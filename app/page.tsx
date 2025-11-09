@@ -7,16 +7,17 @@ export default function Home() {
   const [question, setQuestion] = useState("");
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-white text-gray-900">
-      <h1 className="text-5xl font-extrabold tracking-tight mb-6 text-center">
-        <span className="neon logo-halo">engineerit</span>
-        <span className="ml-2 text-gray-700">chat</span>
+    <main className="flex min-h-screen flex-col items-center p-8 bg-white text-gray-900">
+      {/* Heading: "engineer" filled + "it" outlined */}
+      <h1 className="text-6xl font-extrabold tracking-tight mb-6 text-center leading-tight">
+        <span className="engineer-fill logo-halo">engineer</span>
+        <span className="it-outline logo-halo">it</span>
+        <span className="ml-3 text-gray-800">chat</span>
       </h1>
 
-      <div className="mb-4">
-        <label htmlFor="discipline" className="mr-2 font-medium">
-          Discipline
-        </label>
+      {/* UI */}
+      <div className="mb-3 flex items-center gap-3">
+        <label htmlFor="discipline" className="font-medium">Discipline</label>
         <select
           id="discipline"
           value={discipline}
@@ -27,16 +28,17 @@ export default function Home() {
           <option>Civil</option>
           <option>Mechanical</option>
           <option>Electrical</option>
-          <option>Chemical</option>
+          <option>Process</option>
+          <option>Instrumentation</option>
         </select>
       </div>
 
       <textarea
-        className="w-full max-w-2xl h-40 p-4 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 outline-none"
-        placeholder="Ask an engineering question…"
+        className="w-full max-w-4xl h-44 p-4 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 outline-none"
+        placeholder="Ask an engineering question..."
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
-      ></textarea>
+      />
     </main>
   );
 }
