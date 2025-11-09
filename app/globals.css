@@ -1,22 +1,26 @@
 @import "tailwindcss";
 
-/* Engineerit blue */
-:root { --engineerit-blue: #2c66ff; }
+:root {
+  --engineerit-blue: #2c66ff;
+}
 
-/* Neon glow for the brand word */
+/* Neon glowing text */
 .neon {
   color: var(--engineerit-blue);
   text-shadow:
-    0 0 2px  var(--engineerit-blue),
-    0 0 6px  var(--engineerit-blue),
-    0 0 12px var(--engineerit-blue),
-    0 0 24px rgba(44,102,255,.65),
-    0 0 48px rgba(44,102,255,.45);
-  filter: drop-shadow(0 0 22px rgba(44,102,255,.35));
+    0 0 3px var(--engineerit-blue),
+    0 0 8px var(--engineerit-blue),
+    0 0 18px var(--engineerit-blue),
+    0 0 36px rgba(44, 102, 255, 0.75),
+    0 0 72px rgba(44, 102, 255, 0.55);
+  filter: drop-shadow(0 0 28px rgba(44, 102, 255, 0.4));
+  -webkit-text-stroke: 0.5px rgba(25, 60, 170, 0.35);
 }
 
-/* Soft halo under the logo word */
-.logo-halo { position: relative; }
+/* Halo below the text */
+.logo-halo {
+  position: relative;
+}
 .logo-halo::after {
   content: "";
   position: absolute;
@@ -26,7 +30,11 @@
   width: 340px;
   height: 50px;
   border-radius: 999px;
-  background: radial-gradient(closest-side, rgba(44,102,255,.28), rgba(44,102,255,0));
+  background: radial-gradient(
+    closest-side,
+    rgba(44, 102, 255, 0.28),
+    rgba(44, 102, 255, 0)
+  );
   filter: blur(12px);
   pointer-events: none;
 }

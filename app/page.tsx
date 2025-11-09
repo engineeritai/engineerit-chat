@@ -1,77 +1,42 @@
 "use client";
+
 import { useState } from "react";
 
-const DISCIPLINES = [
-  { id: "general", label: "General" },
-  { id: "process", label: "Process" },
-  { id: "piping", label: "Piping / P&ID" },
-  { id: "mechanical", label: "Mechanical" },
-  { id: "civil", label: "Civil / Structural" },
-  { id: "electrical", label: "Electrical" },
-  { id: "instrument", label: "Instrumentation" },
-  { id: "hazop", label: "HAZOP / Safety" },
-];
-
-export default function Page() {
-  const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
-  const [input, setInput] = useState("");
-  const [discipline, setDiscipline] = useState("general");
-  const [loading, setLoading] = useState(false);
-
-  async function send() {
-    if (!input.trim() || loading) return;
-    const userMsg = input.trim();
-    setMessages((m) => [...m, { role: "user", content: userMsg }]);
-    setInput("");
-    setLoading(true);
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: userMsg,
-        discipline,
-      }),
-    });
-    const data = await res.json();
-    setMessages((m) => [...m, { role: "assistant", content: data.reply ?? "No reply." }]);
-    setLoading(false);
-  }
+export default function Home() {
+  const [discipline, setDiscipline] = useState("General");
+  const [question, setQuestion] = useState("");
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
-      <h1 className="text-3xl font-bold mb-4 text-blue-600">engineerit chat</h1>
+    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-white text-gray-900">
+      <h1 className="text-5xl font-extrabold tracking-tight mb-6 text-center">
+        <span className="neon logo-halo">engineerit</span>
+        <span className="ml-2 text-gray-700">chat</span>
+      </h1>
 
-      <div className="mb-2 flex gap-2 items-center">
-        <label className="text-sm text-gray-600">Discipline</label>
+      <div className="mb-4">
+        <label htmlFor="discipline" className="mr-2 font-medium">
+          Discipline
+        </label>
         <select
+          id="discipline"
           value={discipline}
           onChange={(e) => setDiscipline(e.target.value)}
-          className="border rounded px-2 py-1"
+          className="border rounded px-3 py-1"
         >
-          {DISCIPLINES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+          <option>General</option>
+          <option>Civil</option>
+          <option>Mechanical</option>
+          <option>Electrical</option>
+          <option>Chemical</option>
         </select>
       </div>
 
-      <div className="border rounded p-4 bg-white min-h-[320px] mb-3 overflow-y-auto">
-        {messages.length === 0 && <div className="text-gray-400">Ask an engineering question…</div>}
-        {messages.map((m, i) => (
-          <div key={i} className={`my-2 ${m.role === "user" ? "text-blue-700" : "text-gray-900"}`}>
-            <b>{m.role === "user" ? "You:" : "engineerit:"}</b> {m.content}
-          </div>
-        ))}
-        {loading && <div className="text-gray-400">Thinking…</div>}
-      </div>
-
-      <div className="flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
-          className="flex-1 border rounded px-3 py-2"
-          placeholder="Ask an engineering question…"
-        />
-        <button onClick={send} className="bg-blue-600 text-white rounded px-4">Send</button>
-      </div>
+      <textarea
+        className="w-full max-w-2xl h-40 p-4 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 outline-none"
+        placeholder="Ask an engineering question…"
+        value={question}
+        onChange={(e) => setQuestion(e.target.value)}
+      ></textarea>
     </main>
   );
 }
