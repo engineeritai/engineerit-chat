@@ -1,26 +1,81 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* === Base styles for body === */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply bg-gray-100 text-gray-900 antialiased;
+  font-family: 'Inter', sans-serif;
+}
+
+/* === Input and button smoothing === */
+input, select, button {
+  font-family: inherit;
+}
+
+/* === Scrollbar minimal styling === */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* === Chat area enhancements === */
+textarea, input {
+  @apply focus:ring-2 focus:ring-blue-400 focus:outline-none;
+}
+
+/* === Engineerit Neon Branding === */
+:root {
+  --engineerit-blue: #2c66ff; /* Match this color to your neon logo */
+}
+
+/* Neon glowing text for "engineerit" */
+.neon {
+  color: var(--engineerit-blue);
+  text-shadow:
+    0 0 2px var(--engineerit-blue),
+    0 0 6px var(--engineerit-blue),
+    0 0 12px var(--engineerit-blue),
+    0 0 24px rgba(44,102,255,0.65),
+    0 0 48px rgba(44,102,255,0.45);
+  filter: drop-shadow(0 0 22px rgba(44,102,255,0.35));
+}
+
+/* Halo glow below the logo text */
+.logo-halo {
+  position: relative;
+}
+.logo-halo::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -6px;
+  width: 340px;
+  height: 50px;
+  border-radius: 999px;
+  background: radial-gradient(
+    closest-side,
+    rgba(44,102,255,0.28),
+    rgba(44,102,255,0)
+  );
+  filter: blur(12px);
+  pointer-events: none;
+}
+
+/* === Chat layout helper classes === */
+.chat-bubble {
+  @apply px-4 py-2 rounded-lg my-2 max-w-[80%];
+}
+.chat-user {
+  @apply bg-blue-100 text-blue-800 ml-auto;
+}
+.chat-bot {
+  @apply bg-gray-100 text-gray-800 mr-auto;
 }
