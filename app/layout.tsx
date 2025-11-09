@@ -1,15 +1,22 @@
 import "./globals.css";
-import { ReactNode } from "react";
+import type { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "engineerit chat",
-  description: "AI chat for engineers – powered by Engineerit",
+  description: "AI chat for engineers – engineerit",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className="antialiased bg-white text-gray-900">{children}</body>
+      {/* Center EVERYTHING vertically & horizontally */}
+      <body className="min-h-screen bg-white text-gray-900 antialiased flex items-center justify-center">
+        {children}
+      </body>
     </html>
   );
 }

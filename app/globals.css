@@ -1,56 +1,23 @@
 @import "tailwindcss";
 
-/* Brand color (tune to match your logo exactly) */
+/* Coinbase-like engineer blue */
 :root {
-  --engineer-blue: #2c66ff; /* Coinbase-like blue */
+  --engineer-blue: #2c66ff;
 }
 
-/* ===== Neon styles ===== */
-
-/* Filled neon for "engineer" */
-.engineer-fill {
+/* Solid blue for “engineer” (no glow) */
+.engineer-solid {
   color: var(--engineer-blue);
-  /* multi-layer glow */
-  text-shadow:
-    0 0 2px var(--engineer-blue),
-    0 0 6px var(--engineer-blue),
-    0 0 12px var(--engineer-blue),
-    0 0 24px rgba(44,102,255,.70),
-    0 0 48px rgba(44,102,255,.45);
-  filter: drop-shadow(0 0 18px rgba(44,102,255,.35));
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-/* Outlined neon for "it" (no fill) */
+/* Blue outline for “it” (no fill, no glow) */
 .it-outline {
-  color: transparent;                   /* no fill */
+  color: transparent;
   -webkit-text-stroke: 2px var(--engineer-blue);
-  text-shadow:
-    0 0 2px var(--engineer-blue),
-    0 0 6px var(--engineer-blue),
-    0 0 12px var(--engineer-blue),
-    0 0 24px rgba(44,102,255,.70),
-    0 0 48px rgba(44,102,255,.45);
-  filter: drop-shadow(0 0 18px rgba(44,102,255,.35));
+  letter-spacing: -0.02em;
 }
 
-/* Soft base glow underneath the word */
-.logo-halo {
-  position: relative;
-  display: inline-block;
-}
-.logo-halo::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: -10px;
-  width: 380px;              /* widen/narrow the bloom */
-  height: 56px;
-  border-radius: 999px;
-  background: radial-gradient(closest-side,
-    rgba(44,102,255,.25),
-    rgba(44,102,255,0));
-  filter: blur(16px);
-  pointer-events: none;
-  opacity: .9;
-}
+/* Remove any previous halo/glow if present */
+.logo-halo::after { content: none !important; }
