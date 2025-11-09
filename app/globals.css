@@ -1,23 +1,26 @@
 @import "tailwindcss";
 
-/* Coinbase-like engineer blue */
+/* Coinbase-style clean blue */
 :root {
-  --engineer-blue: #2c66ff;
+  --coinbase-blue: #276EF1;
 }
 
-/* Solid blue for “engineer” (no glow) */
-.engineer-solid {
-  color: var(--engineer-blue);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+/* Use a Coinbase-like Sans font */
+body, h1, h2, h3, h4, h5, h6 {
+  font-family: "Inter", "Helvetica Neue", "Segoe UI", sans-serif;
 }
 
-/* Blue outline for “it” (no fill, no glow) */
+/* "engineer" - filled blue text */
+.engineer-blue {
+  color: var(--coinbase-blue);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+/* "it" - outlined only (blue stroke, no fill) */
 .it-outline {
   color: transparent;
-  -webkit-text-stroke: 2px var(--engineer-blue);
-  letter-spacing: -0.02em;
+  -webkit-text-stroke: 2px var(--coinbase-blue);
+  font-weight: 500;
+  letter-spacing: -0.015em;
 }
-
-/* Remove any previous halo/glow if present */
-.logo-halo::after { content: none !important; }
