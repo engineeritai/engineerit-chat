@@ -1,26 +1,165 @@
-@import "tailwindcss";
+/* app/globals.css */
 
-/* Coinbase-style clean blue */
-:root {
-  --coinbase-blue: #276EF1;
+/* Base */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; }
+
+/* Grid shell: sidebar + main panel */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  height: 100vh;
 }
 
-/* Use a Coinbase-like Sans font */
-body, h1, h2, h3, h4, h5, h6 {
-  font-family: "Inter", "Helvetica Neue", "Segoe UI", sans-serif;
+/* Sidebar */
+.sidebar {
+  background: #f3f4f6; /* light gray */
+  border-right: 1px solid #e5e7eb;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-/* "engineer" - filled blue text */
-.engineer-blue {
-  color: var(--coinbase-blue);
-  font-weight: 500;
-  letter-spacing: -0.015em;
+.sidebar h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #6b7280;
 }
 
-/* "it" - outlined only (blue stroke, no fill) */
-.it-outline {
+.select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: white;
+}
+
+/* Header */
+.header {
+  padding: 24px 28px 12px 28px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+/* Coinbase-ish wordmark: one word “engineerit” + black “chat” */
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px; /* gap only between “engineerit” and “chat” */
+}
+
+.word {
+  display: inline-flex;
+  gap: 0;              /* <— NO SPACE INSIDE THE WORD */
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.engineer {
+  font-weight: 800;
+  font-size: clamp(28px, 4vw, 44px);
+  color: #2563eb;      /* blue-600 */
+  margin-right: 0;
+}
+
+.it {
+  font-weight: 900;
+  font-size: clamp(28px, 4vw, 44px);
   color: transparent;
-  -webkit-text-stroke: 2px var(--coinbase-blue);
-  font-weight: 500;
-  letter-spacing: -0.015em;
+  -webkit-text-stroke: 2px #2563eb; /* outlined */
+  text-stroke: 2px #2563eb;
+  margin-left: -2px;   /* tighten the join to look like 1 word */
 }
+
+.chat {
+  font-weight: 700;
+  font-size: clamp(26px, 3.8vw, 40px);
+  color: #111827;
+}
+
+/* Right panel */
+.main {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Section title row */
+.section-title {
+  padding: 12px 28px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Chat list */
+.chat-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 28px 120px 28px; /* bottom space for composer */
+  overflow-y: auto;
+}
+
+/* Message bubbles */
+.msg {
+  max-width: 880px;
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.02);
+  white-space: pre-wrap;       /* preserves lists/lines */
+}
+
+.msg.user {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+/* Composer (sticky bottom) */
+.composer {
+  position: fixed;
+  left: 280px;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to top, rgba(243,244,246,1), rgba(243,244,246,0.7));
+  padding: 14px 28px 20px 28px;
+  border-top: 1px solid #e5e7eb;
+}
+
+@media (max-width: 900px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .composer { left: 0; }
+}
+
+.textarea {
+  width: 100%;
+  min-height: 56px;
+  max-height: 240px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  outline: none;
+  resize: vertical;
+  font: inherit;
+  background: #fff;
+}
+
+.btn {
+  appearance: none;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.btn:disabled { opacity: .5; cursor: default; }

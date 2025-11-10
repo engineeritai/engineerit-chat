@@ -1,71 +1,179 @@
+// app/page.tsx
 "use client";
 
-import { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import Header from "./components/Header";
+import Sidebar from "./components/Sidebar";
+import ChatMessage from "./components/ChatMessage";
 
-export default function Home() {
+type Role = "user" | "assistant";
+
+type Message = {
+  id: string;
+  role: Role;
+  content: string;
+};
+
+type Thread = {
+  id: string;
+  title: string;
+  discipline: string;
+  messages: Message[];
+};
+
+function uuid() {
+  return Math.random().toString(36).slice(2);
+}
+
+export default function Page() {
   const [discipline, setDiscipline] = useState("General");
-  const [question, setQuestion] = useState("");
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [currentThreadId, setCurrentThreadId] = useState<string | undefined>();
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+
+  // ensure a thread exists
+  useEffect(() => {
+    if (!currentThreadId) {
+      const t: Thread = {
+        id: uuid(),
+        title: "New conversation",
+        discipline,
+        messages: [],
+      };
+      setThreads([t]);
+      setCurrentThreadId(t.id);
+    }
+  }, [currentThreadId, discipline]);
+
+  const thread = useMemo(
+    () => threads.find((t) => t.id === currentThreadId),
+    [threads, currentThreadId]
+  );
+
+  function onNewChat() {
+    const t: Thread = {
+      id: uuid(),
+      title: "New conversation",
+      discipline,
+      messages: [],
+    };
+    setThreads((prev) => [t, ...prev]);
+    setCurrentThreadId(t.id);
+  }
+
+  function onSelectThread(id: string) {
+    setCurrentThreadId(id);
+  }
+
+  function updateThread(updater: (t: Thread) => Thread) {
+    if (!thread) return;
+    setThreads((all) => all.map((t) => (t.id === thread.id ? updater(t) : t)));
+  }
+
+  async function send() {
+    if (!thread || !input.trim() || sending) return;
+    const userText = input.trim();
+    setInput("");
+
+    // add user message
+    updateThread((t) => ({
+      ...t,
+      title: t.messages.length === 0 ? userText.slice(0, 64) : t.title,
+      messages: [...t.messages, { id: uuid(), role: "user", content: userText }],
+    }));
+
+    setSending(true);
+    try {
+      // Call your API (make sure app/api/chat/route.ts exists & OPENAI_API_KEY is set)
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          discipline,
+          messages: (thread?.messages || []).concat({
+            id: "temp",
+            role: "user",
+            content: userText,
+          }),
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Request failed ${res.status}`);
+      }
+
+      const data = (await res.json()) as { reply: string };
+      updateThread((t) => ({
+        ...t,
+        messages: [...t.messages, { id: uuid(), role: "assistant", content: data.reply || "" }],
+      }));
+    } catch (e: any) {
+      updateThread((t) => ({
+        ...t,
+        messages: [
+          ...t.messages,
+          {
+            id: uuid(),
+            role: "assistant",
+            content:
+              "Sorry, I couldn’t complete that request. Check your API key (/api/chat) or try again.",
+          },
+        ],
+      }));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void send();
+    }
+  }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen w-full max-w-6xl px-6">
-      {/* ====== LOGO TITLE ====== */}
-      <h1 className="text-center mb-10 leading-none font-sans">
-        <span className="engineer-blue text-7xl md:text-8xl">engineer</span>
-        <span className="it-outline text-7xl md:text-8xl">it</span>
-        <span className="text-6xl md:text-7xl ml-3 text-black font-medium">
-          chat
-        </span>
-      </h1>
-
-      {/* ====== DISCIPLINE SELECTOR ====== */}
-      <div className="mb-6 flex flex-wrap items-center justify-center gap-3 text-lg">
-        <label htmlFor="discipline" className="font-medium text-gray-900">
-          Discipline
-        </label>
-        <select
-          id="discipline"
-          value={discipline}
-          onChange={(e) => setDiscipline(e.target.value)}
-          className="border rounded-lg px-4 py-2 text-gray-800 focus:ring-2 focus:ring-blue-400 outline-none"
-        >
-          <option>General</option>
-          <option>Civil Engineering</option>
-          <option>Structural Engineering</option>
-          <option>Geotechnical Engineering</option>
-          <option>Mechanical Engineering</option>
-          <option>Electrical Engineering</option>
-          <option>Instrumentation Engineering</option>
-          <option>Mining Engineering</option>
-          <option>Chemical Engineering</option>
-          <option>Petroleum Engineering</option>
-          <option>Process Engineering</option>
-          <option>Architectural Engineering</option>
-          <option>Project Engineering</option>
-          <option>Value Engineering</option>
-          <option>Environmental Engineering</option>
-          <option>Industrial Engineering</option>
-          <option>Materials Engineering</option>
-          <option>Water Resources Engineering</option>
-          <option>Transportation Engineering</option>
-          <option>Energy Engineering</option>
-        </select>
-      </div>
-
-      {/* ====== CHAT BOX ====== */}
-      <textarea
-        className="w-full h-80 p-6 border rounded-xl shadow-md focus:ring-2 focus:ring-blue-400 outline-none text-gray-800 text-lg resize-none"
-        placeholder={`Ask a ${discipline.toLowerCase()} question...`}
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
+    <div className="app-shell">
+      {/* Left */}
+      <Sidebar
+        discipline={discipline}
+        onDisciplineChange={setDiscipline}
+        onNewChat={onNewChat}
+        threads={threads}
+        currentThreadId={currentThreadId}
+        onSelectThread={onSelectThread}
       />
 
-      {/* ====== SUBMIT BUTTON ====== */}
-      <button
-        onClick={() => alert(`Question submitted for ${discipline}`)}
-        className="mt-6 px-6 py-3 bg-[#276EF1] text-white font-medium rounded-lg hover:bg-blue-700 transition-all"
-      >
-        Submit
-      </button>
-    </main>
+      {/* Right */}
+      <div className="main">
+        <Header />
+
+        <div className="section-title">Conversation</div>
+
+        <div className="chat-wrap">
+          {(thread?.messages || []).map((m) => (
+            <ChatMessage key={m.id} role={m.role} content={m.content} />
+          ))}
+        </div>
+
+        {/* Composer */}
+        <div className="composer">
+          <div style={{ display: "flex", gap: 10, maxWidth: 960 }}>
+            <textarea
+              className="textarea"
+              placeholder="Ask an engineering question… (Enter to send)"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onKeyDown}
+            />
+            <button className="btn" disabled={sending} onClick={send}>
+              {sending ? "Sending…" : "Send"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

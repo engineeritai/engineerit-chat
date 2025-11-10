@@ -1,9 +1,17 @@
+// app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
+import { Poppins } from "next/font/google";
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800", "900"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "engineerit chat",
-  description: "AI chat for engineers – engineerit",
+  description: "An engineering assistant",
 };
 
 export default function RootLayout({
@@ -13,8 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      {/* Center EVERYTHING vertically & horizontally */}
-      <body className="min-h-screen bg-white text-gray-900 antialiased flex items-center justify-center">
+      <body className={`${poppins.className} bg-gray-50 text-gray-900`}>
         {children}
       </body>
     </html>

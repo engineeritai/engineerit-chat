@@ -1,36 +1,51 @@
+// app/api/chat/route.ts
+import { NextResponse } from "next/server";
 import OpenAI from "openai";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-const PROMPTS: Record<string, string> = {
-  general: "You are engineerit, a helpful multi-discipline engineering assistant.",
-  process: "You are a process engineer. Prefer PFD/P&ID conventions, mass/energy balance, units, and ISA symbols.",
-  piping: "You are a piping/instrumentation engineer. Follow ISA/ISO symbols and TEMA where relevant; be precise about valves, lines, tags.",
-  mechanical: "You are a mechanical engineer. Reference ASME/API where appropriate; be clear on sizing, loads, and safety factors.",
-  civil: "You are a civil/structural engineer. Consider codes, loads, and detailing best practices.",
-  electrical: "You are an electrical engineer. Emphasize protection, ratings, and single-line diagram concepts.",
-  instrument: "You are an instrumentation engineer. Use ISA tag styles and loop concepts.",
-  hazop: "You are a HAZOP/safety engineer. Focus on deviations, safeguards, and risk reduction—no unsafe advice.",
-};
 
 export async function POST(req: Request) {
   try {
-    const { message, discipline = "general" } = await req.json();
-    const system = PROMPTS[discipline] ?? PROMPTS.general;
+    const { messages, discipline } = await req.json();
 
-    const r = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: message }
-      ]
+    if (!process.env.OPENAI_API_KEY) {
+      return new NextResponse(
+        "Missing OPENAI_API_KEY in environment.",
+        { status: 500 }
+      );
+    }
+
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    // Build a classic ChatML prompt from your local messages array.
+    // Each item should have role: "user" | "assistant" and content: string.
+    const chatMessages =
+      (messages || []).map((m: any) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content,
+      })) as OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+
+    // Add a system instruction to steer answers by discipline
+    chatMessages.unshift({
+      role: "system",
+      content: `You are EngineerAI, a helpful engineering assistant. If a discipline is given, answer with that domain in mind. Discipline: ${discipline}. Use clear structure, bullets, and concise explanations.`,
     });
 
-    return Response.json({ reply: r.choices[0]?.message?.content ?? "No reply." });
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e?.message ?? "Server error" }), { status: 500 });
+    // Use a lightweight, fast model (you can change to gpt-4o if you have access)
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: chatMessages,
+      temperature: 0.2,
+    });
+
+    const reply =
+      completion.choices?.[0]?.message?.content?.trim() ||
+      "I couldn't generate a response.";
+
+    return NextResponse.json({ reply });
+  } catch (err: any) {
+    console.error(err);
+    return new NextResponse(
+      err?.message || "Server error generating response.",
+      { status: 500 }
+    );
   }
 }
