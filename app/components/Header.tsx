@@ -6,7 +6,7 @@ export default function Header() {
   return (
     <header className="header" style={{ padding: "20px" }}>
       <div className="brand" aria-label="engineerit chat">
-        <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
           <span style={{ fontSize: "36px", fontWeight: 800, color: "#0057ff" }}>
             engineer
           </span>
