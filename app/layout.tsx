@@ -12,7 +12,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: "engineerit chat",
-  description: "An engineering assistant",
+  description: "AI assistant for engineers",
 
   openGraph: {
     title: "engineerit chat",
@@ -21,10 +21,10 @@ export const metadata: Metadata = {
     siteName: "engineerit",
     images: [
       {
-        url: "/og.png",
+        url: "https://engineerit.ai/og.png",
         width: 1200,
         height: 630,
-        alt: "engineerit preview",
+        alt: "engineerit og image",
       },
     ],
     type: "website",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "engineerit chat",
     description: "AI assistant for engineers",
-    images: ["/og.png"],
+    images: ["https://engineerit.ai/og.png"],
   },
 };
 
