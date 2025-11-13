@@ -3,6 +3,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import Footer from "./components/Footer";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -23,14 +24,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Open Graph (WhatsApp, LinkedIn, Facebook, iMessage) */}
+        {/* Open Graph Meta */}
         <meta property="og:title" content="engineerit chat" />
         <meta property="og:description" content="AI assistant for engineers" />
         <meta property="og:image" content="https://engineerit.ai/og.png" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://engineerit.ai" />
 
-        {/* Twitter Card */}
+        {/* Twitter Card Meta */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="engineerit chat" />
         <meta name="twitter:description" content="AI assistant for engineers" />
@@ -39,6 +40,7 @@ export default function RootLayout({
 
       <body className={`${poppins.className} bg-gray-50 text-gray-900`}>
         {children}
+        <Footer />
       </body>
     </html>
   );
