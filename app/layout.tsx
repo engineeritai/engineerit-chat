@@ -24,14 +24,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Open Graph Meta */}
+        {/* Favicon */}
+        <link rel="icon" href="/favicon.png" sizes="any" />
+
+        {/* Open Graph */}
         <meta property="og:title" content="engineerit chat" />
         <meta property="og:description" content="AI assistant for engineers" />
         <meta property="og:image" content="https://engineerit.ai/og.png" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://engineerit.ai" />
 
-        {/* Twitter Card Meta */}
+        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="engineerit chat" />
         <meta name="twitter:description" content="AI assistant for engineers" />
