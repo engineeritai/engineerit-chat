@@ -14,6 +14,20 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "engineerit chat",
   description: "AI Engineering Assistant",
+  openGraph: {
+    title: "engineerit chat",
+    description: "AI Engineering Assistant",
+    url: "https://engineerit.ai",
+    siteName: "engineerit.ai",
+    images: ["https://engineerit.ai/og.png"],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "engineerit chat",
+    description: "AI Engineering Assistant",
+    images: ["https://engineerit.ai/og.png"],
+  },
 };
 
 export default function RootLayout({
@@ -24,15 +38,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Force favicon — all browsers */}
-        <link rel="icon" type="image/png" href="/favicon.png?v=2" />
-        <link rel="shortcut icon" type="image/png" href="/favicon.png?v=2" />
-        <link rel="apple-touch-icon" href="/favicon.png?v=2" />
+        {/* Favicon (PNG only, correct location) */}
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="shortcut icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
 
         {/* Open Graph */}
         <meta property="og:title" content="engineerit chat" />
         <meta property="og:description" content="AI Engineering Assistant" />
-        <meta property="og:site_name" content="engineerit.ai" />
         <meta property="og:image" content="https://engineerit.ai/og.png" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://engineerit.ai" />
