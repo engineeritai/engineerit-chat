@@ -1,21 +1,17 @@
 "use client";
 
-import Image from "next/image";
-
 export default function Header() {
   return (
     <header className="header">
       <div className="brand" aria-label="engineerit chat">
-        {/* شعار engineerit */}
-        <Image
-          src="/engineerit-logo.PNG"  // نفس الاسم الموجود في مجلد public
-          alt="engineerit logo"
-          width={260}
-          height={70}
-          priority
-        />
 
-        {/* كلمة chat على يمين الشعار كما كانت */}
+        {/* الكلمة الرئيسية engineerit */}
+        <span className="logo">
+          <span className="engineer">engineer</span>
+          <span className="it">it</span>
+        </span>
+
+        {/* الكلمة الثانوية chat */}
         <span className="chat">chat</span>
       </div>
     </header>
