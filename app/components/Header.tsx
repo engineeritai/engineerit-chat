@@ -10,8 +10,8 @@ export default function Header() {
         <Image
           src="/engineerit-logo.PNG"  // نفس الاسم الموجود في مجلد public
           alt="engineerit logo"
-          width={160}
-          height={50}
+          width={260}
+          height={70}
           priority
         />
 
