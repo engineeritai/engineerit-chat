@@ -8,7 +8,7 @@ export default function Header() {
       <div className="brand" aria-label="engineerit chat">
         {/* شعار engineerit */}
         <Image
-          src="/engineerit-logo.png"  // نفس الاسم الموجود في مجلد public
+          src="/engineerit-logo.PNG"  // نفس الاسم الموجود في مجلد public
           alt="engineerit logo"
           width={160}
           height={50}
