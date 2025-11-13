@@ -19,15 +19,15 @@ export const metadata: Metadata = {
     description: "AI assistant for engineers",
     url: "https://engineerit.ai",
     siteName: "engineerit",
+    type: "website",
     images: [
       {
         url: "https://engineerit.ai/og.png",
         width: 1200,
         height: 630,
-        alt: "engineerit og image",
+        alt: "engineerit preview",
       },
     ],
-    type: "website",
   },
 
   twitter: {
