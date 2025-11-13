@@ -12,7 +12,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "engineerit.ai",
+  title: "engineerit chat",
   description: "AI Engineering Assistant",
 };
 
@@ -26,14 +26,14 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.png" sizes="any" />
 
-        <meta property="og:title" content="engineerit.ai" />
+        <meta property="og:title" content="engineerit chat" />
         <meta property="og:description" content="AI Engineering Assistant" />
         <meta property="og:image" content="https://engineerit.ai/og.png" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://engineerit.ai" />
 
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="engineerit.ai" />
+        <meta name="twitter:title" content="engineerit chat" />
         <meta name="twitter:description" content="AI Engineering Assistant" />
         <meta name="twitter:image" content="https://engineerit.ai/og.png" />
       </head>
