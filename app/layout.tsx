@@ -13,29 +13,6 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "engineerit chat",
   description: "AI assistant for engineers",
-
-  openGraph: {
-    title: "engineerit chat",
-    description: "AI assistant for engineers",
-    url: "https://engineerit.ai",
-    siteName: "engineerit",
-    type: "website",
-    images: [
-      {
-        url: "https://engineerit.ai/og.png",
-        width: 1200,
-        height: 630,
-        alt: "engineerit preview",
-      },
-    ],
-  },
-
-  twitter: {
-    card: "summary_large_image",
-    title: "engineerit chat",
-    description: "AI assistant for engineers",
-    images: ["https://engineerit.ai/og.png"],
-  },
 };
 
 export default function RootLayout({
@@ -45,6 +22,21 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Open Graph (WhatsApp, LinkedIn, Facebook, iMessage) */}
+        <meta property="og:title" content="engineerit chat" />
+        <meta property="og:description" content="AI assistant for engineers" />
+        <meta property="og:image" content="https://engineerit.ai/og.png" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://engineerit.ai" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="engineerit chat" />
+        <meta name="twitter:description" content="AI assistant for engineers" />
+        <meta name="twitter:image" content="https://engineerit.ai/og.png" />
+      </head>
+
       <body className={`${poppins.className} bg-gray-50 text-gray-900`}>
         {children}
       </body>
