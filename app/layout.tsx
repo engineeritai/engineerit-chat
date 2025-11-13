@@ -24,18 +24,23 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Favicon */}
         <link rel="icon" href="/favicon.png" sizes="any" />
 
+        {/* Open Graph */}
         <meta property="og:title" content="engineerit chat" />
         <meta property="og:description" content="AI Engineering Assistant" />
+        <meta property="og:site_name" content="engineerit.ai" />
         <meta property="og:image" content="https://engineerit.ai/og.png" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://engineerit.ai" />
 
+        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="engineerit chat" />
         <meta name="twitter:description" content="AI Engineering Assistant" />
         <meta name="twitter:image" content="https://engineerit.ai/og.png" />
+        <meta name="twitter:site" content="@engineerit_ai" />
       </head>
 
       <body className={`${poppins.className} bg-gray-50 text-gray-900`}>
