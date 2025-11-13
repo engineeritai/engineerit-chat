@@ -24,8 +24,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Favicon */}
-        <link rel="icon" href="/favicon.png" sizes="any" />
+        {/* Force favicon — all browsers */}
+        <link rel="icon" type="image/png" href="/favicon.png?v=2" />
+        <link rel="shortcut icon" type="image/png" href="/favicon.png?v=2" />
+        <link rel="apple-touch-icon" href="/favicon.png?v=2" />
 
         {/* Open Graph */}
         <meta property="og:title" content="engineerit chat" />
@@ -40,7 +42,6 @@ export default function RootLayout({
         <meta name="twitter:title" content="engineerit chat" />
         <meta name="twitter:description" content="AI Engineering Assistant" />
         <meta name="twitter:image" content="https://engineerit.ai/og.png" />
-        <meta name="twitter:site" content="@engineerit_ai" />
       </head>
 
       <body className={`${poppins.className} bg-gray-50 text-gray-900`}>
