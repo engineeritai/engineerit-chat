@@ -12,10 +12,10 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "engineerit chat",
+  title: "engineerit",
   description: "AI Engineering Assistant",
   openGraph: {
-    title: "engineerit chat",
+    title: "engineerit",
     description: "AI Engineering Assistant",
     url: "https://engineerit.ai",
     siteName: "engineerit.ai",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "engineerit chat",
+    title: "engineerit",
     description: "AI Engineering Assistant",
     images: ["https://engineerit.ai/og.png"],
   },
