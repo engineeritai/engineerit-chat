@@ -863,3 +863,10 @@ button {
     min-height: auto;
   }
 }
+.sidebar-legal-link {
+  color: #2563eb;
+  text-decoration: normal;
+}
+.sidebar-legal-link:hover {
+  color: #1d4ed8;
+}

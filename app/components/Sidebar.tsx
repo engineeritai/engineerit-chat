@@ -46,74 +46,114 @@ export default function Sidebar({
 
   const content = (
     <aside className="sidebar-inner">
-      <button className="btn w-full mb-3" onClick={onNewChat}>
-        + New chat
-      </button>
+      {/* TOP: main controls */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* New chat */}
+        <button className="btn w-full mb-3" onClick={onNewChat}>
+          + New chat
+        </button>
 
-      <div style={{ marginBottom: 16 }}>
-        <h3>Discipline</h3>
-        <select
-          className="select"
-          value={discipline}
-          onChange={(e) => onDisciplineChange(e.target.value)}
-        >
-          {DISCIPLINES.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
+        {/* Discipline */}
+        <div>
+          <h3>Discipline</h3>
+          <select
+            className="select"
+            value={discipline}
+            onChange={(e) => onDisciplineChange(e.target.value)}
+          >
+            {DISCIPLINES.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Pages navigation */}
+        <div>
+          <h3>Pages</h3>
+          <nav className="sidebar-nav">
+            <SidebarLink href="/" label="Chat" currentPath={pathname} />
+            <SidebarLink
+              href="/register"
+              label="Plans & Registration"
+              currentPath={pathname}
+            />
+            <SidebarLink
+              href="/profile"
+              label="My Profile"
+              currentPath={pathname}
+            />
+            <SidebarLink
+              href="/feedback"
+              label="Feedback & Complaints"
+              currentPath={pathname}
+            />
+            <SidebarLink
+              href="/legal/terms"
+              label="User Policy & Agreement"
+              currentPath={pathname}
+            />
+          </nav>
+        </div>
+
+        {/* History */}
+        <div>
+          <h3>History</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {threads.length === 0 && (
+              <div style={{ fontSize: 13, color: "#6b7280" }}>
+                No conversations yet
+              </div>
+            )}
+            {threads.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  onSelectThread(t.id);
+                  onCloseMobile();
+                }}
+                style={{
+                  textAlign: "left",
+                  border: "1px solid #e5e7eb",
+                  background: currentThreadId === t.id ? "#fff" : "#f9fafb",
+                  borderRadius: 10,
+                  padding: "8px 10px",
+                  fontSize: 14,
+                }}
+                title={t.title}
+              >
+                {t.title}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <h3>Pages</h3>
-        <nav className="sidebar-nav">
-          <SidebarLink href="/" label="Chat" currentPath={pathname} />
-          <SidebarLink
-            href="/register"
-            label="Plans & Registration"
-            currentPath={pathname}
-          />
-          <SidebarLink href="/profile" label="My Profile" currentPath={pathname} />
-          <SidebarLink
-            href="/feedback"
-            label="Feedback & Complaints"
-            currentPath={pathname}
-          />
-          <SidebarLink
-            href="/legal/terms"
-            label="User Policy & Agreement"
-            currentPath={pathname}
-          />
-        </nav>
-      </div>
-
-      <div>
-        <h3>History</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {threads.length === 0 && (
-            <div style={{ fontSize: 13, color: "#6b7280" }}>No conversations yet</div>
-          )}
-          {threads.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => {
-                onSelectThread(t.id);
-                onCloseMobile();
-              }}
-              style={{
-                textAlign: "left",
-                border: "1px solid #e5e7eb",
-                background: currentThreadId === t.id ? "#fff" : "#f9fafb",
-                borderRadius: 10,
-                padding: "8px 10px",
-                fontSize: 14,
-              }}
-              title={t.title}
-            >
-              {t.title}
-            </button>
-          ))}
+      {/* BOTTOM: legal block */}
+      <div
+        style={{
+          marginTop: 24,
+          paddingTop: 12,
+          borderTop: "1px solid #e5e7eb",
+          fontSize: 11,
+          color: "#6b7280",
+          lineHeight: 1.5,
+        }}
+      >
+        <div style={{ fontWeight: 600, color: "#111827", marginBottom: 4 }}>
+          AI Engineering Assistant
+        </div>
+        <div style={{ marginBottom: 2 }}>
+          © 2025 <span style={{ fontWeight: 500 }}>engineerit</span>. All rights
+          reserved.
+        </div>
+        <div>
+          Use of engineerit as per{" "}
+          <Link href="/legal/terms" className="sidebar-legal-link">
+            User Policy &amp; Agreement
+          </Link>
+          .
         </div>
       </div>
     </aside>
@@ -158,29 +198,5 @@ function SidebarLink({
     >
       {label}
     </Link>
-  );
-}
-
-export default function Footer() {
-  return (
-    <footer
-      style={{
-        padding: "24px",
-        textAlign: "center",
-        fontSize: "13px",
-        color: "#777",
-        marginTop: "283px",
-      }}
-    >
-      <p>AI Engineering Assistant</p>
-
-      <p style={{ marginTop: "6px" }}>
-        © 2025 engineerit. All rights reserved.
-      </p>
-
-      <p style={{ marginTop: "6px" }}>
-        Use of engineerit as per User Policy & Agreement
-      </p>
-    </footer>
   );
 }

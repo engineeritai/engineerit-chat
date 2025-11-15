@@ -8,7 +8,7 @@ export default function Footer() {
         textAlign: "center",
         fontSize: "13px",
         color: "#777",
-        marginTop: "300px",
+        marginTop: "283px",
       }}
     >
       <p>AI Engineering Assistant</p>

@@ -13,41 +13,71 @@ export default function NavSidebar({ isMobileOpen, onCloseMobile }: Props) {
 
   const content = (
     <aside className="sidebar-inner">
-      <div style={{ marginBottom: 16 }}>
-        <h3>Navigation</h3>
-        <nav className="sidebar-nav">
-          <SidebarLink href="/" label="Chat" currentPath={pathname} />
-          <SidebarLink
-            href="/register"
-            label="Plans & Registration"
-            currentPath={pathname}
-          />
-          <SidebarLink
-            href="/profile"
-            label="My Profile"
-            currentPath={pathname}
-          />
-          <SidebarLink
-            href="/feedback"
-            label="Feedback & Complaints"
-            currentPath={pathname}
-          />
-          <SidebarLink
-            href="/legal/terms"
-            label="User Policy & Agreement"
-            currentPath={pathname}
-          />
-        </nav>
+      {/* أعلى السايدبار: الروابط والأقسام */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div>
+          <h3>Navigation</h3>
+          <nav className="sidebar-nav">
+            <SidebarLink href="/" label="Chat" currentPath={pathname} />
+            <SidebarLink
+              href="/register"
+              label="Plans & Registration"
+              currentPath={pathname}
+            />
+            <SidebarLink
+              href="/profile"
+              label="My Profile"
+              currentPath={pathname}
+            />
+            <SidebarLink
+              href="/feedback"
+              label="Feedback & Complaints"
+              currentPath={pathname}
+            />
+            <SidebarLink
+              href="/legal/terms"
+              label="User Policy & Agreement"
+              currentPath={pathname}
+            />
+          </nav>
+        </div>
+      </div>
+
+      {/* أسفل السايدبار: النص القانوني نفسه */}
+      <div
+        style={{
+          marginTop: 24,
+          paddingTop: 12,
+          borderTop: "1px solid #e5e7eb",
+          fontSize: 11,
+          color: "#6b7280",
+          lineHeight: 1.5,
+        }}
+      >
+        <div style={{ fontWeight: 600, color: "#111827", marginBottom: 4 }}>
+          AI Engineering Assistant
+        </div>
+        <div style={{ marginBottom: 2 }}>
+          © 2025 <span style={{ fontWeight: 500 }}>engineerit</span>. All rights
+          reserved.
+        </div>
+        <div>
+          Use of engineerit as per{" "}
+          <Link href="/legal/terms" className="sidebar-legal-link">
+            User Policy &amp; Agreement
+          </Link>
+          .
+        </div>
       </div>
     </aside>
   );
 
   return (
     <>
-      {/* Desktop */}
+      {/* Desktop sidebar */}
       <div className="sidebar desktop-only">{content}</div>
 
-      {/* Mobile overlay */}
+      {/* Mobile overlay sidebar */}
       {isMobileOpen && (
         <div className="sidebar-mobile-overlay" onClick={onCloseMobile}>
           <div
