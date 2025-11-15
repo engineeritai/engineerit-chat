@@ -8,7 +8,7 @@ export default function Footer() {
         textAlign: "center",
         fontSize: "13px",
         color: "#777",
-        marginTop: "40px",
+        marginTop: "283px",
       }}
     >
       <p>AI Engineering Assistant</p>
@@ -18,12 +18,7 @@ export default function Footer() {
       </p>
 
       <p style={{ marginTop: "6px" }}>
-        engineerit may make mistakes. Always verify important information.
-      </p>
-
-      <p style={{ marginTop: "6px" }}>
-        engineerit is not responsible or liable for any decisions you make
-        based on its output.
+        Use of engineerit as per User Policy & Agreement
       </p>
     </footer>
   );

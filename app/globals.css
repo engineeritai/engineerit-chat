@@ -1,165 +1,865 @@
-/* app/globals.css */
+/* =========
+   Base reset
+   ========= */
 
-/* Base */
-* { box-sizing: border-box; }
-html, body { height: 100%; }
-body { margin: 0; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-/* Grid shell: sidebar + main panel */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
+  background: #f9fafb;
+  color: #111827;
+}
+
+/* Remove default link styles */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Simple button reset */
+button {
+  font-family: inherit;
+}
+
+/* =========
+   Layout shell
+   ========= */
+
 .app-shell {
   display: grid;
   grid-template-columns: 280px 1fr;
   height: 100vh;
 }
 
-/* Sidebar */
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* =========
+   Sidebar
+   ========= */
+
 .sidebar {
-  background: #f3f4f6; /* light gray */
+  background: #f3f4f6;
   border-right: 1px solid #e5e7eb;
+}
+
+.sidebar-inner {
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.sidebar h3 {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: #6b7280;
-}
-
-.select {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  background: white;
-}
-
-/* Header */
-.header {
-  padding: 24px 28px 12px 28px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #fff;
-}
-
-/* Coinbase-ish wordmark: one word “engineerit” + black “chat” */
-.brand {
-  display: flex;
-  align-items: baseline;
-  gap: 12px; /* gap only between “engineerit” and “chat” */
-}
-
-.word {
-  display: inline-flex;
-  gap: 0;              /* <— NO SPACE INSIDE THE WORD */
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
-
-.engineer {
-  font-weight: 800;
-  font-size: clamp(28px, 4vw, 44px);
-  color: #2563eb;      /* blue-600 */
-  margin-right: 0;
-}
-
-.it {
-  font-weight: 900;
-  font-size: clamp(28px, 4vw, 44px);
-  color: transparent;
-  -webkit-text-stroke: 2px #2563eb; /* outlined */
-  text-stroke: 2px #2563eb;
-  margin-left: -2px;   /* tighten the join to look like 1 word */
-}
-
-.chat {
-  font-weight: 700;
-  font-size: clamp(26px, 3.8vw, 40px);
-  color: #111827;
-}
-
-/* Right panel */
-.main {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-/* Section title row */
-.section-title {
-  padding: 12px 28px;
-  font-weight: 600;
-  color: #374151;
-}
-
-/* Chat list */
-.chat-wrap {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px 28px 120px 28px; /* bottom space for composer */
+  height: 100%;
   overflow-y: auto;
 }
 
-/* Message bubbles */
-.msg {
-  max-width: 880px;
-  width: 100%;
+.sidebar-inner h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  margin: 0 0 4px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-link {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #374151;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.sidebar-link:hover {
+  background: #e5e7eb;
+}
+
+.sidebar-link-active {
+  background: #ffffff;
+  border-color: #2563eb;
+  color: #111827;
+}
+
+/* =========
+   Header + Logo engineerit (coinbase style)
+   ========= */
+
+.header {
+  padding: 16px 24px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* mobile toggle button (three lines) */
+.mobile-menu-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
   border: 1px solid #e5e7eb;
-  background: #fff;
-  border-radius: 12px;
-  padding: 14px 16px;
-  box-shadow: 0 1px 0 rgba(0,0,0,.02);
-  white-space: pre-wrap;       /* preserves lists/lines */
+  background: #ffffff;
+  padding: 4px;
+  cursor: pointer;
 }
 
-.msg.user {
-  border-color: #bfdbfe;
-  background: #eff6ff;
+.mobile-menu-btn span {
+  display: block;
+  height: 2px;
+  border-radius: 999px;
+  background: #4b5563;
 }
 
-/* Composer (sticky bottom) */
+/* engineerit brand */
+.brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.brand .word {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.brand .engineer {
+  color: #1e66ff; /* Coinbase-like blue */
+}
+
+/* "it" outlined in blue (no fill) */
+.brand .it {
+  color: transparent;
+  -webkit-text-stroke: 1px #1e66ff;
+  text-stroke: 1px #1e66ff;
+}
+
+.brand .chat {
+  font-size: 13px;
+  text-transform: lowercase;
+  color: #4b5563;
+}
+
+/* =========
+   Chat area (similar to ChatGPT)
+   ========= */
+
+.section-title {
+  font-size: 14px;
+  color: #6b7280;
+  padding: 10px 24px 0;
+}
+
+.chat-wrap {
+  flex: 1;
+  padding: 10px 24px 90px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* composer at bottom */
 .composer {
-  position: fixed;
-  left: 280px;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(to top, rgba(243,244,246,1), rgba(243,244,246,0.7));
-  padding: 14px 28px 20px 28px;
   border-top: 1px solid #e5e7eb;
+  padding: 12px 24px 14px;
+  background: #f9fafb;
+  display: flex;
+  justify-content: center;
 }
 
-@media (max-width: 900px) {
-  .app-shell { grid-template-columns: 1fr; }
-  .composer { left: 0; }
+/* =========
+   Chat message bubbles
+   ========= */
+
+.chat-message {
+  max-width: 960px;
+  margin: 0 auto;
+  border-radius: 16px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.chat-message-user {
+  align-self: flex-end;
+  background: #e5f0ff;
+  border: 1px solid #d1e4ff;
+}
+
+.chat-message-assistant {
+  align-self: flex-start;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+/* =========
+   Generic UI
+   ========= */
+
+.btn {
+  border-radius: 999px;
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 14px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn.w-full {
+  width: 100%;
+}
+
+.select {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  padding: 8px 10px;
+  font: inherit;
+  margin-top: 4px;
+  background-color: #ffffff;
 }
 
 .textarea {
   width: 100%;
-  min-height: 56px;
-  max-height: 240px;
-  padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid #d1d5db;
-  outline: none;
-  resize: vertical;
+  padding: 8px 10px;
   font: inherit;
-  background: #fff;
+  resize: vertical;
+  min-height: 60px;
+  font-size: 14px;
 }
 
-.btn {
-  appearance: none;
-  border: none;
-  background: #2563eb;
-  color: #fff;
+/* =========
+   Inner pages (Plans, Profile, Feedback, Legal)
+   ========= */
+
+.page-wrap {
+  padding: 24px 28px 120px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.page-title {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+/* Card container */
+.card {
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  padding: 14px 16px;
+  background: #ffffff;
+}
+
+.section-heading {
+  font-size: 18px;
   font-weight: 600;
-  padding: 10px 16px;
+  margin-bottom: 10px;
+}
+
+/* Forms */
+.form-row {
+  margin-bottom: 12px;
+}
+
+.input {
+  display: block;
+  width: 100%;
   border-radius: 10px;
+  border: 1px solid #d1d5db;
+  padding: 8px 10px;
+  font: inherit;
+  margin-top: 4px;
+}
+
+.form-checkbox-row {
+  margin-top: 10px;
+  margin-bottom: 16px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin-top: 3px;
+}
+
+.link {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+/* Plans grid */
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.plan-card {
+  text-align: left;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  padding: 14px 16px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.plan-card:hover {
+  border-color: #d1d5db;
+}
+
+.plan-card-selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
+}
+
+.plan-name {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.plan-tagline {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.plan-price {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.plan-price-yearly {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.plan-features {
+  font-size: 13px;
+  color: #4b5563;
+  padding-left: 18px;
+}
+
+/* Register form block */
+.register-form {
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  padding: 16px 18px 18px;
+  background: #ffffff;
+}
+
+/* Profile page */
+.profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========
+   Social login buttons
+   ========= */
+
+.social-login-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.social-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  padding: 6px 12px;
+  font-size: 13px;
   cursor: pointer;
 }
-.btn:disabled { opacity: .5; cursor: default; }
+
+.social-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.social-btn-google .social-icon {
+  background: #ea4335;
+  color: #ffffff;
+}
+
+.social-btn-apple .social-icon {
+  background: #111827;
+  color: #ffffff;
+}
+
+.social-btn-microsoft .social-icon {
+  background: linear-gradient(
+    135deg,
+    #f25022 0%,
+    #f25022 25%,
+    #7fba00 25%,
+    #7fba00 50%,
+    #00a4ef 50%,
+    #00a4ef 75%,
+    #ffb900 75%,
+    #ffb900 100%
+  );
+  color: #ffffff;
+}
+
+.social-btn-huawei .social-icon {
+  background: #e60012;
+  color: #ffffff;
+}
+
+/* =========
+   Smart Assistant bot (المساعد الذكي) on feedback page
+   ========= */
+
+.helper-bot-badge {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 50;
+}
+
+.helper-bot-button {
+  border-radius: 999px;
+  background: #1e40af;
+  color: #ffffff;
+  padding: 8px 14px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.35);
+  cursor: pointer;
+}
+
+.helper-bot-panel {
+  position: fixed;
+  right: 18px;
+  bottom: 68px;
+  width: 320px;
+  max-height: 420px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.4);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+
+.helper-bot-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.helper-bot-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.helper-bot-body {
+  padding: 10px 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  font-size: 13px;
+}
+
+.helper-bot-composer {
+  padding: 8px 10px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 6px;
+}
+
+.helper-bot-input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.helper-bot-send {
+  border-radius: 999px;
+  border: none;
+  background: #1e40af;
+  color: #ffffff;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+/* =========
+   Sidebar mobile overlay
+   ========= */
+
+.desktop-only {
+  display: block;
+}
+
+.sidebar-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 40;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.sidebar-mobile-panel {
+  width: 80%;
+  max-width: 320px;
+}
+
+/* =========
+   Responsive tweaks
+   ========= */
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-only {
+    display: none;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .page-wrap {
+    padding: 18px 14px 90px;
+  }
+
+  .chat-wrap {
+    padding: 10px 12px 90px;
+  }
+
+  .composer {
+    padding: 10px 14px;
+  }
+
+  .helper-bot-panel {
+    width: calc(100% - 32px);
+    right: 16px;
+  }
+}
+
+/* ==== CHATGPT-like composer ==== */
+
+.composer {
+  border-top: 1px solid #e5e7eb;
+  padding: 12px 20px;
+  background: #ffffff;
+  display: flex;
+  justify-content: center;
+}
+
+.composer-box {
+  width: 100%;
+  max-width: 850px;
+  border: 1px solid #d1d5db;
+  border-radius: 15px;
+  background: #f9fafb;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Toolbar row */
+.composer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  font-size: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.toolbar-btn:hover {
+  background: #f3f4f6;
+}
+
+/* Textarea */
+.textarea {
+  width: 100%;
+  border: none !important;
+  background: transparent;
+  padding: 8px 0px;
+  font-size: 14px;
+  resize: none;
+  min-height: 45px;
+  max-height: 200px;
+  outline: none;
+}
+
+/* Send button */
+.send-btn {
+  align-self: flex-end;
+  border-radius: 999px;
+  background: #2563eb;
+  color: white;
+  padding: 6px 16px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.plan-card-header {
+  display: flex;
+  align-items: top;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.plan-icon {
+  color: #ffffff;
+}
+
+/* Assistant Engineer — Blue */
+.plan-icon-assistant {
+  background: #1e66ff;
+}
+
+/* Engineer — Silver */
+.plan-icon-engineer {
+  background: #9ca3af;
+}
+
+/* Professional Engineer — Gold */
+.plan-icon-professional {
+  background: #f5ab0bb2;
+}
+
+/* Consultant Engineer — Green */
+.plan-icon-consultant {
+  background:  #71b1a9;
+}
+/* ===== Plans & Registration layout ===== */
+
+.plans-layout {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+}
+
+.plans-layout__header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.plans-layout__header p {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+/* Grid */
+.plans-layout__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+/* Base card */
+.plan-card {
+  border-radius: 24px;
+  padding: 20px 20px 24px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Title + short description */
+.plan-card__top {
+  min-height: 68px; /* يوحد ارتفاع العنوان/الوصف بين البطاقات */
+  margin-bottom: 14px;
+}
+
+.plan-card__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.plan-card__subtitle {
+  font-size: 0.9rem;
+}
+
+/* Pricing area */
+.plan-card__pricing {
+  min-height: 60px; /* يصطف السعر في نفس الخط بين الكروت */
+  margin-bottom: 14px;
+}
+
+.plan-card__price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.95rem;
+}
+
+.plan-card__price-row--secondary {
+  margin-top: 4px;
+  font-size: 0.85rem;
+}
+
+.plan-card__price-main {
+  font-weight: 600;
+}
+
+.plan-card__price-note {
+  color: #374151;
+}
+
+/* Features list */
+.plan-card__features {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+  font-size: 0.9rem;
+}
+
+.plan-card__features li + li {
+  margin-top: 4px;
+}
+
+/* Colors for each tier (full card background) */
+.plan-card--assistant {
+  background: #e5f0ff; /* blue tint */
+}
+
+.plan-card--engineer {
+  background: #f5f5f7; /* silver/gray */
+}
+
+.plan-card--pro {
+  background: #fff8e1; /* soft gold */
+}
+
+.plan-card--consultant {
+  background: #f1ecff; /* platinum / violet */
+}
+
+/* Mobile tweaks */
+@media (max-width: 768px) {
+  .plans-layout {
+    padding: 24px 12px 32px;
+  }
+
+  .plan-card {
+    padding: 18px 16px 22px;
+  }
+
+  .plan-card__top {
+    min-height: auto;
+  }
+
+  .plan-card__pricing {
+    min-height: auto;
+  }
+}

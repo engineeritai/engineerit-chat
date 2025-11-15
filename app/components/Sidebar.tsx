@@ -1,5 +1,7 @@
-// app/components/Sidebar.tsx
 "use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type Props = {
   discipline: string;
@@ -8,6 +10,8 @@ type Props = {
   threads: { id: string; title: string }[];
   currentThreadId?: string;
   onSelectThread: (id: string) => void;
+  isMobileOpen: boolean;
+  onCloseMobile: () => void;
 };
 
 const DISCIPLINES = [
@@ -15,7 +19,7 @@ const DISCIPLINES = [
   "Civil Engineering",
   "Mechanical Engineering",
   "Electrical Engineering",
-  "Chemical Engineering",     // requested position (after Electrical)
+  "Chemical Engineering",
   "Instrumentation",
   "Process Engineering",
   "Geotechnical",
@@ -35,12 +39,18 @@ export default function Sidebar({
   threads,
   currentThreadId,
   onSelectThread,
+  isMobileOpen,
+  onCloseMobile,
 }: Props) {
-  return (
-    <aside className="sidebar">
-      <button className="btn" onClick={onNewChat}>+ New chat</button>
+  const pathname = usePathname();
 
-      <div>
+  const content = (
+    <aside className="sidebar-inner">
+      <button className="btn w-full mb-3" onClick={onNewChat}>
+        + New chat
+      </button>
+
+      <div style={{ marginBottom: 16 }}>
         <h3>Discipline</h3>
         <select
           className="select"
@@ -48,12 +58,37 @@ export default function Sidebar({
           onChange={(e) => onDisciplineChange(e.target.value)}
         >
           {DISCIPLINES.map((d) => (
-            <option key={d} value={d}>{d}</option>
+            <option key={d} value={d}>
+              {d}
+            </option>
           ))}
         </select>
       </div>
 
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginBottom: 16 }}>
+        <h3>Pages</h3>
+        <nav className="sidebar-nav">
+          <SidebarLink href="/" label="Chat" currentPath={pathname} />
+          <SidebarLink
+            href="/register"
+            label="Plans & Registration"
+            currentPath={pathname}
+          />
+          <SidebarLink href="/profile" label="My Profile" currentPath={pathname} />
+          <SidebarLink
+            href="/feedback"
+            label="Feedback & Complaints"
+            currentPath={pathname}
+          />
+          <SidebarLink
+            href="/legal/terms"
+            label="User Policy & Agreement"
+            currentPath={pathname}
+          />
+        </nav>
+      </div>
+
+      <div>
         <h3>History</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {threads.length === 0 && (
@@ -62,7 +97,10 @@ export default function Sidebar({
           {threads.map((t) => (
             <button
               key={t.id}
-              onClick={() => onSelectThread(t.id)}
+              onClick={() => {
+                onSelectThread(t.id);
+                onCloseMobile();
+              }}
               style={{
                 textAlign: "left",
                 border: "1px solid #e5e7eb",
@@ -79,5 +117,46 @@ export default function Sidebar({
         </div>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <div className="sidebar desktop-only">{content}</div>
+
+      {/* Mobile overlay sidebar */}
+      {isMobileOpen && (
+        <div className="sidebar-mobile-overlay" onClick={onCloseMobile}>
+          <div
+            className="sidebar sidebar-mobile-panel"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {content}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function SidebarLink({
+  href,
+  label,
+  currentPath,
+}: {
+  href: string;
+  label: string;
+  currentPath: string | null;
+}) {
+  const active =
+    currentPath === href ||
+    (href !== "/" && currentPath && currentPath.startsWith(href));
+  return (
+    <Link
+      href={href}
+      className={`sidebar-link ${active ? "sidebar-link-active" : ""}`}
+    >
+      {label}
+    </Link>
   );
 }

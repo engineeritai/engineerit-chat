@@ -1,7 +1,6 @@
-// app/page.tsx
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import ChatMessage from "./components/ChatMessage";
@@ -31,8 +30,8 @@ export default function Page() {
   const [currentThreadId, setCurrentThreadId] = useState<string | undefined>();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
-  // ensure a thread exists
   useEffect(() => {
     if (!currentThreadId) {
       const t: Thread = {
@@ -66,17 +65,16 @@ export default function Page() {
     setCurrentThreadId(id);
   }
 
-  function updateThread(updater: (t: Thread) => Thread) {
-    if (!thread) return;
-    setThreads((all) => all.map((t) => (t.id === thread.id ? updater(t) : t)));
+  function updateThread(fn: (t: Thread) => Thread) {
+    setThreads((all) => all.map((t) => (t.id === currentThreadId ? fn(t) : t)));
   }
 
   async function send() {
     if (!thread || !input.trim() || sending) return;
+
     const userText = input.trim();
     setInput("");
 
-    // add user message
     updateThread((t) => ({
       ...t,
       title: t.messages.length === 0 ? userText.slice(0, 64) : t.title,
@@ -85,18 +83,16 @@ export default function Page() {
 
     setSending(true);
     try {
-      // Call your API (make sure app/api/chat/route.ts exists & OPENAI_API_KEY is set)
+      const payloadMessages = (thread.messages || []).concat({
+        id: "temp",
+        role: "user",
+        content: userText,
+      });
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          discipline,
-          messages: (thread?.messages || []).concat({
-            id: "temp",
-            role: "user",
-            content: userText,
-          }),
-        }),
+        body: JSON.stringify({ discipline, messages: payloadMessages }),
       });
 
       if (!res.ok) {
@@ -107,9 +103,13 @@ export default function Page() {
       const data = (await res.json()) as { reply: string };
       updateThread((t) => ({
         ...t,
-        messages: [...t.messages, { id: uuid(), role: "assistant", content: data.reply || "" }],
+        messages: [
+          ...t.messages,
+          { id: uuid(), role: "assistant", content: data.reply || "" },
+        ],
       }));
     } catch (e: any) {
+      console.error(e);
       updateThread((t) => ({
         ...t,
         messages: [
@@ -118,7 +118,7 @@ export default function Page() {
             id: uuid(),
             role: "assistant",
             content:
-              "Sorry, I couldn’t complete that request. Check your API key (/api/chat) or try again.",
+              "Sorry, I couldn’t complete that request. Ensure your OPENAI_API_KEY is set and /api/chat is working.",
           },
         ],
       }));
@@ -136,7 +136,6 @@ export default function Page() {
 
   return (
     <div className="app-shell">
-      {/* Left */}
       <Sidebar
         discipline={discipline}
         onDisciplineChange={setDiscipline}
@@ -144,11 +143,12 @@ export default function Page() {
         threads={threads}
         currentThreadId={currentThreadId}
         onSelectThread={onSelectThread}
+        isMobileOpen={isSidebarOpenMobile}
+        onCloseMobile={() => setIsSidebarOpenMobile(false)}
       />
 
-      {/* Right */}
       <div className="main">
-        <Header />
+        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
         <div className="section-title">Conversation</div>
 
@@ -158,17 +158,81 @@ export default function Page() {
           ))}
         </div>
 
-        {/* Composer */}
+                {/* Composer */}
         <div className="composer">
-          <div style={{ display: "flex", gap: 10, maxWidth: 960 }}>
+          <div className="composer-box">
+            {/* Toolbar */}
+            <div className="composer-toolbar">
+              <button
+                className="toolbar-btn"
+                title="Add attachment"
+                onClick={() => alert("Attachment menu coming soon")}
+              >
+                +
+              </button>
+
+              <button
+                className="toolbar-btn"
+                title="Upload image"
+                onClick={() =>
+                  document.getElementById("image-upload")?.click()
+                }
+              >
+                📷
+              </button>
+
+              <button
+                className="toolbar-btn"
+                title="Upload file"
+                onClick={() =>
+                  document.getElementById("file-upload")?.click()
+                }
+              >
+                📄
+              </button>
+
+              <button
+                className="toolbar-btn"
+                title="Scan document"
+                onClick={() => alert("Scan feature coming soon")}
+              >
+                🖨️
+              </button>
+
+              <button
+                className="toolbar-btn"
+                title="Press to Talk"
+                onMouseDown={() => console.log("Start Recording…")}
+                onMouseUp={() => console.log("Stop Recording…")}
+              >
+                🎤
+              </button>
+            </div>
+
+            {/* Hidden Inputs */}
+            <input type="file" id="image-upload" accept="image/*" hidden />
+            <input type="file" id="file-upload" hidden />
+
+            {/* Textarea */}
             <textarea
               className="textarea"
               placeholder="Ask an engineering question… (Enter to send)"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                // auto-resize
+                e.target.style.height = "45px";
+                e.target.style.height = e.target.scrollHeight + "px";
+              }}
               onKeyDown={onKeyDown}
             />
-            <button className="btn" disabled={sending} onClick={send}>
+
+            {/* Send button */}
+            <button
+              className="send-btn"
+              disabled={sending || !input.trim()}
+              onClick={send}
+            >
               {sending ? "Sending…" : "Send"}
             </button>
           </div>

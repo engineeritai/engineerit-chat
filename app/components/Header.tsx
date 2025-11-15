@@ -1,40 +1,33 @@
-// app/components/Header.tsx
-
 "use client";
 
-export default function Header() {
+import Link from "next/link";
+
+type HeaderProps = {
+  onToggleSidebar: () => void;
+};
+
+export default function Header({ onToggleSidebar }: HeaderProps) {
   return (
-    <header className="header" style={{ padding: "20px" }}>
-      <div className="brand" aria-label="engineerit chat">
-        <div style={{ display: "flex", alignItems: "baseline", gap: "1px" }}>
-          <span style={{ fontSize: "36px", fontWeight: 800, color: "#0057ff" }}>
-            engineer
-          </span>
-          <span
-            style={{
-              fontSize: "36px",
-              fontWeight: 800,
-              color: "transparent",
-              WebkitTextStroke: "2px #0057ff",
-            }}
-          >
-            it
-          </span>
-          <span style={{ fontSize: "36px", fontWeight: 700, marginLeft: "6px" }}>
-            chat
+    <header className="header">
+      <div className="header-left">
+        {/* mobile menu button */}
+        <button
+          className="mobile-menu-btn"
+          onClick={onToggleSidebar}
+          aria-label="Open menu"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        {/* engineerit logo (same style as before) */}
+        <div className="brand" aria-label="engineerit">
+          <span className="word">
+            <span className="engineer">engineer</span>
+            <span className="it">it</span>
           </span>
         </div>
-
-        <p
-          style={{
-            marginTop: "4px",
-            fontSize: "14px",
-            color: "#666",
-            fontWeight: 400,
-          }}
-        >
-          AI Engineering Assistant
-        </p>
       </div>
     </header>
   );
