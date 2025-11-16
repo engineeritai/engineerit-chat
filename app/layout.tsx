@@ -11,10 +11,10 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "engineerit",
+  title: "engineer it",
   description: "AI Engineering Assistant",
   openGraph: {
-    title: "engineerit",
+    title: "engineer it",
     description: "AI Engineering Assistant",
     url: "https://engineerit.ai",
     siteName: "engineerit.ai",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "engineerit",
+    title: "engineer it",
     description: "AI Engineering Assistant",
     images: ["https://engineerit.ai/og.png"],
   },
@@ -43,7 +43,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/favicon.png" />
 
         {/* Open Graph */}
-        <meta property="og:title" content="engineerit" />
+        <meta property="og:title" content="engineer it" />
         <meta property="og:description" content="AI Engineering Assistant" />
         <meta property="og:image" content="https://engineerit.ai/og.png" />
         <meta property="og:type" content="website" />
@@ -51,7 +51,7 @@ export default function RootLayout({
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="engineerit" />
+        <meta name="twitter:title" content="engineer it" />
         <meta name="twitter:description" content="AI Engineering Assistant" />
         <meta name="twitter:image" content="https://engineerit.ai/og.png" />
       </head>
