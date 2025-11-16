@@ -2,9 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
-import ChatMessage from "./components/ChatMessage"; // ok if unused now
 
 type Role = "user" | "assistant";
 
@@ -33,7 +34,7 @@ export default function Page() {
   const [sending, setSending] = useState(false);
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
-  // Ensure we always have an active thread
+  // ---------- bootstrapping first thread ----------
   useEffect(() => {
     if (!currentThreadId) {
       const t: Thread = {
@@ -52,9 +53,9 @@ export default function Page() {
     [threads, currentThreadId]
   );
 
-  // 👇 this is what was missing
-  const messages = thread?.messages ?? [];
+  const messages: Message[] = thread?.messages ?? [];
 
+  // ---------- helpers ----------
   function onNewChat() {
     const t: Thread = {
       id: uuid(),
@@ -70,18 +71,21 @@ export default function Page() {
     setCurrentThreadId(id);
   }
 
-  function updateThread(fn: (t: Thread) => Thread) {
-    setThreads((all) => all.map((t) => (t.id === currentThreadId ? fn(t) : t)));
+  function updateCurrentThread(fn: (t: Thread) => Thread) {
+    setThreads((all) =>
+      all.map((t) => (t.id === currentThreadId ? fn(t) : t))
+    );
   }
 
+  // ---------- sending ----------
   async function send() {
     if (!thread || !input.trim() || sending) return;
 
     const userText = input.trim();
     setInput("");
 
-    // Add user message locally
-    updateThread((t) => ({
+    // add user message locally
+    updateCurrentThread((t) => ({
       ...t,
       title: t.messages.length === 0 ? userText.slice(0, 64) : t.title,
       messages: [...t.messages, { id: uuid(), role: "user", content: userText }],
@@ -108,16 +112,16 @@ export default function Page() {
 
       const data = (await res.json()) as { reply: string };
 
-      updateThread((t) => ({
+      updateCurrentThread((t) => ({
         ...t,
         messages: [
           ...t.messages,
           { id: uuid(), role: "assistant", content: data.reply || "" },
         ],
       }));
-    } catch (e) {
-      console.error(e);
-      updateThread((t) => ({
+    } catch (err) {
+      console.error(err);
+      updateCurrentThread((t) => ({
         ...t,
         messages: [
           ...t.messages,
@@ -125,7 +129,7 @@ export default function Page() {
             id: uuid(),
             role: "assistant",
             content:
-              "Sorry, I couldn’t complete that request. Ensure your OPENAI_API_KEY is set and /api/chat is working.",
+              "Sorry, I couldn’t complete that request. Please check your OPENAI_API_KEY and /api/chat route.",
           },
         ],
       }));
@@ -141,6 +145,7 @@ export default function Page() {
     }
   }
 
+  // ---------- UI ----------
   return (
     <div className="app-shell">
       <Sidebar
@@ -157,7 +162,7 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
-        {/* Conversation area */}
+        {/* CONVERSATION AREA */}
         <div className="conversation">
           {messages.length === 0 ? (
             <div className="empty-state">
@@ -175,8 +180,10 @@ export default function Page() {
                 <div className="message-avatar">
                   {m.role === "user" ? "You" : "AI"}
                 </div>
+
                 <div className="message-bubble">
                   <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ node, ...props }) => (
                         <h1 className="msg-h1" {...props} />
@@ -187,6 +194,9 @@ export default function Page() {
                       h3: ({ node, ...props }) => (
                         <h3 className="msg-h3" {...props} />
                       ),
+                      p: ({ node, ...props }) => (
+                        <p className="msg-p" {...props} />
+                      ),
                       ul: ({ node, ...props }) => (
                         <ul className="msg-ul" {...props} />
                       ),
@@ -195,9 +205,6 @@ export default function Page() {
                       ),
                       li: ({ node, ...props }) => (
                         <li className="msg-li" {...props} />
-                      ),
-                      p: ({ node, ...props }) => (
-                        <p className="msg-p" {...props} />
                       ),
                       strong: ({ node, ...props }) => (
                         <strong className="msg-strong" {...props} />
@@ -212,7 +219,7 @@ export default function Page() {
           )}
         </div>
 
-        {/* Composer */}
+        {/* COMPOSER (bottom input area) */}
         <div className="composer">
           <div className="composer-box">
             {/* Toolbar */}
@@ -263,11 +270,11 @@ export default function Page() {
               </button>
             </div>
 
-            {/* Hidden Inputs */}
+            {/* hidden inputs for now */}
             <input type="file" id="image-upload" accept="image/*" hidden />
             <input type="file" id="file-upload" hidden />
 
-            {/* Textarea */}
+            {/* textarea */}
             <textarea
               className="textarea"
               placeholder="Ask an engineering question… (Enter to send)"
@@ -281,7 +288,7 @@ export default function Page() {
               onKeyDown={onKeyDown}
             />
 
-            {/* Send button */}
+            {/* send button */}
             <button
               className="send-btn"
               disabled={sending || !input.trim()}

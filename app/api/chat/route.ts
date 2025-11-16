@@ -1,50 +1,76 @@
-// app/api/chat/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-export async function POST(req: Request) {
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+type Role = "user" | "assistant";
+
+type Message = {
+  id?: string;
+  role: Role;
+  content: string;
+};
+
+export async function POST(req: NextRequest) {
   try {
-    const { messages, discipline } = await req.json();
+    const body = (await req.json()) as {
+      discipline: string;
+      messages: Message[];
+    };
+
+    const { discipline, messages } = body;
 
     if (!process.env.OPENAI_API_KEY) {
-      return new NextResponse(
-        "Missing OPENAI_API_KEY in environment.",
+      return NextResponse.json(
+        {
+          error:
+            "OPENAI_API_KEY is not set on the server. Please configure it in .env.local.",
+        },
         { status: 500 }
       );
     }
 
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    // Build chat history for OpenAI
+    const chatMessages = [
+      {
+        role: "system" as const,
+        content: `
+You are EngineerAI, an engineering assistant for the website engineerit.ai.
 
-    // Build a classic ChatML prompt from your local messages array.
-    // Each item should have role: "user" | "assistant" and content: string.
-    const chatMessages =
-      (messages || []).map((m: any) => ({
-        role: m.role === "assistant" ? "assistant" : "user",
+- Always answer as a helpful **engineering expert**.
+- Discipline: ${discipline || "General"}.
+- Use **clear markdown**: headings, bullet points, numbered lists where helpful.
+- Show formulas in markdown when relevant.
+- If the user uploads drawings/files (mentioned in text), describe how you would interpret them.
+- Never claim to be legally or professionally liable; user is responsible for decisions.
+      `.trim(),
+      },
+      ...messages.map((m) => ({
+        role: m.role as "user" | "assistant",
         content: m.content,
-      })) as OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+      })),
+    ];
 
-    // Add a system instruction to steer answers by discipline
-    chatMessages.unshift({
-      role: "system",
-      content: `You are EngineerAI, a helpful engineering assistant. If a discipline is given, answer with that domain in mind. Discipline: ${discipline}. Use clear structure, bullets, and concise explanations.`,
-    });
-
-    // Use a lightweight, fast model (you can change to gpt-4o if you have access)
     const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4.1-mini",
       messages: chatMessages,
-      temperature: 0.2,
+      temperature: 0.4,
     });
 
     const reply =
-      completion.choices?.[0]?.message?.content?.trim() ||
-      "I couldn't generate a response.";
+      completion.choices[0]?.message?.content?.trim() ||
+      "I could not generate a reply.";
 
     return NextResponse.json({ reply });
   } catch (err: any) {
-    console.error(err);
-    return new NextResponse(
-      err?.message || "Server error generating response.",
+    console.error("API /api/chat error:", err);
+    return NextResponse.json(
+      {
+        error: "Internal error in /api/chat",
+        detail: String(err?.message || err),
+      },
       { status: 500 }
     );
   }
