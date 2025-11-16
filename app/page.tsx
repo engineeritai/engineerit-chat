@@ -20,8 +20,8 @@ type Attachment = {
   id: string;
   name: string;
   type: "image" | "file";
-  url: string;        // data URL (image) or object URL (file)
-  file?: File;        // original file so we can send it to the API
+  url: string;
+  file?: File;
 };
 
 type Message = {
@@ -51,12 +51,12 @@ export default function Page() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
-  // voice recording state
+  // voice
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
 
-  // -------------- thread management -----------------
+  // ---------- threads ----------
 
   useEffect(() => {
     if (!currentThreadId) {
@@ -99,7 +99,7 @@ export default function Page() {
     );
   }
 
-  // -------------- attachments (image / file) -----------------
+  // ---------- attachments ----------
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -120,7 +120,6 @@ export default function Page() {
       ]);
     };
     reader.readAsDataURL(file);
-
     e.target.value = "";
   };
 
@@ -139,11 +138,6 @@ export default function Page() {
         file,
       },
     ]);
-
-    alert(
-      `Document "${file.name}" attached.\n\nFull PDF/Word/Excel analysis will be added soon. For now, the AI can fully read images; you can also paste important text.`
-    );
-
     e.target.value = "";
   };
 
@@ -151,7 +145,7 @@ export default function Page() {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  // -------------- voice recording -----------------
+  // ---------- voice ----------
 
   async function startRecording() {
     try {
@@ -167,7 +161,6 @@ export default function Page() {
       };
 
       recorder.onstop = async () => {
-        // stop mic
         stream.getTracks().forEach((t) => t.stop());
 
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
@@ -190,9 +183,9 @@ export default function Page() {
           }
 
           const data = (await res.json()) as { text?: string };
-
-          if (data?.text) {
-            setInput((prev) => (prev ? `${prev} ${data.text}` : data.text));
+          const text = data?.text ?? "";
+          if (text) {
+            setInput((prev) => (prev ? `${prev} ${text}` : text));
           }
         } catch (err) {
           console.error(err);
@@ -216,7 +209,7 @@ export default function Page() {
     }
   }
 
-  // -------------- image analysis helper -----------------
+  // ---------- helpers: image / document ----------
 
   async function analyzeImage(question: string, imageFile: File): Promise<string> {
     const formData = new FormData();
@@ -241,20 +234,50 @@ export default function Page() {
     return data.reply || "";
   }
 
-  // -------------- sending messages -----------------
+  async function analyzeDocument(
+    question: string,
+    docFile: File
+  ): Promise<string> {
+    const formData = new FormData();
+    formData.append("file", docFile, docFile.name);
+    formData.append(
+      "question",
+      question ||
+        "Extract the important information from this document and summarize it for an engineer."
+    );
+
+    const res = await fetch("/api/document", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || `Document request failed: ${res.status}`);
+    }
+
+    const data = (await res.json()) as { reply: string };
+    return data.reply || "";
+  }
+
+  // ---------- send ----------
 
   async function send() {
-    if (!thread || (!input.trim() && attachments.length === 0) || sending) return;
+    if (!thread || (!input.trim() && attachments.length === 0) || sending)
+      return;
 
     const userText = input.trim();
     const userAttachments = attachments;
     setInput("");
     setAttachments([]);
 
-    // Add user message locally
+    // أضف رسالة المستخدم
     updateThread((t) => ({
       ...t,
-      title: t.messages.length === 0 ? userText.slice(0, 64) || "New conversation" : t.title,
+      title:
+        t.messages.length === 0
+          ? userText.slice(0, 64) || "New conversation"
+          : t.title,
       messages: [
         ...t.messages,
         {
@@ -269,17 +292,29 @@ export default function Page() {
     setSending(true);
 
     try {
-      const hasImage = userAttachments.some(
+      const docAttachment = userAttachments.find(
+        (a) => a.type === "file" && a.file
+      );
+      const imgAttachment = userAttachments.find(
         (a) => a.type === "image" && a.file
       );
 
-      if (hasImage) {
-        // Use the first image attachment for analysis
-        const imgAttachment = userAttachments.find(
-          (a) => a.type === "image" && a.file
-        )!;
+      if (docAttachment) {
+        // 🔥 هنا نستخدم /api/document فعليًا
+        const reply = await analyzeDocument(userText, docAttachment.file!);
+        updateThread((t) => ({
+          ...t,
+          messages: [
+            ...t.messages,
+            {
+              id: uuid(),
+              role: "assistant",
+              content: reply,
+            },
+          ],
+        }));
+      } else if (imgAttachment) {
         const reply = await analyzeImage(userText, imgAttachment.file!);
-
         updateThread((t) => ({
           ...t,
           messages: [
@@ -292,7 +327,7 @@ export default function Page() {
           ],
         }));
       } else {
-        // Normal text-only chat
+        // تشات نصي عادي
         const payloadMessages = (thread.messages || []).concat({
           id: "temp",
           role: "user" as const,
@@ -326,7 +361,7 @@ export default function Page() {
           ],
         }));
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       updateThread((t) => ({
         ...t,
@@ -336,7 +371,7 @@ export default function Page() {
             id: uuid(),
             role: "assistant",
             content:
-              "Sorry, I couldn’t complete that request. Make sure your OPENAI_API_KEY is set and the image/chat APIs are working.",
+              "Sorry, I couldn’t complete that request. Make sure your image/document/chat APIs are working.",
           },
         ],
       }));
@@ -352,7 +387,7 @@ export default function Page() {
     }
   }
 
-  // -------------- render -----------------
+  // ---------- render ----------
 
   return (
     <div className="app-shell">
@@ -370,7 +405,6 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
-        {/* Conversation */}
         <div className="conversation">
           {messages.length === 0 ? (
             <div className="empty-state">
@@ -389,7 +423,6 @@ export default function Page() {
                   {m.role === "user" ? "You" : "AI"}
                 </div>
                 <div className="message-bubble">
-                  {/* Attachments preview inside message */}
                   {m.attachments && m.attachments.length > 0 && (
                     <div className="msg-attachments">
                       {m.attachments.map((a) =>
@@ -406,7 +439,6 @@ export default function Page() {
                       )}
                     </div>
                   )}
-
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {m.content}
                   </ReactMarkdown>
@@ -416,10 +448,8 @@ export default function Page() {
           )}
         </div>
 
-        {/* Composer */}
         <div className="composer">
           <div className="composer-box">
-            {/* Toolbar */}
             <div className="composer-toolbar">
               <button
                 className="toolbar-btn"
@@ -467,7 +497,6 @@ export default function Page() {
               </button>
             </div>
 
-            {/* attachments preview (before send) */}
             {attachments.length > 0 && (
               <div className="attachments">
                 {attachments.map((a) => (
@@ -485,7 +514,6 @@ export default function Page() {
               </div>
             )}
 
-            {/* Textarea */}
             <textarea
               className="textarea"
               placeholder="Ask an engineering question… (Enter to send)"
@@ -498,7 +526,6 @@ export default function Page() {
               onKeyDown={onKeyDown}
             />
 
-            {/* Send button */}
             <button
               className="send-btn"
               disabled={sending || (!input.trim() && attachments.length === 0)}
@@ -507,7 +534,6 @@ export default function Page() {
               {sending ? "Sending…" : "Send"}
             </button>
 
-            {/* hidden inputs */}
             <input
               type="file"
               id="image-upload"
@@ -518,7 +544,7 @@ export default function Page() {
             <input
               type="file"
               id="file-upload"
-              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
               hidden
               onChange={handleFileChange}
             />
