@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  KeyboardEvent,
+  ChangeEvent,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -9,10 +16,19 @@ import Sidebar from "./components/Sidebar";
 
 type Role = "user" | "assistant";
 
+type Attachment = {
+  id: string;
+  name: string;
+  type: "image" | "file";
+  url: string;        // data URL (image) or object URL (file)
+  file?: File;        // original file so we can send it to the API
+};
+
 type Message = {
   id: string;
   role: Role;
   content: string;
+  attachments?: Attachment[];
 };
 
 type Thread = {
@@ -32,9 +48,16 @@ export default function Page() {
   const [currentThreadId, setCurrentThreadId] = useState<string | undefined>();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
-  // ---------- bootstrapping first thread ----------
+  // voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<BlobPart[]>([]);
+
+  // -------------- thread management -----------------
+
   useEffect(() => {
     if (!currentThreadId) {
       const t: Thread = {
@@ -55,7 +78,6 @@ export default function Page() {
 
   const messages: Message[] = thread?.messages ?? [];
 
-  // ---------- helpers ----------
   function onNewChat() {
     const t: Thread = {
       id: uuid(),
@@ -71,57 +93,242 @@ export default function Page() {
     setCurrentThreadId(id);
   }
 
-  function updateCurrentThread(fn: (t: Thread) => Thread) {
+  function updateThread(fn: (t: Thread) => Thread) {
     setThreads((all) =>
       all.map((t) => (t.id === currentThreadId ? fn(t) : t))
     );
   }
 
-  // ---------- sending ----------
+  // -------------- attachments (image / file) -----------------
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const url = reader.result as string;
+      setAttachments((prev) => [
+        ...prev,
+        {
+          id: uuid(),
+          name: file.name,
+          type: "image",
+          url,
+          file,
+        },
+      ]);
+    };
+    reader.readAsDataURL(file);
+
+    e.target.value = "";
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+    setAttachments((prev) => [
+      ...prev,
+      {
+        id: uuid(),
+        name: file.name,
+        type: "file",
+        url,
+        file,
+      },
+    ]);
+
+    alert(
+      `Document "${file.name}" attached.\n\nFull PDF/Word/Excel analysis will be added soon. For now, the AI can fully read images; you can also paste important text.`
+    );
+
+    e.target.value = "";
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  // -------------- voice recording -----------------
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        // stop mic
+        stream.getTracks().forEach((t) => t.stop());
+
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        audioChunksRef.current = [];
+
+        const formData = new FormData();
+        formData.append("file", blob, "recording.webm");
+
+        try {
+          const res = await fetch("/api/voice", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!res.ok) {
+            const errText = await res.text();
+            console.error("Voice API error:", errText);
+            alert("Transcription failed: " + errText);
+            return;
+          }
+
+          const data = (await res.json()) as { text?: string };
+
+          if (data?.text) {
+            setInput((prev) => (prev ? `${prev} ${data.text}` : data.text));
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Voice transcription failed. Please try again.");
+        }
+      };
+
+      recorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error(err);
+      alert("Could not access microphone. Check browser permissions.");
+    }
+  }
+
+  function stopRecording() {
+    setIsRecording(false);
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+  }
+
+  // -------------- image analysis helper -----------------
+
+  async function analyzeImage(question: string, imageFile: File): Promise<string> {
+    const formData = new FormData();
+    formData.append("file", imageFile, imageFile.name);
+    formData.append(
+      "question",
+      question ||
+        "Please analyze this engineering image and explain it with headings and bullet points."
+    );
+
+    const res = await fetch("/api/image", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || `Image request failed: ${res.status}`);
+    }
+
+    const data = (await res.json()) as { reply: string };
+    return data.reply || "";
+  }
+
+  // -------------- sending messages -----------------
+
   async function send() {
-    if (!thread || !input.trim() || sending) return;
+    if (!thread || (!input.trim() && attachments.length === 0) || sending) return;
 
     const userText = input.trim();
+    const userAttachments = attachments;
     setInput("");
+    setAttachments([]);
 
-    // add user message locally
-    updateCurrentThread((t) => ({
+    // Add user message locally
+    updateThread((t) => ({
       ...t,
-      title: t.messages.length === 0 ? userText.slice(0, 64) : t.title,
-      messages: [...t.messages, { id: uuid(), role: "user", content: userText }],
+      title: t.messages.length === 0 ? userText.slice(0, 64) || "New conversation" : t.title,
+      messages: [
+        ...t.messages,
+        {
+          id: uuid(),
+          role: "user",
+          content: userText || "[Attachment-only message]",
+          attachments: userAttachments,
+        },
+      ],
     }));
 
     setSending(true);
+
     try {
-      const payloadMessages = (thread.messages || []).concat({
-        id: "temp",
-        role: "user" as Role,
-        content: userText,
-      });
+      const hasImage = userAttachments.some(
+        (a) => a.type === "image" && a.file
+      );
 
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ discipline, messages: payloadMessages }),
-      });
+      if (hasImage) {
+        // Use the first image attachment for analysis
+        const imgAttachment = userAttachments.find(
+          (a) => a.type === "image" && a.file
+        )!;
+        const reply = await analyzeImage(userText, imgAttachment.file!);
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `Request failed ${res.status}`);
+        updateThread((t) => ({
+          ...t,
+          messages: [
+            ...t.messages,
+            {
+              id: uuid(),
+              role: "assistant",
+              content: reply,
+            },
+          ],
+        }));
+      } else {
+        // Normal text-only chat
+        const payloadMessages = (thread.messages || []).concat({
+          id: "temp",
+          role: "user" as const,
+          content: userText,
+        });
+
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            discipline,
+            messages: payloadMessages,
+          }),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `Request failed: ${res.status}`);
+        }
+
+        const data = (await res.json()) as { reply: string };
+        updateThread((t) => ({
+          ...t,
+          messages: [
+            ...t.messages,
+            {
+              id: uuid(),
+              role: "assistant",
+              content: data.reply || "",
+            },
+          ],
+        }));
       }
-
-      const data = (await res.json()) as { reply: string };
-
-      updateCurrentThread((t) => ({
-        ...t,
-        messages: [
-          ...t.messages,
-          { id: uuid(), role: "assistant", content: data.reply || "" },
-        ],
-      }));
-    } catch (err) {
-      console.error(err);
-      updateCurrentThread((t) => ({
+    } catch (e: any) {
+      console.error(e);
+      updateThread((t) => ({
         ...t,
         messages: [
           ...t.messages,
@@ -129,7 +336,7 @@ export default function Page() {
             id: uuid(),
             role: "assistant",
             content:
-              "Sorry, I couldn’t complete that request. Please check your OPENAI_API_KEY and /api/chat route.",
+              "Sorry, I couldn’t complete that request. Make sure your OPENAI_API_KEY is set and the image/chat APIs are working.",
           },
         ],
       }));
@@ -138,14 +345,15 @@ export default function Page() {
     }
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       void send();
     }
   }
 
-  // ---------- UI ----------
+  // -------------- render -----------------
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -162,7 +370,7 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
-        {/* CONVERSATION AREA */}
+        {/* Conversation */}
         <div className="conversation">
           {messages.length === 0 ? (
             <div className="empty-state">
@@ -180,37 +388,26 @@ export default function Page() {
                 <div className="message-avatar">
                   {m.role === "user" ? "You" : "AI"}
                 </div>
-
                 <div className="message-bubble">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      h1: ({ node, ...props }) => (
-                        <h1 className="msg-h1" {...props} />
-                      ),
-                      h2: ({ node, ...props }) => (
-                        <h2 className="msg-h2" {...props} />
-                      ),
-                      h3: ({ node, ...props }) => (
-                        <h3 className="msg-h3" {...props} />
-                      ),
-                      p: ({ node, ...props }) => (
-                        <p className="msg-p" {...props} />
-                      ),
-                      ul: ({ node, ...props }) => (
-                        <ul className="msg-ul" {...props} />
-                      ),
-                      ol: ({ node, ...props }) => (
-                        <ol className="msg-ol" {...props} />
-                      ),
-                      li: ({ node, ...props }) => (
-                        <li className="msg-li" {...props} />
-                      ),
-                      strong: ({ node, ...props }) => (
-                        <strong className="msg-strong" {...props} />
-                      ),
-                    }}
-                  >
+                  {/* Attachments preview inside message */}
+                  {m.attachments && m.attachments.length > 0 && (
+                    <div className="msg-attachments">
+                      {m.attachments.map((a) =>
+                        a.type === "image" ? (
+                          <div key={a.id} className="msg-attachment">
+                            <img src={a.url} alt={a.name} />
+                            <span>{a.name}</span>
+                          </div>
+                        ) : (
+                          <div key={a.id} className="msg-attachment">
+                            <span>📄 {a.name}</span>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {m.content}
                   </ReactMarkdown>
                 </div>
@@ -219,15 +416,15 @@ export default function Page() {
           )}
         </div>
 
-        {/* COMPOSER (bottom input area) */}
+        {/* Composer */}
         <div className="composer">
           <div className="composer-box">
             {/* Toolbar */}
             <div className="composer-toolbar">
               <button
                 className="toolbar-btn"
-                title="Add attachment"
-                onClick={() => alert("Attachment menu coming soon")}
+                title="Attachment menu"
+                onClick={() => alert("More attachment options coming soon")}
               >
                 +
               </button>
@@ -245,9 +442,7 @@ export default function Page() {
               <button
                 className="toolbar-btn"
                 title="Upload file"
-                onClick={() =>
-                  document.getElementById("file-upload")?.click()
-                }
+                onClick={() => document.getElementById("file-upload")?.click()}
               >
                 📄
               </button>
@@ -261,41 +456,72 @@ export default function Page() {
               </button>
 
               <button
-                className="toolbar-btn"
-                title="Press to Talk"
-                onMouseDown={() => console.log("Start Recording…")}
-                onMouseUp={() => console.log("Stop Recording…")}
+                className={
+                  "toolbar-btn" + (isRecording ? " toolbar-btn-recording" : "")
+                }
+                title="Press to talk"
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
               >
                 🎤
               </button>
             </div>
 
-            {/* hidden inputs for now */}
-            <input type="file" id="image-upload" accept="image/*" hidden />
-            <input type="file" id="file-upload" hidden />
+            {/* attachments preview (before send) */}
+            {attachments.length > 0 && (
+              <div className="attachments">
+                {attachments.map((a) => (
+                  <div key={a.id} className="attachment-pill">
+                    {a.type === "image" ? "🖼️" : "📄"}{" "}
+                    <span className="attachment-name">{a.name}</span>
+                    <button
+                      className="attachment-remove"
+                      onClick={() => removeAttachment(a.id)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
-            {/* textarea */}
+            {/* Textarea */}
             <textarea
               className="textarea"
               placeholder="Ask an engineering question… (Enter to send)"
               value={input}
               onChange={(e) => {
                 setInput(e.target.value);
-                // auto-resize
                 e.target.style.height = "45px";
                 e.target.style.height = e.target.scrollHeight + "px";
               }}
               onKeyDown={onKeyDown}
             />
 
-            {/* send button */}
+            {/* Send button */}
             <button
               className="send-btn"
-              disabled={sending || !input.trim()}
+              disabled={sending || (!input.trim() && attachments.length === 0)}
               onClick={send}
             >
               {sending ? "Sending…" : "Send"}
             </button>
+
+            {/* hidden inputs */}
+            <input
+              type="file"
+              id="image-upload"
+              accept="image/*"
+              hidden
+              onChange={handleImageChange}
+            />
+            <input
+              type="file"
+              id="file-upload"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+              hidden
+              onChange={handleFileChange}
+            />
           </div>
         </div>
       </div>

@@ -954,3 +954,83 @@ button {
 .msg-strong {
   font-weight: 600;
 }
+
+/* composer toolbar & attachments */
+
+.composer-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.toolbar-btn {
+  border: none;
+  background: #f3f4f6;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.toolbar-btn:hover {
+  background: #e5e7eb;
+}
+
+.toolbar-btn-recording {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.attachment-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e5f0ff;
+  font-size: 12px;
+}
+
+.attachment-name {
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachment-remove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* attachments shown inside messages */
+
+.msg-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.msg-attachment {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.msg-attachment img {
+  max-width: 160px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
