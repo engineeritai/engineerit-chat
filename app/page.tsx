@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
-import ChatMessage from "./components/ChatMessage";
+import ChatMessage from "./components/ChatMessage"; // ok if unused now
 
 type Role = "user" | "assistant";
 
@@ -32,6 +33,7 @@ export default function Page() {
   const [sending, setSending] = useState(false);
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
+  // Ensure we always have an active thread
   useEffect(() => {
     if (!currentThreadId) {
       const t: Thread = {
@@ -49,6 +51,9 @@ export default function Page() {
     () => threads.find((t) => t.id === currentThreadId),
     [threads, currentThreadId]
   );
+
+  // 👇 this is what was missing
+  const messages = thread?.messages ?? [];
 
   function onNewChat() {
     const t: Thread = {
@@ -75,6 +80,7 @@ export default function Page() {
     const userText = input.trim();
     setInput("");
 
+    // Add user message locally
     updateThread((t) => ({
       ...t,
       title: t.messages.length === 0 ? userText.slice(0, 64) : t.title,
@@ -85,7 +91,7 @@ export default function Page() {
     try {
       const payloadMessages = (thread.messages || []).concat({
         id: "temp",
-        role: "user",
+        role: "user" as Role,
         content: userText,
       });
 
@@ -101,6 +107,7 @@ export default function Page() {
       }
 
       const data = (await res.json()) as { reply: string };
+
       updateThread((t) => ({
         ...t,
         messages: [
@@ -108,7 +115,7 @@ export default function Page() {
           { id: uuid(), role: "assistant", content: data.reply || "" },
         ],
       }));
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       updateThread((t) => ({
         ...t,
@@ -150,15 +157,62 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
-        <div className="section-title">Conversation</div>
-
-        <div className="chat-wrap">
-          {(thread?.messages || []).map((m) => (
-            <ChatMessage key={m.id} role={m.role} content={m.content} />
-          ))}
+        {/* Conversation area */}
+        <div className="conversation">
+          {messages.length === 0 ? (
+            <div className="empty-state">
+              <p>Ask an engineering question to start the conversation.</p>
+            </div>
+          ) : (
+            messages.map((m) => (
+              <div
+                key={m.id}
+                className={
+                  "message-row " +
+                  (m.role === "user" ? "message-user" : "message-assistant")
+                }
+              >
+                <div className="message-avatar">
+                  {m.role === "user" ? "You" : "AI"}
+                </div>
+                <div className="message-bubble">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ node, ...props }) => (
+                        <h1 className="msg-h1" {...props} />
+                      ),
+                      h2: ({ node, ...props }) => (
+                        <h2 className="msg-h2" {...props} />
+                      ),
+                      h3: ({ node, ...props }) => (
+                        <h3 className="msg-h3" {...props} />
+                      ),
+                      ul: ({ node, ...props }) => (
+                        <ul className="msg-ul" {...props} />
+                      ),
+                      ol: ({ node, ...props }) => (
+                        <ol className="msg-ol" {...props} />
+                      ),
+                      li: ({ node, ...props }) => (
+                        <li className="msg-li" {...props} />
+                      ),
+                      p: ({ node, ...props }) => (
+                        <p className="msg-p" {...props} />
+                      ),
+                      strong: ({ node, ...props }) => (
+                        <strong className="msg-strong" {...props} />
+                      ),
+                    }}
+                  >
+                    {m.content}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
-                {/* Composer */}
+        {/* Composer */}
         <div className="composer">
           <div className="composer-box">
             {/* Toolbar */}
