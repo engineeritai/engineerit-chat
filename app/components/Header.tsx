@@ -1,13 +1,11 @@
 "use client";
 
-import Link from "next/link";
-
 type HeaderProps = {
   onToggleSidebar: () => void;
 };
 
 export default function Header({ onToggleSidebar }: HeaderProps) {
-  // TEMP: hardcoded for now – later connect to real user/session
+  // TEMP: hardcoded user + plan until we hook Supabase session
   const fullName = "Engineer User";
   const currentPlanId: "assistant" | "engineer" | "professional" | "consultant" =
     "assistant";
@@ -81,7 +79,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
             fontSize: 12,
             fontWeight: 600,
             letterSpacing: 0.2,
-            textTransform: "uppercase",
+            textTransform: "uppercase", // ✅ valid value
           }}
         >
           {badgeLabel}
