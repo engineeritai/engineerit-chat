@@ -81,7 +81,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
             fontSize: 12,
             fontWeight: 600,
             letterSpacing: 0.2,
-            textTransform: "Capitalize Each Word",
+            textTransform: "uppercase",
           }}
         >
           {badgeLabel}
