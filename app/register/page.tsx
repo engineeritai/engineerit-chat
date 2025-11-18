@@ -26,7 +26,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // 1) Create Supabase user (instant login since confirm email is off)
+      // 1) Create Supabase user (will send confirmation email if enabled)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -44,32 +44,27 @@ export default function RegisterPage() {
         return;
       }
 
-      if (!data.user) {
-        setErrorMessage("Unable to create account. Please try again.");
-        setLoading(false);
-        return;
+      // 2) Try to upsert profile row (if user.id is present)
+      if (data.user?.id) {
+        const userId = data.user.id;
+
+        const { error: profileError } = await supabase.from("profiles").upsert({
+          id: userId,
+          full_name: fullName,
+          avatar_url: null,
+          plan: selectedPlanId,
+        });
+
+        if (profileError) {
+          console.error("Profile upsert error:", profileError);
+          // do not block user, only log
+        }
       }
 
-      const userId = data.user.id;
-
-      // 2) Upsert profile row (link auth user -> profiles table)
-      const { error: profileError } = await supabase.from("profiles").upsert({
-        id: userId,
-        full_name: fullName,
-        avatar_url: null,
-        plan: selectedPlanId,
-      });
-
-      if (profileError) {
-        console.error("Profile upsert error:", profileError);
-        // We don't block the user for this, only log it
-      }
-
-      // 3) Show message + redirect to /profile
-      setSuccessMessage("Account created. Redirecting to your profile...");
-      setTimeout(() => {
-        window.location.href = "/profile";
-      }, 1200);
+      // 3) Show message – NO auto login, NO redirect
+      setSuccessMessage(
+        "Account created. Please check your email to verify and activate your account. After verification, use the Login button in the header."
+      );
     } catch (err) {
       console.error(err);
       setErrorMessage("Something went wrong. Please try again.");
@@ -231,7 +226,7 @@ export default function RegisterPage() {
               </label>
             </div>
 
-            {/* Social sign-in (placeholders for future OAuth) */}
+            {/* Social sign-in placeholders */}
             <div className="form-row">
               <div className="section-heading" style={{ marginBottom: 6 }}>
                 Or continue with

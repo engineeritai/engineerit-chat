@@ -56,6 +56,12 @@ export default function Page() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
 
+  // "+" attach mini menu
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+
+  // TODO: later link this to real Supabase profile.plan === "engineer"
+  const isEngineerPlan = true;
+
   // ---------- threads ----------
 
   useEffect(() => {
@@ -260,6 +266,12 @@ export default function Page() {
     return data.reply || "";
   }
 
+  // ---------- Engineer tools helpers ----------
+
+  function insertTemplate(template: string) {
+    setInput((prev) => (prev ? `${prev}\n\n${template}` : template));
+  }
+
   // ---------- send ----------
 
   async function send() {
@@ -270,8 +282,9 @@ export default function Page() {
     const userAttachments = attachments;
     setInput("");
     setAttachments([]);
+    setIsAttachMenuOpen(false);
 
-    // أضف رسالة المستخدم
+    // Add user message
     updateThread((t) => ({
       ...t,
       title:
@@ -300,7 +313,6 @@ export default function Page() {
       );
 
       if (docAttachment) {
-        // 🔥 هنا نستخدم /api/document فعليًا
         const reply = await analyzeDocument(userText, docAttachment.file!);
         updateThread((t) => ({
           ...t,
@@ -327,7 +339,7 @@ export default function Page() {
           ],
         }));
       } else {
-        // تشات نصي عادي
+        // text-only chat
         const payloadMessages = (thread.messages || []).concat({
           id: "temp",
           role: "user" as const,
@@ -405,6 +417,46 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
+        {/* Engineer plan tools bar */}
+        {isEngineerPlan && (
+          <div className="engineer-tools">
+            <span className="engineer-tools-label">Engineer tools:</span>
+            <button
+              type="button"
+              className="engineer-tools-btn"
+              onClick={() =>
+                insertTemplate(
+                  "Generate a detailed engineering technical report, ready to paste into Word, in Arabic and English. Include clear headings: 1) Project Information, 2) Objectives, 3) Methodology, 4) Calculations (summary), 5) Results, 6) Engineering Assessment, 7) Recommendations, 8) Assumptions and limitations. The topic is: [describe project here]."
+                )
+              }
+            >
+              Word: Technical Report
+            </button>
+            <button
+              type="button"
+              className="engineer-tools-btn"
+              onClick={() =>
+                insertTemplate(
+                  "Create an engineering calculation sheet structure suitable for Excel. Use a clear table layout with column headers, formulas description, and units. Sections: Inputs, Assumptions, Step-by-step Calculations, Output Summary, and Checks. The calculation is for: [describe calculation here]. Format the answer so it is easy to copy into Excel."
+                )
+              }
+            >
+              Excel: Calculation Sheet
+            </button>
+            <button
+              type="button"
+              className="engineer-tools-btn"
+              onClick={() =>
+                insertTemplate(
+                  "Create a professional engineering PowerPoint outline in bullet points. Slides: 1) Title & Project Info, 2) Background & Objectives, 3) Methodology, 4) Key Data / Calculations (high level), 5) Results, 6) Risks & Mitigations, 7) Recommendations, 8) Next Steps. The project is: [describe project here]. Provide slide-by-slide bullet points, ready to paste into PowerPoint."
+                )
+              }
+            >
+              PowerPoint: Presentation Outline
+            </button>
+          </div>
+        )}
+
         <div className="conversation">
           {messages.length === 0 ? (
             <div className="empty-state">
@@ -448,55 +500,10 @@ export default function Page() {
           )}
         </div>
 
+        {/* ChatGPT-like composer */}
         <div className="composer">
           <div className="composer-box">
-            <div className="composer-toolbar">
-              <button
-                className="toolbar-btn"
-                title="Attachment menu"
-                onClick={() => alert("More attachment options coming soon")}
-              >
-                +
-              </button>
-
-              <button
-                className="toolbar-btn"
-                title="Upload image"
-                onClick={() =>
-                  document.getElementById("image-upload")?.click()
-                }
-              >
-                📷
-              </button>
-
-              <button
-                className="toolbar-btn"
-                title="Upload file"
-                onClick={() => document.getElementById("file-upload")?.click()}
-              >
-                📄
-              </button>
-
-              <button
-                className="toolbar-btn"
-                title="Scan document"
-                onClick={() => alert("Scan feature coming soon")}
-              >
-                🖨️
-              </button>
-
-              <button
-                className={
-                  "toolbar-btn" + (isRecording ? " toolbar-btn-recording" : "")
-                }
-                title="Press to talk"
-                onMouseDown={startRecording}
-                onMouseUp={stopRecording}
-              >
-                🎤
-              </button>
-            </div>
-
+            {/* attachments pills */}
             {attachments.length > 0 && (
               <div className="attachments">
                 {attachments.map((a) => (
@@ -514,26 +521,91 @@ export default function Page() {
               </div>
             )}
 
-            <textarea
-              className="textarea"
-              placeholder="Ask an engineering question… (Enter to send)"
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                e.target.style.height = "45px";
-                e.target.style.height = e.target.scrollHeight + "px";
-              }}
-              onKeyDown={onKeyDown}
-            />
+            {/* main input row */}
+            <div className="chat-input-row">
+              {/* LEFT: + with mini menu */}
+              <div className="chat-input-left">
+                <button
+                  type="button"
+                  className="chat-input-icon-btn"
+                  aria-label="Add attachments"
+                  onClick={() => setIsAttachMenuOpen((v) => !v)}
+                >
+                  <span className="chat-input-plus">+</span>
+                </button>
 
-            <button
-              className="send-btn"
-              disabled={sending || (!input.trim() && attachments.length === 0)}
-              onClick={send}
-            >
-              {sending ? "Sending…" : "Send"}
-            </button>
+                {isAttachMenuOpen && (
+                  <div className="attach-menu">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAttachMenuOpen(false);
+                        document.getElementById("image-upload")?.click();
+                      }}
+                    >
+                      📷 Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAttachMenuOpen(false);
+                        document.getElementById("file-upload")?.click();
+                      }}
+                    >
+                      📄 Document
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAttachMenuOpen(false);
+                        alert("Scan feature coming soon");
+                      }}
+                    >
+                      🖨️ Scan (coming soon)
+                    </button>
+                  </div>
+                )}
+              </div>
 
+              {/* CENTER: textarea */}
+              <textarea
+                className="textarea"
+                placeholder="Ask an engineering question…"
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  e.target.style.height = "45px";
+                  e.target.style.height = e.target.scrollHeight + "px";
+                }}
+                onKeyDown={onKeyDown}
+              />
+
+              {/* RIGHT: mic + send */}
+              <button
+                type="button"
+                className={
+                  "chat-input-icon-btn" +
+                  (isRecording ? " chat-input-icon-btn-record" : "")
+                }
+                title="Press and hold to talk"
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+              >
+                🎤
+              </button>
+
+              <button
+                type="button"
+                className="chat-input-send-btn"
+                disabled={sending || (!input.trim() && attachments.length === 0)}
+                onClick={send}
+                aria-label="Send message"
+              >
+                ➤
+              </button>
+            </div>
+
+            {/* hidden file inputs */}
             <input
               type="file"
               id="image-upload"

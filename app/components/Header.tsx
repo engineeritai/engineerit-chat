@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 type HeaderProps = {
@@ -10,8 +11,21 @@ type HeaderProps = {
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 export default function Header({ onToggleSidebar }: HeaderProps) {
-  const [fullName, setFullName] = useState("Engineer User");
+  const [fullName, setFullName] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [planId, setPlanId] = useState<PlanId>("assistant");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // avatar menu
+  const [isLoginOpen, setIsLoginOpen] = useState(false); // login dropdown
+
+  // inline login form states
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const router = useRouter();
 
   const planLabels: Record<PlanId, string> = {
     assistant: "Assistant",
@@ -21,18 +35,15 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   };
 
   const planColors: Record<PlanId, string> = {
-    assistant: "#2563eb", // blue
-    engineer: "#f97316", // orange
-    professional: "#0f766e", // teal
-    consultant: "#7c3aed", // purple
+    assistant: "#2563eb",
+    engineer: "#f97316",
+    professional: "#0f766e",
+    consultant: "#7c3aed",
   };
 
-  const badgeLabel = planLabels[planId];
-  const badgeColor = planColors[planId];
-
-  function getInitials(name: string) {
-    if (!name) return "EN";
-    const parts = name.trim().split(" ");
+  function getInitials(name: string | null, fallbackEmail: string | null) {
+    const base = name || fallbackEmail || "U";
+    const parts = base.trim().split(" ");
     if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
     return (
       parts[0].charAt(0).toUpperCase() +
@@ -40,42 +51,101 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     );
   }
 
-  // Load current user + profile from Supabase
+  // Load user from Supabase on mount
   useEffect(() => {
-    const loadHeaderUser = async () => {
+    const load = async () => {
       const {
         data: { user },
-        error,
       } = await supabase.auth.getUser();
 
-      if (error || !user) {
-        // not logged in → keep defaults
+      if (!user) {
+        setIsLoggedIn(false);
         return;
       }
 
-      // Load profile row for plan + full name
-      const { data: profile, error: profileError } = await supabase
+      setIsLoggedIn(true);
+      setEmail(user.email || null);
+
+      const { data: profile } = await supabase
         .from("profiles")
         .select("full_name, plan")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (!profileError && profile) {
-        if (profile.full_name) setFullName(profile.full_name);
-        if (profile.plan) setPlanId(profile.plan as PlanId);
-      } else if (user.user_metadata?.full_name) {
-        // fallback to auth metadata if profile missing
-        setFullName(user.user_metadata.full_name);
-      }
+      if (profile?.full_name) setFullName(profile.full_name);
+      if (profile?.plan) setPlanId(profile.plan as PlanId);
     };
 
-    loadHeaderUser();
+    load();
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsMenuOpen(false);
+    setIsLoggedIn(false);
+    setFullName(null);
+    setEmail(null);
+    router.push("/"); // go back to main
+  };
+
+  const goTo = (path: string) => {
+    setIsMenuOpen(false);
+    router.push(path);
+  };
+
+  const handleInlineLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+    setLoginLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
+
+      if (error) {
+        setLoginError(error.message);
+        setLoginLoading(false);
+        return;
+      }
+
+      if (!data.session || !data.user) {
+        setLoginError("Unable to sign in. Please try again.");
+        setLoginLoading(false);
+        return;
+      }
+
+      // Mark as logged in and load profile
+      setIsLoggedIn(true);
+      setEmail(data.user.email || null);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, plan")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (profile?.full_name) setFullName(profile.full_name);
+      if (profile?.plan) setPlanId(profile.plan as PlanId);
+
+      // Close login dropdown, clear form, go to profile
+      setIsLoginOpen(false);
+      setLoginEmail("");
+      setLoginPassword("");
+      router.push("/profile");
+    } catch (err) {
+      console.error(err);
+      setLoginError("Something went wrong. Please try again.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
 
   return (
     <header className="header">
+      {/* LEFT – menu + logo */}
       <div className="header-left">
-        {/* mobile menu button */}
         <button
           className="mobile-menu-btn"
           onClick={onToggleSidebar}
@@ -86,7 +156,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           <span />
         </button>
 
-        {/* engineerit logo */}
         <div className="brand" aria-label="engineerit">
           <span className="word">
             <span className="engineer">engineer</span>
@@ -95,48 +164,297 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         </div>
       </div>
 
-      {/* RIGHT SIDE: subscription badge + avatar */}
+      {/* RIGHT – login or avatar */}
       <div
         className="header-right"
         style={{
           display: "flex",
           alignItems: "center",
           gap: 12,
+          position: "relative",
         }}
       >
-        {/* Subscription badge */}
-        <span
-          style={{
-            backgroundColor: badgeColor,
-            color: "white",
-            padding: "4px 10px",
-            borderRadius: 999,
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: 0.2,
-          }}
-        >
-          {badgeLabel}
-        </span>
+        {/* NOT LOGGED IN → show Login button with inline panel */}
+        {!isLoggedIn && (
+          <>
+            <button
+              onClick={() => {
+                setIsLoginOpen((v) => !v);
+                setIsMenuOpen(false);
+              }}
+              style={{
+                padding: "6px 14px",
+                backgroundColor: "#2563eb",
+                color: "white",
+                borderRadius: 999,
+                fontSize: 14,
+                fontWeight: 600,
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Login
+            </button>
 
-        {/* Avatar (initials from user name) */}
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: "9999px",
-            backgroundColor: "#e5e7eb",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 600,
-            fontSize: 13,
-            color: "#374151",
-          }}
-        >
-          {getInitials(fullName)}
-        </div>
+            {isLoginOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "110%",
+                  right: 0,
+                  minWidth: 260,
+                  backgroundColor: "white",
+                  borderRadius: 16,
+                  boxShadow: "0 10px 25px rgba(15, 23, 42, 0.18)",
+                  padding: 10,
+                  zIndex: 50,
+                  border: "1px solid rgba(148,163,184,0.3)",
+                }}
+              >
+                <form onSubmit={handleInlineLogin}>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      marginBottom: 8,
+                      color: "#111827",
+                    }}
+                  >
+                    Sign in to engineerit.ai
+                  </div>
+
+                  <div style={{ marginBottom: 6 }}>
+                    <input
+                      type="email"
+                      required
+                      placeholder="Email"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        borderRadius: 8,
+                        border: "1px solid #d1d5db",
+                        fontSize: 13,
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 6 }}>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        borderRadius: 8,
+                        border: "1px solid #d1d5db",
+                        fontSize: 13,
+                      }}
+                    />
+                  </div>
+
+                  {loginError && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "#b91c1c",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {loginError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loginLoading}
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      borderRadius: 999,
+                      border: "none",
+                      backgroundColor: "#2563eb",
+                      color: "white",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {loginLoading ? "Signing in…" : "Sign in"}
+                  </button>
+
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontSize: 11,
+                      color: "#6b7280",
+                    }}
+                  >
+                    Don&apos;t have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLoginOpen(false);
+                        router.push("/register");
+                      }}
+                      style={{
+                        border: "none",
+                        background: "none",
+                        padding: 0,
+                        margin: 0,
+                        color: "#2563eb",
+                        cursor: "pointer",
+                        fontSize: 11,
+                        fontWeight: 500,
+                      }}
+                    >
+                      Register
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* LOGGED IN → show plan badge + avatar with menu */}
+        {isLoggedIn && (
+          <>
+            <span
+              style={{
+                backgroundColor: planColors[planId],
+                color: "white",
+                padding: "4px 10px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              {planLabels[planId]}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsMenuOpen((v) => !v);
+                setIsLoginOpen(false);
+              }}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "9999px",
+                backgroundColor: "#e5e7eb",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 600,
+                fontSize: 13,
+                color: "#374151",
+                border: "none",
+                cursor: "pointer",
+              }}
+              aria-label="Account menu"
+            >
+              {getInitials(fullName, email)}
+            </button>
+
+            {isMenuOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "110%",
+                  right: 0,
+                  minWidth: 220,
+                  backgroundColor: "white",
+                  borderRadius: 16,
+                  boxShadow: "0 10px 25px rgba(15, 23, 42, 0.18)",
+                  padding: 8,
+                  zIndex: 50,
+                  border: "1px solid rgba(148,163,184,0.3)",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "6px 10px 8px",
+                    borderBottom: "1px solid rgba(226,232,240,0.9)",
+                    marginBottom: 4,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "#111827",
+                    }}
+                  >
+                    {fullName || email}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "#6b7280",
+                      marginTop: 2,
+                    }}
+                  >
+                    {planLabels[planId]} plan
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => goTo("/profile")}
+                  style={menuItemStyle}
+                >
+                  My Profile
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => goTo("/register")}
+                  style={menuItemStyle}
+                >
+                  Plans &amp; Registration (Upgrade)
+                </button>
+
+                <div
+                  style={{
+                    borderTop: "1px solid rgba(226,232,240,0.9)",
+                    margin: "4px 0",
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  style={{
+                    ...menuItemStyle,
+                    color: "#b91c1c",
+                    fontWeight: 600,
+                  }}
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </header>
   );
 }
+
+const menuItemStyle: React.CSSProperties = {
+  width: "100%",
+  textAlign: "left",
+  padding: "6px 10px",
+  fontSize: 13,
+  background: "none",
+  border: "none",
+  borderRadius: 10,
+  cursor: "pointer",
+  color: "#111827",
+};

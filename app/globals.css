@@ -178,7 +178,7 @@ button {
 }
 
 /* =========
-   Chat area (similar to ChatGPT)
+   Chat area
    ========= */
 
 .section-title {
@@ -194,40 +194,6 @@ button {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-/* composer at bottom */
-.composer {
-  border-top: 1px solid #e5e7eb;
-  padding: 12px 24px 14px;
-  background: #f9fafb;
-  display: flex;
-  justify-content: center;
-}
-
-/* =========
-   Chat message bubbles
-   ========= */
-
-.chat-message {
-  max-width: 960px;
-  margin: 0 auto;
-  border-radius: 16px;
-  padding: 10px 14px;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.chat-message-user {
-  align-self: flex-end;
-  background: #e5f0ff;
-  border: 1px solid #d1e4ff;
-}
-
-.chat-message-assistant {
-  align-self: flex-start;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
 }
 
 /* =========
@@ -270,9 +236,12 @@ button {
   border: 1px solid #d1d5db;
   padding: 8px 10px;
   font: inherit;
-  resize: vertical;
-  min-height: 60px;
+  resize: none;
+  min-height: 45px;
+  max-height: 200px;
   font-size: 14px;
+  outline: none;
+  background: transparent;
 }
 
 /* =========
@@ -488,7 +457,7 @@ button {
 }
 
 /* =========
-   Smart Assistant bot (المساعد الذكي) on feedback page
+   Smart Assistant bot (feedback page)
    ========= */
 
 .helper-bot-badge {
@@ -632,7 +601,7 @@ button {
   }
 }
 
-/* ==== CHATGPT-like composer ==== */
+/* ==== composer container ==== */
 
 .composer {
   border-top: 1px solid #e5e7eb;
@@ -654,59 +623,8 @@ button {
   gap: 8px;
 }
 
-/* Toolbar row */
-.composer-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+/* Plans icons */
 
-.toolbar-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: white;
-  font-size: 18px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-}
-
-.toolbar-btn:hover {
-  background: #f3f4f6;
-}
-
-/* Textarea */
-.textarea {
-  width: 100%;
-  border: none !important;
-  background: transparent;
-  padding: 8px 0px;
-  font-size: 14px;
-  resize: none;
-  min-height: 45px;
-  max-height: 200px;
-  outline: none;
-}
-
-/* Send button */
-.send-btn {
-  align-self: flex-end;
-  border-radius: 999px;
-  background: #2563eb;
-  color: white;
-  padding: 6px 16px;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.send-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 .plan-card-header {
   display: flex;
   align-items: top;
@@ -735,8 +653,9 @@ button {
 
 /* Consultant Engineer — Green */
 .plan-icon-consultant {
-  background:  #71b1a9;
+  background: #71b1a9;
 }
+
 /* ===== Plans & Registration layout ===== */
 
 .plans-layout {
@@ -776,7 +695,7 @@ button {
 
 /* Title + short description */
 .plan-card__top {
-  min-height: 68px; /* يوحد ارتفاع العنوان/الوصف بين البطاقات */
+  min-height: 68px;
   margin-bottom: 14px;
 }
 
@@ -792,7 +711,7 @@ button {
 
 /* Pricing area */
 .plan-card__pricing {
-  min-height: 60px; /* يصطف السعر في نفس الخط بين الكروت */
+  min-height: 60px;
   margin-bottom: 14px;
 }
 
@@ -828,21 +747,21 @@ button {
   margin-top: 4px;
 }
 
-/* Colors for each tier (full card background) */
+/* Colors for each tier */
 .plan-card--assistant {
-  background: #e5f0ff; /* blue tint */
+  background: #e5f0ff;
 }
 
 .plan-card--engineer {
-  background: #f5f5f7; /* silver/gray */
+  background: #f5f5f7;
 }
 
 .plan-card--pro {
-  background: #fff8e1; /* soft gold */
+  background: #fff8e1;
 }
 
 .plan-card--consultant {
-  background: #f1ecff; /* platinum / violet */
+  background: #f1ecff;
 }
 
 /* Mobile tweaks */
@@ -863,6 +782,7 @@ button {
     min-height: auto;
   }
 }
+
 .sidebar-legal-link {
   color: #2563eb;
   text-decoration: normal;
@@ -870,6 +790,7 @@ button {
 .sidebar-legal-link:hover {
   color: #1d4ed8;
 }
+
 /* ==== Chat conversation layout ==== */
 
 .conversation {
@@ -879,7 +800,7 @@ button {
   background: #f5f5f7;
 }
 
-/* صف الرسالة */
+/* message row */
 .message-row {
   display: flex;
   align-items: flex-start;
@@ -887,18 +808,18 @@ button {
   margin-bottom: 12px;
 }
 
-/* مظهر مختلف للمستخدم والـ AI */
+/* user/assistant bubbles */
 .message-user .message-bubble {
-  background: #e0f2fe; /* أزرق فاتح */
+  background: #e0f2fe;
   border-radius: 18px 18px 4px 18px;
 }
 
 .message-assistant .message-bubble {
-  background: #ffffff; /* أبيض */
+  background: #ffffff;
   border-radius: 18px 18px 18px 4px;
 }
 
-/* Avatar صغير على اليسار */
+/* avatar */
 .message-avatar {
   width: 32px;
   height: 32px;
@@ -912,7 +833,7 @@ button {
   color: #4b5563;
 }
 
-/* فقاعة الرسالة */
+/* bubble */
 .message-bubble {
   max-width: 800px;
   padding: 10px 14px;
@@ -921,65 +842,7 @@ button {
   border: 1px solid #e5e7eb;
 }
 
-/* تنسيق Markdown داخل الرسالة */
-.msg-h1 {
-  font-size: 20px;
-  font-weight: 700;
-  margin: 4px 0 6px;
-}
-.msg-h2 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 4px 0 4px;
-}
-.msg-h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 4px 0 2px;
-}
-
-.msg-p {
-  margin: 2px 0 6px;
-}
-
-.msg-ul,
-.msg-ol {
-  margin: 4px 0 8px 18px;
-}
-
-.msg-li {
-  margin-bottom: 2px;
-}
-
-.msg-strong {
-  font-weight: 600;
-}
-
-/* composer toolbar & attachments */
-
-.composer-toolbar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.toolbar-btn {
-  border: none;
-  background: #f3f4f6;
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.toolbar-btn:hover {
-  background: #e5e7eb;
-}
-
-.toolbar-btn-recording {
-  background: #fee2e2;
-  color: #b91c1c;
-}
+/* attachments in composer */
 
 .attachments {
   display: flex;
@@ -1012,7 +875,7 @@ button {
   font-size: 12px;
 }
 
-/* attachments shown inside messages */
+/* attachments inside messages */
 
 .msg-attachments {
   display: flex;
@@ -1033,4 +896,132 @@ button {
   max-width: 160px;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
+}
+
+/* ==== ChatGPT-like input row ==== */
+
+.chat-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.chat-input-left {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* + button */
+.chat-input-icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-input-icon-btn:hover {
+  background: #e5e7eb;
+}
+
+.chat-input-plus {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 1px solid #6b7280;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  color: #374151;
+}
+
+/* mini attachment menu under + */
+.attach-menu {
+  position: absolute;
+  bottom: 110%;
+  left: 0;
+  min-width: 160px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.18);
+  border: 1px solid #e5e7eb;
+  padding: 6px;
+  z-index: 20;
+}
+
+.attach-menu button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 4px 6px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.attach-menu button:hover {
+  background: #f3f4f6;
+}
+
+/* mic active */
+.chat-input-icon-btn-record {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* send button */
+.chat-input-send-btn {
+  border-radius: 999px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-input-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ==== Engineer tools bar ==== */
+
+.engineer-tools {
+  padding: 8px 24px 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  background: #f9fafb;
+}
+
+.engineer-tools-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.engineer-tools-btn {
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.engineer-tools-btn:hover {
+  background: #e5f0ff;
+  border-color: #93c5fd;
 }
