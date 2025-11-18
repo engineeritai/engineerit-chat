@@ -1,40 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function ProfilePage() {
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
-  // Local profile data (temporary – replace with real user info later)
   const [fullName, setFullName] = useState("Engineer User");
   const [email, setEmail] = useState("you@example.com");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
-  // TEMP subscription level (we'll connect to real data later)
-  const currentPlanId = "assistant"; // "assistant" | "engineer" | "professional" | "consultant"
+  const [planId, setPlanId] = useState<
+    "assistant" | "engineer" | "professional" | "consultant"
+  >("assistant");
 
-  const planLabels = {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const router = useRouter();
+
+  const planLabels: Record<string, string> = {
     assistant: "Assistant Engineer",
     engineer: "Engineer",
     professional: "Professional Engineer",
     consultant: "Consultant Engineer",
-  } as const;
+  };
 
-  const planBadgeColors = {
-    assistant: "#2563eb", // blue
-    engineer: "#f97316", // orange
-    professional: "#0f766e", // teal
-    consultant: "#7c3aed", // purple
-  } as const;
+  const planBadgeColors: Record<string, string> = {
+    assistant: "#2563eb",
+    engineer: "#f97316",
+    professional: "#0f766e",
+    consultant: "#7c3aed",
+  };
 
-  const currentPlanLabel =
-    planLabels[currentPlanId as keyof typeof planLabels] ||
-    "Assistant Engineer";
-  const currentPlanColor =
-    planBadgeColors[currentPlanId as keyof typeof planBadgeColors] ||
-    "#2563eb";
+  const currentPlanLabel = planLabels[planId];
+  const currentPlanColor = planBadgeColors[planId];
 
   function getInitials(name: string) {
     if (!name) return "EN";
@@ -46,13 +52,113 @@ export default function ProfilePage() {
     );
   }
 
-  // Handle image upload
+  // Handle image upload (local preview only for now)
   const handlePhotoUpload = (e: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPhotoPreview(url); // show immediately
+    setPhotoPreview(URL.createObjectURL(file)); // instant display (not yet stored in Supabase)
   };
+
+  // 🔹 Load user + profile from Supabase on first render
+  useEffect(() => {
+    const loadProfile = async () => {
+      setLoading(true);
+      setErrorMessage(null);
+
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error("getUser error:", error);
+        setErrorMessage("Could not load user. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      if (!user) {
+        // Not logged in → go to register
+        router.push("/register");
+        return;
+      }
+
+      setUserId(user.id);
+      setEmail(user.email || "");
+
+      // Load profile row
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("profile load error:", profileError);
+      } else if (profileData) {
+        setFullName(profileData.full_name || "Engineer User");
+        if (profileData.plan) {
+          setPlanId(profileData.plan);
+        }
+        if (profileData.avatar_url) {
+          setPhotoPreview(profileData.avatar_url);
+        }
+      }
+
+      setLoading(false);
+    };
+
+    loadProfile();
+  }, [router]);
+
+  // 🔹 Save changes (update profiles table only for now)
+  const handleSave = async () => {
+    if (!userId) return;
+    setSaving(true);
+    setMessage(null);
+    setErrorMessage(null);
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: fullName,
+          // avatar_url: will be wired when we connect Storage
+          plan: planId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userId);
+
+      if (error) {
+        console.error("profile update error:", error);
+        setErrorMessage("Could not save changes. Please try again.");
+      } else {
+        setMessage("Profile updated.");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Unexpected error while saving.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="app-shell">
+        <NavSidebar
+          isMobileOpen={isSidebarOpenMobile}
+          onCloseMobile={() => setIsSidebarOpenMobile(false)}
+        />
+        <div className="main">
+          <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
+          <div className="page-wrap">
+            <p className="page-subtitle">Loading your profile…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -160,12 +266,12 @@ export default function ProfilePage() {
 
               <div className="form-row">
                 <label>
-                  Email address
+                  Email address (from login)
                   <input
                     className="input"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    readOnly
                   />
                 </label>
               </div>
@@ -182,7 +288,63 @@ export default function ProfilePage() {
                 </label>
               </div>
 
-              <button className="btn">Save changes</button>
+              {/* Plan selector (optional, mostly for debugging now) */}
+              <div className="form-row">
+                <label>
+                  Subscription
+                  <select
+                    className="input"
+                    value={planId}
+                    onChange={(e) =>
+                      setPlanId(
+                        e.target.value as
+                          | "assistant"
+                          | "engineer"
+                          | "professional"
+                          | "consultant"
+                      )
+                    }
+                  >
+                    <option value="assistant">Assistant Engineer</option>
+                    <option value="engineer">Engineer</option>
+                    <option value="professional" disabled>
+                      Professional Engineer (coming soon)
+                    </option>
+                    <option value="consultant" disabled>
+                      Consultant Engineer (coming soon)
+                    </option>
+                  </select>
+                </label>
+              </div>
+
+              {errorMessage && (
+                <p
+                  style={{
+                    color: "#b91c1c",
+                    fontSize: 13,
+                    marginTop: 8,
+                    marginBottom: 0,
+                  }}
+                >
+                  {errorMessage}
+                </p>
+              )}
+              {message && (
+                <p
+                  style={{
+                    color: "#15803d",
+                    fontSize: 13,
+                    marginTop: 8,
+                    marginBottom: 0,
+                  }}
+                >
+                  {message}
+                </p>
+              )}
+
+              <button className="btn" onClick={handleSave} disabled={saving}>
+                {saving ? "Saving…" : "Save changes"}
+              </button>
             </section>
 
             {/* Activity */}

@@ -19,13 +19,14 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
     setLoading(true);
 
     try {
+      // 1) Create Supabase user (instant login since confirm email is off)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -39,14 +40,39 @@ export default function RegisterPage() {
 
       if (error) {
         setErrorMessage(error.message);
-      } else {
-        setSuccessMessage(
-          "Account created. Please check your email to confirm your account."
-        );
+        setLoading(false);
+        return;
       }
-    } catch (err: any) {
-      setErrorMessage("Something went wrong. Please try again.");
+
+      if (!data.user) {
+        setErrorMessage("Unable to create account. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      const userId = data.user.id;
+
+      // 2) Upsert profile row (link auth user -> profiles table)
+      const { error: profileError } = await supabase.from("profiles").upsert({
+        id: userId,
+        full_name: fullName,
+        avatar_url: null,
+        plan: selectedPlanId,
+      });
+
+      if (profileError) {
+        console.error("Profile upsert error:", profileError);
+        // We don't block the user for this, only log it
+      }
+
+      // 3) Show message + redirect to /profile
+      setSuccessMessage("Account created. Redirecting to your profile...");
+      setTimeout(() => {
+        window.location.href = "/profile";
+      }, 1200);
+    } catch (err) {
       console.error(err);
+      setErrorMessage("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
