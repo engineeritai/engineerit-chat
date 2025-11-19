@@ -62,7 +62,7 @@ export default function Page() {
   // TODO: later link this to real Supabase profile.plan === "engineer"
   const isEngineerPlan = true;
 
-  // scroll to bottom ref
+  // auto-scroll
   const conversationEndRef = useRef<HTMLDivElement | null>(null);
 
   // ---------- threads ----------
@@ -87,7 +87,6 @@ export default function Page() {
 
   const messages: Message[] = thread?.messages ?? [];
 
-  // auto scroll to bottom on new messages
   useEffect(() => {
     if (conversationEndRef.current) {
       conversationEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -139,7 +138,7 @@ export default function Page() {
     e.target.value = "";
   };
 
-  // الملفات: فقط نضيف للـ attachments ونترك send() يتعامل مع الـ API
+  // الملفات: نضيفها فقط للـ attachments، الإرسال يتم من دالة send()
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -295,7 +294,7 @@ export default function Page() {
     setAttachments([]);
     setIsAttachMenuOpen(false);
 
-    // Add user message
+    // add user message
     updateThread((t) => ({
       ...t,
       title:
@@ -428,7 +427,7 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
-        {/* Engineer plan tools bar */}
+        {/* Engineer tools bar */}
         {isEngineerPlan && (
           <div className="engineer-tools">
             <span className="engineer-tools-label">Engineer tools:</span>
@@ -509,11 +508,10 @@ export default function Page() {
               </div>
             ))
           )}
-          {/* anchor for auto-scroll */}
           <div ref={conversationEndRef} />
         </div>
 
-        {/* ChatGPT-like composer */}
+        {/* composer – واسعة مثل السابق، + يسار، ميك وسهم يمين */}
         <div className="composer">
           <div className="composer-box">
             {/* attachments pills */}
@@ -534,49 +532,51 @@ export default function Page() {
               </div>
             )}
 
-            {/* main input row – مثل ChatGPT: عريض ومتجاوب */}
+            {/* main input row */}
             <div className="chat-input-row">
               {/* LEFT: + with mini menu */}
-              <button
-                type="button"
-                className="chat-input-icon-btn"
-                aria-label="Add attachments"
-                onClick={() => setIsAttachMenuOpen((v) => !v)}
-              >
-                <span className="chat-input-plus">+</span>
-              </button>
+              <div className="chat-input-left">
+                <button
+                  type="button"
+                  className="chat-input-icon-btn"
+                  aria-label="Add attachments"
+                  onClick={() => setIsAttachMenuOpen((v) => !v)}
+                >
+                  <span className="chat-input-plus">+</span>
+                </button>
 
-              {isAttachMenuOpen && (
-                <div className="attach-menu">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAttachMenuOpen(false);
-                      document.getElementById("image-upload")?.click();
-                    }}
-                  >
-                    📷 Photo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAttachMenuOpen(false);
-                      document.getElementById("file-upload")?.click();
-                    }}
-                  >
-                    📄 Document
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAttachMenuOpen(false);
-                      alert("Scan feature coming soon");
-                    }}
-                  >
-                    🖨️ Scan (coming soon)
-                  </button>
-                </div>
-              )}
+                {isAttachMenuOpen && (
+                  <div className="attach-menu">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAttachMenuOpen(false);
+                        document.getElementById("image-upload")?.click();
+                      }}
+                    >
+                      📷 Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAttachMenuOpen(false);
+                        document.getElementById("file-upload")?.click();
+                      }}
+                    >
+                      📄 Document
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAttachMenuOpen(false);
+                        alert("Scan feature coming soon");
+                      }}
+                    >
+                      🖨️ Scan (coming soon)
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* CENTER: textarea عريضة */}
               <textarea
@@ -591,7 +591,7 @@ export default function Page() {
                 onKeyDown={onKeyDown}
               />
 
-              {/* RIGHT: mic + send متجاورين مثل ChatGPT */}
+              {/* RIGHT: mic + send */}
               <button
                 type="button"
                 className={
