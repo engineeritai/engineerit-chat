@@ -62,6 +62,9 @@ export default function Page() {
   // TODO: later link this to real Supabase profile.plan === "engineer"
   const isEngineerPlan = true;
 
+  // scroll to bottom ref
+  const conversationEndRef = useRef<HTMLDivElement | null>(null);
+
   // ---------- threads ----------
 
   useEffect(() => {
@@ -83,6 +86,13 @@ export default function Page() {
   );
 
   const messages: Message[] = thread?.messages ?? [];
+
+  // auto scroll to bottom on new messages
+  useEffect(() => {
+    if (conversationEndRef.current) {
+      conversationEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages.length]);
 
   function onNewChat() {
     const t: Thread = {
@@ -129,7 +139,7 @@ export default function Page() {
     e.target.value = "";
   };
 
-  // هنا التصحيح المهم: نضيف الملف إلى attachments فقط
+  // الملفات: فقط نضيف للـ attachments ونترك send() يتعامل مع الـ API
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -499,6 +509,8 @@ export default function Page() {
               </div>
             ))
           )}
+          {/* anchor for auto-scroll */}
+          <div ref={conversationEndRef} />
         </div>
 
         {/* ChatGPT-like composer */}
@@ -522,94 +534,88 @@ export default function Page() {
               </div>
             )}
 
-            {/* main input row */}
+            {/* main input row – مثل ChatGPT: عريض ومتجاوب */}
             <div className="chat-input-row">
               {/* LEFT: + with mini menu */}
-              <div className="chat-input-left">
-                <button
-                  type="button"
-                  className="chat-input-icon-btn"
-                  aria-label="Add attachments"
-                  onClick={() => setIsAttachMenuOpen((v) => !v)}
-                >
-                  <span className="chat-input-plus">+</span>
-                </button>
+              <button
+                type="button"
+                className="chat-input-icon-btn"
+                aria-label="Add attachments"
+                onClick={() => setIsAttachMenuOpen((v) => !v)}
+              >
+                <span className="chat-input-plus">+</span>
+              </button>
 
-                {isAttachMenuOpen && (
-                  <div className="attach-menu">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAttachMenuOpen(false);
-                        document.getElementById("image-upload")?.click();
-                      }}
-                    >
-                      📷 Photo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAttachMenuOpen(false);
-                        document.getElementById("file-upload")?.click();
-                      }}
-                    >
-                      📄 Document
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAttachMenuOpen(false);
-                        alert("Scan feature coming soon");
-                      }}
-                    >
-                      🖨️ Scan (coming soon)
-                    </button>
-                  </div>
-                )}
-              </div>
+              {isAttachMenuOpen && (
+                <div className="attach-menu">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAttachMenuOpen(false);
+                      document.getElementById("image-upload")?.click();
+                    }}
+                  >
+                    📷 Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAttachMenuOpen(false);
+                      document.getElementById("file-upload")?.click();
+                    }}
+                  >
+                    📄 Document
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAttachMenuOpen(false);
+                      alert("Scan feature coming soon");
+                    }}
+                  >
+                    🖨️ Scan (coming soon)
+                  </button>
+                </div>
+              )}
 
-              {/* CENTER: textarea */}
-              <div className="chat-input-center">
-                <textarea
-                  className="textarea"
-                  placeholder="Send a message to engineerit.ai…"
-                  value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value);
-                    e.target.style.height = "45px";
-                    e.target.style.height = e.target.scrollHeight + "px";
-                  }}
-                  onKeyDown={onKeyDown}
-                />
-              </div>
+              {/* CENTER: textarea عريضة */}
+              <textarea
+                className="textarea"
+                placeholder="Send a message to engineerit.ai…"
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  e.target.style.height = "45px";
+                  e.target.style.height = e.target.scrollHeight + "px";
+                }}
+                onKeyDown={onKeyDown}
+              />
 
-              {/* RIGHT: mic + send (مثل شات GPT: أيقونتين في اليمين) */}
-              <div className="chat-input-right">
-                <button
-                  type="button"
-                  className={
-                    "chat-input-icon-btn mic-btn" +
-                    (isRecording ? " chat-input-icon-btn-record" : "")
-                  }
-                  title="Hold to talk"
-                  onMouseDown={startRecording}
-                  onMouseUp={stopRecording}
-                >
-                  🎤
-                </button>
+              {/* RIGHT: mic + send متجاورين مثل ChatGPT */}
+              <button
+                type="button"
+                className={
+                  "chat-input-icon-btn" +
+                  (isRecording ? " chat-input-icon-btn-record" : "")
+                }
+                title="Hold to talk"
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+              >
+                🎤
+              </button>
 
-                <button
-                  type="button"
-                  className="chat-input-send-btn"
-                  disabled={
-                    sending || (!input.trim() && attachments.length === 0)
-                  }
-                  onClick={send}
-                  aria-label="Send message"
-                >
-                  ➤
-                </button>
-              </div>
+              <button
+                type="button"
+                className="chat-input-send-btn"
+                disabled={
+                  sending || (!input.trim() && attachments.length === 0)
+                }
+                onClick={send}
+                aria-label="Send message"
+              >
+                ➤
+              </button>
             </div>
 
             {/* hidden file inputs */}
