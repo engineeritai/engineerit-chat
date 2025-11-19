@@ -1052,43 +1052,39 @@ body {
     margin-right: 0;
   }
 }
-/* ===== Mobile chat layout fix ===== */
+/* ===== Mobile chat layout fix (updated) ===== */
 
-/* خلي الهيكل كله بارتفاع الشاشة، واللي يتحرك فقط وسط الصفحة */
+/* نخلي الهيكل مرن بدون قفل ارتفاع الصفحة */
 .app-shell {
   display: flex;
-  height: 100vh;
-  overflow: hidden;
+  flex-direction: row;
+  min-height: 100vh;        /* بدل height:100vh */
+  /* لا نستخدم overflow:hidden هنا */
 }
 
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
-/* منطقة المحادثة فقط هي اللي تسكرول */
+/* المحادثة نفسها سكّرول، لكن الصفحة ككل تقدر تنزل لو في محتوى أكثر */
 .conversation {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* الشات أسفل الصفحة دائماً */
-.composer {
-  border-top: 1px solid #eee;
+/* لا نقفل الـ scroll العمودي على مستوى الصفحة */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;       /* فقط نمنع الحركة يمين/يسار */
 }
 
-/* منع الحركة يمين/يسار وضبط العرض على الجوال */
+/* تحسين عرض الشات على الموبايل بدون قفل الصفحة */
 @media (max-width: 768px) {
-  html,
-  body {
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
-  }
-
   .conversation,
   .composer,
   .composer-box,
@@ -1098,7 +1094,7 @@ body {
     box-sizing: border-box;
   }
 
-  /* منع الزوم التلقائي في iOS عند الضغط على خانة الكتابة */
+  /* منع الزوم في iOS عند الضغط على خانة الكتابة */
   .textarea {
     font-size: 16px;
   }
