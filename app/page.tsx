@@ -129,47 +129,24 @@ export default function Page() {
     e.target.value = "";
   };
 
-  const handleFileChange = async (
-  event: React.ChangeEvent<HTMLInputElement>
-) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
+  // هنا التصحيح المهم: نضيف الملف إلى attachments فقط
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  try {
-    // نجهز الـ FormData بنفس الأسماء التي يقرأها الـ API
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append(
-      "question",
-      "Summarize this engineering document with headings, bullet points, important numbers/dates, and key recommendations."
-    );
+    setAttachments((prev) => [
+      ...prev,
+      {
+        id: uuid(),
+        name: file.name,
+        type: "file",
+        url: file.name,
+        file,
+      },
+    ]);
 
-    // نرسل على /api/document (نفس route.ts اللي أرسلته لي)
-    const res = await fetch("/api/document", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!res.ok) {
-      console.error("Upload failed:", await res.text());
-      return;
-    }
-
-    const data = await res.json();
-
-    // هنا يرجع لك الرد في data.reply
-    console.log("Document reply from API:", data.reply);
-
-    // 👇 لو عندك نظام رسائل (setMessages ...) تقدر تضيفه هنا لاحقاً
-    // حالياً نخليه console.log فقط للتأكد أنه شغال
-  } catch (error) {
-    console.error("handleFileChange error:", error);
-  } finally {
-    // نفضّي قيمة input لو حاب
-    event.target.value = "";
-  }
-};
-
+    e.target.value = "";
+  };
 
   const removeAttachment = (id: string) => {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
@@ -592,41 +569,47 @@ export default function Page() {
               </div>
 
               {/* CENTER: textarea */}
-              <textarea
-                className="textarea"
-                placeholder="Ask an engineering question…"
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  e.target.style.height = "45px";
-                  e.target.style.height = e.target.scrollHeight + "px";
-                }}
-                onKeyDown={onKeyDown}
-              />
+              <div className="chat-input-center">
+                <textarea
+                  className="textarea"
+                  placeholder="Send a message to engineerit.ai…"
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    e.target.style.height = "45px";
+                    e.target.style.height = e.target.scrollHeight + "px";
+                  }}
+                  onKeyDown={onKeyDown}
+                />
+              </div>
 
-              {/* RIGHT: mic + send */}
-              <button
-                type="button"
-                className={
-                  "chat-input-icon-btn" +
-                  (isRecording ? " chat-input-icon-btn-record" : "")
-                }
-                title="Press and hold to talk"
-                onMouseDown={startRecording}
-                onMouseUp={stopRecording}
-              >
-                🎤
-              </button>
+              {/* RIGHT: mic + send (مثل شات GPT: أيقونتين في اليمين) */}
+              <div className="chat-input-right">
+                <button
+                  type="button"
+                  className={
+                    "chat-input-icon-btn mic-btn" +
+                    (isRecording ? " chat-input-icon-btn-record" : "")
+                  }
+                  title="Hold to talk"
+                  onMouseDown={startRecording}
+                  onMouseUp={stopRecording}
+                >
+                  🎤
+                </button>
 
-              <button
-                type="button"
-                className="chat-input-send-btn"
-                disabled={sending || (!input.trim() && attachments.length === 0)}
-                onClick={send}
-                aria-label="Send message"
-              >
-                ➤
-              </button>
+                <button
+                  type="button"
+                  className="chat-input-send-btn"
+                  disabled={
+                    sending || (!input.trim() && attachments.length === 0)
+                  }
+                  onClick={send}
+                  aria-label="Send message"
+                >
+                  ➤
+                </button>
+              </div>
             </div>
 
             {/* hidden file inputs */}
