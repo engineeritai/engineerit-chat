@@ -1025,3 +1025,30 @@ button {
   background: #e5f0ff;
   border-color: #93c5fd;
 }
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* يمنع الحركة يمين/يسار في الصفحة */
+}
+/* تأكد أن الشات وكل مكوناته لا تتعدى عرض الشاشة على الجوال */
+.conversation,
+.composer,
+.composer-box,
+.chat-input-row {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* في الشاشات الصغيرة: قلل الحواف الجانبية */
+@media (max-width: 768px) {
+  .main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .composer-box {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
