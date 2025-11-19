@@ -1,357 +1,264 @@
+// app/profile/page.tsx
 "use client";
 
-import { useEffect, useState, ChangeEvent } from "react";
-import Header from "../components/Header";
-import NavSidebar from "../components/NavSidebar";
+import { useEffect, useState, ChangeEvent, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-type ProfileRow = {
-  id: string;
+type Profile = {
   full_name: string | null;
   avatar_url: string | null;
+  subscription_tier: string | null;
 };
 
-export default function ProfilePage() {
-  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
+const SUBSCRIPTION_LEVELS = ["free", "plus", "pro", "premium"];
 
+export default function ProfilePage() {
+  const router = useRouter();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  const [fullName, setFullName] = useState("");
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const loadProfile = async () => {
+    setLoading(true);
+    setMessage(null);
 
-  const [statusMsg, setStatusMsg] = useState<string | null>(null);
-  const [statusError, setStatusError] = useState<string | null>(null);
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-  // Subscription level (for now from metadata / default)
-  const [planLabel, setPlanLabel] = useState("Visitor");
+    if (userError || !user) {
+      setMessage("Please login first.");
+      setLoading(false);
+      router.push("/auth/login");
+      return;
+    }
 
-  useEffect(() => {
-    async function loadProfile() {
-      setLoading(true);
-      setStatusMsg(null);
-      setStatusError(null);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("full_name, avatar_url, subscription_tier")
+      .eq("id", user.id)
+      .single();
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+    if (error && error.code !== "PGRST116") {
+      setMessage(error.message);
+      setLoading(false);
+      return;
+    }
 
-      if (userError || !user) {
-        setStatusError("You are not logged in. Please sign in first.");
+    if (!data) {
+      // create empty profile row
+      const { error: insertError } = await supabase
+        .from("profiles")
+        .insert({ id: user.id });
+
+      if (insertError) {
+        setMessage(insertError.message);
         setLoading(false);
         return;
       }
 
-      setUserId(user.id);
-      setUserEmail(user.email ?? null);
-
-      const metaName =
-        (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name;
-      const metaPlan = (user.user_metadata as any)?.plan_id;
-
-      if (metaPlan === "assistant") setPlanLabel("Assistant Engineer");
-      else if (metaPlan === "engineer") setPlanLabel("Engineer");
-      else if (metaPlan === "professional") setPlanLabel("Professional Engineer");
-      else if (metaPlan === "consultant") setPlanLabel("Consultant Engineer");
-
-      // Load from profiles table
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single<ProfileRow>();
-
-      if (error && error.code !== "PGRST116") {
-        console.error(error);
-        setStatusError("Could not load your profile.");
-      }
-
-      if (data) {
-        setFullName(data.full_name || metaName || "");
-        if (data.avatar_url) setPhotoPreview(data.avatar_url);
-      } else {
-        // No row yet – use metadata as initial
-        setFullName(metaName || "");
-      }
-
-      setLoading(false);
+      setProfile({
+        full_name: user.email ?? "",
+        avatar_url: null,
+        subscription_tier: "free",
+      });
+    } else {
+      setProfile({
+        full_name: data.full_name,
+        avatar_url: data.avatar_url,
+        subscription_tier: data.subscription_tier ?? "free",
+      });
     }
 
-    void loadProfile();
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function getInitials(name: string | null | undefined, email?: string | null) {
-    const src = name && name.trim().length > 0 ? name : email || "";
-    if (!src) return "EN";
-    const parts = src.trim().split(" ");
-    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setMessage("Not logged in.");
+      return;
+    }
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+    const filePath = fileName;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      setMessage(uploadError.message);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
+
+    const publicUrl = publicUrlData.publicUrl;
+
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ avatar_url: publicUrl })
+      .eq("id", user.id);
+
+    if (updateError) {
+      setMessage(updateError.message);
+      return;
+    }
+
+    setProfile((prev) =>
+      prev ? { ...prev, avatar_url: publicUrl } : prev
+    );
+    setMessage("Profile image updated.");
+  };
+
+  const handleSave = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+
+    setSaving(true);
+    setMessage(null);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setMessage("Not logged in.");
+      setSaving(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        full_name: profile.full_name,
+        subscription_tier: profile.subscription_tier,
+      })
+      .eq("id", user.id);
+
+    if (error) {
+      setMessage(error.message);
+    } else {
+      setMessage("Profile saved.");
+    }
+
+    setSaving(false);
+  };
+
+  if (loading || !profile) {
     return (
-      parts[0].charAt(0).toUpperCase() +
-      parts[parts.length - 1].charAt(0).toUpperCase()
+      <div className="min-h-screen flex items-center justify-center bg-[#020617]">
+        <p className="text-sm text-gray-300">Loading profile...</p>
+      </div>
     );
   }
 
-  const handlePhotoUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
-    e.target.value = "";
-  };
-
-  async function handleSave() {
-    if (!userId) return;
-    setSaving(true);
-    setStatusMsg(null);
-    setStatusError(null);
-
-    try {
-      let avatarUrl: string | null = photoPreview || null;
-
-      // If a new file is selected, upload to Storage
-      if (photoFile) {
-        const ext = photoFile.name.split(".").pop();
-        const path = `${userId}/${Date.now()}.${ext || "jpg"}`;
-
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("avatars")
-          .upload(path, photoFile, {
-            upsert: true,
-          });
-
-        if (uploadError) {
-          console.error(uploadError);
-          throw new Error("Failed to upload profile photo.");
-        }
-
-        const { data: publicUrlData } = supabase.storage
-          .from("avatars")
-          .getPublicUrl(uploadData.path);
-
-        avatarUrl = publicUrlData.publicUrl;
-        setPhotoPreview(avatarUrl);
-      }
-
-      const { error: upsertError } = await supabase.from("profiles").upsert(
-        {
-          id: userId,
-          full_name: fullName,
-          avatar_url: avatarUrl,
-        },
-        { onConflict: "id" }
-      );
-
-      if (upsertError) {
-        console.error(upsertError);
-        throw new Error("Failed to save profile.");
-      }
-
-      setStatusMsg("Profile saved successfully.");
-      setPhotoFile(null);
-    } catch (err: any) {
-      setStatusError(
-        err?.message || "Something went wrong while saving your profile."
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
-    <div className="app-shell">
-      <NavSidebar
-        isMobileOpen={isSidebarOpenMobile}
-        onCloseMobile={() => setIsSidebarOpenMobile(false)}
-      />
+    <div className="min-h-screen bg-[#020617] flex justify-center py-10">
+      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-black/70 p-8">
+        <h1 className="text-xl font-semibold text-white mb-4">
+          Account profile
+        </h1>
 
-      <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
+        <form onSubmit={handleSave} className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-sm text-gray-300">
+              {profile.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.avatar_url}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                "No image"
+              )}
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">
+                Profile picture
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="text-xs text-gray-300"
+              />
+            </div>
+          </div>
 
-        <div className="page-wrap">
-          <h1 className="page-title">My Profile</h1>
-          <p className="page-subtitle">
-            Manage your engineerit.ai account details and activity.
-          </p>
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">
+              Full name
+            </label>
+            <input
+              type="text"
+              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+              value={profile.full_name ?? ""}
+              onChange={(e) =>
+                setProfile((prev) =>
+                  prev
+                    ? { ...prev, full_name: e.target.value }
+                    : prev
+                )
+              }
+            />
+          </div>
 
-          {loading ? (
-            <p style={{ fontSize: 14 }}>Loading your profile…</p>
-          ) : (
-            <>
-              {/* Top summary card */}
-              <section className="card" style={{ marginBottom: 24 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                    gap: 16,
-                  }}
-                >
-                  {/* Avatar */}
-                  <div
-                    style={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: "999px",
-                      overflow: "hidden",
-                      backgroundColor: "#e5e7eb",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: 600,
-                      fontSize: 20,
-                      color: "#374151",
-                    }}
-                  >
-                    {photoPreview ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={photoPreview}
-                        alt="Profile"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    ) : (
-                      getInitials(fullName, userEmail)
-                    )}
-                  </div>
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">
+              Subscription level
+            </label>
+            <select
+              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
+              value={profile.subscription_tier ?? "free"}
+              onChange={(e) =>
+                setProfile((prev) =>
+                  prev
+                    ? { ...prev, subscription_tier: e.target.value }
+                    : prev
+                )
+              }
+            >
+              {SUBSCRIPTION_LEVELS.map((lvl) => (
+                <option key={lvl} value={lvl}>
+                  {lvl}
+                </option>
+              ))}
+            </select>
+          </div>
 
-                  {/* Name + email + plan */}
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    <div style={{ fontSize: 18, fontWeight: 600 }}>
-                      {fullName || "Your name"}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 14,
-                        color: "#6b7280",
-                        marginBottom: 8,
-                      }}
-                    >
-                      {userEmail ?? "No email"}
-                    </div>
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full rounded-lg bg-white text-black font-semibold py-2 text-sm disabled:opacity-60"
+          >
+            {saving ? "Saving..." : "Save profile"}
+          </button>
+        </form>
 
-                    <span
-                      style={{
-                        backgroundColor: "#2563eb",
-                        color: "white",
-                        padding: "4px 10px",
-                        borderRadius: 999,
-                        fontSize: 12,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {planLabel}
-                    </span>
-                  </div>
-                </div>
-              </section>
-
-              <div className="profile-grid">
-                {/* Personal info */}
-                <section className="card">
-                  <h2 className="section-heading">Personal information</h2>
-
-                  <div className="form-row">
-                    <label>
-                      Full name
-                      <input
-                        className="input"
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="form-row">
-                    <label>
-                      Email address
-                      <input
-                        className="input"
-                        type="email"
-                        value={userEmail ?? ""}
-                        disabled
-                      />
-                    </label>
-                  </div>
-
-                  <div className="form-row">
-                    <label>
-                      Profile photo
-                      <input
-                        className="input"
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoUpload}
-                      />
-                    </label>
-                  </div>
-
-                  {statusMsg && (
-                    <p
-                      style={{
-                        fontSize: 13,
-                        color: "#047857",
-                        marginBottom: 8,
-                      }}
-                    >
-                      {statusMsg}
-                    </p>
-                  )}
-                  {statusError && (
-                    <p
-                      style={{
-                        fontSize: 13,
-                        color: "#b91c1c",
-                        marginBottom: 8,
-                      }}
-                    >
-                      {statusError}
-                    </p>
-                  )}
-
-                  <button className="btn" onClick={handleSave} disabled={saving}>
-                    {saving ? "Saving…" : "Save changes"}
-                  </button>
-                </section>
-
-                {/* Activity placeholder */}
-                <section className="card">
-                  <h2 className="section-heading">Activity</h2>
-                  <p className="page-subtitle" style={{ marginBottom: 10 }}>
-                    Soon you will see:
-                  </p>
-                  <ul className="plan-features">
-                    <li>Previous chat histories</li>
-                    <li>Generated Word / Excel / PowerPoint files</li>
-                    <li>
-                      Engineering drawings and projects processed in
-                      engineerit.ai
-                    </li>
-                  </ul>
-                  <p
-                    style={{
-                      fontSize: 12,
-                      color: "#6b7280",
-                      marginTop: 8,
-                    }}
-                  >
-                    (Integration with real storage and history will be added in
-                    the Engineer / Pro plans.)
-                  </p>
-                </section>
-              </div>
-            </>
-          )}
-        </div>
+        {message && (
+          <p className="mt-4 text-xs text-gray-300">{message}</p>
+        )}
       </div>
     </div>
   );
