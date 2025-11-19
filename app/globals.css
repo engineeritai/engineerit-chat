@@ -1052,3 +1052,54 @@ body {
     margin-right: 0;
   }
 }
+/* ===== Mobile chat layout fix ===== */
+
+/* خلي الهيكل كله بارتفاع الشاشة، واللي يتحرك فقط وسط الصفحة */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* منطقة المحادثة فقط هي اللي تسكرول */
+.conversation {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* الشات أسفل الصفحة دائماً */
+.composer {
+  border-top: 1px solid #eee;
+}
+
+/* منع الحركة يمين/يسار وضبط العرض على الجوال */
+@media (max-width: 768px) {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  .conversation,
+  .composer,
+  .composer-box,
+  .chat-input-row {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* منع الزوم التلقائي في iOS عند الضغط على خانة الكتابة */
+  .textarea {
+    font-size: 16px;
+  }
+}
