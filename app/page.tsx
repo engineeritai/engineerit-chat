@@ -129,23 +129,47 @@ export default function Page() {
     e.target.value = "";
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileChange = async (
+  event: React.ChangeEvent<HTMLInputElement>
+) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
 
-    const url = URL.createObjectURL(file);
-    setAttachments((prev) => [
-      ...prev,
-      {
-        id: uuid(),
-        name: file.name,
-        type: "file",
-        url,
-        file,
-      },
-    ]);
-    e.target.value = "";
-  };
+  try {
+    // نجهز الـ FormData بنفس الأسماء التي يقرأها الـ API
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append(
+      "question",
+      "Summarize this engineering document with headings, bullet points, important numbers/dates, and key recommendations."
+    );
+
+    // نرسل على /api/document (نفس route.ts اللي أرسلته لي)
+    const res = await fetch("/api/document", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      console.error("Upload failed:", await res.text());
+      return;
+    }
+
+    const data = await res.json();
+
+    // هنا يرجع لك الرد في data.reply
+    console.log("Document reply from API:", data.reply);
+
+    // 👇 لو عندك نظام رسائل (setMessages ...) تقدر تضيفه هنا لاحقاً
+    // حالياً نخليه console.log فقط للتأكد أنه شغال
+  } catch (error) {
+    console.error("handleFileChange error:", error);
+  } finally {
+    // نفضّي قيمة input لو حاب
+    event.target.value = "";
+  }
+};
+
 
   const removeAttachment = (id: string) => {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
@@ -616,7 +640,7 @@ export default function Page() {
             <input
               type="file"
               id="file-upload"
-              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,mpp,.dwg,.dxf"
               hidden
               onChange={handleFileChange}
             />
