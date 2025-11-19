@@ -153,7 +153,7 @@ export default function LoginPage() {
 
         <p style={smallTextStyle}>
           Don&apos;t have an account?{" "}
-          <Link href="/auth/register" style={linkStyle}>
+          <Link href="/register" style={linkStyle}>
             Register →
           </Link>
         </p>
