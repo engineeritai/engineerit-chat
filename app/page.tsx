@@ -430,7 +430,7 @@ export default function Page() {
                 )
               }
             >
-              Word: Technical Report
+              Technical Report
             </button>
             <button
               type="button"
@@ -441,7 +441,7 @@ export default function Page() {
                 )
               }
             >
-              Excel: Calculation Sheet
+              Calculation Sheet
             </button>
             <button
               type="button"
@@ -452,7 +452,7 @@ export default function Page() {
                 )
               }
             >
-              PowerPoint: Presentation Outline
+              Presentation Outline
             </button>
           </div>
         )}
