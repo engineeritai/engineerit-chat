@@ -429,43 +429,100 @@ export default function Page() {
 
         {/* Engineer tools bar */}
         {isEngineerPlan && (
-          <div className="engineer-tools">
-            <span className="engineer-tools-label">Engineer tools:</span>
-            <button
-              type="button"
-              className="engineer-tools-btn"
-              onClick={() =>
-                insertTemplate(
-                  "Generate a detailed engineering technical report, ready to paste into Word, in Arabic and English. Include clear headings: 1) Project Information, 2) Objectives, 3) Methodology, 4) Calculations (summary), 5) Results, 6) Engineering Assessment, 7) Recommendations, 8) Assumptions and limitations. The topic is: [describe project here]."
-                )
-              }
-            >
-              Technical Report
-            </button>
-            <button
-              type="button"
-              className="engineer-tools-btn"
-              onClick={() =>
-                insertTemplate(
-                  "Create an engineering calculation sheet structure suitable for Excel. Use a clear table layout with column headers, formulas description, and units. Sections: Inputs, Assumptions, Step-by-step Calculations, Output Summary, and Checks. The calculation is for: [describe calculation here]. Format the answer so it is easy to copy into Excel."
-                )
-              }
-            >
-              Calculation Sheet
-            </button>
-            <button
-              type="button"
-              className="engineer-tools-btn"
-              onClick={() =>
-                insertTemplate(
-                  "Create a professional engineering PowerPoint outline in bullet points. Slides: 1) Title & Project Info, 2) Background & Objectives, 3) Methodology, 4) Key Data / Calculations (high level), 5) Results, 6) Risks & Mitigations, 7) Recommendations, 8) Next Steps. The project is: [describe project here]. Provide slide-by-slide bullet points, ready to paste into PowerPoint."
-                )
-              }
-            >
-              Presentation Outline
-            </button>
-          </div>
-        )}
+  <div className="engineer-tools">
+    <span className="engineer-tools-label">Engineer tools:</span>
+
+    {/* 1) Professional Technical Report */}
+    <button
+      type="button"
+      className="engineer-tools-btn"
+      onClick={() =>
+        insertTemplate(
+          [
+            "Prepare a professional engineering technical report for the following topic: [describe the project].",
+            "",
+            "The report should be clear, concise, and ready to paste into Word. Use the following structure:",
+            "1) Executive Summary",
+            "2) Project Background and Scope",
+            "3) Objectives and Performance Requirements",
+            "4) Methodology and Design Basis",
+            "5) Data, Calculations, and Engineering Assumptions (high-level summary)",
+            "6) Results and Technical Findings",
+            "7) Engineering Assessment and Discussion",
+            "8) Risks, Constraints, and Limitations",
+            "9) Conclusions and Recommendations",
+            "",
+            "Write in a formal engineering style. Use bullet points where appropriate and highlight any critical values, standards, or codes."
+          ].join("\n")
+        )
+      }
+    >
+      Technical Report
+    </button>
+
+    {/* 2) Calculation Sheet for Excel */}
+    <button
+      type="button"
+      className="engineer-tools-btn"
+      onClick={() =>
+        insertTemplate(
+          [
+            "Design a structured engineering calculation sheet suitable for Excel for the following calculation: [describe the calculation].",
+            "",
+            "The output should be easy to copy into Excel. Use the following sections and clearly mark each block:",
+            "1) Inputs and Design Parameters (with units and typical/default values)",
+            "2) Assumptions and References (codes, standards, design manuals)",
+            "3) Step-by-Step Calculation Procedure (each step with short explanation)",
+            "4) Output Summary (key results, governing values, pass/fail criteria)",
+            "5) Sensitivity or Check Calculations (if relevant)",
+            "",
+            "For each variable, specify:",
+            "- Symbol",
+            "- Description",
+            "- Unit",
+            "- Cell reference suggestion (e.g., A2, B5)",
+            "",
+            "Use a clean tabular layout so it can be copied directly into Excel."
+          ].join("\n")
+        )
+      }
+    >
+      Calculation Sheet
+    </button>
+
+    {/* 3) Board-Level Presentation Outline */}
+    <button
+      type="button"
+      className="engineer-tools-btn"
+      onClick={() =>
+        insertTemplate(
+          [
+            "Create a board-level engineering PowerPoint outline for the following project: [describe the project].",
+            "",
+            "The audience is senior management / decision-makers. Use clear, high-impact bullet points. Slides:",
+            "1) Title, Project Owner, and Date",
+            "2) Problem Statement and Business Context",
+            "3) Objectives and Success Criteria",
+            "4) Technical Approach / Methodology (high-level only)",
+            "5) Key Data, Findings, and Engineering Insights",
+            "6) Risks, Constraints, and Mitigation Measures",
+            "7) Options Comparison (if applicable) and Recommendation",
+            "8) Implementation Plan and Next Steps",
+            "",
+            "For each slide, provide:",
+            "- Slide title",
+            "- 3–6 concise bullet points",
+            "- Any critical numbers or graphics that should be shown.",
+            "",
+            "Keep the language suitable for non-technical executives while still technically accurate."
+          ].join("\n")
+        )
+      }
+    >
+      Presentation Outline
+    </button>
+  </div>
+)}
 
         <div className="conversation">
           {messages.length === 0 ? (
