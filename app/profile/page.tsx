@@ -1,264 +1,451 @@
-// app/profile/page.tsx
 "use client";
 
-import { useEffect, useState, ChangeEvent, FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Header from "../components/Header";
+import NavSidebar from "../components/NavSidebar";
 import { supabase } from "@/lib/supabaseClient";
 
-type Profile = {
-  full_name: string | null;
-  avatar_url: string | null;
-  subscription_tier: string | null;
-};
-
-const SUBSCRIPTION_LEVELS = ["free", "plus", "pro", "premium"];
+type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
+
+  const [fullName, setFullName] = useState("Engineer User");
+  const [email, setEmail] = useState("you@example.com");
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  const [planId, setPlanId] = useState<PlanId>("assistant");
+
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const loadProfile = async () => {
-    setLoading(true);
-    setMessage(null);
+  const router = useRouter();
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      setMessage("Please login first.");
-      setLoading(false);
-      router.push("/auth/login");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("full_name, avatar_url, subscription_tier")
-      .eq("id", user.id)
-      .single();
-
-    if (error && error.code !== "PGRST116") {
-      setMessage(error.message);
-      setLoading(false);
-      return;
-    }
-
-    if (!data) {
-      // create empty profile row
-      const { error: insertError } = await supabase
-        .from("profiles")
-        .insert({ id: user.id });
-
-      if (insertError) {
-        setMessage(insertError.message);
-        setLoading(false);
-        return;
-      }
-
-      setProfile({
-        full_name: user.email ?? "",
-        avatar_url: null,
-        subscription_tier: "free",
-      });
-    } else {
-      setProfile({
-        full_name: data.full_name,
-        avatar_url: data.avatar_url,
-        subscription_tier: data.subscription_tier ?? "free",
-      });
-    }
-
-    setLoading(false);
+  const planLabels: Record<PlanId, string> = {
+    assistant: "Assistant Engineer (Free)",
+    engineer: "Engineer",
+    professional: "Professional Engineer",
+    consultant: "Consultant Engineer",
   };
 
-  useEffect(() => {
-    loadProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const planBadgeColors: Record<PlanId, string> = {
+    assistant: "#2563eb",
+    engineer: "#f97316",
+    professional: "#0f766e",
+    consultant: "#7c3aed",
+  };
 
-  const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0]) return;
-    const file = e.target.files[0];
+  const planDescriptions: Record<PlanId, string> = {
+    assistant:
+      "Default free plan. Basic chat access and limited engineering assistance.",
+    engineer:
+      "Advanced engineer-focused tools, document analysis, and priority responses. Will be activated after official launch.",
+    professional:
+      "Extended tools for senior engineers, team collaboration, and advanced reporting. Coming soon.",
+    consultant:
+      "High-end tier for consulting engineers with advanced features and extended limits. Coming soon.",
+  };
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setMessage("Not logged in.");
-      return;
-    }
+  const currentPlanLabel = planLabels[planId];
+  const currentPlanColor = planBadgeColors[planId];
+  const currentPlanDescription = planDescriptions[planId];
 
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-    const filePath = fileName;
-
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      setMessage(uploadError.message);
-      return;
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from("avatars")
-      .getPublicUrl(filePath);
-
-    const publicUrl = publicUrlData.publicUrl;
-
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ avatar_url: publicUrl })
-      .eq("id", user.id);
-
-    if (updateError) {
-      setMessage(updateError.message);
-      return;
-    }
-
-    setProfile((prev) =>
-      prev ? { ...prev, avatar_url: publicUrl } : prev
+  function getInitials(name: string) {
+    if (!name) return "EN";
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (
+      parts[0].charAt(0).toUpperCase() +
+      parts[parts.length - 1].charAt(0).toUpperCase()
     );
-    setMessage("Profile image updated.");
+  }
+
+  // Load profile from Supabase (user + profiles row)
+  useEffect(() => {
+    async function loadProfile() {
+      setLoading(true);
+      setErrorMessage(null);
+
+      try {
+        // نقرأ الـ session أولاً
+        const { data: sessionData } = await supabase.auth.getSession();
+
+        if (!sessionData?.session) {
+          // غير مسجل → إعادة توجيه لصفحة الدخول
+          router.replace("/auth/login");
+          return;
+        }
+
+        const user = sessionData.session.user;
+
+        if (!user) {
+          router.replace("/auth/login");
+          return;
+        }
+
+        setUserId(user.id);
+        setEmail(user.email ?? "");
+
+        // قراءة صف الـ profile
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Profile load error:", profileError);
+        } else if (profileData) {
+          setFullName(profileData.full_name || "Engineer User");
+
+          if (profileData.plan) {
+            setPlanId(profileData.plan as PlanId);
+          }
+
+          if (profileData.avatar_url) {
+            setPhotoPreview(profileData.avatar_url);
+          }
+        }
+      } catch (err) {
+        console.error("Profile loading error:", err);
+        setErrorMessage("Could not load profile. Please try again.");
+      } finally {
+        // مهم جدًا: إيقاف حالة التحميل مهما حصل
+        setLoading(false);
+      }
+    }
+
+    void loadProfile();
+  }, [router]);
+
+  const handlePhotoUpload = (e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoPreview(URL.createObjectURL(file));
   };
 
-  const handleSave = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!profile) return;
+  const handleSave = async () => {
+    if (!userId) return;
 
     setSaving(true);
     setMessage(null);
+    setErrorMessage(null);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setMessage("Not logged in.");
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: fullName,
+          plan: planId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userId);
+
+      if (error) {
+        console.error("Profile update error:", error);
+        setErrorMessage("Could not save changes. Please try again.");
+      } else {
+        setMessage("Profile updated.");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Unexpected error while saving.");
+    } finally {
       setSaving(false);
-      return;
     }
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        full_name: profile.full_name,
-        subscription_tier: profile.subscription_tier,
-      })
-      .eq("id", user.id);
-
-    if (error) {
-      setMessage(error.message);
-    } else {
-      setMessage("Profile saved.");
-    }
-
-    setSaving(false);
   };
 
-  if (loading || !profile) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#020617]">
-        <p className="text-sm text-gray-300">Loading profile...</p>
+      <div className="app-shell">
+        <NavSidebar
+          isMobileOpen={isSidebarOpenMobile}
+          onCloseMobile={() => setIsSidebarOpenMobile(false)}
+        />
+        <div className="main">
+          <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
+          <div className="page-wrap">
+            <p className="page-subtitle">Loading your profile…</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] flex justify-center py-10">
-      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-black/70 p-8">
-        <h1 className="text-xl font-semibold text-white mb-4">
-          Account profile
-        </h1>
+    <div className="app-shell">
+      <NavSidebar
+        isMobileOpen={isSidebarOpenMobile}
+        onCloseMobile={() => setIsSidebarOpenMobile(false)}
+      />
 
-        <form onSubmit={handleSave} className="space-y-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-white/10 overflow-hidden flex items-center justify-center text-sm text-gray-300">
-              {profile.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={profile.avatar_url}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                "No image"
-              )}
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 block mb-1">
-                Profile picture
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="text-xs text-gray-300"
-              />
-            </div>
-          </div>
+      <div className="main">
+        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">
-              Full name
-            </label>
-            <input
-              type="text"
-              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-              value={profile.full_name ?? ""}
-              onChange={(e) =>
-                setProfile((prev) =>
-                  prev
-                    ? { ...prev, full_name: e.target.value }
-                    : prev
-                )
-              }
-            />
-          </div>
+        <div className="page-wrap">
+          <h1 className="page-title">My Profile</h1>
+          <p className="page-subtitle">
+            Update your personal information and review your current plan in
+            engineerit.ai.
+          </p>
 
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">
-              Subscription level
-            </label>
-            <select
-              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-white/40"
-              value={profile.subscription_tier ?? "free"}
-              onChange={(e) =>
-                setProfile((prev) =>
-                  prev
-                    ? { ...prev, subscription_tier: e.target.value }
-                    : prev
-                )
-              }
+          {/* Top section (Avatar + Plan Badge) */}
+          <section className="card" style={{ marginBottom: 24 }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 16,
+              }}
             >
-              {SUBSCRIPTION_LEVELS.map((lvl) => (
-                <option key={lvl} value={lvl}>
-                  {lvl}
-                </option>
-              ))}
-            </select>
+              {/* Avatar */}
+              <div
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: "9999px",
+                  overflow: "hidden",
+                  backgroundColor: "#e5e7eb",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 600,
+                  fontSize: 20,
+                  color: "#374151",
+                }}
+              >
+                {photoPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photoPreview}
+                    alt="Profile"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  getInitials(fullName)
+                )}
+              </div>
+
+              {/* Name + email + plan badge */}
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontSize: 18, fontWeight: 600 }}>
+                  {fullName || "Your Name"}
+                </div>
+                <div
+                  style={{ fontSize: 14, color: "#6b7280", marginBottom: 8 }}
+                >
+                  {email}
+                </div>
+
+                <span
+                  style={{
+                    backgroundColor: currentPlanColor,
+                    color: "white",
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  {currentPlanLabel}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* Main sections */}
+          <div className="profile-grid">
+            {/* Personal Info */}
+            <section className="card">
+              <h2 className="section-heading">Personal information</h2>
+
+              <div className="form-row">
+                <label>
+                  Full name
+                  <input
+                    className="input"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div className="form-row">
+                <label>
+                  Email address
+                  <input
+                    className="input"
+                    type="email"
+                    value={email}
+                    readOnly
+                  />
+                </label>
+              </div>
+
+              <div className="form-row">
+                <label>
+                  Profile photo
+                  <input
+                    className="input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                  />
+                </label>
+              </div>
+
+              {/* Subscription selector (for now internal / pre-launch) */}
+              <div className="form-row">
+                <label>
+                  Subscription (pre-launch)
+                  <select
+                    className="input"
+                    value={planId}
+                    onChange={(e) =>
+                      setPlanId(
+                        e.target.value as
+                          | "assistant"
+                          | "engineer"
+                          | "professional"
+                          | "consultant"
+                      )
+                    }
+                  >
+                    <option value="assistant">
+                      Assistant Engineer (Free default)
+                    </option>
+                    <option value="engineer">
+                      Engineer (will be activated after launch)
+                    </option>
+                    <option value="professional" disabled>
+                      Professional Engineer (coming soon)
+                    </option>
+                    <option value="consultant" disabled>
+                      Consultant Engineer (coming soon)
+                    </option>
+                  </select>
+                </label>
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: "#6b7280",
+                    marginTop: 4,
+                    marginBottom: 0,
+                  }}
+                >
+                  Plan changes will be fully controlled by the subscription
+                  system after official launch.
+                </p>
+              </div>
+
+              {errorMessage && (
+                <p
+                  style={{
+                    color: "#b91c1c",
+                    fontSize: 13,
+                    marginTop: 8,
+                    marginBottom: 0,
+                  }}
+                >
+                  {errorMessage}
+                </p>
+              )}
+              {message && (
+                <p
+                  style={{
+                    color: "#15803d",
+                    fontSize: 13,
+                    marginTop: 8,
+                    marginBottom: 0,
+                  }}
+                >
+                  {message}
+                </p>
+              )}
+
+              <button className="btn" onClick={handleSave} disabled={saving}>
+                {saving ? "Saving…" : "Save changes"}
+              </button>
+            </section>
+
+            {/* Current Subscription Details */}
+            <section className="card">
+              <h2 className="section-heading">Current subscription</h2>
+
+              <p className="page-subtitle" style={{ marginBottom: 8 }}>
+                This reflects your current plan stored in engineerit.ai profile.
+              </p>
+
+              <div
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: "1px solid #e5e7eb",
+                  marginBottom: 12,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    marginBottom: 4,
+                  }}
+                >
+                  {currentPlanLabel}
+                </div>
+                <div style={{ fontSize: 13, color: "#6b7280" }}>
+                  {currentPlanDescription}
+                </div>
+              </div>
+
+              <ul className="plan-features">
+                {planId === "assistant" && (
+                  <>
+                    <li>Basic AI chat access</li>
+                    <li>Limited engineering assistance</li>
+                    <li>Single-user usage</li>
+                  </>
+                )}
+                {planId === "engineer" && (
+                  <>
+                    <li>Engineer tools bar inside chat</li>
+                    <li>Document analysis for engineering files</li>
+                    <li>Priority responses and extended limits</li>
+                  </>
+                )}
+                {planId === "professional" && (
+                  <>
+                    <li>Advanced reporting and templates</li>
+                    <li>Team and project-level features</li>
+                    <li>Higher limits and priority support</li>
+                  </>
+                )}
+                {planId === "consultant" && (
+                  <>
+                    <li>Full access to all features</li>
+                    <li>Consulting-focused workflows</li>
+                    <li>Maximum limits and premium support</li>
+                  </>
+                )}
+              </ul>
+
+              <p style={{ fontSize: 12, color: "#6b7280", marginTop: 8 }}>
+                Detailed billing and subscription management will be enabled
+                approximately two weeks after the official launch.
+              </p>
+            </section>
           </div>
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full rounded-lg bg-white text-black font-semibold py-2 text-sm disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save profile"}
-          </button>
-        </form>
-
-        {message && (
-          <p className="mt-4 text-xs text-gray-300">{message}</p>
-        )}
+        </div>
       </div>
     </div>
   );
