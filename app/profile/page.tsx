@@ -165,7 +165,6 @@ export default function ProfilePage() {
       const payload = {
         id: userId,
         full_name: fullName,
-        email: email,
         plan: planId,
         avatar_url: photoPreview ?? null,
         updated_at: new Date().toISOString(),
