@@ -18,10 +18,9 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // avatar menu
-  const [isLoginOpen, setIsLoginOpen] = useState(false); // login dropdown
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
-  // inline login form states
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
@@ -53,7 +52,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     );
   }
 
-  // Load user + profile from Supabase on mount
+  // تحميل المستخدم والبروفايل من Supabase + fallback من localStorage
   useEffect(() => {
     const load = async () => {
       const {
@@ -72,23 +71,44 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
       setIsLoggedIn(true);
       setEmail(user.email || null);
 
+      let loadedFromDb = false;
+
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("full_name, plan, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (error) {
-        console.error("Header profile load error:", error);
-        return;
+      if (!error && profile) {
+        loadedFromDb = true;
+        if (profile.full_name) setFullName(profile.full_name);
+        if (profile.plan) setPlanId(profile.plan as PlanId);
+        if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
       }
 
-      if (profile?.full_name) setFullName(profile.full_name);
-      if (profile?.plan) setPlanId(profile.plan as PlanId);
-      if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
+      // لو لم يتم التحميل من DB، نحاول من localStorage
+      if (!loadedFromDb) {
+        try {
+          const cached = window.localStorage.getItem("engineerit_profile");
+          if (cached) {
+            const parsed = JSON.parse(cached) as {
+              fullName?: string;
+              email?: string;
+              avatarUrl?: string;
+              planId?: PlanId;
+            };
+            if (parsed.fullName) setFullName(parsed.fullName);
+            if (parsed.email && !email) setEmail(parsed.email);
+            if (parsed.avatarUrl) setAvatarUrl(parsed.avatarUrl);
+            if (parsed.planId) setPlanId(parsed.planId);
+          }
+        } catch (err) {
+          console.error("Failed to read cached profile in header:", err);
+        }
+      }
     };
 
-    load();
+    void load();
   }, []);
 
   const handleLogout = async () => {
@@ -99,7 +119,14 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     setEmail(null);
     setAvatarUrl(null);
     setPlanId("assistant");
-    router.push("/"); // go back to main
+
+    try {
+      window.localStorage.removeItem("engineerit_profile");
+    } catch {
+      // ignore
+    }
+
+    router.push("/");
   };
 
   const goTo = (path: string) => {
@@ -130,11 +157,9 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         return;
       }
 
-      // Mark as logged in
       setIsLoggedIn(true);
       setEmail(data.user.email || null);
 
-      // Load profile after login (including avatar)
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("full_name, plan, avatar_url")
@@ -145,9 +170,23 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         if (profile.full_name) setFullName(profile.full_name);
         if (profile.plan) setPlanId(profile.plan as PlanId);
         if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
+
+        // نخزن أيضاً في localStorage
+        try {
+          window.localStorage.setItem(
+            "engineerit_profile",
+            JSON.stringify({
+              fullName: profile.full_name,
+              email: data.user.email,
+              avatarUrl: profile.avatar_url,
+              planId: profile.plan as PlanId,
+            })
+          );
+        } catch (err) {
+          console.error("Failed to cache profile after login:", err);
+        }
       }
 
-      // Close login dropdown, clear form, go to profile
       setIsLoginOpen(false);
       setLoginEmail("");
       setLoginPassword("");
@@ -192,7 +231,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           position: "relative",
         }}
       >
-        {/* NOT LOGGED IN → Login button + inline panel */}
+        {/* NOT LOGGED IN */}
         {!isLoggedIn && (
           <>
             <button
@@ -339,7 +378,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           </>
         )}
 
-        {/* LOGGED IN → plan badge + avatar with menu */}
+        {/* LOGGED IN */}
         {isLoggedIn && (
           <>
             <span

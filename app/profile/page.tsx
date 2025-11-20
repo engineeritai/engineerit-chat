@@ -64,7 +64,7 @@ export default function ProfilePage() {
     );
   }
 
-  // تحميل بيانات المستخدم + البروفايل من Supabase
+  // تحميل بيانات المستخدم + البروفايل من Supabase أو localStorage
   useEffect(() => {
     async function loadProfile() {
       setLoading(true);
@@ -88,6 +88,8 @@ export default function ProfilePage() {
         setUserId(user.id);
         setEmail(user.email ?? "");
 
+        let loadedFromDb = false;
+
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("*")
@@ -97,15 +99,34 @@ export default function ProfilePage() {
         if (profileError) {
           console.error("Profile load error:", profileError);
         } else if (profileData) {
+          loadedFromDb = true;
           setFullName(profileData.full_name || "Engineer User");
-
           if (profileData.plan) {
             setPlanId(profileData.plan as PlanId);
           }
-
           if (profileData.avatar_url) {
-            // نخزنها مباشرة كـ preview (سواء كانت data URL أو URL عادي)
             setPhotoPreview(profileData.avatar_url);
+          }
+        }
+
+        // لو ما قدرنا نحمل من DB، نحاول من localStorage كنسخة احتياطية
+        if (!loadedFromDb) {
+          try {
+            const cached = window.localStorage.getItem("engineerit_profile");
+            if (cached) {
+              const parsed = JSON.parse(cached) as {
+                fullName?: string;
+                email?: string;
+                avatarUrl?: string;
+                planId?: PlanId;
+              };
+              if (parsed.fullName) setFullName(parsed.fullName);
+              if (parsed.email) setEmail(parsed.email);
+              if (parsed.avatarUrl) setPhotoPreview(parsed.avatarUrl);
+              if (parsed.planId) setPlanId(parsed.planId);
+            }
+          } catch (err) {
+            console.error("Failed to read cached profile:", err);
           }
         }
       } catch (err) {
@@ -119,7 +140,7 @@ export default function ProfilePage() {
     void loadProfile();
   }, [router]);
 
-  // رفع الصورة (حاليًا: فقط نعمل preview ونخزنها كنص في avatar_url عند الحفظ)
+  // رفع الصورة → نخزنها كـ data URL في الذاكرة، ثم نحفظها في Supabase + localStorage عند الحفظ
   const handlePhotoUpload = (e: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -127,13 +148,12 @@ export default function ProfilePage() {
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
-      // نخزنها في الذاكرة + سنحفظها كما هي في avatar_url
       setPhotoPreview(result);
     };
     reader.readAsDataURL(file);
   };
 
-  // حفظ البيانات في جدول profiles
+  // حفظ البيانات في جدول profiles + تخزين نسخة في localStorage
   const handleSave = async () => {
     if (!userId) return;
 
@@ -142,21 +162,37 @@ export default function ProfilePage() {
     setErrorMessage(null);
 
     try {
-      // نستخدم upsert بدلاً من update حتى لو لم يكن هناك صف سابق يتم إنشاؤه
-      const { error } = await supabase.from("profiles").upsert({
+      const payload = {
         id: userId,
         full_name: fullName,
         email: email,
         plan: planId,
         avatar_url: photoPreview ?? null,
         updated_at: new Date().toISOString(),
-      });
+      };
+
+      const { error } = await supabase.from("profiles").upsert(payload);
 
       if (error) {
         console.error("Profile upsert error:", error);
         setErrorMessage("Could not save changes. Please try again.");
       } else {
         setMessage("Profile updated.");
+
+        // نخزن نسخة في localStorage لاستخدامها في الهيدر والتحميل السريع
+        try {
+          window.localStorage.setItem(
+            "engineerit_profile",
+            JSON.stringify({
+              fullName,
+              email,
+              avatarUrl: photoPreview,
+              planId,
+            })
+          );
+        } catch (err) {
+          console.error("Failed to cache profile:", err);
+        }
       }
     } catch (err) {
       console.error(err);
