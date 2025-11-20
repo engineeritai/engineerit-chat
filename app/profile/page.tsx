@@ -64,18 +64,16 @@ export default function ProfilePage() {
     );
   }
 
-  // Load profile from Supabase (user + profiles row)
+  // تحميل بيانات المستخدم + البروفايل من Supabase
   useEffect(() => {
     async function loadProfile() {
       setLoading(true);
       setErrorMessage(null);
 
       try {
-        // نقرأ الـ session أولاً
         const { data: sessionData } = await supabase.auth.getSession();
 
         if (!sessionData?.session) {
-          // غير مسجل → إعادة توجيه لصفحة الدخول
           router.replace("/auth/login");
           return;
         }
@@ -90,7 +88,6 @@ export default function ProfilePage() {
         setUserId(user.id);
         setEmail(user.email ?? "");
 
-        // قراءة صف الـ profile
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("*")
@@ -107,6 +104,7 @@ export default function ProfilePage() {
           }
 
           if (profileData.avatar_url) {
+            // نخزنها مباشرة كـ preview (سواء كانت data URL أو URL عادي)
             setPhotoPreview(profileData.avatar_url);
           }
         }
@@ -114,7 +112,6 @@ export default function ProfilePage() {
         console.error("Profile loading error:", err);
         setErrorMessage("Could not load profile. Please try again.");
       } finally {
-        // مهم جدًا: إيقاف حالة التحميل مهما حصل
         setLoading(false);
       }
     }
@@ -122,12 +119,21 @@ export default function ProfilePage() {
     void loadProfile();
   }, [router]);
 
+  // رفع الصورة (حاليًا: فقط نعمل preview ونخزنها كنص في avatar_url عند الحفظ)
   const handlePhotoUpload = (e: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPhotoPreview(URL.createObjectURL(file));
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      // نخزنها في الذاكرة + سنحفظها كما هي في avatar_url
+      setPhotoPreview(result);
+    };
+    reader.readAsDataURL(file);
   };
 
+  // حفظ البيانات في جدول profiles
   const handleSave = async () => {
     if (!userId) return;
 
@@ -136,17 +142,18 @@ export default function ProfilePage() {
     setErrorMessage(null);
 
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          full_name: fullName,
-          plan: planId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", userId);
+      // نستخدم upsert بدلاً من update حتى لو لم يكن هناك صف سابق يتم إنشاؤه
+      const { error } = await supabase.from("profiles").upsert({
+        id: userId,
+        full_name: fullName,
+        email: email,
+        plan: planId,
+        avatar_url: photoPreview ?? null,
+        updated_at: new Date().toISOString(),
+      });
 
       if (error) {
-        console.error("Profile update error:", error);
+        console.error("Profile upsert error:", error);
         setErrorMessage("Could not save changes. Please try again.");
       } else {
         setMessage("Profile updated.");
@@ -304,7 +311,7 @@ export default function ProfilePage() {
                 </label>
               </div>
 
-              {/* Subscription selector (for now internal / pre-launch) */}
+              {/* Subscription selector (pre-launch) */}
               <div className="form-row">
                 <label>
                   Subscription (pre-launch)
