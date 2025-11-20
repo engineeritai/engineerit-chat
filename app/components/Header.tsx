@@ -14,6 +14,8 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const [fullName, setFullName] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [planId, setPlanId] = useState<PlanId>("assistant");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false); // avatar menu
@@ -51,7 +53,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     );
   }
 
-  // Load user from Supabase on mount
+  // Load user + profile from Supabase on mount
   useEffect(() => {
     const load = async () => {
       const {
@@ -60,20 +62,30 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
       if (!user) {
         setIsLoggedIn(false);
+        setFullName(null);
+        setEmail(null);
+        setAvatarUrl(null);
+        setPlanId("assistant");
         return;
       }
 
       setIsLoggedIn(true);
       setEmail(user.email || null);
 
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from("profiles")
-        .select("full_name, plan")
+        .select("full_name, plan, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
 
+      if (error) {
+        console.error("Header profile load error:", error);
+        return;
+      }
+
       if (profile?.full_name) setFullName(profile.full_name);
       if (profile?.plan) setPlanId(profile.plan as PlanId);
+      if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
     };
 
     load();
@@ -85,6 +97,8 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     setIsLoggedIn(false);
     setFullName(null);
     setEmail(null);
+    setAvatarUrl(null);
+    setPlanId("assistant");
     router.push("/"); // go back to main
   };
 
@@ -116,18 +130,22 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         return;
       }
 
-      // Mark as logged in and load profile
+      // Mark as logged in
       setIsLoggedIn(true);
       setEmail(data.user.email || null);
 
-      const { data: profile } = await supabase
+      // Load profile after login (including avatar)
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("full_name, plan")
+        .select("full_name, plan, avatar_url")
         .eq("id", data.user.id)
         .maybeSingle();
 
-      if (profile?.full_name) setFullName(profile.full_name);
-      if (profile?.plan) setPlanId(profile.plan as PlanId);
+      if (!profileError && profile) {
+        if (profile.full_name) setFullName(profile.full_name);
+        if (profile.plan) setPlanId(profile.plan as PlanId);
+        if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
+      }
 
       // Close login dropdown, clear form, go to profile
       setIsLoginOpen(false);
@@ -174,7 +192,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           position: "relative",
         }}
       >
-        {/* NOT LOGGED IN → show Login button with inline panel */}
+        {/* NOT LOGGED IN → Login button + inline panel */}
         {!isLoggedIn && (
           <>
             <button
@@ -321,7 +339,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           </>
         )}
 
-        {/* LOGGED IN → show plan badge + avatar with menu */}
+        {/* LOGGED IN → plan badge + avatar with menu */}
         {isLoggedIn && (
           <>
             <span
@@ -347,7 +365,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                 width: 32,
                 height: 32,
                 borderRadius: "9999px",
-                backgroundColor: "#e5e7eb",
+                backgroundColor: avatarUrl ? "transparent" : "#e5e7eb",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -356,10 +374,24 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                 color: "#374151",
                 border: "none",
                 cursor: "pointer",
+                overflow: "hidden",
               }}
               aria-label="Account menu"
             >
-              {getInitials(fullName, email)}
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt="Profile"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                getInitials(fullName, email)
+              )}
             </button>
 
             {isMenuOpen && (
