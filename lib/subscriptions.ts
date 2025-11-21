@@ -18,13 +18,13 @@ export const plans = [
     name: "Pro",
     price: 39,
     description: "Advanced AI tools",
-    active: false, // Coming Soon
+    active: true,
   },
   {
     id: "consultant",
     name: "Consultant",
     price: 79,
     description: "Full professional suite",
-    active: false, // Coming Soon
+    active: true,
   },
 ];

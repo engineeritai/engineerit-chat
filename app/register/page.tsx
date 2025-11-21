@@ -58,7 +58,6 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // 1) Create Supabase user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -84,7 +83,6 @@ export default function RegisterPage() {
 
       const userId = data.user.id;
 
-      // 2) Upsert profile row
       const { error: profileError } = await supabase.from("profiles").upsert({
         id: userId,
         full_name: fullName,
@@ -94,10 +92,8 @@ export default function RegisterPage() {
 
       if (profileError) {
         console.error("Profile upsert error:", profileError);
-        // we don't block the user, just log it
       }
 
-      // 3) Show success + redirect
       setSuccessMessage("Account created. Redirecting to your profile...");
       setTimeout(() => {
         window.location.href = "/profile";
@@ -131,15 +127,7 @@ export default function RegisterPage() {
           </p>
 
           {/* ===== PLANS GRID ===== */}
-          <div
-            className="plans-grid"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-              gap: "24px",
-              alignItems: "stretch",
-            }}
-          >
+          <div className="plans-grid">
             {PLANS.map((plan) => {
               const isSelected = plan.id === selectedPlanId;
               const color = PLAN_COLORS[plan.id] || "#2563eb";
@@ -156,16 +144,16 @@ export default function RegisterPage() {
                     borderRadius: 24,
                     border: `1px solid ${isSelected ? color : "#e5e7eb"}`,
                     background: "white",
-                    padding: 24,
+                    padding: 20,
                     textAlign: "left",
                     cursor: "pointer",
                     display: "flex",
                     flexDirection: "column",
                     height: "100%",
                     boxShadow: isSelected
-                      ? "0 14px 35px rgba(15,23,42,0.18)"
-                      : "0 8px 20px rgba(15,23,42,0.06)",
-                    transform: isSelected ? "translateY(-2px)" : "none",
+                      ? "0 12px 30px rgba(15,23,42,0.18)"
+                      : "0 6px 18px rgba(15,23,42,0.06)",
+                    transform: isSelected ? "translateY(-1px)" : "none",
                     transition:
                       "box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease",
                   }}
@@ -175,22 +163,22 @@ export default function RegisterPage() {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      marginBottom: 14,
+                      marginBottom: 10,
                     }}
                   >
                     <div
                       style={{
-                        width: 44,
-                        height: 44,
+                        width: 40,
+                        height: 40,
                         borderRadius: "50%",
                         backgroundColor: color,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: 700,
                         color: "white",
-                        marginRight: 14,
+                        marginRight: 12,
                         flexShrink: 0,
                       }}
                     >
@@ -200,7 +188,7 @@ export default function RegisterPage() {
                     <div>
                       <div
                         style={{
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: 700,
                           color: "#111827",
                           marginBottom: 2,
@@ -210,7 +198,7 @@ export default function RegisterPage() {
                       </div>
                       <div
                         style={{
-                          fontSize: 14,
+                          fontSize: 13,
                           color: "#6b7280",
                           lineHeight: 1.35,
                         }}
@@ -221,10 +209,10 @@ export default function RegisterPage() {
                   </div>
 
                   {/* PRICE */}
-                  <div style={{ marginBottom: 12 }}>
+                  <div style={{ marginBottom: 8 }}>
                     <div
                       style={{
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: 700,
                         color,
                       }}
@@ -233,7 +221,7 @@ export default function RegisterPage() {
                     </div>
                     <div
                       style={{
-                        fontSize: 13,
+                        fontSize: 12,
                         color: "#6b7280",
                         marginTop: 2,
                       }}
@@ -248,14 +236,14 @@ export default function RegisterPage() {
                       listStyle: "disc",
                       paddingLeft: 20,
                       margin: 0,
-                      marginTop: 4,
-                      fontSize: 14,
+                      marginTop: 2,
+                      fontSize: 13,
                       color: "#374151",
                       flexGrow: 1,
                     }}
                   >
                     {plan.features.map((f) => (
-                      <li key={f} style={{ marginBottom: 6 }}>
+                      <li key={f} style={{ marginBottom: 4 }}>
                         {f}
                       </li>
                     ))}
@@ -349,7 +337,6 @@ export default function RegisterPage() {
                   <span>Apple</span>
                 </button>
 
-                {/* Placeholders for future providers */}
                 <button
                   type="button"
                   className="social-btn social-btn-microsoft"
