@@ -34,9 +34,9 @@ export const PLANS: Plan[] = [
     name: "Engineer",
     shortName: "E",
     tagline: "For practicing engineers who need faster documentation.",
-    //  SAR 19 / month, 10% yearly discount → 205 SAR / year
-    priceMonthly: `${SAR_SYMBOL} 19 / month`,
-    priceYearly: `${SAR_SYMBOL} 205 / year (10% off)`,
+    //  SAR 19 / month, 10% yearly discount → SAR 205 / year
+    priceMonthly: `SAR 19 / month`,
+    priceYearly: `SAR 205 / year (10% off)`,
     features: [
       "Everything in Assistant Engineer",
       "Export Word, Excel, PowerPoint outputs",
@@ -50,9 +50,9 @@ export const PLANS: Plan[] = [
     name: "Professional Engineer",
     shortName: "P",
     tagline: "For senior engineers and lead designers.",
-    //  SAR 41 / month, 13% yearly discount → 428 SAR / year
-    priceMonthly: `${SAR_SYMBOL} 41 / month`,
-    priceYearly: `${SAR_SYMBOL} 428 / year (13% off)`,
+    //  SAR 41 / month, 13% yearly discount → SAR 428 / year
+    priceMonthly: `SAR 41 / month`,
+    priceYearly: `SAR 428 / year (13% off)`,
     features: [
       "Everything in Engineer",
       "Advanced designs, equations, formulas, design checks",
@@ -66,9 +66,9 @@ export const PLANS: Plan[] = [
     name: "Consultant Engineer",
     shortName: "C",
     tagline: "For consultants and firms managing full projects.",
-    //  SAR 79 / month, 17% yearly discount → 787 SAR / year
-    priceMonthly: `${SAR_SYMBOL} 79 / month`,
-    priceYearly: `${SAR_SYMBOL} 787 / year (17% off)`,
+    //  SAR 79 / month, 17% yearly discount → SAR 787 / year
+    priceMonthly: `SAR 79 / month`,
+    priceYearly: `SAR 787 / year (17% off)`,
     features: [
       "Everything in Professional Engineer",
       "Equipment list & BOQ extraction",
