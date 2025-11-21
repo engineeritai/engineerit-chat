@@ -31,7 +31,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const planLabels: Record<PlanId, string> = {
     assistant: "Assistant",
     engineer: "Engineer",
-    professional: "Pro",
+    professional: "Professional",
     consultant: "Consultant",
   };
 

@@ -7,6 +7,13 @@ import NavSidebar from "../components/NavSidebar";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
+const PLAN_COLORS: Record<string, string> = {
+  assistant: "#2563eb", // أزرق
+  engineer: "#f59e0b", // ذهبي
+  professional: "#0f766e", // أخضر
+  consultant: "#7c3aed", // بنفسجي
+};
+
 export default function RegisterPage() {
   const [selectedPlanId, setSelectedPlanId] = useState("assistant");
   const [accepted, setAccepted] = useState(false);
@@ -19,7 +26,7 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // ✅ OAuth مع Supabase لـ Google / Apple
+  // OAuth مع Supabase لـ Google / Apple
   const handleOAuthLogin = async (provider: "google" | "apple") => {
     try {
       setErrorMessage("");
@@ -87,7 +94,7 @@ export default function RegisterPage() {
 
       if (profileError) {
         console.error("Profile upsert error:", profileError);
-        // ما نمنع التسجيل، فقط نطبع الخطأ
+        // لا نمنع التسجيل، فقط نطبع الخطأ
       }
 
       // 3) رسالة نجاح + تحويل للبروفايل
@@ -120,10 +127,11 @@ export default function RegisterPage() {
             Engineer, or Consultant Engineer.
           </p>
 
-          {/* ✅ Plans cards – كل الخطط مفعّلة الآن */}
+          {/* ✅ Plans cards – ألوان موحدة مع الـ badge */}
           <div className="plans-grid">
             {PLANS.map((plan) => {
               const isSelected = plan.id === selectedPlanId;
+              const color = PLAN_COLORS[plan.id] || "#2563eb";
 
               return (
                 <button
@@ -133,19 +141,52 @@ export default function RegisterPage() {
                     isSelected ? "plan-card-selected" : ""
                   }`}
                   onClick={() => setSelectedPlanId(plan.id)}
+                  style={{
+                    border: `1px solid ${
+                      isSelected ? color : "rgba(226,232,240,1)"
+                    }`,
+                    boxShadow: isSelected
+                      ? "0 14px 35px rgba(15,23,42,0.22)"
+                      : "0 8px 20px rgba(15,23,42,0.08)",
+                    transform: isSelected ? "translateY(-2px)" : "none",
+                    transition:
+                      "box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease",
+                  }}
                 >
                   <div className="plan-card-header">
-                    <div className={`plan-icon plan-icon-${plan.id}`}>
+                    {/* دائرة الأيقونة بلون الخطة، بدون side colors */}
+                    <div
+                      className="plan-icon"
+                      style={{
+                        backgroundColor: color,
+                        borderRadius: "9999px",
+                        width: 32,
+                        height: 32,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "white",
+                        fontWeight: 700,
+                        fontSize: 14,
+                      }}
+                    >
                       {plan.shortName[0]}
                     </div>
                     <div>
-                      <div className="plan-name">{plan.name}</div>
+                      <div
+                        className="plan-name"
+                        style={{ color: "#111827", fontWeight: 700 }}
+                      >
+                        {plan.name}
+                      </div>
                       <div className="plan-tagline">{plan.tagline}</div>
                     </div>
                   </div>
 
                   <div className="plan-price">
-                    <div>{plan.priceMonthly}</div>
+                    <div style={{ color, fontWeight: 700 }}>
+                      {plan.priceMonthly}
+                    </div>
                     <div className="plan-price-yearly">
                       {plan.priceYearly}
                     </div>
@@ -248,7 +289,7 @@ export default function RegisterPage() {
                   <span>Apple</span>
                 </button>
 
-                {/* Microsoft / Huawei: placeholders حتى نفعّلهم لاحقاً */}
+                {/* Microsoft / Huawei: placeholders */}
                 <button
                   type="button"
                   className="social-btn social-btn-microsoft"
