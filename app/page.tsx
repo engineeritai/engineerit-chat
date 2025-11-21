@@ -13,6 +13,7 @@ import remarkGfm from "remark-gfm";
 
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
+import { supabase } from "@/lib/supabaseClient";
 
 type Role = "user" | "assistant";
 
@@ -20,7 +21,7 @@ type Attachment = {
   id: string;
   name: string;
   type: "image" | "file";
-  url: string;
+  url: string; // data URL for images, object URL for files
   file?: File;
 };
 
@@ -38,8 +39,43 @@ type Thread = {
   messages: Message[];
 };
 
+type PlanId = "assistant" | "engineer" | "professional" | "consultant";
+
 function uuid() {
   return Math.random().toString(36).slice(2);
+}
+
+/** ===== Engineer tools config (desktop + mobile) ===== */
+
+const ENGINEER_TOOLS = [
+  { id: "drawing", label: "Drawing & Diagrams" },
+  { id: "design", label: "Design & Code Check" },
+  { id: "itp", label: "ITP & QA/QC" },
+  { id: "boq", label: "BOQ & Quantities" },
+  { id: "schedule", label: "Schedule & Resources" },
+  { id: "value", label: "Value Engineering" },
+  { id: "dashboard", label: "Project Dashboards" },
+] as const;
+
+type ToolId = (typeof ENGINEER_TOOLS)[number]["id"];
+
+const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
+  assistant: [], // كله 🔒 (إعلان للترقية)
+  engineer: ["drawing", "design", "itp", "boq"],
+  professional: ["drawing", "design", "itp", "boq", "schedule", "value"],
+  consultant: [
+    "drawing",
+    "design",
+    "itp",
+    "boq",
+    "schedule",
+    "value",
+    "dashboard",
+  ],
+};
+
+function hasAccess(planId: PlanId, toolId: ToolId) {
+  return TOOL_ACCESS[planId]?.includes(toolId);
 }
 
 export default function Page() {
@@ -59,11 +95,43 @@ export default function Page() {
   // "+" attach mini menu
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
 
-  // TODO: later link this to real Supabase profile.plan === "engineer"
-  const isEngineerPlan = true;
+  // plan (للتحكم في Engineer tools)
+  const [planId, setPlanId] = useState<PlanId>("assistant");
+  const [showMobileTools, setShowMobileTools] = useState(false);
 
-  // auto-scroll
-  const conversationEndRef = useRef<HTMLDivElement | null>(null);
+  // ---------- load plan from Supabase ----------
+
+  useEffect(() => {
+    const loadPlan = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          setPlanId("assistant");
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profile?.plan) {
+          setPlanId(profile.plan as PlanId);
+        } else {
+          setPlanId("assistant");
+        }
+      } catch (err) {
+        console.error("Failed to load plan for engineer tools", err);
+        setPlanId("assistant");
+      }
+    };
+
+    void loadPlan();
+  }, []);
 
   // ---------- threads ----------
 
@@ -86,12 +154,6 @@ export default function Page() {
   );
 
   const messages: Message[] = thread?.messages ?? [];
-
-  useEffect(() => {
-    if (conversationEndRef.current) {
-      conversationEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages.length]);
 
   function onNewChat() {
     const t: Thread = {
@@ -138,22 +200,21 @@ export default function Page() {
     e.target.value = "";
   };
 
-  // الملفات: نضيفها فقط للـ attachments، الإرسال يتم من دالة send()
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const url = URL.createObjectURL(file);
     setAttachments((prev) => [
       ...prev,
       {
         id: uuid(),
         name: file.name,
         type: "file",
-        url: file.name,
+        url,
         file,
       },
     ]);
-
     e.target.value = "";
   };
 
@@ -282,6 +343,49 @@ export default function Page() {
     setInput((prev) => (prev ? `${prev}\n\n${template}` : template));
   }
 
+  const handleEngineerToolClick = (toolId: ToolId) => {
+    // لكل أداة نضيف تمبليت جاهز في خانة الكتابة
+    switch (toolId) {
+      case "drawing":
+        insertTemplate(
+          "Explain and analyze the attached engineering drawing (PFD / P&ID / block diagram). Describe the main units, flows, and key engineering notes in Arabic and English."
+        );
+        break;
+      case "design":
+        insertTemplate(
+          "Check this engineering design against relevant codes and standards. List assumptions, checks, and any non-compliance items, in Arabic and English."
+        );
+        break;
+      case "itp":
+        insertTemplate(
+          "Generate an Inspection & Test Plan (ITP) and QA/QC checklist for this engineering activity. Include hold points, responsible party, and acceptance criteria."
+        );
+        break;
+      case "boq":
+        insertTemplate(
+          "From this project description, propose a structured Bill of Quantities (BOQ) with main items, units, and estimated quantities (if possible)."
+        );
+        break;
+      case "schedule":
+        insertTemplate(
+          "Build a high-level project schedule with main activities, approximate durations, and logical sequence. Present it in a table format suitable for MS Project or Primavera."
+        );
+        break;
+      case "value":
+        insertTemplate(
+          "Perform a value engineering review: suggest alternative materials, construction methods, or design optimizations to reduce cost and improve performance."
+        );
+        break;
+      case "dashboard":
+        insertTemplate(
+          "Create a management-level dashboard summary for this project: key KPIs, main risks, status summary, and next actions in bullet points."
+        );
+        break;
+      default:
+        break;
+    }
+  };
+
   // ---------- send ----------
 
   async function send() {
@@ -294,7 +398,7 @@ export default function Page() {
     setAttachments([]);
     setIsAttachMenuOpen(false);
 
-    // add user message
+    // Add user message
     updateThread((t) => ({
       ...t,
       title:
@@ -427,102 +531,73 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
-        {/* Engineer tools bar */}
-        {isEngineerPlan && (
-  <div className="engineer-tools">
-    <span className="engineer-tools-label">Engineer tools:</span>
+        {/* Engineer tools – Desktop / Tablet */}
+        <div className="engineer-tools">
+          <span className="engineer-tools-label">Engineer tools:</span>
+          <div className="engineer-tools-row">
+            {ENGINEER_TOOLS.map((tool) => {
+              const enabled = hasAccess(planId, tool.id);
+              return (
+                <button
+                  key={tool.id}
+                  type="button"
+                  className={
+                    "engineer-tools-btn" +
+                    (enabled ? "" : " engineer-tools-btn-locked")
+                  }
+                  disabled={!enabled}
+                  onClick={() => enabled && handleEngineerToolClick(tool.id)}
+                >
+                  {!enabled && <span className="tool-lock">🔒</span>}
+                  <span>{tool.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-    {/* 1) Professional Technical Report */}
-    <button
-      type="button"
-      className="engineer-tools-btn"
-      onClick={() =>
-        insertTemplate(
-          [
-            "Prepare a professional engineering technical report for the following topic: [describe the project].",
-            "",
-            "The report should be clear, concise, and ready to paste into Word. Use the following structure:",
-            "1) Executive Summary",
-            "2) Project Background and Scope",
-            "3) Objectives and Performance Requirements",
-            "4) Methodology and Design Basis",
-            "5) Data, Calculations, and Engineering Assumptions (high-level summary)",
-            "6) Results and Technical Findings",
-            "7) Engineering Assessment and Discussion",
-            "8) Risks, Constraints, and Limitations",
-            "9) Conclusions and Recommendations",
-            "",
-            "Write in a formal engineering style. Use bullet points where appropriate and highlight any critical values, standards, or codes."
-          ].join("\n")
-        )
-      }
-    >
-      Technical Report
-    </button>
+        {/* Engineer tools – Mobile (dropdown) */}
+        <div className="engineer-tools-mobile">
+          <button
+            type="button"
+            className="engineer-tools-mobile-toggle"
+            onClick={() => setShowMobileTools((v) => !v)}
+          >
+            <span>Engineer tools for your plan</span>
+            <span style={{ fontSize: 12 }}>{showMobileTools ? "▲" : "▼"}</span>
+          </button>
 
-    {/* 2) Calculation Sheet for Excel */}
-    <button
-      type="button"
-      className="engineer-tools-btn"
-      onClick={() =>
-        insertTemplate(
-          [
-            "Design a structured engineering calculation sheet suitable for Excel for the following calculation: [describe the calculation].",
-            "",
-            "The output should be easy to copy into Excel. Use the following sections and clearly mark each block:",
-            "1) Inputs and Design Parameters (with units and typical/default values)",
-            "2) Assumptions and References (codes, standards, design manuals)",
-            "3) Step-by-Step Calculation Procedure (each step with short explanation)",
-            "4) Output Summary (key results, governing values, pass/fail criteria)",
-            "5) Sensitivity or Check Calculations (if relevant)",
-            "",
-            "For each variable, specify:",
-            "- Symbol",
-            "- Description",
-            "- Unit",
-            "- Cell reference suggestion (e.g., A2, B5)",
-            "",
-            "Use a clean tabular layout so it can be copied directly into Excel."
-          ].join("\n")
-        )
-      }
-    >
-      Calculation Sheet
-    </button>
+          {showMobileTools && (
+            <div className="engineer-tools-mobile-panel">
+              <div className="engineer-tools-mobile-list">
+                {ENGINEER_TOOLS.map((tool) => {
+                  const enabled = hasAccess(planId, tool.id);
+                  return (
+                    <div
+                      key={tool.id}
+                      className={
+                        "engineer-tools-mobile-item" +
+                        (enabled
+                          ? ""
+                          : " engineer-tools-mobile-item-locked")
+                      }
+                    >
+                      <div>
+                        {enabled ? "✅" : "🔒"} <span>{tool.label}</span>
+                      </div>
 
-    {/* 3) Board-Level Presentation Outline */}
-    <button
-      type="button"
-      className="engineer-tools-btn"
-      onClick={() =>
-        insertTemplate(
-          [
-            "Create a board-level engineering PowerPoint outline for the following project: [describe the project].",
-            "",
-            "The audience is senior management / decision-makers. Use clear, high-impact bullet points. Slides:",
-            "1) Title, Project Owner, and Date",
-            "2) Problem Statement and Business Context",
-            "3) Objectives and Success Criteria",
-            "4) Technical Approach / Methodology (high-level only)",
-            "5) Key Data, Findings, and Engineering Insights",
-            "6) Risks, Constraints, and Mitigation Measures",
-            "7) Options Comparison (if applicable) and Recommendation",
-            "8) Implementation Plan and Next Steps",
-            "",
-            "For each slide, provide:",
-            "- Slide title",
-            "- 3–6 concise bullet points",
-            "- Any critical numbers or graphics that should be shown.",
-            "",
-            "Keep the language suitable for non-technical executives while still technically accurate."
-          ].join("\n")
-        )
-      }
-    >
-      Presentation Outline
-    </button>
-  </div>
-)}
+                      {!enabled && (
+                        <span className="engineer-tools-mobile-plan-hint">
+                          Upgrade
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="conversation">
           {messages.length === 0 ? (
@@ -565,10 +640,9 @@ export default function Page() {
               </div>
             ))
           )}
-          <div ref={conversationEndRef} />
         </div>
 
-        {/* composer – واسعة مثل السابق، + يسار، ميك وسهم يمين */}
+        {/* ChatGPT-like composer */}
         <div className="composer">
           <div className="composer-box">
             {/* attachments pills */}
@@ -635,10 +709,10 @@ export default function Page() {
                 )}
               </div>
 
-              {/* CENTER: textarea عريضة */}
+              {/* CENTER: textarea */}
               <textarea
                 className="textarea"
-                placeholder="Send a message to engineerit.ai…"
+                placeholder="Ask an engineering question…"
                 value={input}
                 onChange={(e) => {
                   setInput(e.target.value);
@@ -655,7 +729,7 @@ export default function Page() {
                   "chat-input-icon-btn" +
                   (isRecording ? " chat-input-icon-btn-record" : "")
                 }
-                title="Hold to talk"
+                title="Press and hold to talk"
                 onMouseDown={startRecording}
                 onMouseUp={stopRecording}
               >
@@ -665,9 +739,7 @@ export default function Page() {
               <button
                 type="button"
                 className="chat-input-send-btn"
-                disabled={
-                  sending || (!input.trim() && attachments.length === 0)
-                }
+                disabled={sending || (!input.trim() && attachments.length === 0)}
                 onClick={send}
                 aria-label="Send message"
               >
