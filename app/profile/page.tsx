@@ -347,40 +347,40 @@ export default function ProfilePage() {
 
               {/* Subscription selector – كل الخطط مفعّلة الآن */}
               <div className="form-row">
-                <label>
-                  Subscription
-                  <select
-                    className="input"
-                    value={planId}
-                    onChange={(e) =>
-                      setPlanId(
-                        e.target.value as
-                          | "assistant"
-                          | "engineer"
-                          | "professional"
-                          | "consultant"
-                      )
-                    }
-                  >
-                    <option value="assistant">
-                      Assistant Engineer (Free default)
-                    </option>
-                    <option value="engineer">Engineer</option>
-                    <option value="professional">Professional Engineer</option>
-                    <option value="consultant">Consultant Engineer</option>
-                  </select>
-                </label>
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: "#6b7280",
-                    marginTop: 4,
-                    marginBottom: 0,
-                  }}
-                >
-                  Plan upgrades will be integrated with payments system later.
-                </p>
-              </div>
+  <label>
+    Subscription
+    <select
+      className="input"
+      value={planId}
+      onChange={(e) =>
+        setPlanId(
+          e.target.value as
+            | "assistant"
+            | "engineer"
+            | "professional"
+            | "consultant"
+        )
+      }
+    >
+      <option value="assistant">
+        Assistant Engineer (Free default)
+      </option>
+      <option value="engineer">Engineer</option>
+      <option value="professional">Professional Engineer</option>
+      <option value="consultant">Consultant Engineer</option>
+    </select>
+  </label>
+  <p
+    style={{
+      fontSize: 12,
+      color: "#6b7280",
+      marginTop: 4,
+      marginBottom: 0,
+    }}
+  >
+    Plan upgrades will be integrated with payments system later.
+  </p>
+</div>
 
               {errorMessage && (
                 <p
