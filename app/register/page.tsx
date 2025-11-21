@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { PLANS } from "@/lib/plans";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { PLANS } from "@/lib/plans";
 
 const PLAN_COLORS: Record<string, string> = {
-  assistant: "#2563eb", // أزرق
-  engineer: "#f59e0b", // ذهبي
-  professional: "#0f766e", // أخضر
-  consultant: "#7c3aed", // بنفسجي
+  assistant: "#2563eb", // Blue
+  engineer: "#f97316", // Orange / Gold
+  professional: "#0f766e", // Green
+  consultant: "#7c3aed", // Purple
 };
 
 export default function RegisterPage() {
@@ -26,7 +26,7 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // OAuth مع Supabase لـ Google / Apple
+  // OAuth login with Supabase (Google / Apple)
   const handleOAuthLogin = async (provider: "google" | "apple") => {
     try {
       setErrorMessage("");
@@ -51,7 +51,7 @@ export default function RegisterPage() {
     }
   };
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
@@ -94,10 +94,10 @@ export default function RegisterPage() {
 
       if (profileError) {
         console.error("Profile upsert error:", profileError);
-        // لا نمنع التسجيل، فقط نطبع الخطأ
+        // لا نمنع التسجيل، فقط نسجّل الخطأ
       }
 
-      // 3) رسالة نجاح + تحويل للبروفايل
+      // 3) نجاح + تحويل للبروفايل
       setSuccessMessage("Account created. Redirecting to your profile...");
       setTimeout(() => {
         window.location.href = "/profile";
@@ -109,6 +109,10 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  const selectedPlanName =
+    PLANS.find((p) => p.id === selectedPlanId)?.name ||
+    "Assistant Engineer";
 
   return (
     <div className="app-shell">
@@ -127,7 +131,7 @@ export default function RegisterPage() {
             Engineer, or Consultant Engineer.
           </p>
 
-          {/* ✅ Plans cards – ألوان موحدة مع الـ badge */}
+          {/* ✅ Plans cards – aligned + same colors as header badges */}
           <div className="plans-grid">
             {PLANS.map((plan) => {
               const isSelected = plan.id === selectedPlanId;
@@ -142,43 +146,23 @@ export default function RegisterPage() {
                   }`}
                   onClick={() => setSelectedPlanId(plan.id)}
                   style={{
-                    border: `1px solid ${
-                      isSelected ? color : "rgba(226,232,240,1)"
-                    }`,
+                    borderColor: isSelected ? color : "#e5e7eb",
                     boxShadow: isSelected
-                      ? "0 14px 35px rgba(15,23,42,0.22)"
-                      : "0 8px 20px rgba(15,23,42,0.08)",
+                      ? "0 14px 35px rgba(15,23,42,0.18)"
+                      : "0 8px 20px rgba(15,23,42,0.06)",
                     transform: isSelected ? "translateY(-2px)" : "none",
-                    transition:
-                      "box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease",
                   }}
                 >
                   <div className="plan-card-header">
-                    {/* دائرة الأيقونة بلون الخطة، بدون side colors */}
+                    {/* دائرة الأيقونة فقط، بدون شريط جانبي */}
                     <div
                       className="plan-icon"
-                      style={{
-                        backgroundColor: color,
-                        borderRadius: "9999px",
-                        width: 32,
-                        height: 32,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "white",
-                        fontWeight: 700,
-                        fontSize: 14,
-                      }}
+                      style={{ backgroundColor: color, color: "white" }}
                     >
                       {plan.shortName[0]}
                     </div>
                     <div>
-                      <div
-                        className="plan-name"
-                        style={{ color: "#111827", fontWeight: 700 }}
-                      >
-                        {plan.name}
-                      </div>
+                      <div className="plan-name">{plan.name}</div>
                       <div className="plan-tagline">{plan.tagline}</div>
                     </div>
                   </div>
@@ -255,10 +239,7 @@ export default function RegisterPage() {
                   type="text"
                   className="input"
                   readOnly
-                  value={
-                    PLANS.find((p) => p.id === selectedPlanId)?.name ||
-                    "Assistant Engineer"
-                  }
+                  value={selectedPlanName}
                 />
               </label>
             </div>
@@ -289,7 +270,7 @@ export default function RegisterPage() {
                   <span>Apple</span>
                 </button>
 
-                {/* Microsoft / Huawei: placeholders */}
+                {/* Placeholders for future providers */}
                 <button
                   type="button"
                   className="social-btn social-btn-microsoft"
@@ -325,9 +306,9 @@ export default function RegisterPage() {
                   <Link href="/legal/terms" className="link">
                     User Policy & Agreement
                   </Link>
-                  , including cancellation and refund policies, and I understand
-                  that engineerit.ai is not responsible or liable for any
-                  decisions or mistakes based on the outputs.
+                  , including cancellation and refund policies, and I
+                  understand that engineerit.ai is not responsible or liable
+                  for any decisions or mistakes based on the outputs.
                 </span>
               </label>
             </div>
