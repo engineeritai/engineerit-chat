@@ -8,10 +8,10 @@ import { supabase } from "@/lib/supabaseClient";
 import { PLANS } from "@/lib/plans";
 
 const PLAN_COLORS: Record<string, string> = {
-  assistant: "#2563eb", // Blue
-  engineer: "#f97316", // Orange / Gold
-  professional: "#0f766e", // Green
-  consultant: "#7c3aed", // Purple
+  assistant: "#2563eb", // blue
+  engineer: "#f97316", // orange / gold
+  professional: "#0f766e", // green
+  consultant: "#7c3aed", // purple
 };
 
 export default function RegisterPage() {
@@ -94,10 +94,10 @@ export default function RegisterPage() {
 
       if (profileError) {
         console.error("Profile upsert error:", profileError);
-        // لا نمنع التسجيل، فقط نسجّل الخطأ
+        // we don't block the user, just log it
       }
 
-      // 3) نجاح + تحويل للبروفايل
+      // 3) Show success + redirect
       setSuccessMessage("Account created. Redirecting to your profile...");
       setTimeout(() => {
         window.location.href = "/profile";
@@ -111,8 +111,7 @@ export default function RegisterPage() {
   };
 
   const selectedPlanName =
-    PLANS.find((p) => p.id === selectedPlanId)?.name ||
-    "Assistant Engineer";
+    PLANS.find((p) => p.id === selectedPlanId)?.name || "Assistant Engineer";
 
   return (
     <div className="app-shell">
@@ -131,51 +130,134 @@ export default function RegisterPage() {
             Engineer, or Consultant Engineer.
           </p>
 
-          {/* ✅ Plans cards – aligned + same colors as header badges */}
-          <div className="plans-grid">
+          {/* ===== PLANS GRID ===== */}
+          <div
+            className="plans-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gap: "24px",
+              alignItems: "stretch",
+            }}
+          >
             {PLANS.map((plan) => {
               const isSelected = plan.id === selectedPlanId;
               const color = PLAN_COLORS[plan.id] || "#2563eb";
+              const letter =
+                (plan.shortName || plan.name || "E").charAt(0).toUpperCase();
 
               return (
                 <button
                   key={plan.id}
                   type="button"
-                  className={`plan-card ${
-                    isSelected ? "plan-card-selected" : ""
-                  }`}
                   onClick={() => setSelectedPlanId(plan.id)}
+                  className="plan-card"
                   style={{
-                    borderColor: isSelected ? color : "#e5e7eb",
+                    borderRadius: 24,
+                    border: `1px solid ${isSelected ? color : "#e5e7eb"}`,
+                    background: "white",
+                    padding: 24,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    height: "100%",
                     boxShadow: isSelected
                       ? "0 14px 35px rgba(15,23,42,0.18)"
                       : "0 8px 20px rgba(15,23,42,0.06)",
                     transform: isSelected ? "translateY(-2px)" : "none",
+                    transition:
+                      "box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease",
                   }}
                 >
-                  <div className="plan-card-header">
-  <div className={`plan-icon plan-icon-${plan.id}`}>
-    {plan.shortName[0]}
-  </div>
-  <div>
-    <div className="plan-name">{plan.name}</div>
-    <div className="plan-tagline">{plan.tagline}</div>
-  </div>
-</div>
+                  {/* HEADER: circle + title + tagline */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      marginBottom: 14,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: "50%",
+                        backgroundColor: color,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 20,
+                        fontWeight: 700,
+                        color: "white",
+                        marginRight: 14,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {letter}
+                    </div>
 
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 20,
+                          fontWeight: 700,
+                          color: "#111827",
+                          marginBottom: 2,
+                        }}
+                      >
+                        {plan.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          color: "#6b7280",
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        {plan.tagline}
+                      </div>
+                    </div>
+                  </div>
 
-                  <div className="plan-price">
-                    <div style={{ color, fontWeight: 700 }}>
+                  {/* PRICE */}
+                  <div style={{ marginBottom: 12 }}>
+                    <div
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 700,
+                        color,
+                      }}
+                    >
                       {plan.priceMonthly}
                     </div>
-                    <div className="plan-price-yearly">
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: "#6b7280",
+                        marginTop: 2,
+                      }}
+                    >
                       {plan.priceYearly}
                     </div>
                   </div>
 
-                  <ul className="plan-features">
+                  {/* FEATURES */}
+                  <ul
+                    style={{
+                      listStyle: "disc",
+                      paddingLeft: 20,
+                      margin: 0,
+                      marginTop: 4,
+                      fontSize: 14,
+                      color: "#374151",
+                      flexGrow: 1,
+                    }}
+                  >
                     {plan.features.map((f) => (
-                      <li key={f}>{f}</li>
+                      <li key={f} style={{ marginBottom: 6 }}>
+                        {f}
+                      </li>
                     ))}
                   </ul>
                 </button>
@@ -183,7 +265,7 @@ export default function RegisterPage() {
             })}
           </div>
 
-          {/* Registration form */}
+          {/* ===== REGISTRATION FORM ===== */}
           <form className="register-form" onSubmit={handleSubmit}>
             <h2 className="section-heading">Create your account</h2>
 
@@ -303,9 +385,9 @@ export default function RegisterPage() {
                   <Link href="/legal/terms" className="link">
                     User Policy & Agreement
                   </Link>
-                  , including cancellation and refund policies, and I
-                  understand that engineerit.ai is not responsible or liable
-                  for any decisions or mistakes based on the outputs.
+                  , including cancellation and refund policies, and I understand
+                  that engineerit.ai is not responsible or liable for any
+                  decisions or mistakes based on the outputs.
                 </span>
               </label>
             </div>
