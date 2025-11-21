@@ -45,7 +45,9 @@ function uuid() {
   return Math.random().toString(36).slice(2);
 }
 
-/** ===== Engineer tools config (desktop + mobile) ===== */
+/* ============================
+   Engineer tools configuration
+   ============================ */
 
 const ENGINEER_TOOLS = [
   { id: "drawing", label: "Drawing & Diagrams" },
@@ -59,10 +61,17 @@ const ENGINEER_TOOLS = [
 
 type ToolId = (typeof ENGINEER_TOOLS)[number]["id"];
 
+/**
+ * صلاحيات الأدوات حسب نوع الاشتراك:
+ * - Assistant: الكل مقفول (إعلان للترقية فقط)
+ * - Engineer: Drawing + Design
+ * - Professional: كل أدوات Engineer + ITP & QA/QC + BOQ & Quantities
+ * - Consultant: كل ما سبق + Schedule & Resources + Value Engineering + Project Dashboards
+ */
 const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
-  assistant: [], // كله 🔒 (إعلان للترقية)
-  engineer: ["drawing", "design", "itp", "boq"],
-  professional: ["drawing", "design", "itp", "boq", "schedule", "value"],
+  assistant: [],
+  engineer: ["drawing", "design"],
+  professional: ["drawing", "design", "itp", "boq"],
   consultant: [
     "drawing",
     "design",
@@ -92,14 +101,18 @@ export default function Page() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
 
-  // "+" attach mini menu
+  // "+" mini attach menu
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
 
-  // plan (للتحكم في Engineer tools)
+  // plan (لربط الأدوات بالاشتراك)
   const [planId, setPlanId] = useState<PlanId>("assistant");
+
+  // mobile tools dropdown
   const [showMobileTools, setShowMobileTools] = useState(false);
 
-  // ---------- load plan from Supabase ----------
+  /* ======================
+     Load user plan (Supabase)
+     ====================== */
 
   useEffect(() => {
     const loadPlan = async () => {
@@ -113,14 +126,19 @@ export default function Page() {
           return;
         }
 
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from("profiles")
           .select("plan")
           .eq("id", user.id)
           .maybeSingle();
 
-        if (profile?.plan) {
-          setPlanId(profile.plan as PlanId);
+        if (!error && profile?.plan) {
+          const p = profile.plan as PlanId;
+          if (p === "assistant" || p === "engineer" || p === "professional" || p === "consultant") {
+            setPlanId(p);
+          } else {
+            setPlanId("assistant");
+          }
         } else {
           setPlanId("assistant");
         }
@@ -133,7 +151,9 @@ export default function Page() {
     void loadPlan();
   }, []);
 
-  // ---------- threads ----------
+  /* ======================
+     Threads management
+     ====================== */
 
   useEffect(() => {
     if (!currentThreadId) {
@@ -176,7 +196,9 @@ export default function Page() {
     );
   }
 
-  // ---------- attachments ----------
+  /* ======================
+     Attachments
+     ====================== */
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -222,7 +244,9 @@ export default function Page() {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  // ---------- voice ----------
+  /* ======================
+     Voice
+     ====================== */
 
   async function startRecording() {
     try {
@@ -286,7 +310,9 @@ export default function Page() {
     }
   }
 
-  // ---------- helpers: image / document ----------
+  /* ======================
+     Helper APIs: image / document
+     ====================== */
 
   async function analyzeImage(question: string, imageFile: File): Promise<string> {
     const formData = new FormData();
@@ -337,14 +363,15 @@ export default function Page() {
     return data.reply || "";
   }
 
-  // ---------- Engineer tools helpers ----------
+  /* ======================
+     Engineer tools helpers
+     ====================== */
 
   function insertTemplate(template: string) {
     setInput((prev) => (prev ? `${prev}\n\n${template}` : template));
   }
 
   const handleEngineerToolClick = (toolId: ToolId) => {
-    // لكل أداة نضيف تمبليت جاهز في خانة الكتابة
     switch (toolId) {
       case "drawing":
         insertTemplate(
@@ -386,7 +413,9 @@ export default function Page() {
     }
   };
 
-  // ---------- send ----------
+  /* ======================
+     Send message
+     ====================== */
 
   async function send() {
     if (!thread || (!input.trim() && attachments.length === 0) || sending)
@@ -398,7 +427,7 @@ export default function Page() {
     setAttachments([]);
     setIsAttachMenuOpen(false);
 
-    // Add user message
+    // add user message
     updateThread((t) => ({
       ...t,
       title:
@@ -513,7 +542,9 @@ export default function Page() {
     }
   }
 
-  // ---------- render ----------
+  /* ======================
+     Render
+     ====================== */
 
   return (
     <div className="app-shell">
@@ -531,7 +562,7 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
-        {/* Engineer tools – Desktop / Tablet */}
+        {/* Engineer tools – desktop / tablet */}
         <div className="engineer-tools">
           <span className="engineer-tools-label">Engineer tools:</span>
           <div className="engineer-tools-row">
@@ -556,7 +587,7 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Engineer tools – Mobile (dropdown) */}
+        {/* Engineer tools – mobile dropdown */}
         <div className="engineer-tools-mobile">
           <button
             type="button"
@@ -585,7 +616,6 @@ export default function Page() {
                       <div>
                         {enabled ? "✅" : "🔒"} <span>{tool.label}</span>
                       </div>
-
                       {!enabled && (
                         <span className="engineer-tools-mobile-plan-hint">
                           Upgrade
@@ -599,6 +629,7 @@ export default function Page() {
           )}
         </div>
 
+        {/* Conversation */}
         <div className="conversation">
           {messages.length === 0 ? (
             <div className="empty-state">
@@ -642,10 +673,9 @@ export default function Page() {
           )}
         </div>
 
-        {/* ChatGPT-like composer */}
+        {/* Composer */}
         <div className="composer">
           <div className="composer-box">
-            {/* attachments pills */}
             {attachments.length > 0 && (
               <div className="attachments">
                 {attachments.map((a) => (
@@ -663,9 +693,8 @@ export default function Page() {
               </div>
             )}
 
-            {/* main input row */}
             <div className="chat-input-row">
-              {/* LEFT: + with mini menu */}
+              {/* + button */}
               <div className="chat-input-left">
                 <button
                   type="button"
@@ -709,7 +738,7 @@ export default function Page() {
                 )}
               </div>
 
-              {/* CENTER: textarea */}
+              {/* textarea */}
               <textarea
                 className="textarea"
                 placeholder="Ask an engineering question…"
@@ -722,7 +751,7 @@ export default function Page() {
                 onKeyDown={onKeyDown}
               />
 
-              {/* RIGHT: mic + send */}
+              {/* mic */}
               <button
                 type="button"
                 className={
@@ -736,6 +765,7 @@ export default function Page() {
                 🎤
               </button>
 
+              {/* send */}
               <button
                 type="button"
                 className="chat-input-send-btn"
