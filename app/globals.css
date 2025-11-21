@@ -321,10 +321,31 @@ button {
 /* === Plans & Registration cards === */
 
 /* PLAN CARDS GRID ALIGNMENT */
+/* موبايل عادي: كرتين في الصف (2×2) */
 .plans-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 28px;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+/* شاشات صغيرة جداً: كرت واحد في الصف */
+@media (max-width: 480px) {
+  .plans-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* لابتوب / ديسكتوب: 4 كروت في صف واحد */
+@media (min-width: 1024px) {
+  .plans-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* نضمن أن كل الكروت نفس الارتفاع */
+.plan-card {
+  height: 100%;
 }
 
 /* PLAN CARD */
@@ -689,39 +710,6 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-/* Plans icons */
-
-.plan-card-header {
-  display: flex;
-  align-items: top;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.plan-icon {
-  color: #ffffff;
-}
-
-/* Assistant Engineer — Blue */
-.plan-icon-assistant {
-  background: #1e66ff;
-}
-
-/* Engineer — Silver */
-.plan-icon-engineer {
-  background: #9ca3af;
-}
-
-/* Professional Engineer — Gold */
-.plan-icon-professional {
-  background: #f5ab0bb2;
-}
-
-/* Consultant Engineer — Green */
-.plan-icon-consultant {
-  background: #71b1a9;
 }
 
 /* ===== Plans & Registration layout ===== */
