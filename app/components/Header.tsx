@@ -86,7 +86,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
       }
 
-      // لو لم يتم التحميل من DB، نحاول من localStorage
       if (!loadedFromDb) {
         try {
           const cached = window.localStorage.getItem("engineerit_profile");
@@ -171,7 +170,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         if (profile.plan) setPlanId(profile.plan as PlanId);
         if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
 
-        // نخزن أيضاً في localStorage
         try {
           window.localStorage.setItem(
             "engineerit_profile",
@@ -194,6 +192,32 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     } catch (err) {
       console.error(err);
       setLoginError("Something went wrong. Please try again.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  // ✅ تسجيل/دخول باستخدام Google أو Apple (Supabase OAuth)
+  const handleOAuthLogin = async (provider: "google" | "apple") => {
+    try {
+      setLoginError(null);
+      setLoginLoading(true);
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + "/profile",
+        },
+      });
+
+      if (error) {
+        console.error("OAuth error:", error);
+        setLoginError(error.message);
+      }
+      // بعد OAuth، Supabase سيعيد التوجيه تلقائياً
+    } catch (err) {
+      console.error(err);
+      setLoginError("OAuth login failed. Please try again.");
     } finally {
       setLoginLoading(false);
     }
@@ -259,7 +283,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   position: "absolute",
                   top: "110%",
                   right: 0,
-                  minWidth: 260,
+                  minWidth: 280,
                   backgroundColor: "white",
                   borderRadius: 16,
                   boxShadow: "0 10px 25px rgba(15, 23, 42, 0.18)",
@@ -278,6 +302,75 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                     }}
                   >
                     Sign in to engineerit.ai
+                  </div>
+
+                  {/* Social logins */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                      marginBottom: 8,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleOAuthLogin("google")}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        borderRadius: 999,
+                        border: "1px solid #d1d5db",
+                        backgroundColor: "white",
+                        fontSize: 13,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Continue with Google
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOAuthLogin("apple")}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        borderRadius: 999,
+                        border: "1px solid #d1d5db",
+                        backgroundColor: "white",
+                        fontSize: 13,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Continue with Apple
+                    </button>
+                    {/* Huawei: يحتاج إعداد OAuth منفصل (SSO/OIDC) في Supabase أو عبر مزود خارجي */}
+                    <button
+                      type="button"
+                      disabled
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        borderRadius: 999,
+                        border: "1px solid #e5e7eb",
+                        backgroundColor: "#f9fafb",
+                        fontSize: 13,
+                        cursor: "not-allowed",
+                        color: "#9ca3af",
+                      }}
+                    >
+                      Huawei ID (will be added)
+                    </button>
+                  </div>
+
+                  <div
+                    style={{
+                      textAlign: "center",
+                      fontSize: 11,
+                      color: "#9ca3af",
+                      margin: "4px 0 6px",
+                    }}
+                  >
+                    or use your email
                   </div>
 
                   <div style={{ marginBottom: 6 }}>

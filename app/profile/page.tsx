@@ -43,11 +43,11 @@ export default function ProfilePage() {
     assistant:
       "Default free plan. Basic chat access and limited engineering assistance.",
     engineer:
-      "Advanced engineer-focused tools, document analysis, and priority responses. Will be activated after official launch.",
+      "Engineer-focused tools, document analysis, and better limits for daily use.",
     professional:
-      "Extended tools for senior engineers, team collaboration, and advanced reporting. Coming soon.",
+      "Extended tools for senior engineers, project-level workflows, and advanced reporting.",
     consultant:
-      "High-end tier for consulting engineers with advanced features and extended limits. Coming soon.",
+      "Full access for consulting engineers with maximum limits and advanced analysis features.",
   };
 
   const currentPlanLabel = planLabels[planId];
@@ -140,7 +140,7 @@ export default function ProfilePage() {
     void loadProfile();
   }, [router]);
 
-  // رفع الصورة → نخزنها كـ data URL في الذاكرة، ثم نحفظها في Supabase + localStorage عند الحفظ
+  // رفع الصورة → data URL تتخزن في الذاكرة، ثم نحفظها في Supabase + localStorage عند الحفظ
   const handlePhotoUpload = (e: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -174,11 +174,10 @@ export default function ProfilePage() {
 
       if (error) {
         console.error("Profile upsert error:", error);
-        setErrorMessage("Could not save changes. Please try again.");
+        setErrorMessage(error.message || "Could not save changes. Please try again.");
       } else {
         setMessage("Profile updated.");
 
-        // نخزن نسخة في localStorage لاستخدامها في الهيدر والتحميل السريع
         try {
           window.localStorage.setItem(
             "engineerit_profile",
@@ -346,10 +345,10 @@ export default function ProfilePage() {
                 </label>
               </div>
 
-              {/* Subscription selector (pre-launch) */}
+              {/* Subscription selector – كل الخطط مفعّلة الآن */}
               <div className="form-row">
                 <label>
-                  Subscription (pre-launch)
+                  Subscription
                   <select
                     className="input"
                     value={planId}
@@ -366,15 +365,9 @@ export default function ProfilePage() {
                     <option value="assistant">
                       Assistant Engineer (Free default)
                     </option>
-                    <option value="engineer">
-                      Engineer (will be activated after launch)
-                    </option>
-                    <option value="professional" disabled>
-                      Professional Engineer (coming soon)
-                    </option>
-                    <option value="consultant" disabled>
-                      Consultant Engineer (coming soon)
-                    </option>
+                    <option value="engineer">Engineer</option>
+                    <option value="professional">Professional Engineer</option>
+                    <option value="consultant">Consultant Engineer</option>
                   </select>
                 </label>
                 <p
@@ -385,8 +378,7 @@ export default function ProfilePage() {
                     marginBottom: 0,
                   }}
                 >
-                  Plan changes will be fully controlled by the subscription
-                  system after official launch.
+                  Plan upgrades will be integrated with payments system later.
                 </p>
               </div>
 
@@ -462,28 +454,27 @@ export default function ProfilePage() {
                   <>
                     <li>Engineer tools bar inside chat</li>
                     <li>Document analysis for engineering files</li>
-                    <li>Priority responses and extended limits</li>
+                    <li>Higher limits than free plan</li>
                   </>
                 )}
                 {planId === "professional" && (
                   <>
                     <li>Advanced reporting and templates</li>
-                    <li>Team and project-level features</li>
-                    <li>Higher limits and priority support</li>
+                    <li>Project-level workflows</li>
+                    <li>Higher limits and better priority</li>
                   </>
                 )}
                 {planId === "consultant" && (
                   <>
                     <li>Full access to all features</li>
                     <li>Consulting-focused workflows</li>
-                    <li>Maximum limits and premium support</li>
+                    <li>Maximum limits and premium priority</li>
                   </>
                 )}
               </ul>
 
               <p style={{ fontSize: 12, color: "#6b7280", marginTop: 8 }}>
-                Detailed billing and subscription management will be enabled
-                approximately two weeks after the official launch.
+                Billing and subscription management will be enabled after launch.
               </p>
             </section>
           </div>
