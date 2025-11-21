@@ -19,6 +19,31 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  // ✅ OAuth مع Supabase لـ Google / Apple
+  const handleOAuthLogin = async (provider: "google" | "apple") => {
+    try {
+      setErrorMessage("");
+      setLoading(true);
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + "/profile",
+        },
+      });
+
+      if (error) {
+        console.error("OAuth error:", error);
+        setErrorMessage(error.message || "Could not sign in. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setErrorMessage("");
@@ -26,7 +51,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // 1) Create Supabase user (instant login since confirm email is off)
+      // 1) Create Supabase user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -52,7 +77,7 @@ export default function RegisterPage() {
 
       const userId = data.user.id;
 
-      // 2) Upsert profile row (link auth user -> profiles table)
+      // 2) Upsert profile row
       const { error: profileError } = await supabase.from("profiles").upsert({
         id: userId,
         full_name: fullName,
@@ -62,10 +87,10 @@ export default function RegisterPage() {
 
       if (profileError) {
         console.error("Profile upsert error:", profileError);
-        // We don't block the user for this, only log it
+        // ما نمنع التسجيل، فقط نطبع الخطأ
       }
 
-      // 3) Show message + redirect to /profile
+      // 3) رسالة نجاح + تحويل للبروفايل
       setSuccessMessage("Account created. Redirecting to your profile...");
       setTimeout(() => {
         window.location.href = "/profile";
@@ -95,12 +120,10 @@ export default function RegisterPage() {
             Engineer, or Consultant Engineer.
           </p>
 
-          {/* Plans cards */}
+          {/* ✅ Plans cards – كل الخطط مفعّلة الآن */}
           <div className="plans-grid">
             {PLANS.map((plan) => {
               const isSelected = plan.id === selectedPlanId;
-              const isComingSoon =
-                plan.id === "professional" || plan.id === "consultant";
 
               return (
                 <button
@@ -109,40 +132,8 @@ export default function RegisterPage() {
                   className={`plan-card ${
                     isSelected ? "plan-card-selected" : ""
                   }`}
-                  onClick={() => {
-                    if (!isComingSoon) {
-                      setSelectedPlanId(plan.id);
-                    }
-                  }}
-                  style={
-                    isComingSoon
-                      ? {
-                          opacity: 0.45,
-                          position: "relative",
-                          pointerEvents: "none",
-                        }
-                      : {}
-                  }
+                  onClick={() => setSelectedPlanId(plan.id)}
                 >
-                  {/* COMING SOON badge for Pro / Consultant */}
-                  {isComingSoon && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: 12,
-                        right: 12,
-                        padding: "4px 10px",
-                        borderRadius: 999,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        backgroundColor: "#111827",
-                        color: "white",
-                      }}
-                    >
-                      COMING SOON
-                    </div>
-                  )}
-
                   <div className="plan-card-header">
                     <div className={`plan-icon plan-icon-${plan.id}`}>
                       {plan.shortName[0]}
@@ -231,7 +222,7 @@ export default function RegisterPage() {
               </label>
             </div>
 
-            {/* Social sign-in (placeholders for future OAuth) */}
+            {/* Social sign-in */}
             <div className="form-row">
               <div className="section-heading" style={{ marginBottom: 6 }}>
                 Or continue with
@@ -240,9 +231,8 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   className="social-btn social-btn-google"
-                  onClick={() => {
-                    window.location.href = "/api/auth/signin/google";
-                  }}
+                  onClick={() => handleOAuthLogin("google")}
+                  disabled={loading}
                 >
                   <span className="social-icon">G</span>
                   <span>Google</span>
@@ -251,34 +241,32 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   className="social-btn social-btn-apple"
-                  onClick={() => {
-                    window.location.href = "/api/auth/signin/apple";
-                  }}
+                  onClick={() => handleOAuthLogin("apple")}
+                  disabled={loading}
                 >
                   <span className="social-icon"></span>
                   <span>Apple</span>
                 </button>
 
+                {/* Microsoft / Huawei: placeholders حتى نفعّلهم لاحقاً */}
                 <button
                   type="button"
                   className="social-btn social-btn-microsoft"
-                  onClick={() => {
-                    window.location.href = "/api/auth/signin/azure-ad";
-                  }}
+                  disabled
+                  style={{ opacity: 0.5, cursor: "not-allowed" }}
                 >
                   <span className="social-icon">MS</span>
-                  <span>Microsoft / Outlook</span>
+                  <span>Microsoft / Outlook (soon)</span>
                 </button>
 
                 <button
                   type="button"
                   className="social-btn social-btn-huawei"
-                  onClick={() => {
-                    window.location.href = "/api/auth/signin/huawei";
-                  }}
+                  disabled
+                  style={{ opacity: 0.5, cursor: "not-allowed" }}
                 >
                   <span className="social-icon">H</span>
-                  <span>Huawei</span>
+                  <span>Huawei (soon)</span>
                 </button>
               </div>
             </div>
@@ -303,7 +291,6 @@ export default function RegisterPage() {
               </label>
             </div>
 
-            {/* Error / success messages */}
             {errorMessage && (
               <div
                 style={{
