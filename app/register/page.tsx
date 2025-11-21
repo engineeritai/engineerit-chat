@@ -154,18 +154,15 @@ export default function RegisterPage() {
                   }}
                 >
                   <div className="plan-card-header">
-                    {/* دائرة الأيقونة فقط، بدون شريط جانبي */}
-                    <div
-                      className="plan-icon"
-                      style={{ backgroundColor: color, color: "white" }}
-                    >
-                      {plan.shortName[0]}
-                    </div>
-                    <div>
-                      <div className="plan-name">{plan.name}</div>
-                      <div className="plan-tagline">{plan.tagline}</div>
-                    </div>
-                  </div>
+  <div className={`plan-icon plan-icon-${plan.id}`}>
+    {plan.shortName[0]}
+  </div>
+  <div>
+    <div className="plan-name">{plan.name}</div>
+    <div className="plan-tagline">{plan.tagline}</div>
+  </div>
+</div>
+
 
                   <div className="plan-price">
                     <div style={{ color, fontWeight: 700 }}>
