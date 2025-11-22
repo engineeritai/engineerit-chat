@@ -118,7 +118,7 @@ export default function TermsPage() {
               gap: 16,
             }}
           >
-            <h2 className="section-heading">Download Full Terms Documents (PDF)</h2>
+            <h2 className="section-heading">Download Full Terms Documents (DOCX)</h2>
             <p>You can download the complete Terms of Use as PDF documents below:</p>
 
             <div
@@ -129,7 +129,7 @@ export default function TermsPage() {
               }}
             >
               <a
-                href="/legal/Engineerit_Terms_EN.pdf"
+                href="/legal/Engineerit_Terms_EN.docx"
                 download
                 className="btn btn-secondary"
                 style={{
@@ -144,7 +144,7 @@ export default function TermsPage() {
               </a>
 
               <a
-                href="/legal/Engineerit_Terms_AR.pdf"
+                href="/legal/Engineerit_Terms_AR.docx"
                 download
                 className="btn btn-secondary"
                 style={{
