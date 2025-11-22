@@ -158,12 +158,6 @@ export default function TermsPage() {
                 📄 تحميل شروط الاستخدام (عربي)
               </a>
             </div>
-
-            <p style={{ fontSize: 12, color: "#6b7280" }}>
-              Ensure both PDF files are uploaded to:
-              <br />
-              <code>/public/legal/</code>
-            </p>
           </div>
         </div>
       </div>
