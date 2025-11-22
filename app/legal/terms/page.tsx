@@ -119,7 +119,7 @@ export default function TermsPage() {
             }}
           >
             <h2 className="section-heading">Download Full Terms Documents (DOCX)</h2>
-            <p>You can download the complete Terms of Use as PDF documents below:</p>
+            <p>You can download the complete Terms of Use as documents below:</p>
 
             <div
               style={{
