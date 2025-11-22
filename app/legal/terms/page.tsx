@@ -25,7 +25,7 @@ export default function TermsPage() {
           </p>
 
           <div className="card" style={{ fontSize: 14, lineHeight: 1.6 }}>
-            {/* نفس النص القانوني السابق */}
+            {/* Existing Terms */}
             <h2 className="section-heading">1. Use of the Service</h2>
             <p>
               engineerit.ai is an AI-assisted engineering tool designed to
@@ -102,6 +102,67 @@ export default function TermsPage() {
             <p style={{ fontSize: 12, color: "#6b7280", marginTop: 12 }}>
               This document is provided as a general user policy template and
               does not constitute legal advice.
+            </p>
+          </div>
+
+          {/* Attachments Section */}
+          <div
+            className="card"
+            style={{
+              marginTop: 20,
+              padding: 20,
+              fontSize: 14,
+              lineHeight: 1.6,
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+            }}
+          >
+            <h2 className="section-heading">Download Full Terms Documents (PDF)</h2>
+            <p>You can download the complete Terms of Use as PDF documents below:</p>
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 12,
+              }}
+            >
+              <a
+                href="/legal/Engineerit_Terms_EN.pdf"
+                download
+                className="btn btn-secondary"
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 8,
+                  border: "1px solid #e5e7eb",
+                  textDecoration: "none",
+                  fontSize: 14,
+                }}
+              >
+                📄 Download Terms of Use (English)
+              </a>
+
+              <a
+                href="/legal/Engineerit_Terms_AR.pdf"
+                download
+                className="btn btn-secondary"
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 8,
+                  border: "1px solid #e5e7eb",
+                  textDecoration: "none",
+                  fontSize: 14,
+                }}
+              >
+                📄 تحميل شروط الاستخدام (عربي)
+              </a>
+            </div>
+
+            <p style={{ fontSize: 12, color: "#6b7280" }}>
+              Ensure both PDF files are uploaded to:
+              <br />
+              <code>/public/legal/</code>
             </p>
           </div>
         </div>
