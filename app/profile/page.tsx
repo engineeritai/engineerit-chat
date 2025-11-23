@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import { supabase } from "@/lib/supabaseClient";
+import SubscribeButton from "../components/SubscribeButton";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
@@ -201,7 +202,7 @@ export default function ProfilePage() {
     <div className="app-shell">
       <NavSidebar
         isMobileOpen={isSidebarOpenMobile}
-        onCloseMobile={() => setIsSidebarOpenMobile((v) => !v)}
+        onCloseMobile={() => setIsSidebarOpenMobile(false)}
       />
 
       <div className="main">
@@ -472,6 +473,67 @@ export default function ProfilePage() {
                   subscription and cannot be changed manually.
                 </p>
               </div>
+
+              {/* ▼▼ NEW: Upgrade buttons, placed right under the select ▼▼ */}
+              <div className="form-row" style={{ marginTop: 12 }}>
+                <h3
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    marginBottom: 6,
+                  }}
+                >
+                  Upgrade your plan
+                </h3>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 8,
+                  }}
+                >
+                  {planId === "assistant" && (
+                    <>
+                      <SubscribeButton
+                        planId="engineer"
+                        label="Upgrade to Engineer"
+                      />
+                      <SubscribeButton
+                        planId="professional"
+                        label="Upgrade to Professional"
+                      />
+                      <SubscribeButton
+                        planId="consultant"
+                        label="Upgrade to Consultant"
+                      />
+                    </>
+                  )}
+
+                  {planId === "engineer" && (
+                    <>
+                      <SubscribeButton
+                        planId="professional"
+                        label="Upgrade to Professional"
+                      />
+                      <SubscribeButton
+                        planId="consultant"
+                        label="Upgrade to Consultant"
+                      />
+                    </>
+                  )}
+
+                  {planId === "professional" && (
+                    <SubscribeButton
+                      planId="consultant"
+                      label="Upgrade to Consultant"
+                    />
+                  )}
+
+                  {/* If already consultant, no upgrade buttons */}
+                </div>
+              </div>
+              {/* ▲▲ END upgrade block ▲▲ */}
 
               <hr
                 style={{

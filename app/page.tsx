@@ -788,7 +788,7 @@ export default function Page() {
             <input
               type="file"
               id="file-upload"
-              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,mpp,.dwg,.dxf"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.mpp,.dwg,.dxf,.m,.mat,.slx,.sldprt,.sldasm,.step,.stp,.iges,.inp"
               hidden
               onChange={handleFileChange}
             />
