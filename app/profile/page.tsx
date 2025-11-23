@@ -576,8 +576,7 @@ export default function ProfilePage() {
                   marginTop: 8,
                 }}
               >
-                These features will be connected to Supabase storage and
-                subscription logic as we finalize the production setup.
+                More features are coming soon to enhance your engineerit.ai experience.
               </p>
             </section>
           </div>
