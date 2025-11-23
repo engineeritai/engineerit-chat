@@ -7,15 +7,27 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { PLANS } from "@/lib/plans";
 
-const PLAN_COLORS: Record<string, string> = {
+type PlanId = "assistant" | "engineer" | "professional" | "consultant";
+
+const PLAN_COLORS: Record<PlanId, string> = {
   assistant: "#2563eb", // blue
   engineer: "#f97316", // orange / gold
   professional: "#0f766e", // green
   consultant: "#7c3aed", // purple
 };
 
+// Current monthly prices in SAR (used when inserting into subscriptions)
+const PLAN_PRICES: Record<PlanId, number> = {
+  assistant: 0,
+  engineer: 19,
+  professional: 41,
+  consultant: 79,
+};
+
+const PLAN_DURATION_DAYS = 30; // initial subscription period
+
 export default function RegisterPage() {
-  const [selectedPlanId, setSelectedPlanId] = useState("assistant");
+  const [selectedPlanId, setSelectedPlanId] = useState<PlanId>("assistant");
   const [accepted, setAccepted] = useState(false);
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
@@ -58,6 +70,19 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      // 0) Calculate subscription dates and price
+      const now = new Date();
+      const expires =
+        selectedPlanId === "assistant"
+          ? null
+          : new Date(
+              now.getTime() + PLAN_DURATION_DAYS * 24 * 60 * 60 * 1000
+            );
+
+      const price = PLAN_PRICES[selectedPlanId] ?? 0;
+      const currency = "SAR";
+
+      // 1) Create Supabase user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -83,17 +108,39 @@ export default function RegisterPage() {
 
       const userId = data.user.id;
 
+      // 2) Upsert into profiles table
       const { error: profileError } = await supabase.from("profiles").upsert({
         id: userId,
         full_name: fullName,
         avatar_url: null,
         plan: selectedPlanId,
+        billing_currency: currency,
+        plan_started_at: now.toISOString(),
+        plan_expires_at: expires ? expires.toISOString() : null,
       });
 
       if (profileError) {
         console.error("Profile upsert error:", profileError);
+        // Do not block user; just log
       }
 
+      // 3) Insert into subscriptions table
+      const { error: subError } = await supabase.from("subscriptions").insert({
+        user_id: userId,
+        plan: selectedPlanId,
+        price,
+        currency,
+        status: "active",
+        start_date: now.toISOString(),
+        end_date: expires ? expires.toISOString() : null,
+      });
+
+      if (subError) {
+        console.error("Subscription insert error:", subError);
+        // Also do not block user; just log for later troubleshooting
+      }
+
+      // 4) Show success and redirect
       setSuccessMessage("Account created. Redirecting to your profile...");
       setTimeout(() => {
         window.location.href = "/profile";
@@ -126,11 +173,12 @@ export default function RegisterPage() {
             Engineer, or Consultant Engineer.
           </p>
 
-          {/* ===== PLANS GRID ===== */}
+          {/* ===== PLANS GRID (same look as main page) ===== */}
           <div className="plans-grid">
             {PLANS.map((plan) => {
               const isSelected = plan.id === selectedPlanId;
-              const color = PLAN_COLORS[plan.id] || "#2563eb";
+              const color =
+                PLAN_COLORS[plan.id as PlanId] || PLAN_COLORS.assistant;
               const letter =
                 (plan.shortName || plan.name || "E").charAt(0).toUpperCase();
 
@@ -138,47 +186,40 @@ export default function RegisterPage() {
                 <button
                   key={plan.id}
                   type="button"
-                  onClick={() => setSelectedPlanId(plan.id)}
+                  onClick={() => setSelectedPlanId(plan.id as PlanId)}
                   className="plan-card"
                   style={{
-                    borderRadius: 24,
-                    border: `1px solid ${isSelected ? color : "#e5e7eb"}`,
-                    background: "white",
-                    padding: 20,
-                    textAlign: "left",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    height: "100%",
+                    // Only a light visual highlight when selected.
+                    borderColor: isSelected ? color : undefined,
                     boxShadow: isSelected
-                      ? "0 12px 30px rgba(15,23,42,0.18)"
-                      : "0 6px 18px rgba(15,23,42,0.06)",
-                    transform: isSelected ? "translateY(-1px)" : "none",
+                      ? "0 14px 35px rgba(15,23,42,0.18)"
+                      : undefined,
+                    transform: isSelected ? "translateY(-2px)" : undefined,
                     transition:
                       "box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease",
                   }}
                 >
-                  {/* HEADER: circle + title + tagline */}
+                  {/* Header: colored circle + title + tagline */}
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      marginBottom: 10,
+                      marginBottom: 14,
                     }}
                   >
                     <div
                       style={{
-                        width: 40,
-                        height: 40,
+                        width: 44,
+                        height: 44,
                         borderRadius: "50%",
                         backgroundColor: color,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: 700,
                         color: "white",
-                        marginRight: 12,
+                        marginRight: 14,
                         flexShrink: 0,
                       }}
                     >
@@ -188,7 +229,7 @@ export default function RegisterPage() {
                     <div>
                       <div
                         style={{
-                          fontSize: 18,
+                          fontSize: 20,
                           fontWeight: 700,
                           color: "#111827",
                           marginBottom: 2,
@@ -198,7 +239,7 @@ export default function RegisterPage() {
                       </div>
                       <div
                         style={{
-                          fontSize: 13,
+                          fontSize: 14,
                           color: "#6b7280",
                           lineHeight: 1.35,
                         }}
@@ -208,11 +249,11 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  {/* PRICE */}
-                  <div style={{ marginBottom: 8 }}>
+                  {/* Price block */}
+                  <div style={{ marginBottom: 12 }}>
                     <div
                       style={{
-                        fontSize: 17,
+                        fontSize: 18,
                         fontWeight: 700,
                         color,
                       }}
@@ -221,7 +262,7 @@ export default function RegisterPage() {
                     </div>
                     <div
                       style={{
-                        fontSize: 12,
+                        fontSize: 13,
                         color: "#6b7280",
                         marginTop: 2,
                       }}
@@ -230,20 +271,20 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  {/* FEATURES */}
+                  {/* Features list */}
                   <ul
                     style={{
                       listStyle: "disc",
                       paddingLeft: 20,
                       margin: 0,
-                      marginTop: 2,
-                      fontSize: 13,
+                      marginTop: 4,
+                      fontSize: 14,
                       color: "#374151",
                       flexGrow: 1,
                     }}
                   >
                     {plan.features.map((f) => (
-                      <li key={f} style={{ marginBottom: 4 }}>
+                      <li key={f} style={{ marginBottom: 6 }}>
                         {f}
                       </li>
                     ))}
@@ -337,6 +378,7 @@ export default function RegisterPage() {
                   <span>Apple</span>
                 </button>
 
+                {/* Placeholders for future providers */}
                 <button
                   type="button"
                   className="social-btn social-btn-microsoft"
@@ -372,9 +414,9 @@ export default function RegisterPage() {
                   <Link href="/legal/terms" className="link">
                     User Policy & Agreement
                   </Link>
-                  , including cancellation and refund policies, and I understand
-                  that engineerit.ai is not responsible or liable for any
-                  decisions or mistakes based on the outputs.
+                  , including cancellation and refund policies, and I
+                  understand that engineerit.ai is not responsible or liable
+                  for any decisions or mistakes based on the outputs.
                 </span>
               </label>
             </div>
