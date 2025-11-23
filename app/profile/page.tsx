@@ -16,6 +16,10 @@ export default function ProfilePage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const [planId, setPlanId] = useState<PlanId>("assistant");
+  const [billingCountry, setBillingCountry] = useState<string>("");
+  const [billingCurrency, setBillingCurrency] = useState<string>("SAR");
+  const [planStartedAt, setPlanStartedAt] = useState<string | null>(null);
+  const [planExpiresAt, setPlanExpiresAt] = useState<string | null>(null);
 
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,7 +30,7 @@ export default function ProfilePage() {
   const router = useRouter();
 
   const planLabels: Record<PlanId, string> = {
-    assistant: "Assistant Engineer (Free)",
+    assistant: "Assistant Engineer",
     engineer: "Engineer",
     professional: "Professional Engineer",
     consultant: "Consultant Engineer",
@@ -39,20 +43,8 @@ export default function ProfilePage() {
     consultant: "#7c3aed",
   };
 
-  const planDescriptions: Record<PlanId, string> = {
-    assistant:
-      "Default free plan. Basic chat access and limited engineering assistance.",
-    engineer:
-      "Engineer-focused tools, document analysis, and better limits for daily use.",
-    professional:
-      "Extended tools for senior engineers, project-level workflows, and advanced reporting.",
-    consultant:
-      "Full access for consulting engineers with maximum limits and advanced analysis features.",
-  };
-
   const currentPlanLabel = planLabels[planId];
   const currentPlanColor = planBadgeColors[planId];
-  const currentPlanDescription = planDescriptions[planId];
 
   function getInitials(name: string) {
     if (!name) return "EN";
@@ -64,120 +56,108 @@ export default function ProfilePage() {
     );
   }
 
-  // تحميل بيانات المستخدم + البروفايل من Supabase أو localStorage
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  // Load user + profile from Supabase on first render
   useEffect(() => {
-    async function loadProfile() {
+    const loadProfile = async () => {
       setLoading(true);
       setErrorMessage(null);
 
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
 
-        if (!sessionData?.session) {
-          router.replace("/auth/login");
-          return;
-        }
-
-        const user = sessionData.session.user;
-
-        if (!user) {
-          router.replace("/auth/login");
-          return;
-        }
-
-        setUserId(user.id);
-        setEmail(user.email ?? "");
-
-        let loadedFromDb = false;
-
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error("Profile load error:", profileError);
-        } else if (profileData) {
-          loadedFromDb = true;
-          setFullName(profileData.full_name || "Engineer User");
-          if (profileData.plan) {
-            setPlanId(profileData.plan as PlanId);
-          }
-          if (profileData.avatar_url) {
-            setPhotoPreview(profileData.avatar_url);
-          }
-        }
-
-        // لو ما قدرنا نحمل من DB، نحاول من localStorage كنسخة احتياطية
-        if (!loadedFromDb) {
-          try {
-            const cached = window.localStorage.getItem("engineerit_profile");
-            if (cached) {
-              const parsed = JSON.parse(cached) as {
-                fullName?: string;
-                email?: string;
-                avatarUrl?: string;
-                planId?: PlanId;
-              };
-              if (parsed.fullName) setFullName(parsed.fullName);
-              if (parsed.email) setEmail(parsed.email);
-              if (parsed.avatarUrl) setPhotoPreview(parsed.avatarUrl);
-              if (parsed.planId) setPlanId(parsed.planId);
-            }
-          } catch (err) {
-            console.error("Failed to read cached profile:", err);
-          }
-        }
-      } catch (err) {
-        console.error("Profile loading error:", err);
-        setErrorMessage("Could not load profile. Please try again.");
-      } finally {
+      if (error) {
+        console.error("getUser error:", error);
+        setErrorMessage("Could not load user. Please try again.");
         setLoading(false);
+        return;
       }
-    }
+
+      if (!user) {
+        router.push("/register");
+        return;
+      }
+
+      setUserId(user.id);
+      setEmail(user.email || "");
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select(
+          "full_name, avatar_url, plan, billing_country, billing_currency, plan_started_at, plan_expires_at"
+        )
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("profile load error:", profileError);
+      } else if (profileData) {
+        setFullName(profileData.full_name || "Engineer User");
+        if (profileData.avatar_url) {
+          setPhotoPreview(profileData.avatar_url);
+        }
+
+        if (profileData.plan) {
+          setPlanId(profileData.plan as PlanId);
+        }
+
+        if (profileData.billing_country) {
+          setBillingCountry(profileData.billing_country);
+        }
+
+        if (profileData.billing_currency) {
+          setBillingCurrency(profileData.billing_currency);
+        } else {
+          setBillingCurrency("SAR");
+        }
+
+        if (profileData.plan_started_at) {
+          setPlanStartedAt(profileData.plan_started_at);
+        }
+        if (profileData.plan_expires_at) {
+          setPlanExpiresAt(profileData.plan_expires_at);
+        }
+      }
+
+      setLoading(false);
+    };
 
     void loadProfile();
   }, [router]);
 
-  // رفع الصورة → data URL تتخزن في الذاكرة، ثم نحفظها في Supabase + localStorage عند الحفظ
-  const handlePhotoUpload = (e: any) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      setPhotoPreview(result);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // حفظ البيانات في جدول profiles + تخزين نسخة في localStorage
   const handleSave = async () => {
     if (!userId) return;
-
     setSaving(true);
     setMessage(null);
     setErrorMessage(null);
 
     try {
-      const payload = {
-        id: userId,
-        full_name: fullName,
-        plan: planId,
-        avatar_url: photoPreview ?? null,
-        updated_at: new Date().toISOString(),
-      };
-
-      const { error } = await supabase.from("profiles").upsert(payload);
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: fullName,
+          avatar_url: photoPreview,
+          plan: planId,
+          billing_country: billingCountry || null,
+          billing_currency: billingCurrency || "SAR",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userId);
 
       if (error) {
-        console.error("Profile upsert error:", error);
-        setErrorMessage(error.message || "Could not save changes. Please try again.");
+        console.error("profile update error:", error);
+        setErrorMessage("Could not save changes. Please try again.");
       } else {
         setMessage("Profile updated.");
 
+        // Cache in localStorage for the Header
         try {
           window.localStorage.setItem(
             "engineerit_profile",
@@ -189,7 +169,7 @@ export default function ProfilePage() {
             })
           );
         } catch (err) {
-          console.error("Failed to cache profile:", err);
+          console.error("Failed to cache profile locally:", err);
         }
       }
     } catch (err) {
@@ -221,7 +201,7 @@ export default function ProfilePage() {
     <div className="app-shell">
       <NavSidebar
         isMobileOpen={isSidebarOpenMobile}
-        onCloseMobile={() => setIsSidebarOpenMobile(false)}
+        onCloseMobile={() => setIsSidebarOpenMobile((v) => !v)}
       />
 
       <div className="main">
@@ -230,8 +210,8 @@ export default function ProfilePage() {
         <div className="page-wrap">
           <h1 className="page-title">My Profile</h1>
           <p className="page-subtitle">
-            Update your personal information and review your current plan in
-            engineerit.ai.
+            Update your personal information and review your plan and activity
+            in engineerit.ai.
           </p>
 
           {/* Top section (Avatar + Plan Badge) */}
@@ -276,7 +256,7 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Name + email + plan badge */}
+              {/* Name + email + plan */}
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ fontSize: 18, fontWeight: 600 }}>
                   {fullName || "Your Name"}
@@ -299,6 +279,22 @@ export default function ProfilePage() {
                 >
                   {currentPlanLabel}
                 </span>
+              </div>
+
+              {/* Plan timing (optional, read-only for now) */}
+              <div style={{ minWidth: 200, fontSize: 12, color: "#6b7280" }}>
+                {planStartedAt && (
+                  <div>
+                    <strong>Plan started:</strong>{" "}
+                    {new Date(planStartedAt).toLocaleDateString()}
+                  </div>
+                )}
+                {planExpiresAt && (
+                  <div>
+                    <strong>Plan renews:</strong>{" "}
+                    {new Date(planExpiresAt).toLocaleDateString()}
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -323,7 +319,7 @@ export default function ProfilePage() {
 
               <div className="form-row">
                 <label>
-                  Email address
+                  Email address (from login)
                   <input
                     className="input"
                     type="email"
@@ -343,44 +339,64 @@ export default function ProfilePage() {
                     onChange={handlePhotoUpload}
                   />
                 </label>
+                <p
+                  style={{
+                    fontSize: 11,
+                    color: "#6b7280",
+                    marginTop: 4,
+                    marginBottom: 0,
+                  }}
+                >
+                  (Image is stored for your account and used in the header.)
+                </p>
               </div>
 
-              {/* Subscription selector – كل الخطط مفعّلة الآن */}
+              <h3
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  marginTop: 16,
+                  marginBottom: 8,
+                }}
+              >
+                Billing details (for future subscriptions)
+              </h3>
+
               <div className="form-row">
-  <label>
-    Subscription
-    <select
-      className="input"
-      value={planId}
-      onChange={(e) =>
-        setPlanId(
-          e.target.value as
-            | "assistant"
-            | "engineer"
-            | "professional"
-            | "consultant"
-        )
-      }
-    >
-      <option value="assistant">
-        Assistant Engineer (Free default)
-      </option>
-      <option value="engineer">Engineer</option>
-      <option value="professional">Professional Engineer</option>
-      <option value="consultant">Consultant Engineer</option>
-    </select>
-  </label>
-  <p
-    style={{
-      fontSize: 12,
-      color: "#6b7280",
-      marginTop: 4,
-      marginBottom: 0,
-    }}
-  >
-    Plan upgrades will be integrated with payments system later.
-  </p>
-</div>
+                <label>
+                  Billing country / region
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder="e.g. Saudi Arabia"
+                    value={billingCountry}
+                    onChange={(e) => setBillingCountry(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div className="form-row">
+                <label>
+                  Billing currency
+                  <input
+                    className="input"
+                    type="text"
+                    value={billingCurrency}
+                    onChange={(e) => setBillingCurrency(e.target.value)}
+                  />
+                </label>
+                <p
+                  style={{
+                    fontSize: 11,
+                    color: "#6b7280",
+                    marginTop: 4,
+                    marginBottom: 0,
+                  }}
+                >
+                  Default is SAR. In the future this will be used to localize
+                  your pricing.
+                </p>
+              </div>
 
               {errorMessage && (
                 <p
@@ -412,69 +428,89 @@ export default function ProfilePage() {
               </button>
             </section>
 
-            {/* Current Subscription Details */}
+            {/* Activity / Plan info */}
             <section className="card">
-              <h2 className="section-heading">Current subscription</h2>
-
-              <p className="page-subtitle" style={{ marginBottom: 8 }}>
-                This reflects your current plan stored in engineerit.ai profile.
+              <h2 className="section-heading">Plan & activity</h2>
+              <p className="page-subtitle" style={{ marginBottom: 10 }}>
+                Your current plan controls which engineer tools and limits are
+                available in the main chat.
               </p>
 
-              <div
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 12,
-                  border: "1px solid #e5e7eb",
-                  marginBottom: 12,
-                }}
-              >
-                <div
+              <div className="form-row">
+                <label>
+                  Subscription plan
+                  <select
+                    className="input"
+                    value={planId}
+                    onChange={(e) =>
+                      setPlanId(
+                        e.target.value as
+                          | "assistant"
+                          | "engineer"
+                          | "professional"
+                          | "consultant"
+                      )
+                    }
+                  >
+                    <option value="assistant">Assistant Engineer</option>
+                    <option value="engineer">Engineer</option>
+                    <option value="professional">
+                      Professional Engineer
+                    </option>
+                    <option value="consultant">Consultant Engineer</option>
+                  </select>
+                </label>
+                <p
                   style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    marginBottom: 4,
+                    fontSize: 11,
+                    color: "#6b7280",
+                    marginTop: 4,
+                    marginBottom: 0,
                   }}
                 >
-                  {currentPlanLabel}
-                </div>
-                <div style={{ fontSize: 13, color: "#6b7280" }}>
-                  {currentPlanDescription}
-                </div>
+                  In production, this will be controlled by your paid
+                  subscription and cannot be changed manually.
+                </p>
               </div>
 
+              <hr
+                style={{
+                  border: 0,
+                  borderTop: "1px solid #e5e7eb",
+                  margin: "12px 0",
+                }}
+              />
+
+              <h3
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  marginBottom: 8,
+                }}
+              >
+                Coming soon
+              </h3>
+
               <ul className="plan-features">
-                {planId === "assistant" && (
-                  <>
-                    <li>Basic AI chat access</li>
-                    <li>Limited engineering assistance</li>
-                    <li>Single-user usage</li>
-                  </>
-                )}
-                {planId === "engineer" && (
-                  <>
-                    <li>Engineer tools bar inside chat</li>
-                    <li>Document analysis for engineering files</li>
-                    <li>Higher limits than free plan</li>
-                  </>
-                )}
-                {planId === "professional" && (
-                  <>
-                    <li>Advanced reporting and templates</li>
-                    <li>Project-level workflows</li>
-                    <li>Higher limits and better priority</li>
-                  </>
-                )}
-                {planId === "consultant" && (
-                  <>
-                    <li>Full access to all features</li>
-                    <li>Consulting-focused workflows</li>
-                    <li>Maximum limits and premium priority</li>
-                  </>
-                )}
+                <li>View previous chat histories per project/thread</li>
+                <li>
+                  Access generated files (Word, Excel, PowerPoint, PDFs, etc.)
+                </li>
+                <li>Track engineering drawings processed by engineerit.ai</li>
+                <li>
+                  Manage invoices and subscription status for each plan level
+                </li>
               </ul>
 
-              <p style={{ fontSize: 12, color: "#6b7280", marginTop: 8 }}>
-                Billing and subscription management will be enabled after launch.
+              <p
+                style={{
+                  fontSize: 12,
+                  color: "#6b7280",
+                  marginTop: 8,
+                }}
+              >
+                These features will be connected to Supabase storage and
+                subscription logic as we finalize the production setup.
               </p>
             </section>
           </div>
