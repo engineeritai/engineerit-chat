@@ -474,7 +474,7 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              {/* ▼▼ NEW: Upgrade buttons, placed right under the select ▼▼ */}
+              {/* Upgrade buttons */}
               <div className="form-row" style={{ marginTop: 12 }}>
                 <h3
                   style={{
@@ -493,47 +493,52 @@ export default function ProfilePage() {
                     gap: 8,
                   }}
                 >
-                  {planId === "assistant" && (
+                  {userId && planId === "assistant" && (
                     <>
                       <SubscribeButton
                         planId="engineer"
                         label="Upgrade to Engineer"
+                        userId={userId}
                       />
                       <SubscribeButton
                         planId="professional"
                         label="Upgrade to Professional"
+                        userId={userId}
                       />
                       <SubscribeButton
                         planId="consultant"
                         label="Upgrade to Consultant"
+                        userId={userId}
                       />
                     </>
                   )}
 
-                  {planId === "engineer" && (
+                  {userId && planId === "engineer" && (
                     <>
                       <SubscribeButton
                         planId="professional"
                         label="Upgrade to Professional"
+                        userId={userId}
                       />
                       <SubscribeButton
                         planId="consultant"
                         label="Upgrade to Consultant"
+                        userId={userId}
                       />
                     </>
                   )}
 
-                  {planId === "professional" && (
+                  {userId && planId === "professional" && (
                     <SubscribeButton
                       planId="consultant"
                       label="Upgrade to Consultant"
+                      userId={userId}
                     />
                   )}
-
                   {/* If already consultant, no upgrade buttons */}
                 </div>
               </div>
-              {/* ▲▲ END upgrade block ▲▲ */}
+              {/* END upgrade block */}
 
               <hr
                 style={{

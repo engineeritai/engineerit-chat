@@ -4,70 +4,68 @@ import { useState } from "react";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
-interface SubscribeButtonProps {
+type Props = {
   planId: PlanId;
   label: string;
-}
+  userId: string; // we will pass this from profile/page.tsx
+};
 
-export default function SubscribeButton({ planId, label }: SubscribeButtonProps) {
+export default function SubscribeButton({ planId, label, userId }: Props) {
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   const handleClick = async () => {
     setLoading(true);
-    setMessage(null);
-    setErrorMessage(null);
+    setStatus(null);
 
     try {
       const res = await fetch("/api/subscribe", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ planId }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, planId }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error || "Subscription failed");
+        const body = await res.json().catch(() => null);
+        setStatus(
+          body?.error || "Could not update your plan. Please try again."
+        );
+        return;
       }
 
-      setMessage("Subscription updated. Refreshing profile…");
-      // refresh profile so plan + dates update
+      setStatus("Plan updated. Reloading…");
+      // reload to show the new plan badge / info
       setTimeout(() => {
         window.location.reload();
-      }, 1000);
-    } catch (err: any) {
+      }, 800);
+    } catch (err) {
       console.error(err);
-      setErrorMessage(err.message || "Unable to update subscription.");
+      setStatus("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ display: "inline-flex", flexDirection: "column" }}>
+    <div
+      style={{
+        display: "inline-flex",
+        flexDirection: "column",
+        gap: 4,
+      }}
+    >
       <button
         type="button"
-        onClick={handleClick}
-        disabled={loading}
         className="btn"
-        style={{
-          padding: "6px 12px",
-          fontSize: 13,
-          marginRight: 6,
-          marginBottom: 4,
-        }}
+        style={{ paddingInline: 16, fontSize: 14 }}
+        disabled={loading || !userId}
+        onClick={handleClick}
       >
         {loading ? "Processing…" : label}
       </button>
-      {errorMessage && (
-        <span style={{ fontSize: 11, color: "#b91c1c" }}>{errorMessage}</span>
-      )}
-      {message && (
-        <span style={{ fontSize: 11, color: "#15803d" }}>{message}</span>
+
+      {status && (
+        <span style={{ fontSize: 11, color: "#6b7280" }}>{status}</span>
       )}
     </div>
   );
