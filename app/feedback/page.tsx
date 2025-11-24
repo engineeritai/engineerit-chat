@@ -19,7 +19,7 @@ export default function FeedbackPage() {
   const [text, setText] = useState("");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
-    "idle",
+    "idle"
   );
 
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
@@ -37,17 +37,25 @@ export default function FeedbackPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!text.trim()) return;
+
     setStatus("sending");
     try {
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, text, email }),
+        body: JSON.stringify({
+          category: type,      // ✅ ما كان يُرسل سابقاً
+          message: text,       // ✅ بدلاً من text فقط
+          email: email || undefined,
+        }),
       });
+
       if (!res.ok) throw new Error("Request failed");
       setStatus("done");
       setText("");
-    } catch {
+    } catch (err) {
+      console.error("Feedback submit error:", err);
       setStatus("error");
     }
   }
@@ -76,7 +84,8 @@ export default function FeedbackPage() {
           "I could not understand well. Please try to explain in a different way.",
       };
       setBotMessages((prev) => [...prev, botMsg]);
-    } catch {
+    } catch (err) {
+      console.error("Smart assistant error:", err);
       const botMsg: BotMessage = {
         id: uuid(),
         from: "bot",
@@ -114,7 +123,10 @@ export default function FeedbackPage() {
                 <select
                   className="select"
                   value={type}
-                  onChange={(e) => setType(e.target.value)}
+                  onChange={(e) => {
+                    setType(e.target.value);
+                    setStatus("idle");
+                  }}
                 >
                   <option value="feedback">Feedback</option>
                   <option value="complaint">Complaint</option>
@@ -131,7 +143,10 @@ export default function FeedbackPage() {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setStatus("idle");
+                  }}
                 />
               </label>
             </div>
@@ -145,7 +160,10 @@ export default function FeedbackPage() {
                   required
                   placeholder="Write your feedback, complaint, or suggestion in detail…"
                   value={text}
-                  onChange={(e) => setText(e.target.value)}
+                  onChange={(e) => {
+                    setText(e.target.value);
+                    setStatus("idle");
+                  }}
                 />
               </label>
             </div>
@@ -203,7 +221,8 @@ export default function FeedbackPage() {
                   <div
                     key={m.id}
                     style={{
-                      alignSelf: m.from === "user" ? "flex-end" : "flex-start",
+                      alignSelf:
+                        m.from === "user" ? "flex-end" : "flex-start",
                       maxWidth: "90%",
                       padding: "6px 9px",
                       borderRadius: 12,

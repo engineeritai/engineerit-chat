@@ -1,3 +1,5 @@
+// app/api/document/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { toFile } from "openai/uploads";
@@ -9,12 +11,12 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// تحويل XML إلى نص عادي بسيط
+// Simple XML → plain text
 function xmlToPlain(xml: string): string {
   return xml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-// استخراج نص من ملفات Office: DOCX / PPTX / XLSX
+// Extract text from Office files: DOCX / PPTX / XLSX
 async function extractOfficeText(buffer: Buffer, filename: string): Promise<string> {
   const zip = await JSZip.loadAsync(buffer);
   const lower = filename.toLowerCase();
@@ -26,10 +28,9 @@ async function extractOfficeText(buffer: Buffer, filename: string): Promise<stri
       const xml = await mainDoc.async("text");
       texts.push(xmlToPlain(xml));
     }
-
-    // لو عندك عناوين إضافية (headers/footers) ممكن تضيفها هنا لاحقاً
+    // headers/footers يمكن إضافتها لاحقًا إذا احتجنا
   } else if (lower.endsWith(".pptx")) {
-    // نقرأ جميع الشرائح ppt/slides/slideX.xml
+    // read all slides ppt/slides/slideX.xml
     const files = Object.keys(zip.files).filter(
       (n) => n.startsWith("ppt/slides/slide") && n.endsWith(".xml")
     );
@@ -41,7 +42,7 @@ async function extractOfficeText(buffer: Buffer, filename: string): Promise<stri
       }
     }
   } else if (lower.endsWith(".xlsx")) {
-    // نقرأ sharedStrings (النصوص الموجودة في الجداول)
+    // sharedStrings → النصوص الموجودة داخل الجداول
     const shared = zip.file("xl/sharedStrings.xml");
     if (shared) {
       const xml = await shared.async("text");
@@ -56,19 +57,23 @@ async function extractOfficeText(buffer: Buffer, filename: string): Promise<stri
   return result;
 }
 
-// تلخيص نص جاهز (أيًا كان مصدره)
+// Summarize from already-extracted plain text
 async function summarizeFromText(text: string, question: string): Promise<string> {
   if (!text.trim()) {
     return `
-I couldn't extract readable text from this document. It may be a scanned/image-based file.
-Please upload it as a PDF/image or paste the important text directly.`;
+I couldn't extract readable text from this document.  
+It may be a scanned/image-based file or a pure binary file.
+
+Please try:
+- Uploading a clearer PDF or image, **or**
+- Copy/pasting the important text directly into the chat.`;
   }
 
   const maxChars = 20000;
   const truncated = text.slice(0, maxChars);
 
   const prompt = `
-You are an engineering document summarizer.
+You are an engineering document summarizer for engineerit.ai.
 
 User request:
 ${question}
@@ -78,12 +83,15 @@ Below is the extracted content of a document:
 ${truncated}
 ---
 
-Provide:
-- Title
-- Short context
-- Bullet points for key findings
-- Important numbers/dates/names
-- Key recommendations
+Please respond **bilingually (Arabic and English)** where useful.
+
+Provide, in clear Markdown:
+
+1) Title / عنوان مناسب
+2) Short context / سياق مختصر
+3) Bullet points for key findings / أهم النتائج بنقاط
+4) Important numbers, dates, names / الأرقام والتواريخ والأسماء المهمة
+5) Key engineering recommendations / التوصيات الهندسية الرئيسية
 `;
 
   const completion = await client.chat.completions.create({
@@ -91,7 +99,8 @@ Provide:
     messages: [
       {
         role: "system",
-        content: "You are a precise engineering document summarizer.",
+        content:
+          "You are a precise engineering document summarizer. You handle technical reports, drawings, specs, codes, and project documents in Arabic and English.",
       },
       { role: "user", content: prompt },
     ],
@@ -104,7 +113,7 @@ Provide:
   );
 }
 
-// المسار الحالي اللي شغّال ممتاز مع PDF: upload + input_file
+// Using file upload + responses API (good for PDF/any complex file)
 async function summarizeViaUpload(
   buffer: Buffer,
   filename: string,
@@ -126,11 +135,11 @@ async function summarizeViaUpload(
             text:
               question +
               "\n\nPlease answer in clear markdown with:\n" +
-              "- Title\n" +
-              "- Short context\n" +
-              "- Bullet points for key findings\n" +
-              "- Important numbers/dates/names\n" +
-              "- Key recommendations.",
+              "1) Title / عنوان\n" +
+              "2) Short context\n" +
+              "3) Bullet points for key findings\n" +
+              "4) Important numbers/dates/names\n" +
+              "5) Key recommendations.",
           },
           {
             type: "input_file",
@@ -156,14 +165,26 @@ export async function POST(req: NextRequest) {
     const questionField = formData.get("question");
 
     const question =
-      (typeof questionField === "string" && questionField.trim().length > 0
+      typeof questionField === "string" && questionField.trim().length > 0
         ? questionField
-        : "Summarize this engineering document with headings, bullet points, important numbers/dates, and key recommendations.");
+        : "Summarize this engineering document (Arabic + English) with headings, bullet points, important numbers/dates, and key recommendations.";
 
     if (!file) {
       return NextResponse.json(
         { error: "No file uploaded" },
         { status: 400 }
+      );
+    }
+
+    // Basic size guard (e.g. 20 MB) to avoid crazy huge files
+    const maxBytes = 20 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      return NextResponse.json(
+        {
+          error:
+            "File is too large. Please upload a smaller document (max ~20 MB) or split it into parts.",
+        },
+        { status: 413 }
       );
     }
 
@@ -173,12 +194,14 @@ export async function POST(req: NextRequest) {
 
     let reply: string;
 
+    // ─────────────────────────────────────
+    // 1) Office formats: DOCX / PPTX / XLSX
+    // ─────────────────────────────────────
     if (
       lowerName.endsWith(".docx") ||
       lowerName.endsWith(".pptx") ||
       lowerName.endsWith(".xlsx")
     ) {
-      // 🔹 ملفات Word / PowerPoint / Excel → نفك الضغط ونستخرج النص
       try {
         const officeText = await extractOfficeText(buffer, lowerName);
         reply = await summarizeFromText(officeText, question);
@@ -187,7 +210,6 @@ export async function POST(req: NextRequest) {
           "OFFICE extraction failed, falling back to upload/raw:",
           err
         );
-        // لو فشل JSZip لأي سبب، نجرب upload مثل باقي الأنواع
         try {
           reply = await summarizeViaUpload(buffer, file.name, question);
         } catch (err2) {
@@ -196,8 +218,11 @@ export async function POST(req: NextRequest) {
           reply = await summarizeFromText(raw, question);
         }
       }
+
+      // ─────────────────────────────────────
+      // 2) PDF (keep the path that was working well)
+      // ─────────────────────────────────────
     } else if (lowerName.endsWith(".pdf")) {
-      // 🔹 PDF → نحافظ على المسار اللي كان شغّال عندك
       try {
         reply = await summarizeViaUpload(buffer, file.name, question);
       } catch (err) {
@@ -205,8 +230,39 @@ export async function POST(req: NextRequest) {
         const raw = buffer.toString("utf8").replace(/\0/g, " ");
         reply = await summarizeFromText(raw, question);
       }
+
+      // ─────────────────────────────────────
+      // 3) Engineering / binary formats (MS Project, AutoCAD, FEA, etc.)
+      //    We treat them via upload first; if that fails, we last-resort to raw text.
+      // ─────────────────────────────────────
+    } else if (
+      lowerName.endsWith(".mpp") || // MS Project
+      lowerName.endsWith(".dwg") ||
+      lowerName.endsWith(".dxf") || // AutoCAD
+      lowerName.endsWith(".m") || // Matlab scripts
+      lowerName.endsWith(".slx") || // Simulink
+      lowerName.endsWith(".sldprt") ||
+      lowerName.endsWith(".sldasm") || // SolidWorks
+      lowerName.endsWith(".inp") || // Abaqus
+      lowerName.endsWith(".cdb") || // ANSYS DB
+      lowerName.endsWith(".fem") ||
+      lowerName.endsWith(".nas")
+    ) {
+      try {
+        reply = await summarizeViaUpload(buffer, file.name, question);
+      } catch (err) {
+        console.error(
+          "Engineering/binary upload failed, falling back to raw:",
+          err
+        );
+        const raw = buffer.toString("utf8").replace(/\0/g, " ");
+        reply = await summarizeFromText(raw, question);
+      }
+
+      // ─────────────────────────────────────
+      // 4) Any other type → generic path
+      // ─────────────────────────────────────
     } else {
-      // 🔹 أي نوع آخر → نحاول upload ثم ننزل إلى raw text
       try {
         reply = await summarizeViaUpload(buffer, file.name, question);
       } catch (err) {

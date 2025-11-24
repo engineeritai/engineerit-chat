@@ -110,6 +110,9 @@ export default function Page() {
   // mobile tools dropdown
   const [showMobileTools, setShowMobileTools] = useState(false);
 
+  // landing post (one-time per browser)
+  const [showLanding, setShowLanding] = useState(false);
+
   /* ======================
      Load user plan (Supabase)
      ====================== */
@@ -134,7 +137,12 @@ export default function Page() {
 
         if (!error && profile?.plan) {
           const p = profile.plan as PlanId;
-          if (p === "assistant" || p === "engineer" || p === "professional" || p === "consultant") {
+          if (
+            p === "assistant" ||
+            p === "engineer" ||
+            p === "professional" ||
+            p === "consultant"
+          ) {
             setPlanId(p);
           } else {
             setPlanId("assistant");
@@ -150,6 +158,37 @@ export default function Page() {
 
     void loadPlan();
   }, []);
+
+  /* ======================
+     Landing post visibility
+     ====================== */
+
+  useEffect(() => {
+    try {
+      const KEY = "engineerit_landing_seen_v1";
+      if (typeof window === "undefined") return;
+      const seen = window.localStorage.getItem(KEY);
+      if (!seen) {
+        setShowLanding(true);
+      }
+    } catch (err) {
+      console.error("Landing localStorage error:", err);
+      // لو صار خطأ، نخليها تظهر مرة واحدة في هذه الجلسة
+      setShowLanding(true);
+    }
+  }, []);
+
+  const handleCloseLanding = () => {
+    try {
+      const KEY = "engineerit_landing_seen_v1";
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(KEY, "yes");
+      }
+    } catch {
+      // ignore
+    }
+    setShowLanding(false);
+  };
 
   /* ======================
      Threads management
@@ -314,7 +353,10 @@ export default function Page() {
      Helper APIs: image / document
      ====================== */
 
-  async function analyzeImage(question: string, imageFile: File): Promise<string> {
+  async function analyzeImage(
+    question: string,
+    imageFile: File
+  ): Promise<string> {
     const formData = new FormData();
     formData.append("file", imageFile, imageFile.name);
     formData.append(
@@ -562,6 +604,61 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
+        {/* Landing post (banner) */}
+        {showLanding && (
+          <div
+            className="card"
+            style={{
+              margin: "12px 16px 4px 16px",
+              padding: "12px 14px",
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "flex-start",
+              gap: 8,
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  marginBottom: 4,
+                }}
+              >
+                Welcome to engineerit.ai
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#6b7280",
+                  lineHeight: 1.4,
+                }}
+              >
+                Upload your engineering files (Word, PowerPoint, Excel, PDF,
+                drawings and more), ask in Arabic or English, and let the AI
+                assist you in design, QA/QC, BOQ, scheduling and value
+                engineering. Files are processed securely and kept only for a
+                limited time.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleCloseLanding}
+              aria-label="Close"
+              style={{
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                fontSize: 14,
+                padding: "2px 6px",
+                color: "#6b7280",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Engineer tools – desktop / tablet */}
         <div className="engineer-tools">
           <span className="engineer-tools-label">Engineer tools:</span>
@@ -769,7 +866,9 @@ export default function Page() {
               <button
                 type="button"
                 className="chat-input-send-btn"
-                disabled={sending || (!input.trim() && attachments.length === 0)}
+                disabled={
+                  sending || (!input.trim() && attachments.length === 0)
+                }
                 onClick={send}
                 aria-label="Send message"
               >
