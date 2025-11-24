@@ -118,7 +118,7 @@ export default function TermsPage() {
               gap: 16,
             }}
           >
-            <h2 className="section-heading">Download Full Terms Documents (DOCX)</h2>
+            <h2 className="section-heading">Download Full Terms Documents </h2>
             <p>You can download the complete Terms of Use as documents below:</p>
 
             <div
