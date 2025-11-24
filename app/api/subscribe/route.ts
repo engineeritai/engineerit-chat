@@ -1,4 +1,3 @@
-// app/api/subscribe/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -28,7 +27,8 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date();
-    const expires =
+    const start = now.toISOString();
+    const end =
       planId === "assistant"
         ? null
         : new Date(
@@ -42,21 +42,22 @@ export async function POST(req: NextRequest) {
       .from("profiles")
       .update({
         plan: planId,
-        plan_started_at: now.toISOString(),
-        plan_expires_at: expires,
+        plan_started_at: start,
+        plan_expires_at: end,
+        billing_currency: "SAR",
       })
       .eq("id", userId);
 
     if (profileError) {
-      console.error("profile update error", profileError);
+      console.error("Profile update error:", profileError);
       return NextResponse.json(
-        { error: "Failed to update profile plan" },
+        { error: "Failed to update profile" },
         { status: 500 }
       );
     }
 
-    // 2) Insert subscription record
-    const { error: subError } = await supabaseAdmin
+    // 2) Insert subscription row
+    const { error: subscriptionError } = await supabaseAdmin
       .from("subscriptions")
       .insert({
         user_id: userId,
@@ -64,20 +65,23 @@ export async function POST(req: NextRequest) {
         price,
         currency: "SAR",
         status: "active",
-        start_date: now.toISOString(),
-        end_date: expires,
+        start_date: start,
+        end_date: end,
       });
 
-    if (subError) {
-      console.error("subscription insert error", subError);
-      // Don’t fail the whole request for this; just log
+    if (subscriptionError) {
+      console.error("Subscription insert error:", subscriptionError);
+      return NextResponse.json(
+        { error: "Failed to create subscription" },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("subscribe route error", err);
+    console.error("Subscribe API error:", err);
     return NextResponse.json(
-      { error: "Unexpected error in subscription API" },
+      { error: "Unexpected error in subscribe endpoint" },
       { status: 500 }
     );
   }

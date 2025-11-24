@@ -7,7 +7,7 @@ type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 type Props = {
   planId: PlanId;
   label: string;
-  userId: string; // we will pass this from profile/page.tsx
+  userId?: string | null;
 };
 
 export default function SubscribeButton({ planId, label, userId }: Props) {
@@ -15,6 +15,11 @@ export default function SubscribeButton({ planId, label, userId }: Props) {
   const [status, setStatus] = useState<string | null>(null);
 
   const handleClick = async () => {
+    if (!userId) {
+      setStatus("Not authenticated");
+      return;
+    }
+
     setLoading(true);
     setStatus(null);
 
@@ -25,47 +30,45 @@ export default function SubscribeButton({ planId, label, userId }: Props) {
         body: JSON.stringify({ userId, planId }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        setStatus(
-          body?.error || "Could not update your plan. Please try again."
-        );
+        setStatus(data.error || "Subscription failed.");
         return;
       }
 
-      setStatus("Plan updated. Reloading…");
-      // reload to show the new plan badge / info
-      setTimeout(() => {
-        window.location.reload();
-      }, 800);
+      setStatus("Plan updated.");
+      // Optional: refresh page to show new plan badge / dates
+      window.location.reload();
     } catch (err) {
       console.error(err);
-      setStatus("Something went wrong. Please try again.");
+      setStatus("Unexpected error while updating subscription.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div
-      style={{
-        display: "inline-flex",
-        flexDirection: "column",
-        gap: 4,
-      }}
-    >
+    <div style={{ display: "inline-flex", flexDirection: "column" }}>
       <button
         type="button"
         className="btn"
-        style={{ paddingInline: 16, fontSize: 14 }}
-        disabled={loading || !userId}
         onClick={handleClick}
+        disabled={loading || !userId}
+        style={{ paddingInline: 18, fontSize: 13 }}
       >
-        {loading ? "Processing…" : label}
+        {loading ? "Updating…" : label}
       </button>
-
       {status && (
-        <span style={{ fontSize: 11, color: "#6b7280" }}>{status}</span>
+        <span
+          style={{
+            marginTop: 4,
+            fontSize: 11,
+            color: status === "Plan updated." ? "#16a34a" : "#b91c1c",
+          }}
+        >
+          {status}
+        </span>
       )}
     </div>
   );

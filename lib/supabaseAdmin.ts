@@ -2,17 +2,14 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // from Vercel
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // SECRET — never expose in browser
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error(
-    "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env variables"
-  );
-}
+if (!supabaseUrl) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+if (!serviceRoleKey) throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
 
-// Admin client: SERVER-SIDE ONLY (never import in client components)
 export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
   auth: {
+    autoRefreshToken: false,
     persistSession: false,
   },
 });

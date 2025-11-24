@@ -493,48 +493,49 @@ export default function ProfilePage() {
                     gap: 8,
                   }}
                 >
-                  {userId && planId === "assistant" && (
-                    <>
-                      <SubscribeButton
-                        planId="engineer"
-                        label="Upgrade to Engineer"
-                        userId={userId}
-                      />
-                      <SubscribeButton
-                        planId="professional"
-                        label="Upgrade to Professional"
-                        userId={userId}
-                      />
-                      <SubscribeButton
-                        planId="consultant"
-                        label="Upgrade to Consultant"
-                        userId={userId}
-                      />
-                    </>
-                  )}
+                  {planId === "assistant" && (
+  <>
+    <SubscribeButton
+      planId="engineer"
+      label="Upgrade to Engineer"
+      userId={userId}
+    />
+    <SubscribeButton
+      planId="professional"
+      label="Upgrade to Professional"
+      userId={userId}
+    />
+    <SubscribeButton
+      planId="consultant"
+      label="Upgrade to Consultant"
+      userId={userId}
+    />
+  </>
+)}
 
-                  {userId && planId === "engineer" && (
-                    <>
-                      <SubscribeButton
-                        planId="professional"
-                        label="Upgrade to Professional"
-                        userId={userId}
-                      />
-                      <SubscribeButton
-                        planId="consultant"
-                        label="Upgrade to Consultant"
-                        userId={userId}
-                      />
-                    </>
-                  )}
+{planId === "engineer" && (
+  <>
+    <SubscribeButton
+      planId="professional"
+      label="Upgrade to Professional"
+      userId={userId}
+    />
+    <SubscribeButton
+      planId="consultant"
+      label="Upgrade to Consultant"
+      userId={userId}
+    />
+  </>
+)}
 
-                  {userId && planId === "professional" && (
-                    <SubscribeButton
-                      planId="consultant"
-                      label="Upgrade to Consultant"
-                      userId={userId}
-                    />
-                  )}
+{planId === "professional" && (
+  <SubscribeButton
+    planId="consultant"
+    label="Upgrade to Consultant"
+    userId={userId}
+  />
+)}
+
                   {/* If already consultant, no upgrade buttons */}
                 </div>
               </div>
