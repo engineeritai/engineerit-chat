@@ -35,6 +35,7 @@ export default function FeedbackPage() {
     },
   ]);
 
+  // 🔧 إرسال النموذج للـ API بالشكل الصحيح
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim()) return;
@@ -45,8 +46,8 @@ export default function FeedbackPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          category: type,      // ✅ ما كان يُرسل سابقاً
-          message: text,       // ✅ بدلاً من text فقط
+          category: type,      // كان يُرسل type فقط
+          message: text,       // كان يُرسل text فقط
           email: email || undefined,
         }),
       });
