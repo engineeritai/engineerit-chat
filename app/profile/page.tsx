@@ -469,7 +469,7 @@ export default function ProfilePage() {
                     marginBottom: 0,
                   }}
                 >
-                  In production, this will be controlled by your paid
+                  This will be controlled by your paid
                   subscription and cannot be changed manually.
                 </p>
               </div>
