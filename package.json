@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "@supabase/supabase-js": "^2.81.1",
     "jszip": "^3.10.1",
     "mammoth": "^1.11.0",
