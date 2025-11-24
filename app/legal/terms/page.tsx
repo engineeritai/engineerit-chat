@@ -155,7 +155,7 @@ export default function TermsPage() {
                   fontSize: 14,
                 }}
               >
-                📄 تحميل شروط الاستخدام (عربي)
+                📄 Download Terms of Use (Arabic)
               </a>
             </div>
           </div>
