@@ -634,11 +634,10 @@ export default function Page() {
                   lineHeight: 1.4,
                 }}
               >
-                Upload your engineering files (Word, PowerPoint, Excel, PDF,
-                drawings and more), ask in Arabic or English, and let the AI
-                assist you in design, QA/QC, BOQ, scheduling and value
-                engineering. Files are processed securely and kept only for a
-                limited time.
+                A digital AI-powered platform providing engineering intelligence services, 
+                including automated engineering analysis, data processing, software development, 
+                remote technical consulting, and operating an interactive system that utilizes AI technologies 
+                to analyze documents, drawings, and enhance engineering efficiency
               </div>
             </div>
             <button
