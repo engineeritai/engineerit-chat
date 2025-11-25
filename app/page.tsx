@@ -637,7 +637,7 @@ export default function Page() {
                 A digital AI-powered platform providing engineering intelligence services, 
                 including automated engineering analysis, data processing, software development, 
                 remote technical consulting, and operating an interactive system that utilizes AI technologies 
-                to analyze documents, drawings, and enhance engineering efficiency
+                to analyze documents, drawings, and enhance engineering efficiency.
               </div>
             </div>
             <button
