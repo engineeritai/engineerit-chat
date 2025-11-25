@@ -1,42 +1,50 @@
 import { NextResponse } from "next/server";
-import sendgrid from "@sendgrid/mail";
-
-sendgrid.setApiKey(process.env.SENDGRID_API_KEY || "");
+import nodemailer from "nodemailer";
 
 export async function POST(req: Request) {
   try {
     const { type, text, email } = await req.json();
 
-    if (!text || text.trim().length === 0) {
+    if (!text) {
       return NextResponse.json(
-        { error: "Message is empty" },
+        { error: "Message is required" },
         { status: 400 }
       );
     }
 
-    // Email content
-    const msg = {
-      to: "info@engineerit.ai",
-      from: "info@engineerit.ai", // MUST be verified in SendGrid
-      subject: `Engineerit.ai – New ${type}`,
-      text: `
-New feedback / complaint / suggestion:
+    // Configure transporter
+    const transporter = nodemailer.createTransport({
+      host: process.env.ZSMTP_HOST,
+      port: Number(process.env.ZSMTP_PORT || 465),
+      secure: true,
+      auth: {
+        user: process.env.ZSMTP_USER,
+        pass: process.env.ZSMTP_PASS,
+      },
+    });
 
-Type: ${type}
-Email: ${email || "Not provided"}
-
-Message:
-${text}
+    // Build email content
+    const mailOptions = {
+      from: `"EngineerIT Feedback" <${process.env.ZSMTP_USER}>`,
+      to: process.env.ZSMTP_USER, // send to same inbox
+      subject: `New ${type} received from engineerit.ai`,
+      html: `
+        <h2>New Feedback / Complaint / Suggestion</h2>
+        <p><strong>Category:</strong> ${type}</p>
+        <p><strong>Email:</strong> ${email || "Not provided"}</p>
+        <p><strong>Message:</strong></p>
+        <p>${text.replace(/\n/g, "<br>")}</p>
       `,
     };
 
-    await sendgrid.send(msg);
+    // Send email
+    await transporter.sendMail(mailOptions);
 
-    return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    console.error("Feedback error:", err);
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("FEEDBACK ERROR:", err);
     return NextResponse.json(
-      { error: "Failed to send email" },
+      { error: "Failed to send feedback" },
       { status: 500 }
     );
   }
