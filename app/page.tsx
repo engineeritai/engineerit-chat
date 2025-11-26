@@ -684,46 +684,55 @@ export default function Page() {
         </div>
 
         {/* Engineer tools – mobile dropdown */}
-        <div className="engineer-tools-mobile">
-          <button
-            type="button"
-            className="engineer-tools-mobile-toggle"
-            onClick={() => setShowMobileTools((v) => !v)}
-          >
-            <span>Engineer tools for your plan</span>
-            <span style={{ fontSize: 12 }}>{showMobileTools ? "▲" : "▼"}</span>
-          </button>
+<div className="engineer-tools-mobile">
+  <button
+    type="button"
+    className="engineer-tools-mobile-toggle"
+    onClick={() => setShowMobileTools((v) => !v)}
+  >
+    <span>Engineer tools for your plan</span>
+    <span style={{ fontSize: 12 }}>{showMobileTools ? "▲" : "▼"}</span>
+  </button>
 
-          {showMobileTools && (
-            <div className="engineer-tools-mobile-panel">
-              <div className="engineer-tools-mobile-list">
-                {ENGINEER_TOOLS.map((tool) => {
-                  const enabled = hasAccess(planId, tool.id);
-                  return (
-                    <div
-                      key={tool.id}
-                      className={
-                        "engineer-tools-mobile-item" +
-                        (enabled
-                          ? ""
-                          : " engineer-tools-mobile-item-locked")
-                      }
-                    >
-                      <div>
-                        {enabled ? "✅" : "🔒"} <span>{tool.label}</span>
-                      </div>
-                      {!enabled && (
-                        <span className="engineer-tools-mobile-plan-hint">
-                          Upgrade
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+  {showMobileTools && (
+    <div className="engineer-tools-mobile-panel">
+      <div className="engineer-tools-mobile-list">
+        {ENGINEER_TOOLS.map((tool) => {
+          const enabled = hasAccess(planId, tool.id);
+          return (
+            <button
+              key={tool.id}
+              type="button"
+              className={
+                "engineer-tools-mobile-item" +
+                (enabled ? "" : " engineer-tools-mobile-item-locked")
+              }
+              disabled={!enabled}
+              onClick={() => {
+                if (!enabled) {
+                  alert("This tool requires a higher subscription plan.");
+                  return;
+                }
+                handleEngineerToolClick(tool.id);
+                setShowMobileTools(false);
+              }}
+            >
+              <div>
+                {enabled ? "✅" : "🔒"} <span>{tool.label}</span>
               </div>
-            </div>
-          )}
-        </div>
+              {!enabled && (
+                <span className="engineer-tools-mobile-plan-hint">
+                  Upgrade
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  )}
+</div>
+
 
         {/* Conversation */}
         <div className="conversation">
