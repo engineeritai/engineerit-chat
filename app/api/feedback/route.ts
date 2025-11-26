@@ -1,51 +1,68 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 
+// مهم جداً: نجبر الراوت يشتغل على Node.js (ليس Edge)
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const { type, text, email } = await req.json();
+    const body = await req.json();
+    const type = body.type || "feedback";
+    const text = body.text as string | undefined;
+    const email = body.email as string | undefined;
 
-    if (!text || !text.trim()) {
+    if (!text || typeof text !== "string") {
       return NextResponse.json(
         { error: "Message is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // SMTP Transporter for Zoho
+    const host = process.env.ZSMTP_HOST;
+    const port = Number(process.env.ZSMTP_PORT || "465");
+    const user = process.env.ZSMTP_USER;
+    const pass = process.env.ZSMTP_PASS;
+
+    if (!host || !user || !pass) {
+      console.error("Missing SMTP envs", {
+        host: !!host,
+        user: !!user,
+        pass: !!pass,
+      });
+      return NextResponse.json(
+        { error: "Email server is not configured" },
+        { status: 500 },
+      );
+    }
+
     const transporter = nodemailer.createTransport({
-      host: process.env.ZSMTP_HOST,
-      port: Number(process.env.ZSMTP_PORT || 465),
-      secure: Number(process.env.ZSMTP_PORT) === 465, // true للبورت 465
-      auth: {
-        user: process.env.ZSMTP_USER,
-        pass: process.env.ZSMTP_PASS,
-      },
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
     });
 
-    const mailOptions = {
-      from: process.env.ZSMTP_USER,         // info@engineerit.ai
-      to: process.env.ZSMTP_USER,           // نفس الإيميل يستقبل
-      subject: `EngineerIT - New ${type || "Feedback"}`,
-      html: `
-        <h2>New Message From engineerit.ai</h2>
-        <p><strong>Category:</strong> ${type || "feedback"}</p>
-        <p><strong>Email:</strong> ${email || "Not provided"}</p>
-        <hr />
-        <p>${text.replace(/\n/g, "<br>")}</p>
-      `,
-    };
+    const safeText = text.toString();
 
-    await transporter.sendMail(mailOptions);
+    await transporter.sendMail({
+      from: `"engineerit.ai Feedback" <${user}>`,
+      to: user, // ترسل لنفس الإيميل info@engineerit.ai
+      subject: `New ${type} from engineerit.ai`,
+      html: `
+        <h2>New feedback message</h2>
+        <p><strong>Category:</strong> ${type}</p>
+        <p><strong>From email:</strong> ${email || "Not provided"}</p>
+        <p><strong>Message:</strong></p>
+        <p>${safeText.replace(/\n/g, "<br>")}</p>
+      `,
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("FEEDBACK ERROR:", err);
     return NextResponse.json(
       { error: "Failed to send feedback" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
