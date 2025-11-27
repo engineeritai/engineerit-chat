@@ -5,17 +5,15 @@ import { plans } from "@/lib/subscriptions";
 
 export default function SubscriptionPage() {
   const [loading, setLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState("");
+  const [selected, setSelected] = useState("");
 
-  async function selectPlan(planId: string) {
+  async function handleSelect(planId: string) {
     setLoading(true);
-    setSelectedPlan(planId);
+    setSelected(planId);
 
     await fetch("/api/subscription/select", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan: planId }),
     });
 
@@ -23,56 +21,69 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto mt-10 space-y-6">
-      <h1 className="text-3xl font-semibold">Engineerit Plans</h1>
+    <div className="page-wrap" style={{ padding: "40px 20px" }}>
+      <h1 className="page-title">Plans & Subscription</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {plans.map((plan) => {
-          const isSelected = selectedPlan === plan.id;
+      <p style={{ marginBottom: 30, color: "#555", fontSize: 16 }}>
+        Choose your level: Assistant, Engineer, Professional, or Consultant.
+      </p>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: 24,
+        }}
+      >
+        {plans.map((p) => {
+          const isSelected = selected === p.id;
 
           return (
             <div
-              key={plan.id}
-              className={`
-                relative border rounded-2xl p-6 transition-all
-                ${plan.active ? "border-blue-500" : "border-gray-400 opacity-60"}
-                ${isSelected ? "bg-blue-50 border-blue-600 shadow-lg" : ""}
-              `}
+              key={p.id}
+              style={{
+                background: "#fff",
+                borderRadius: 16,
+                padding: 24,
+                border: "1px solid #e5e7eb",
+                boxShadow: isSelected
+                  ? "0 0 0 3px rgba(37,99,235,0.4)"
+                  : "0 1px 2px rgba(0,0,0,0.05)",
+                transition: "0.2s",
+              }}
             >
-              {/* COMING SOON OVERLAY */}
-              {!plan.active && (
-                <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
-                  <span className="bg-white/90 text-gray-800 px-4 py-1 rounded-lg text-sm font-semibold shadow">
-                    COMING SOON
-                  </span>
-                </div>
-              )}
+              <h2 style={{ fontSize: 22, fontWeight: 700 }}>{p.name}</h2>
 
-              <h2 className="text-xl font-bold">{plan.name}</h2>
-              <p className="text-gray-600">{plan.description}</p>
-
-              <p className="mt-4 text-2xl font-bold">
-                {plan.price === 0 ? "Free" : `${plan.price} SAR / mo`}
+              <p style={{ marginTop: 8, color: "#6b7280", fontSize: 15 }}>
+                {p.description}
               </p>
 
-              {plan.active ? (
-                <button
-                  onClick={() => selectPlan(plan.id)}
-                  className={`
-                    mt-4 w-full py-2 rounded-xl text-white transition
-                    ${loading && isSelected ? "bg-blue-300" : "bg-blue-600 hover:bg-blue-700"}
-                  `}
-                >
-                  {loading && isSelected ? "Saving..." : isSelected ? "Selected ✓" : "Select"}
-                </button>
-              ) : (
-                <button
-                  disabled
-                  className="mt-4 w-full bg-gray-400 text-white py-2 rounded-xl cursor-not-allowed"
-                >
-                  Coming Soon
-                </button>
-              )}
+              <p style={{ marginTop: 14, fontSize: 22, fontWeight: 700 }}>
+                {p.price === 0 ? "Free" : `${p.price} SAR / month`}
+              </p>
+
+              <button
+                onClick={() => handleSelect(p.id)}
+                disabled={loading && isSelected}
+                style={{
+                  marginTop: 16,
+                  width: "100%",
+                  padding: "10px 0",
+                  borderRadius: 12,
+                  background:
+                    loading && isSelected ? "#93c5fd" : "#2563eb",
+                  color: "#fff",
+                  fontSize: 15,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                {loading && isSelected
+                  ? "Saving..."
+                  : isSelected
+                  ? "Selected ✓"
+                  : "Select"}
+              </button>
             </div>
           );
         })}
