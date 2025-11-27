@@ -41,7 +41,6 @@ export default function ProfilePage() {
           return;
         }
 
-        // جلب بيانات البروفايل
         const { data, error } = await supabase
           .from("profiles")
           .select("full_name, avatar_url, subscription_tier")
@@ -140,7 +139,6 @@ export default function ProfilePage() {
       const ext = file.name.split(".").pop() ?? "jpg";
       const filePath = `${user.id}/${Date.now()}.${ext}`;
 
-      // رفع الصورة إلى bucket اسمه "avatars"
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, file, { upsert: true });
@@ -169,8 +167,45 @@ export default function ProfilePage() {
       setErrorMsg("Could not upload profile photo.");
     } finally {
       setSavingAvatar(false);
-      // عشان تقدر تختار نفس الملف مرة ثانية لو حبيت
       e.target.value = "";
+    }
+  }
+
+  async function handleUpgradeClick(
+    targetPlan: "plus" | "pro" | "premium" = "pro"
+  ) {
+    try {
+      setErrorMsg(null);
+      setInfoMsg(null);
+
+      const { data, error: sessionErr } = await supabase.auth.getSession();
+      if (sessionErr || !data.session) {
+        setErrorMsg("You must be logged in to upgrade.");
+        return;
+      }
+
+      const res = await fetch("/api/payments/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${data.session.access_token}`,
+        },
+        body: JSON.stringify({
+          planCode: targetPlan,     // plus / pro / premium
+          billingCycle: "monthly",  // ممكن نضيف اختيار لاحقاً
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        setErrorMsg(json.error || "Could not start checkout.");
+        return;
+      }
+
+      window.location.href = json.url;
+    } catch (err) {
+      console.error("UPGRADE CLICK ERROR:", err);
+      setErrorMsg("Could not start upgrade process.");
     }
   }
 
@@ -239,9 +274,6 @@ export default function ProfilePage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontWeight: 600,
-                    fontSize: 28,
-                    overflow: "hidden",
                   }}
                 >
                   {profile?.avatar_url ? (
@@ -333,22 +365,16 @@ export default function ProfilePage() {
             </p>
             <p style={{ fontSize: 14, color: "#6b7280" }}>
               Plan changes are controlled by engineerit.ai billing
-              only. You cannot change the plan directly from this
-              page without completing the upgrade &amp; payment
-              process.
+              only. You can start upgrade to a higher plan from here.
             </p>
 
             <button
               className="btn"
               type="button"
               style={{ marginTop: 16 }}
-              onClick={() => {
-                alert(
-                  "Upgrade and payment flow will be available soon. Your current plan is read-only for now."
-                );
-              }}
+              onClick={() => handleUpgradeClick("pro")}
             >
-              Upgrade / manage subscription
+              Upgrade to Professional (Stripe)
             </button>
           </div>
         </div>
