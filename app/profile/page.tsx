@@ -40,14 +40,13 @@ export default function ProfilePage() {
           return;
         }
 
-        // اسم ابتدائي من الميتاداتا أو الإيميل
+        // اسم وصورة ابتدائية من الميتاداتا أو الإيميل
         let initialFullName =
           (user.user_metadata?.full_name as string | undefined) ??
           (user.user_metadata?.name as string | undefined) ??
           user.email?.split("@")[0] ??
           "";
 
-        // صورة ابتدائية من user_metadata (مثل الهيدر)
         let avatarUrl: string | null =
           (user.user_metadata?.avatar_url as string | undefined) ??
           (user.user_metadata?.picture as string | undefined) ??
@@ -71,7 +70,7 @@ export default function ProfilePage() {
           console.error("PROFILE SELECT ERROR:", error);
         }
 
-        // upsert للتأكد من وجود الصف وتخزين الصورة
+        // upsert للتأكد من وجود الصف وتخزين آخر نسخة من الصورة
         const { error: upsertError } = await supabase
           .from("profiles")
           .upsert(
@@ -190,6 +189,7 @@ export default function ProfilePage() {
 
       const publicUrl = publicData.publicUrl;
 
+      // تحديث جدول profiles
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_url: publicUrl })
@@ -200,6 +200,11 @@ export default function ProfilePage() {
         setErrorMsg("Could not save profile photo.");
         return;
       }
+
+      // تحديث user_metadata حتى يقرأها الهيدر وأي مكان آخر
+      await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl },
+      });
 
       setProfile((prev) =>
         prev ? { ...prev, avatar_url: publicUrl } : prev
@@ -418,7 +423,7 @@ export default function ProfilePage() {
               style={{ marginTop: 16 }}
               onClick={() => handleUpgradeClick("pro")}
             >
-              Upgrade to Professional (Stripe)
+              Upgrade to Professional
             </button>
           </div>
         </div>
