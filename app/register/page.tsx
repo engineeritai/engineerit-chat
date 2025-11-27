@@ -9,14 +9,18 @@ import { PLANS } from "@/lib/plans";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
-const PLAN_COLORS: Record<PlanId, string> = {
-  assistant: "#2563eb", // blue
-  engineer: "#f97316", // orange / gold
-  professional: "#0f766e", // green
-  consultant: "#7c3aed", // purple
+// ألوان الشعار (الأيقونة الدائرية) لكل خطة – نفس القيم المستخدمة في صفحة /subscription
+const PLAN_BADGES: Record<
+  PlanId,
+  { fg: string; bg: string }
+> = {
+  assistant: { fg: "#1d4ed8", bg: "#eff6ff" }, // أزرق
+  engineer: { fg: "#ea580c", bg: "#fff7ed" }, // برتقالي
+  professional: { fg: "#059669", bg: "#ecfdf3" }, // أخضر
+  consultant: { fg: "#7c3aed", bg: "#f5f3ff" }, // بنفسجي
 };
 
-// Current monthly prices in SAR (used when inserting into subscriptions)
+// الأسعار الشهرية الحالية بالريال السعودي – تستخدم عند الإنشاء في subscriptions
 const PLAN_PRICES: Record<PlanId, number> = {
   assistant: 0,
   engineer: 19,
@@ -24,7 +28,7 @@ const PLAN_PRICES: Record<PlanId, number> = {
   consultant: 79,
 };
 
-const PLAN_DURATION_DAYS = 30; // initial subscription period
+const PLAN_DURATION_DAYS = 30; // مدة الاشتراك الأولية
 
 export default function RegisterPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<PlanId>("assistant");
@@ -53,7 +57,9 @@ export default function RegisterPage() {
 
       if (error) {
         console.error("OAuth error:", error);
-        setErrorMessage(error.message || "Could not sign in. Please try again.");
+        setErrorMessage(
+          error.message || "Could not sign in. Please try again."
+        );
       }
     } catch (err) {
       console.error(err);
@@ -70,7 +76,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // 0) Calculate subscription dates and price
+      // 0) حساب تواريخ الاشتراك والسعر
       const now = new Date();
       const expires =
         selectedPlanId === "assistant"
@@ -82,7 +88,7 @@ export default function RegisterPage() {
       const price = PLAN_PRICES[selectedPlanId] ?? 0;
       const currency = "SAR";
 
-      // 1) Create Supabase user
+      // 1) إنشاء مستخدم Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -108,39 +114,43 @@ export default function RegisterPage() {
 
       const userId = data.user.id;
 
-      // 2) Upsert into profiles table
-      const { error: profileError } = await supabase.from("profiles").upsert({
-        id: userId,
-        full_name: fullName,
-        avatar_url: null,
-        plan: selectedPlanId,
-        billing_currency: currency,
-        plan_started_at: now.toISOString(),
-        plan_expires_at: expires ? expires.toISOString() : null,
-      });
+      // 2) upsert في جدول profiles
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .upsert({
+          id: userId,
+          full_name: fullName,
+          avatar_url: null,
+          plan: selectedPlanId,
+          billing_currency: currency,
+          plan_started_at: now.toISOString(),
+          plan_expires_at: expires ? expires.toISOString() : null,
+        });
 
       if (profileError) {
         console.error("Profile upsert error:", profileError);
-        // Do not block user; just log
+        // لا نوقف المستخدم، فقط نطبع للمتابعة لاحقاً
       }
 
-      // 3) Insert into subscriptions table
-      const { error: subError } = await supabase.from("subscriptions").insert({
-        user_id: userId,
-        plan: selectedPlanId,
-        price,
-        currency,
-        status: "active",
-        start_date: now.toISOString(),
-        end_date: expires ? expires.toISOString() : null,
-      });
+      // 3) إدخال سجل الاشتراك في subscriptions
+      const { error: subError } = await supabase
+        .from("subscriptions")
+        .insert({
+          user_id: userId,
+          plan: selectedPlanId,
+          price,
+          currency,
+          status: "active",
+          start_date: now.toISOString(),
+          end_date: expires ? expires.toISOString() : null,
+        });
 
       if (subError) {
         console.error("Subscription insert error:", subError);
-        // Also do not block user; just log for later troubleshooting
+        // أيضاً لا نوقف المستخدم
       }
 
-      // 4) Show success and redirect
+      // 4) رسالة نجاح وتحويل للبروفايل
       setSuccessMessage("Account created. Redirecting to your profile...");
       setTimeout(() => {
         window.location.href = "/profile";
@@ -154,7 +164,8 @@ export default function RegisterPage() {
   };
 
   const selectedPlanName =
-    PLANS.find((p) => p.id === selectedPlanId)?.name || "Assistant Engineer";
+    PLANS.find((p) => p.id === selectedPlanId)?.name ||
+    "Assistant Engineer";
 
   return (
     <div className="app-shell">
@@ -164,23 +175,32 @@ export default function RegisterPage() {
       />
 
       <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
+        <Header
+          onToggleSidebar={() =>
+            setIsSidebarOpenMobile((v) => !v)
+          }
+        />
 
         <div className="page-wrap">
-          <h1 className="page-title">Plans & Registration</h1>
+          <h1 className="page-title">Plans &amp; Registration</h1>
           <p className="page-subtitle">
             Choose your level: Assistant Engineer, Engineer, Professional
             Engineer, or Consultant Engineer.
           </p>
 
-          {/* ===== PLANS GRID (same look as main page) ===== */}
+          {/* ===== PLANS GRID (نفس شكل صفحة /subscription) ===== */}
           <div className="plans-grid">
             {PLANS.map((plan) => {
               const isSelected = plan.id === selectedPlanId;
-              const color =
-                PLAN_COLORS[plan.id as PlanId] || PLAN_COLORS.assistant;
-              const letter =
-                (plan.shortName || plan.name || "E").charAt(0).toUpperCase();
+              const badge =
+                PLAN_BADGES[plan.id as PlanId] || PLAN_BADGES.assistant;
+              const letter = (
+                plan.shortName ||
+                plan.name ||
+                "E"
+              )
+                .charAt(0)
+                .toUpperCase();
 
               return (
                 <button
@@ -189,8 +209,7 @@ export default function RegisterPage() {
                   onClick={() => setSelectedPlanId(plan.id as PlanId)}
                   className="plan-card"
                   style={{
-                    // Only a light visual highlight when selected.
-                    borderColor: isSelected ? color : undefined,
+                    borderColor: isSelected ? badge.fg : undefined,
                     boxShadow: isSelected
                       ? "0 14px 35px rgba(15,23,42,0.18)"
                       : undefined,
@@ -199,7 +218,7 @@ export default function RegisterPage() {
                       "box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease",
                   }}
                 >
-                  {/* Header: colored circle + title + tagline */}
+                  {/* الأيقونة + العنوان */}
                   <div
                     style={{
                       display: "flex",
@@ -211,14 +230,14 @@ export default function RegisterPage() {
                       style={{
                         width: 44,
                         height: 44,
-                        borderRadius: "50%",
-                        backgroundColor: color,
+                        borderRadius: "999px",
+                        backgroundColor: badge.bg,
+                        color: badge.fg,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         fontSize: 20,
                         fontWeight: 700,
-                        color: "white",
                         marginRight: 14,
                         flexShrink: 0,
                       }}
@@ -249,13 +268,13 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  {/* Price block */}
+                  {/* السعر */}
                   <div style={{ marginBottom: 12 }}>
                     <div
                       style={{
                         fontSize: 18,
                         fontWeight: 700,
-                        color,
+                        color: badge.fg,
                       }}
                     >
                       {plan.priceMonthly}
@@ -271,7 +290,7 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  {/* Features list */}
+                  {/* المميزات */}
                   <ul
                     style={{
                       listStyle: "disc",
@@ -294,7 +313,7 @@ export default function RegisterPage() {
             })}
           </div>
 
-          {/* ===== REGISTRATION FORM ===== */}
+          {/* ===== نموذج التسجيل ===== */}
           <form className="register-form" onSubmit={handleSubmit}>
             <h2 className="section-heading">Create your account</h2>
 
@@ -352,7 +371,7 @@ export default function RegisterPage() {
               </label>
             </div>
 
-            {/* Social sign-in */}
+            {/* تسجيل عبر المنصات */}
             <div className="form-row">
               <div className="section-heading" style={{ marginBottom: 6 }}>
                 Or continue with
@@ -378,7 +397,6 @@ export default function RegisterPage() {
                   <span>Apple</span>
                 </button>
 
-                {/* Placeholders for future providers */}
                 <button
                   type="button"
                   className="social-btn social-btn-microsoft"
@@ -412,7 +430,7 @@ export default function RegisterPage() {
                 <span>
                   I have read and agree to the{" "}
                   <Link href="/legal/terms" className="link">
-                    User Policy & Agreement
+                    User Policy &amp; Agreement
                   </Link>
                   , including cancellation and refund policies, and I
                   understand that engineerit.ai is not responsible or liable

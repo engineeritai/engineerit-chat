@@ -1153,3 +1153,24 @@ body {
     justify-content: center;
   }
 }
+/* Subscription plans grid */
+.plans-grid {
+  display: grid;
+  gap: 24px;
+  /* مبدئياً عمود واحد للموبايل */
+  grid-template-columns: 1fr;
+}
+
+/* شاشات متوسطة: عمودين */
+@media (min-width: 640px) {
+  .plans-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* شاشات كبيرة: أربع أعمدة في صف واحد */
+@media (min-width: 1024px) {
+  .plans-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
