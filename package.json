@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.81.1",
     "jszip": "^3.10.1",
     "mammoth": "^1.11.0",

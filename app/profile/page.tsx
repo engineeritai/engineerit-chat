@@ -1,296 +1,357 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent, FormEvent } from "react";
+import React, { useEffect, useState, ChangeEvent } from "react";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
-import supabase from "../../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 
 type ProfileRow = {
-  id: string;
   full_name: string | null;
   avatar_url: string | null;
-  plan: string | null;
+  subscription_tier: string | null;
 };
 
 export default function ProfilePage() {
+  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
+
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(true);
   const [savingName, setSavingName] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [savingAvatar, setSavingAvatar] = useState(false);
 
-  // تحميل البروفايل عند فتح الصفحة
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
+
   useEffect(() => {
-    const loadProfile = async () => {
-      setLoading(true);
+    async function loadProfile() {
+      try {
+        setLoading(true);
+        setErrorMsg(null);
+
+        const {
+          data: { user },
+          error: userErr,
+        } = await supabase.auth.getUser();
+
+        if (userErr) throw userErr;
+        if (!user) {
+          setErrorMsg("You are not logged in.");
+          setLoading(false);
+          return;
+        }
+
+        // جلب بيانات البروفايل
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("full_name, avatar_url, subscription_tier")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const initialFullName =
+          data?.full_name ??
+          ((user.user_metadata?.full_name as string | undefined) ??
+            user.email?.split("@")[0] ??
+            "");
+
+        const row: ProfileRow = {
+          full_name: initialFullName,
+          avatar_url: data?.avatar_url ?? null,
+          subscription_tier: data?.subscription_tier ?? "assistant",
+        };
+
+        setProfile(row);
+        setFullName(initialFullName);
+      } catch (err) {
+        console.error("PROFILE LOAD ERROR:", err);
+        setErrorMsg("Could not load profile.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadProfile();
+  }, []);
+
+  async function handleSaveName() {
+    try {
+      setSavingName(true);
       setErrorMsg(null);
+      setInfoMsg(null);
 
       const {
         data: { user },
-        error: userError,
+        error: userErr,
       } = await supabase.auth.getUser();
 
-      if (userError || !user) {
-        console.error(userError);
-        setErrorMsg("Could not load profile.");
-        setLoading(false);
+      if (userErr) throw userErr;
+      if (!user) {
+        setErrorMsg("You are not logged in.");
         return;
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
+        .update({ full_name: fullName })
+        .eq("id", user.id);
 
-      if (error) {
-        console.error("PROFILE LOAD ERROR:", error);
-        setErrorMsg("Could not load profile.");
-        setLoading(false);
-        return;
-      }
+      if (error) throw error;
 
-      const p = data as ProfileRow;
-      setProfile(p);
-      setFullName(p.full_name ?? "");
-      setLoading(false);
-    };
-
-    loadProfile();
-  }, []);
-
-  // حفظ الاسم
-  const handleSaveName = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!profile) return;
-
-    setSavingName(true);
-    setErrorMsg(null);
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      console.error(userError);
-      setErrorMsg("Could not save name.");
-      setSavingName(false);
-      return;
-    }
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({ full_name: fullName })
-      .eq("id", user.id);
-
-    if (error) {
-      console.error("NAME SAVE ERROR:", error);
-      setErrorMsg("Could not save name.");
-    } else {
       setProfile((prev) =>
-        prev ? { ...prev, full_name: fullName } : prev
+        prev
+          ? { ...prev, full_name: fullName }
+          : {
+              full_name: fullName,
+              avatar_url: null,
+              subscription_tier: "assistant",
+            }
       );
+      setInfoMsg("Profile updated successfully.");
+    } catch (err) {
+      console.error("PROFILE SAVE ERROR:", err);
+      setErrorMsg("Could not save profile.");
+    } finally {
+      setSavingName(false);
     }
+  }
 
-    setSavingName(false);
-  };
-
-  // رفع صورة البروفايل
-  const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  async function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingAvatar(true);
-    setErrorMsg(null);
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      console.error(userError);
-      setErrorMsg("Could not upload profile photo.");
-      setUploadingAvatar(false);
-      return;
-    }
-
     try {
-      const fileExt = file.name.split(".").pop();
-      const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+      setSavingAvatar(true);
+      setErrorMsg(null);
+      setInfoMsg(null);
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file, {
-          upsert: true,
-          cacheControl: "3600",
-          contentType: file.type,
-        });
+      const {
+        data: { user },
+        error: userErr,
+      } = await supabase.auth.getUser();
 
-      if (uploadError || !uploadData) {
-        console.error("AVATAR UPLOAD ERROR:", uploadError);
-        setErrorMsg("Could not upload profile photo.");
-        setUploadingAvatar(false);
+      if (userErr) throw userErr;
+      if (!user) {
+        setErrorMsg("You are not logged in.");
         return;
       }
 
-      const { data: publicUrlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(uploadData.path);
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const filePath = `${user.id}/${Date.now()}.${ext}`;
 
-      const publicUrl = publicUrlData.publicUrl;
+      // رفع الصورة إلى bucket اسمه "avatars"
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      const publicUrl = publicData.publicUrl;
 
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_url: publicUrl })
         .eq("id", user.id);
 
-      if (updateError) {
-        console.error("AVATAR URL SAVE ERROR:", updateError);
-        setErrorMsg("Could not upload profile photo.");
-      } else {
-        setProfile((prev) =>
-          prev ? { ...prev, avatar_url: publicUrl } : prev
-        );
-      }
+      if (updateError) throw updateError;
+
+      setProfile((prev) =>
+        prev ? { ...prev, avatar_url: publicUrl } : prev
+      );
+      setInfoMsg("Profile photo updated.");
     } catch (err) {
-      console.error("AVATAR UNKNOWN ERROR:", err);
+      console.error("AVATAR UPLOAD ERROR:", err);
       setErrorMsg("Could not upload profile photo.");
+    } finally {
+      setSavingAvatar(false);
+      // عشان تقدر تختار نفس الملف مرة ثانية لو حبيت
+      e.target.value = "";
     }
+  }
 
-    setUploadingAvatar(false);
-  };
-
-  const currentPlan = profile?.plan ?? "assistant";
-  const planLabelMap: Record<string, string> = {
-    assistant: "Assistant (Free)",
-    engineer: "Engineer",
-    professional: "Professional",
-    consultant: "Consultant",
-  };
-  const currentPlanLabel = planLabelMap[currentPlan] ?? currentPlan;
-
-  const initials =
-    profile?.full_name?.trim()?.charAt(0).toUpperCase() ?? "E";
+  const currentPlan = profile?.subscription_tier || "assistant";
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f5f7fb]">
-      <Header />
-      <div className="flex flex-1">
-        <NavSidebar />
+    <div className="app-shell">
+      <NavSidebar
+        isMobileOpen={isSidebarOpenMobile}
+        onCloseMobile={() => setIsSidebarOpenMobile(false)}
+      />
 
-        <main className="flex-1 px-6 py-10">
-          <h1 className="text-3xl font-semibold text-gray-900 mb-6">
-            Profile &amp; Subscription
-          </h1>
+      <div className="main">
+        <Header
+          onToggleSidebar={() =>
+            setIsSidebarOpenMobile((v) => !v)
+          }
+        />
+
+        <div className="page-wrap">
+          <h1 className="page-title">Profile &amp; Subscription</h1>
 
           {errorMsg && (
-            <p className="text-red-600 mb-4">{errorMsg}</p>
+            <p
+              style={{
+                color: "#b91c1c",
+                marginBottom: 12,
+                fontSize: 14,
+              }}
+            >
+              {errorMsg}
+            </p>
+          )}
+
+          {infoMsg && (
+            <p
+              style={{
+                color: "#16a34a",
+                marginBottom: 12,
+                fontSize: 14,
+              }}
+            >
+              {infoMsg}
+            </p>
           )}
 
           {loading ? (
-            <p>Loading...</p>
+            <p>Loading profile…</p>
           ) : (
-            <div className="max-w-3xl space-y-8">
-              {/* Profile card */}
-              <section className="bg-white rounded-2xl shadow-sm p-6">
-                <div className="flex items-center gap-6 mb-6">
-                  <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-3xl font-semibold text-gray-700 overflow-hidden">
-                    {profile?.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={profile.avatar_url}
-                        alt="Profile avatar"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      initials
-                    )}
-                  </div>
+            <div className="card">
+              {/* Profile photo */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  marginBottom: 24,
+                }}
+              >
+                <div
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: "9999px",
+                    background: "#e5e7eb",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 600,
+                    fontSize: 28,
+                    overflow: "hidden",
+                  }}
+                >
+                  {profile?.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profile.avatar_url}
+                      alt="Profile"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    (fullName?.trim()[0] || "E").toUpperCase()
+                  )}
+                </div>
 
-                  <div>
-                    <label className="inline-block">
-                      <span className="sr-only">Choose profile photo</span>
+                <div>
+                  <div style={{ marginBottom: 6 }}>
+                    <label
+                      style={{
+                        display: "inline-block",
+                        padding: "6px 12px",
+                        borderRadius: 9999,
+                        background: "#2563eb",
+                        color: "white",
+                        cursor: "pointer",
+                        fontSize: 14,
+                      }}
+                    >
+                      Choose File
                       <input
                         type="file"
                         accept="image/*"
+                        style={{ display: "none" }}
                         onChange={handleAvatarChange}
-                        disabled={uploadingAvatar}
-                        className="hidden"
-                        id="avatar-input"
+                        disabled={savingAvatar}
                       />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          document
-                            .getElementById("avatar-input")
-                            ?.click()
-                        }
-                        className="px-4 py-2 rounded-full bg-[#2563eb] text-white font-medium text-sm hover:bg-[#1d4ed8] disabled:opacity-60"
-                        disabled={uploadingAvatar}
-                      >
-                        {uploadingAvatar ? "Uploading..." : "Choose File"}
-                      </button>
                     </label>
-                    <p className="text-xs text-gray-500 mt-1">
-                      JPG, PNG, or GIF. Max 5 MB.
-                    </p>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#6b7280",
+                    }}
+                  >
+                    JPG, PNG, or GIF. Max 5 MB.
                   </div>
                 </div>
+              </div>
 
-                <form onSubmit={handleSaveName} className="space-y-3">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Full name
-                  </label>
+              {/* Full name */}
+              <div className="form-row">
+                <label>
+                  Full name
                   <input
+                    className="input"
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
                     placeholder="Your full name"
                   />
-                  <button
-                    type="submit"
-                    disabled={savingName}
-                    className="mt-2 inline-flex px-5 py-2 rounded-full bg-[#2563eb] text-white text-sm font-medium hover:bg-[#1d4ed8] disabled:opacity-60"
-                  >
-                    {savingName ? "Saving..." : "Save changes"}
-                  </button>
-                </form>
-              </section>
+                </label>
+              </div>
 
-              {/* Subscription card */}
-              <section className="bg-white rounded-2xl shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                  Subscription
-                </h2>
-                <p className="text-sm text-gray-700 mb-4">
-                  Current plan:{" "}
-                  <span className="font-semibold">{currentPlanLabel}</span>
-                </p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Plan changes are controlled by engineerit.ai billing
-                  only. You cannot change the plan directly from this
-                  page without completing the upgrade &amp; payment
-                  process.
-                </p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    alert(
-                      "Upgrade and payment flow will be available soon. Your current plan is read-only for now."
-                    )
-                  }
-                  className="inline-flex px-5 py-2 rounded-full bg-[#2563eb] text-white text-sm font-medium hover:bg-[#1d4ed8]"
-                >
-                  Upgrade / manage subscription
-                </button>
-              </section>
+              <button
+                className="btn"
+                type="button"
+                onClick={handleSaveName}
+                disabled={savingName}
+              >
+                {savingName ? "Saving…" : "Save changes"}
+              </button>
             </div>
           )}
-        </main>
+
+          {/* Subscription card */}
+          <div className="card" style={{ marginTop: 24 }}>
+            <h2 className="card-title">Subscription</h2>
+            <p style={{ marginBottom: 8 }}>
+              Current plan:{" "}
+              <strong>
+                {currentPlan === "assistant"
+                  ? "Assistant (Free)"
+                  : currentPlan.charAt(0).toUpperCase() +
+                    currentPlan.slice(1)}
+              </strong>
+            </p>
+            <p style={{ fontSize: 14, color: "#6b7280" }}>
+              Plan changes are controlled by engineerit.ai billing
+              only. You cannot change the plan directly from this
+              page without completing the upgrade &amp; payment
+              process.
+            </p>
+
+            <button
+              className="btn"
+              type="button"
+              style={{ marginTop: 16 }}
+              onClick={() => {
+                alert(
+                  "Upgrade and payment flow will be available soon. Your current plan is read-only for now."
+                );
+              }}
+            >
+              Upgrade / manage subscription
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
