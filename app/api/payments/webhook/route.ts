@@ -4,12 +4,19 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+// دالة ترجع عميل Stripe فقط وقت الاستخدام
+function getStripeClient(): any {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  return new Stripe(key as string) as any;
+}
 
 export async function POST(req: NextRequest) {
   const sig = req.headers.get("stripe-signature");
@@ -18,10 +25,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  let event: Stripe.Event;
+  let event: any;
 
   try {
     const body = await req.text();
+    const stripe = getStripeClient();
+
     event = stripe.webhooks.constructEvent(
       body,
       sig,
@@ -38,7 +47,7 @@ export async function POST(req: NextRequest) {
   try {
     switch (event.type) {
       case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
+        const session = event.data.object as any;
 
         const subscriptionId =
           typeof session.subscription === "string"
@@ -52,9 +61,9 @@ export async function POST(req: NextRequest) {
 
         const userId = session.metadata?.user_id;
         const planCode = session.metadata?.plan_code;
-        const billingCycle = (session.metadata?.billing_cycle as
-          | "monthly"
-          | "yearly") ?? "monthly";
+        const billingCycle =
+          (session.metadata?.billing_cycle as "monthly" | "yearly") ??
+          "monthly";
 
         if (!userId || !planCode || !subscriptionId || !customerId) {
           console.error("Missing metadata in session");
@@ -97,7 +106,7 @@ export async function POST(req: NextRequest) {
       }
 
       case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as any;
 
         const { data: subRow } = await supabaseAdmin
           .from("user_subscriptions")
@@ -125,6 +134,7 @@ export async function POST(req: NextRequest) {
       }
 
       default:
+        // نتجاهل الأحداث الأخرى حالياً
         break;
     }
 

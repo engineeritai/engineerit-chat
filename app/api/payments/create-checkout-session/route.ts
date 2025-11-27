@@ -4,13 +4,21 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-// نستخدم any لتفادي مشاكل الأنواع بين إصدارات stripe
-const stripe: any = new Stripe(process.env.STRIPE_SECRET_KEY! as string);
-
+// Supabase admin client
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+// دالة ترجع عميل Stripe فقط وقت الاستخدام
+function getStripeClient(): any {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  // نستخدم any لتفادي مشاكل الأنواع
+  return new Stripe(key as string) as any;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -82,6 +90,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 3) إنشاء Stripe customer أو استخدام الموجود
+    const stripe = getStripeClient();
+
     let stripeCustomerId: string | null = null;
 
     const { data: existing } = await supabaseAdmin
@@ -105,7 +115,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4) إنشاء Checkout Session
-    // @ts-ignore - نتجاهل فحص الأنواع هنا بسبب تغيّر تعريفات stripe
+    // @ts-ignore لتفادي مشاكل الأنواع بين إصدارات stripe
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: stripeCustomerId,
