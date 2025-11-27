@@ -4,6 +4,7 @@ import React, { useEffect, useState, ChangeEvent } from "react";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import { supabase } from "../../lib/supabaseClient";
+import Link from "next/link";
 
 type ProfileRow = {
   full_name: string | null;
@@ -23,6 +24,9 @@ export default function ProfilePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
+  // ─────────────────────────────
+  // Load profile from Supabase
+  // ─────────────────────────────
   useEffect(() => {
     async function loadProfile() {
       try {
@@ -40,7 +44,7 @@ export default function ProfilePage() {
           return;
         }
 
-        // اسم وصورة ابتدائية من الميتاداتا أو الإيميل
+        // اسم ابتدائي من الميتاداتا أو الإيميل
         let initialFullName =
           (user.user_metadata?.full_name as string | undefined) ??
           (user.user_metadata?.name as string | undefined) ??
@@ -54,7 +58,7 @@ export default function ProfilePage() {
 
         let subscriptionTier: string | null = "assistant";
 
-        // قراءة الصف من profiles إن وجد
+        // قراءة صف profile لو موجود
         const { data, error } = await supabase
           .from("profiles")
           .select("full_name, avatar_url, subscription_tier")
@@ -70,7 +74,7 @@ export default function ProfilePage() {
           console.error("PROFILE SELECT ERROR:", error);
         }
 
-        // upsert للتأكد من وجود الصف وتخزين آخر نسخة من الصورة
+        // upsert للتأكد من وجود الصف
         const { error: upsertError } = await supabase
           .from("profiles")
           .upsert(
@@ -106,6 +110,9 @@ export default function ProfilePage() {
     void loadProfile();
   }, []);
 
+  // ─────────────────────────────
+  // Save name
+  // ─────────────────────────────
   async function handleSaveName() {
     try {
       setSavingName(true);
@@ -151,6 +158,9 @@ export default function ProfilePage() {
     }
   }
 
+  // ─────────────────────────────
+  // Avatar upload
+  // ─────────────────────────────
   async function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -189,7 +199,6 @@ export default function ProfilePage() {
 
       const publicUrl = publicData.publicUrl;
 
-      // تحديث جدول profiles
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_url: publicUrl })
@@ -201,7 +210,6 @@ export default function ProfilePage() {
         return;
       }
 
-      // تحديث user_metadata حتى يقرأها الهيدر وأي مكان آخر
       await supabase.auth.updateUser({
         data: { avatar_url: publicUrl },
       });
@@ -216,44 +224,6 @@ export default function ProfilePage() {
     } finally {
       setSavingAvatar(false);
       e.target.value = "";
-    }
-  }
-
-  async function handleUpgradeClick(
-    targetPlan: "plus" | "pro" | "premium" = "pro"
-  ) {
-    try {
-      setErrorMsg(null);
-      setInfoMsg(null);
-
-      const { data, error: sessionErr } = await supabase.auth.getSession();
-      if (sessionErr || !data.session) {
-        setErrorMsg("You must be logged in to upgrade.");
-        return;
-      }
-
-      const res = await fetch("/api/payments/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${data.session.access_token}`,
-        },
-        body: JSON.stringify({
-          planCode: targetPlan,
-          billingCycle: "monthly",
-        }),
-      });
-
-      const json = await res.json();
-      if (!res.ok) {
-        setErrorMsg(json.error || "Could not start checkout.");
-        return;
-      }
-
-      window.location.href = json.url;
-    } catch (err) {
-      console.error("UPGRADE CLICK ERROR:", err);
-      setErrorMsg("Could not start upgrade process.");
     }
   }
 
@@ -414,17 +384,19 @@ export default function ProfilePage() {
             </p>
             <p style={{ fontSize: 14, color: "#6b7280" }}>
               Plan changes are controlled by engineerit.ai billing
-              only. You can start upgrade to a higher plan from here.
+              only. You can manage or upgrade your plan from the
+              subscription page.
             </p>
 
-            <button
-              className="btn"
-              type="button"
-              style={{ marginTop: 16 }}
-              onClick={() => handleUpgradeClick("pro")}
-            >
-              Upgrade to Professional
-            </button>
+            <Link href="/subscription">
+              <button
+                className="btn"
+                type="button"
+                style={{ marginTop: 16 }}
+              >
+                Manage / Upgrade subscription
+              </button>
+            </Link>
           </div>
         </div>
       </div>
