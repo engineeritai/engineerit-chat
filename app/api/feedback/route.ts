@@ -7,14 +7,19 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const type = body.type || "feedback";
-    const text = body.text as string | undefined;
+
+    const type = (body.type as string | undefined) || "feedback";
     const email = body.email as string | undefined;
 
-    if (!text || typeof text !== "string") {
+    // يدعم كلا الاسمين: text أو message
+    const message =
+      (body.text as string | undefined) ||
+      (body.message as string | undefined);
+
+    if (!message || typeof message !== "string") {
       return NextResponse.json(
         { error: "Message is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -31,22 +36,28 @@ export async function POST(req: Request) {
       });
       return NextResponse.json(
         { error: "Email server is not configured" },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
+    // يدعم 465 (SSL) و 587 (STARTTLS) حسب قيمة ZSMTP_PORT
     const transporter = nodemailer.createTransport({
       host,
       port,
-      secure: port === 465,
+      secure: port === 465, // 465 = SSL, غيره = STARTTLS
       auth: { user, pass },
     });
 
-    const safeText = text.toString();
+    const safeText = message.toString();
+
+    const toEmail =
+      process.env.FEEDBACK_TO_EMAIL && process.env.FEEDBACK_TO_EMAIL.trim().length > 0
+        ? process.env.FEEDBACK_TO_EMAIL
+        : user;
 
     await transporter.sendMail({
       from: `"engineerit.ai Feedback" <${user}>`,
-      to: user, // ترسل لنفس الإيميل info@engineerit.ai
+      to: toEmail,
       subject: `New ${type} from engineerit.ai`,
       html: `
         <h2>New feedback message</h2>
@@ -62,7 +73,7 @@ export async function POST(req: Request) {
     console.error("FEEDBACK ERROR:", err);
     return NextResponse.json(
       { error: "Failed to send feedback" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
