@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef, ChangeEvent } from "react";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
-import { createClient } from "../../lib/supabaseclient"; // ✅ هذا هو الصحيح
+import { createClient } from "@/lib/supabaseClient"; // ✅ استخدم alias @
+
 
 type ProfileRow = {
   full_name: string | null;
