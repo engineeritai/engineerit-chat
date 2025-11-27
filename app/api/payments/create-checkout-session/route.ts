@@ -4,7 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// نستخدم any لتفادي مشاكل الأنواع بين إصدارات stripe
+const stripe: any = new Stripe(process.env.STRIPE_SECRET_KEY! as string);
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,7 +14,10 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { planCode, billingCycle }: { planCode: string; billingCycle: "monthly" | "yearly" } =
+    const {
+      planCode,
+      billingCycle,
+    }: { planCode: string; billingCycle: "monthly" | "yearly" } =
       await req.json();
 
     if (!planCode || !billingCycle) {
@@ -59,7 +63,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // priceId من متغيرات البيئة (تضبطها من Stripe Dashboard)
+    // priceId من متغيرات البيئة (تضبطها لاحقاً من Stripe Dashboard)
     let priceId: string | null = null;
 
     if (planCode === "pro" && billingCycle === "monthly") {
@@ -101,6 +105,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4) إنشاء Checkout Session
+    // @ts-ignore - نتجاهل فحص الأنواع هنا بسبب تغيّر تعريفات stripe
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: stripeCustomerId,
