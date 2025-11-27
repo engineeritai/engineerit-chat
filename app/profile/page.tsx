@@ -29,36 +29,65 @@ export default function ProfilePage() {
         setLoading(true);
         setErrorMsg(null);
 
+        // 1) جلب المستخدم الحالي
         const {
           data: { user },
           error: userErr,
         } = await supabase.auth.getUser();
 
-        if (userErr) throw userErr;
-        if (!user) {
+        if (userErr || !user) {
           setErrorMsg("You are not logged in.");
           setLoading(false);
           return;
         }
 
+        // اسم ابتدائي من الميتاداتا أو الإيميل
+        let initialFullName =
+          (user.user_metadata?.full_name as string | undefined) ??
+          user.email?.split("@")[0] ??
+          "";
+
+        let avatarUrl: string | null = null;
+        let subscriptionTier: string | null = "assistant";
+
+        // 2) نحاول نقرأ الصف من profiles
         const { data, error } = await supabase
           .from("profiles")
           .select("full_name, avatar_url, subscription_tier")
           .eq("id", user.id)
           .maybeSingle();
 
-        if (error) throw error;
+        if (!error && data) {
+          if (data.full_name) initialFullName = data.full_name;
+          avatarUrl = data.avatar_url ?? null;
+          subscriptionTier = data.subscription_tier ?? "assistant";
+        } else if (error) {
+          console.error("PROFILE SELECT ERROR:", error);
+          // نكمل باستخدام القيم الافتراضية بدون ما نوقف الصفحة
+        }
 
-        const initialFullName =
-          data?.full_name ??
-          ((user.user_metadata?.full_name as string | undefined) ??
-            user.email?.split("@")[0] ??
-            "");
+        // 3) نحاول نعمل upsert للسجل عشان نضمن وجوده في القاعدة
+        const { error: upsertError } = await supabase
+          .from("profiles")
+          .upsert(
+            {
+              id: user.id,
+              full_name: initialFullName,
+              avatar_url: avatarUrl,
+              subscription_tier: subscriptionTier,
+            },
+            { onConflict: "id" }
+          );
+
+        if (upsertError) {
+          console.error("PROFILE UPSERT ERROR:", upsertError);
+          // برضو نعرض البيانات محلياً حتى لو فشل
+        }
 
         const row: ProfileRow = {
           full_name: initialFullName,
-          avatar_url: data?.avatar_url ?? null,
-          subscription_tier: data?.subscription_tier ?? "assistant",
+          avatar_url: avatarUrl,
+          subscription_tier: subscriptionTier,
         };
 
         setProfile(row);
@@ -85,8 +114,7 @@ export default function ProfilePage() {
         error: userErr,
       } = await supabase.auth.getUser();
 
-      if (userErr) throw userErr;
-      if (!user) {
+      if (userErr || !user) {
         setErrorMsg("You are not logged in.");
         return;
       }
@@ -96,7 +124,11 @@ export default function ProfilePage() {
         .update({ full_name: fullName })
         .eq("id", user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("PROFILE SAVE ERROR:", error);
+        setErrorMsg("Could not save profile.");
+        return;
+      }
 
       setProfile((prev) =>
         prev
@@ -130,8 +162,7 @@ export default function ProfilePage() {
         error: userErr,
       } = await supabase.auth.getUser();
 
-      if (userErr) throw userErr;
-      if (!user) {
+      if (userErr || !user) {
         setErrorMsg("You are not logged in.");
         return;
       }
@@ -143,7 +174,11 @@ export default function ProfilePage() {
         .from("avatars")
         .upload(filePath, file, { upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("AVATAR UPLOAD ERROR:", uploadError);
+        setErrorMsg("Could not upload profile photo.");
+        return;
+      }
 
       const { data: publicData } = supabase.storage
         .from("avatars")
@@ -156,7 +191,11 @@ export default function ProfilePage() {
         .update({ avatar_url: publicUrl })
         .eq("id", user.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("AVATAR UPDATE ERROR:", updateError);
+        setErrorMsg("Could not save profile photo.");
+        return;
+      }
 
       setProfile((prev) =>
         prev ? { ...prev, avatar_url: publicUrl } : prev
@@ -191,8 +230,8 @@ export default function ProfilePage() {
           Authorization: `Bearer ${data.session.access_token}`,
         },
         body: JSON.stringify({
-          planCode: targetPlan,     // plus / pro / premium
-          billingCycle: "monthly",  // ممكن نضيف اختيار لاحقاً
+          planCode: targetPlan,
+          billingCycle: "monthly",
         }),
       });
 
