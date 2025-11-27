@@ -29,7 +29,6 @@ export default function ProfilePage() {
         setLoading(true);
         setErrorMsg(null);
 
-        // 1) جلب المستخدم الحالي
         const {
           data: { user },
           error: userErr,
@@ -44,13 +43,19 @@ export default function ProfilePage() {
         // اسم ابتدائي من الميتاداتا أو الإيميل
         let initialFullName =
           (user.user_metadata?.full_name as string | undefined) ??
+          (user.user_metadata?.name as string | undefined) ??
           user.email?.split("@")[0] ??
           "";
 
-        let avatarUrl: string | null = null;
+        // صورة ابتدائية من user_metadata (مثل الهيدر)
+        let avatarUrl: string | null =
+          (user.user_metadata?.avatar_url as string | undefined) ??
+          (user.user_metadata?.picture as string | undefined) ??
+          null;
+
         let subscriptionTier: string | null = "assistant";
 
-        // 2) نحاول نقرأ الصف من profiles
+        // قراءة الصف من profiles إن وجد
         const { data, error } = await supabase
           .from("profiles")
           .select("full_name, avatar_url, subscription_tier")
@@ -59,14 +64,14 @@ export default function ProfilePage() {
 
         if (!error && data) {
           if (data.full_name) initialFullName = data.full_name;
-          avatarUrl = data.avatar_url ?? null;
-          subscriptionTier = data.subscription_tier ?? "assistant";
+          if (data.avatar_url) avatarUrl = data.avatar_url;
+          if (data.subscription_tier)
+            subscriptionTier = data.subscription_tier;
         } else if (error) {
           console.error("PROFILE SELECT ERROR:", error);
-          // نكمل باستخدام القيم الافتراضية بدون ما نوقف الصفحة
         }
 
-        // 3) نحاول نعمل upsert للسجل عشان نضمن وجوده في القاعدة
+        // upsert للتأكد من وجود الصف وتخزين الصورة
         const { error: upsertError } = await supabase
           .from("profiles")
           .upsert(
@@ -81,7 +86,6 @@ export default function ProfilePage() {
 
         if (upsertError) {
           console.error("PROFILE UPSERT ERROR:", upsertError);
-          // برضو نعرض البيانات محلياً حتى لو فشل
         }
 
         const row: ProfileRow = {
@@ -313,6 +317,7 @@ export default function ProfilePage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    overflow: "hidden",
                   }}
                 >
                   {profile?.avatar_url ? (
