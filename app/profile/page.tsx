@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, ChangeEvent } from "react";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "../../lib/supabaseclient"; // ✅ هذا هو الصحيح
 
 type ProfileRow = {
   full_name: string | null;
@@ -21,7 +21,8 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const supabase = createClientComponentClient();
+
+  const supabase = createClient();
 
   // تحميل بيانات البروفايل
   useEffect(() => {
@@ -55,7 +56,7 @@ export default function ProfilePage() {
     loadProfile();
   }, [supabase]);
 
-  // حفظ الاسم فقط
+  // حفظ الاسم
   async function handleSaveName() {
     setSavingName(true);
     const {
@@ -93,7 +94,6 @@ export default function ProfilePage() {
     try {
       setUploadingAvatar(true);
 
-      // مسار الملف داخل البكِت
       const filePath = `${user.id}/${Date.now()}-${file.name}`;
 
       const { error: uploadError } = await supabase.storage
@@ -109,12 +109,10 @@ export default function ProfilePage() {
         return;
       }
 
-      // الحصول على الرابط العام
       const {
         data: { publicUrl },
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-      // حفظ الرابط في جدول profiles
       const { error: updateError } = await supabase
         .from("profiles")
         .update({
@@ -132,7 +130,6 @@ export default function ProfilePage() {
       setAvatarUrl(publicUrl);
     } finally {
       setUploadingAvatar(false);
-      // حتى نسمح برفع نفس الملف مرة أخرى لو أراد
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
