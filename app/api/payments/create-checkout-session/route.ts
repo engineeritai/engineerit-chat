@@ -4,9 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20",
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -61,8 +59,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // هنا تحط priceId يدوي مؤقتاً (تأخذه من Stripe Dashboard)
-    // مثال: pro شهرياً
+    // priceId من متغيرات البيئة (تضبطها من Stripe Dashboard)
     let priceId: string | null = null;
 
     if (planCode === "pro" && billingCycle === "monthly") {

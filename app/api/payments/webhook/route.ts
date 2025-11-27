@@ -4,9 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20",
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -74,7 +72,6 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        // upsert اشتراك المستخدم
         await supabaseAdmin.from("user_subscriptions").upsert(
           {
             user_id: userId,
@@ -91,7 +88,6 @@ export async function POST(req: NextRequest) {
           }
         );
 
-        // تحديث tier في profiles
         await supabaseAdmin
           .from("profiles")
           .update({ subscription_tier: planCode })
@@ -129,7 +125,6 @@ export async function POST(req: NextRequest) {
       }
 
       default:
-        // تجاهل بقية الأحداث الآن
         break;
     }
 
