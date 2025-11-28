@@ -29,13 +29,18 @@ export default function SubscriptionPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
+  /**
+   * ============================================================
+   *    🔥 النسخة النهائية الجديدة من handleSelect (معدل بالكامل)
+   * ============================================================
+   */
   async function handleSelect(planId: PlanId) {
     try {
       setErrorMsg(null);
       setInfoMsg(null);
       setSavingPlanId(planId);
 
-      // 1) Assistant (free) → نفس السلوك القديم: حفظ الخطة فقط بدون دفع
+      // 1) Assistant (free) → يحفظ الخطة بدون دفع
       if (planId === "assistant") {
         const res = await fetch("/api/subscription/select", {
           method: "POST",
@@ -61,13 +66,12 @@ export default function SubscriptionPage() {
         return;
       }
 
-      // 2) Paid plans: Engineer / Professional / Consultant → مويسر
+      // 2) Paid plans → Engineer / Professional / Consultant → Moeasar checkout
       const res = await fetch("/api/checkout/moyasar", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        // مويسر API تتوقع planId = engineer | professional | consultant
         body: JSON.stringify({ planId }),
       });
 
@@ -82,7 +86,6 @@ export default function SubscriptionPage() {
         return;
       }
 
-      // Redirect to Moyasar payment page
       window.location.href = json.url as string;
     } catch (err) {
       console.error(err);
@@ -91,6 +94,8 @@ export default function SubscriptionPage() {
       setSavingPlanId(null);
     }
   }
+
+  /** --------------------------------------------------------- */
 
   return (
     <div className="app-shell">
@@ -178,7 +183,7 @@ export default function SubscriptionPage() {
                       "box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease",
                   }}
                 >
-                  {/* رأس الكرت: دائرة الحرف + الاسم + الوصف القصير */}
+                  {/* رأس الكرت */}
                   <div
                     style={{
                       display: "flex",
@@ -250,7 +255,7 @@ export default function SubscriptionPage() {
                     </div>
                   </div>
 
-                  {/* المميزات – تملأ ارتفاع الكرت */}
+                  {/* المميزات */}
                   <ul
                     style={{
                       listStyle: "disc",
@@ -269,7 +274,7 @@ export default function SubscriptionPage() {
                     ))}
                   </ul>
 
-                  {/* زر الاختيار في الأسفل */}
+                  {/* زر الاختيار */}
                   <button
                     type="button"
                     onClick={() => handleSelect(id)}
