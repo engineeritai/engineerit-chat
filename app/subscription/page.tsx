@@ -35,30 +35,58 @@ export default function SubscriptionPage() {
       setInfoMsg(null);
       setSavingPlanId(planId);
 
-      const res = await fetch("/api/subscription/select", {
+      // 1) Assistant (free) → نفس السلوك القديم: حفظ الخطة فقط بدون دفع
+      if (planId === "assistant") {
+        const res = await fetch("/api/subscription/select", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ plan: planId }),
+        });
+
+        const json = await res
+          .json()
+          .catch(() => ({ error: "Could not save subscription." }));
+
+        if (!res.ok) {
+          setErrorMsg(json.error || "Could not save subscription.");
+          return;
+        }
+
+        setSelectedPlanId(planId);
+        setInfoMsg(
+          "Your plan has been saved. You can continue from your profile page."
+        );
+        return;
+      }
+
+      // 2) Paid plans: Engineer / Professional / Consultant → مويسر
+      const res = await fetch("/api/checkout/moyasar", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ plan: planId }),
+        // مويسر API تتوقع planId = engineer | professional | consultant
+        body: JSON.stringify({ planId }),
       });
 
       const json = await res
         .json()
-        .catch(() => ({ error: "Could not save subscription." }));
+        .catch(() => ({ error: "Could not start payment." }));
 
-      if (!res.ok) {
-        setErrorMsg(json.error || "Could not save subscription.");
+      if (!res.ok || !json.url) {
+        setErrorMsg(
+          json.error || "Could not start payment. Please try again."
+        );
         return;
       }
 
-      setSelectedPlanId(planId);
-      setInfoMsg(
-        "Your plan has been saved. You can continue from your profile page."
-      );
+      // Redirect to Moyasar payment page
+      window.location.href = json.url as string;
     } catch (err) {
       console.error(err);
-      setErrorMsg("Could not save subscription. Please try again.");
+      setErrorMsg("Could not process your request. Please try again.");
     } finally {
       setSavingPlanId(null);
     }
