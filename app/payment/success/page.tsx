@@ -1,27 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 export default function PaymentSuccessPage() {
-  const searchParams = useSearchParams();
-  const plan = searchParams.get("plan") as PlanId | null;
-
-  const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">(
-    "idle"
-  );
+  const [plan, setPlan] = useState<PlanId | null>(null);
+  const [status, setStatus] =
+    useState<"idle" | "saving" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
+  // 1) قراءة plan من كويري سترنغ (?.plan) على المتصفح
   useEffect(() => {
-    if (!plan) {
-      setStatus("error");
-      setMessage("Payment succeeded, but plan information is missing.");
-      return;
-    }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const p = params.get("plan") as PlanId | null;
 
-    if (status !== "idle") return;
+      if (!p) {
+        setStatus("error");
+        setMessage("Payment succeeded, but plan information is missing.");
+        return;
+      }
+
+      setPlan(p);
+    } catch (err) {
+      console.error(err);
+      setStatus("error");
+      setMessage("Payment succeeded, but we could not read the plan.");
+    }
+  }, []);
+
+  // 2) استدعاء API لتحديث الاشتراك في Supabase
+  useEffect(() => {
+    if (!plan || status !== "idle") return;
 
     const saveSubscription = async () => {
       try {
