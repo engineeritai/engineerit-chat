@@ -10,6 +10,20 @@ type HeaderProps = {
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
+const PLAN_LABELS: Record<PlanId, string> = {
+  assistant: "Assistant",
+  engineer: "Engineer",
+  professional: "Professional",
+  consultant: "Consultant",
+};
+
+const PLAN_COLORS: Record<PlanId, string> = {
+  assistant: "#2563eb",
+  engineer: "#f97316",
+  professional: "#0f766e",
+  consultant: "#7c3aed",
+};
+
 export default function Header({ onToggleSidebar }: HeaderProps) {
   const [fullName, setFullName] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
@@ -17,7 +31,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
 
@@ -27,20 +40,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const router = useRouter();
-
-  const planLabels: Record<PlanId, string> = {
-    assistant: "Assistant",
-    engineer: "Engineer",
-    professional: "Professional",
-    consultant: "Consultant",
-  };
-
-  const planColors: Record<PlanId, string> = {
-    assistant: "#2563eb",
-    engineer: "#f97316",
-    professional: "#0f766e",
-    consultant: "#7c3aed",
-  };
 
   function getInitials(name: string | null, fallbackEmail: string | null) {
     const base = name || fallbackEmail || "U";
@@ -52,7 +51,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     );
   }
 
-  // تحميل المستخدم والبروفايل من Supabase + fallback من localStorage
+  // تحميل بيانات المستخدم والبروفايل من Supabase فقط
   useEffect(() => {
     const load = async () => {
       const {
@@ -71,40 +70,39 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
       setIsLoggedIn(true);
       setEmail(user.email || null);
 
-      let loadedFromDb = false;
+      let currentPlan: PlanId = "assistant";
+      let name =
+        (user.user_metadata?.full_name as string | undefined) ??
+        (user.user_metadata?.name as string | undefined) ??
+        user.email?.split("@")[0] ??
+        "";
+      let avatar: string | null =
+        (user.user_metadata?.avatar_url as string | undefined) ??
+        (user.user_metadata?.picture as string | undefined) ??
+        null;
 
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("full_name, plan, avatar_url")
+        .select("full_name, avatar_url, subscription_tier")
         .eq("id", user.id)
         .maybeSingle();
 
       if (!error && profile) {
-        loadedFromDb = true;
-        if (profile.full_name) setFullName(profile.full_name);
-        if (profile.plan) setPlanId(profile.plan as PlanId);
-        if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
-      }
-
-      if (!loadedFromDb) {
-        try {
-          const cached = window.localStorage.getItem("engineerit_profile");
-          if (cached) {
-            const parsed = JSON.parse(cached) as {
-              fullName?: string;
-              email?: string;
-              avatarUrl?: string;
-              planId?: PlanId;
-            };
-            if (parsed.fullName) setFullName(parsed.fullName);
-            if (parsed.email && !email) setEmail(parsed.email);
-            if (parsed.avatarUrl) setAvatarUrl(parsed.avatarUrl);
-            if (parsed.planId) setPlanId(parsed.planId);
-          }
-        } catch (err) {
-          console.error("Failed to read cached profile in header:", err);
+        if (profile.full_name) name = profile.full_name;
+        if (profile.avatar_url) avatar = profile.avatar_url;
+        if (
+          profile.subscription_tier &&
+          ["assistant", "engineer", "professional", "consultant"].includes(
+            profile.subscription_tier
+          )
+        ) {
+          currentPlan = profile.subscription_tier as PlanId;
         }
       }
+
+      setFullName(name || null);
+      setAvatarUrl(avatar);
+      setPlanId(currentPlan);
     };
 
     void load();
@@ -118,13 +116,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     setEmail(null);
     setAvatarUrl(null);
     setPlanId("assistant");
-
-    try {
-      window.localStorage.removeItem("engineerit_profile");
-    } catch {
-      // ignore
-    }
-
     router.push("/");
   };
 
@@ -150,40 +141,49 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         return;
       }
 
-      if (!data.session || !data.user) {
+      if (!data.user) {
         setLoginError("Unable to sign in. Please try again.");
         setLoginLoading(false);
         return;
       }
 
+      // بعد تسجيل الدخول، حمّل البروفايل بنفس المنطق
       setIsLoggedIn(true);
       setEmail(data.user.email || null);
 
+      let currentPlan: PlanId = "assistant";
+      let name =
+        (data.user.user_metadata?.full_name as string | undefined) ??
+        (data.user.user_metadata?.name as string | undefined) ??
+        data.user.email?.split("@")[0] ??
+        "";
+      let avatar: string | null =
+        (data.user.user_metadata?.avatar_url as string | undefined) ??
+        (data.user.user_metadata?.picture as string | undefined) ??
+        null;
+
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("full_name, plan, avatar_url")
+        .select("full_name, avatar_url, subscription_tier")
         .eq("id", data.user.id)
         .maybeSingle();
 
       if (!profileError && profile) {
-        if (profile.full_name) setFullName(profile.full_name);
-        if (profile.plan) setPlanId(profile.plan as PlanId);
-        if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
-
-        try {
-          window.localStorage.setItem(
-            "engineerit_profile",
-            JSON.stringify({
-              fullName: profile.full_name,
-              email: data.user.email,
-              avatarUrl: profile.avatar_url,
-              planId: profile.plan as PlanId,
-            })
-          );
-        } catch (err) {
-          console.error("Failed to cache profile after login:", err);
+        if (profile.full_name) name = profile.full_name;
+        if (profile.avatar_url) avatar = profile.avatar_url;
+        if (
+          profile.subscription_tier &&
+          ["assistant", "engineer", "professional", "consultant"].includes(
+            profile.subscription_tier
+          )
+        ) {
+          currentPlan = profile.subscription_tier as PlanId;
         }
       }
+
+      setFullName(name || null);
+      setAvatarUrl(avatar);
+      setPlanId(currentPlan);
 
       setIsLoginOpen(false);
       setLoginEmail("");
@@ -197,7 +197,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     }
   };
 
-  // ✅ تسجيل/دخول باستخدام Google أو Apple (Supabase OAuth)
   const handleOAuthLogin = async (provider: "google" | "apple") => {
     try {
       setLoginError(null);
@@ -214,7 +213,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         console.error("OAuth error:", error);
         setLoginError(error.message);
       }
-      // بعد OAuth، Supabase سيعيد التوجيه تلقائياً
     } catch (err) {
       console.error(err);
       setLoginError("OAuth login failed. Please try again.");
@@ -225,7 +223,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
   return (
     <header className="header">
-      {/* LEFT – menu + logo */}
+      {/* LEFT: menu + logo */}
       <div className="header-left">
         <button
           className="mobile-menu-btn"
@@ -245,7 +243,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         </div>
       </div>
 
-      {/* RIGHT – login or avatar */}
+      {/* RIGHT */}
       <div
         className="header-right"
         style={{
@@ -304,7 +302,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                     Sign in to engineerit.ai
                   </div>
 
-                  {/* Social logins */}
                   <div
                     style={{
                       display: "flex",
@@ -342,23 +339,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       }}
                     >
                       Continue with Apple
-                    </button>
-                    {/* Huawei: يحتاج إعداد OAuth منفصل (SSO/OIDC) في Supabase أو عبر مزود خارجي */}
-                    <button
-                      type="button"
-                      disabled
-                      style={{
-                        width: "100%",
-                        padding: "6px 8px",
-                        borderRadius: 999,
-                        border: "1px solid #e5e7eb",
-                        backgroundColor: "#f9fafb",
-                        fontSize: 13,
-                        cursor: "not-allowed",
-                        color: "#9ca3af",
-                      }}
-                    >
-                      Huawei ID (will be added)
                     </button>
                   </div>
 
@@ -436,35 +416,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   >
                     {loginLoading ? "Signing in…" : "Sign in"}
                   </button>
-
-                  <div
-                    style={{
-                      marginTop: 6,
-                      fontSize: 11,
-                      color: "#6b7280",
-                    }}
-                  >
-                    Don&apos;t have an account?{" "}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsLoginOpen(false);
-                        router.push("/register");
-                      }}
-                      style={{
-                        border: "none",
-                        background: "none",
-                        padding: 0,
-                        margin: 0,
-                        color: "#2563eb",
-                        cursor: "pointer",
-                        fontSize: 11,
-                        fontWeight: 500,
-                      }}
-                    >
-                      Register
-                    </button>
-                  </div>
                 </form>
               </div>
             )}
@@ -476,7 +427,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           <>
             <span
               style={{
-                backgroundColor: planColors[planId],
+                backgroundColor: PLAN_COLORS[planId],
                 color: "white",
                 padding: "4px 10px",
                 borderRadius: 999,
@@ -484,7 +435,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                 fontWeight: 600,
               }}
             >
-              {planLabels[planId]}
+              {PLAN_LABELS[planId]}
             </span>
 
             <button
@@ -564,7 +515,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       marginTop: 2,
                     }}
                   >
-                    {planLabels[planId]} plan
+                    {PLAN_LABELS[planId]} plan
                   </div>
                 </div>
 

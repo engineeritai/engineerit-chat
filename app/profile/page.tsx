@@ -12,11 +12,33 @@ type ProfileRow = {
   subscription_tier: string | null;
 };
 
+type SubscriptionRow = {
+  plan: string | null;
+  price: number | null;
+  currency: string | null;
+  status: string | null;
+  start_date: string | null;
+  end_date: string | null;
+};
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function ProfilePage() {
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [savingName, setSavingName] = useState(false);
   const [savingAvatar, setSavingAvatar] = useState(false);
@@ -24,8 +46,12 @@ export default function ProfilePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
+  const [activeSub, setActiveSub] = useState<SubscriptionRow | null>(null);
+  const [chatCount, setChatCount] = useState<number | null>(null);
+  const [docCount, setDocCount] = useState<number | null>(null);
+
   // ─────────────────────────────
-  // Load profile from Supabase
+  // Load profile + subscription + counts
   // ─────────────────────────────
   useEffect(() => {
     async function loadProfile() {
@@ -43,6 +69,8 @@ export default function ProfilePage() {
           setLoading(false);
           return;
         }
+
+        setEmail(user.email ?? null);
 
         // اسم ابتدائي من الميتاداتا أو الإيميل
         let initialFullName =
@@ -99,6 +127,50 @@ export default function ProfilePage() {
 
         setProfile(row);
         setFullName(initialFullName);
+
+        // ✅ اشتراك المستخدم من جدول subscriptions
+        // نختار فقط الصف المطابق لنفس الخطة في البروفايل
+        const { data: subs, error: subsError } = await supabase
+          .from("subscriptions")
+          .select("plan, price, currency, status, start_date, end_date")
+          .eq("user_id", user.id)
+          .eq("plan", subscriptionTier) // هنا نضمن ألا يظهر سعر خطة أخرى
+          .order("start_date", { ascending: false })
+          .limit(1);
+
+        if (!subsError && subs && subs.length > 0) {
+          setActiveSub(subs[0] as SubscriptionRow);
+        } else if (subsError) {
+          console.error("SUBSCRIPTIONS SELECT ERROR:", subsError);
+        }
+
+        // عدد الرسائل في الشات (اختياري)
+        try {
+          const { count: cCount, error: cErr } = await supabase
+            .from("chat_messages")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id);
+
+          if (!cErr && typeof cCount === "number") {
+            setChatCount(cCount);
+          }
+        } catch (e) {
+          console.warn("CHAT COUNT ERROR (optional):", e);
+        }
+
+        // عدد الملفات (اختياري)
+        try {
+          const { count: dCount, error: dErr } = await supabase
+            .from("documents")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id);
+
+          if (!dErr && typeof dCount === "number") {
+            setDocCount(dCount);
+          }
+        } catch (e) {
+          console.warn("DOC COUNT ERROR (optional):", e);
+        }
       } catch (err) {
         console.error("PROFILE LOAD ERROR:", err);
         setErrorMsg("Could not load profile.");
@@ -229,6 +301,11 @@ export default function ProfilePage() {
 
   const currentPlan = profile?.subscription_tier || "assistant";
 
+  const currentPlanLabel =
+    currentPlan === "assistant"
+      ? "Assistant (Free)"
+      : currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
+
   return (
     <div className="app-shell">
       <NavSidebar
@@ -270,6 +347,7 @@ export default function ProfilePage() {
             </p>
           )}
 
+          {/* بطاقة البروفايل الأساسية */}
           {loading ? (
             <p>Loading profile…</p>
           ) : (
@@ -293,6 +371,9 @@ export default function ProfilePage() {
                     alignItems: "center",
                     justifyContent: "center",
                     overflow: "hidden",
+                    fontSize: 28,
+                    fontWeight: 600,
+                    color: "#111827",
                   }}
                 >
                   {profile?.avatar_url ? (
@@ -345,7 +426,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Full name */}
+              {/* Full name + email */}
               <div className="form-row">
                 <label>
                   Full name
@@ -358,6 +439,20 @@ export default function ProfilePage() {
                   />
                 </label>
               </div>
+
+              {email && (
+                <div className="form-row">
+                  <label>
+                    Email
+                    <input
+                      className="input"
+                      type="email"
+                      value={email}
+                      readOnly
+                    />
+                  </label>
+                </div>
+              )}
 
               <button
                 className="btn"
@@ -373,15 +468,74 @@ export default function ProfilePage() {
           {/* Subscription card */}
           <div className="card" style={{ marginTop: 24 }}>
             <h2 className="card-title">Subscription</h2>
-            <p style={{ marginBottom: 8 }}>
-              Current plan:{" "}
-              <strong>
-                {currentPlan === "assistant"
-                  ? "Assistant (Free)"
-                  : currentPlan.charAt(0).toUpperCase() +
-                    currentPlan.slice(1)}
-              </strong>
+
+            {/* سطر الخطة الحالية */}
+            <p style={{ marginBottom: 12, fontSize: 15 }}>
+              Current plan: <strong>{currentPlanLabel}</strong>
             </p>
+
+            {/* لو الخطة Assistant (Free) نبيّن إنه مجاني، بدون سعر 79 أو غيره */}
+            {currentPlan === "assistant" ? (
+              <p
+                style={{
+                  fontSize: 14,
+                  color: "#4b5563",
+                  marginBottom: 10,
+                }}
+              >
+                You are on the <strong>free Assistant</strong> plan. No
+                charges will be applied until you upgrade to a paid
+                plan.
+              </p>
+            ) : activeSub ? (
+              // خطط مدفوعة – نعرض تفاصيل الفاتورة
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 24,
+                  fontSize: 14,
+                  color: "#374151",
+                  marginBottom: 10,
+                }}
+              >
+                <div>
+                  <div>
+                    Status:{" "}
+                    <strong>{activeSub.status ?? "unknown"}</strong>
+                  </div>
+                  {activeSub.price !== null && activeSub.currency && (
+                    <div>
+                      Price:{" "}
+                      <strong>
+                        {activeSub.price} {activeSub.currency}
+                      </strong>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div>
+                    Start date:{" "}
+                    <strong>{formatDate(activeSub.start_date)}</strong>
+                  </div>
+                  <div>
+                    End date:{" "}
+                    <strong>{formatDate(activeSub.end_date)}</strong>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p
+                style={{
+                  fontSize: 14,
+                  color: "#6b7280",
+                  marginBottom: 10,
+                }}
+              >
+                No active billing record found for this plan yet.
+              </p>
+            )}
+
             <p style={{ fontSize: 14, color: "#6b7280" }}>
               Plan changes are controlled by engineerit.ai billing
               only. You can manage or upgrade your plan from the
@@ -397,6 +551,36 @@ export default function ProfilePage() {
                 Manage / Upgrade subscription
               </button>
             </Link>
+          </div>
+
+          {/* Activity card */}
+          <div className="card" style={{ marginTop: 24 }}>
+            <h2 className="card-title">Activity</h2>
+            <ul
+              style={{
+                paddingLeft: 20,
+                margin: 0,
+                fontSize: 14,
+                color: "#374151",
+                lineHeight: 1.7,
+              }}
+            >
+              <li>
+                Total chats:{" "}
+                <strong>
+                  {chatCount !== null ? chatCount : "soon"}
+                </strong>
+              </li>
+              <li>
+                Total uploaded documents:{" "}
+                <strong>
+                  {docCount !== null ? docCount : "soon"}
+                </strong>
+              </li>
+              <li>
+                Saved projects: <strong>soon</strong>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
