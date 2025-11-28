@@ -3,10 +3,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-// لو عندك types لقاعدة البيانات استخدمها هنا بدل any
+// لو عندك نوع Database استخدمه هنا بدل any
 // import type { Database } from "@/lib/database.types";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
@@ -19,7 +20,7 @@ const ALLOWED_PLANS: PlanId[] = [
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => null) as
+    const body = (await req.json().catch(() => null)) as
       | { plan?: PlanId }
       | null;
 
@@ -32,17 +33,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient<any>({ cookies: () => cookieStore });
+    // Supabase client مرتبط بالكوكيز (سيشن المستخدم)
+    const supabase = createRouteHandlerClient<any>({ cookies });
 
     const {
       data: { user },
-      error: userError,
+      error: authError,
     } = await supabase.auth.getUser();
 
-    if (userError || !user) {
+    if (authError) {
+      console.error("Supabase auth error:", authError);
       return NextResponse.json(
         { error: "Not authenticated." },
+        { status: 401 }
+      );
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found." },
         { status: 401 }
       );
     }
@@ -58,7 +67,10 @@ export async function POST(req: NextRequest) {
     if (updateError) {
       console.error("Failed to update subscription_tier:", updateError);
       return NextResponse.json(
-        { error: "Failed to update subscription. Please try again." },
+        {
+          error:
+            "Failed to update subscription in database. Please contact support if the problem persists.",
+        },
         { status: 500 }
       );
     }
