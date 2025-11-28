@@ -1,21 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import Link from "next/link";
 import { PLANS } from "@/lib/plans";
+import type { PlanId } from "@/lib/plans";
 
-const PLAN_COLORS: Record<string, string> = {
-  assistant: "#2563eb",      // Blue
-  engineer: "#f97316",       // Orange
-  professional: "#0f766e",   // Teal/Green
-  consultant: "#7c3aed",     // Purple
+const PLAN_COLORS: Record<PlanId, string> = {
+  assistant: "#2563eb", // blue
+  engineer: "#f97316", // orange
+  professional: "#0f766e", // teal
+  consultant: "#7c3aed", // purple
+};
+
+// خلفية فاتحة للأيقونة والزر
+const PLAN_LIGHT_BG: Record<PlanId, string> = {
+  assistant: "rgba(37,99,235,0.08)",
+  engineer: "rgba(249,115,22,0.08)",
+  professional: "rgba(15,118,110,0.08)",
+  consultant: "rgba(124,58,237,0.08)",
 };
 
 export default function SubscriptionPage() {
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
-  const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null);
+  const [savingPlanId, setSavingPlanId] = useState<PlanId | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
+
+  async function handleSelect(planId: PlanId) {
+    try {
+      setErrorMsg(null);
+      setInfoMsg(null);
+      setSavingPlanId(planId);
+
+      const res = await fetch("/api/subscription/select", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ plan: planId }),
+      });
+
+      const json = await res
+        .json()
+        .catch(() => ({ error: "Could not save subscription." }));
+
+      if (!res.ok) {
+        setErrorMsg(json.error || "Could not save subscription.");
+        return;
+      }
+
+      setSelectedPlanId(planId);
+      setInfoMsg(
+        "Your plan has been saved. You can continue from your profile page."
+      );
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("Could not save subscription. Please try again.");
+    } finally {
+      setSavingPlanId(null);
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -25,94 +72,139 @@ export default function SubscriptionPage() {
       />
 
       <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
+        <Header
+          onToggleSidebar={() =>
+            setIsSidebarOpenMobile((prev) => !prev)
+          }
+        />
 
         <div className="page-wrap">
-          <h1 className="page-title">Plans & Subscription</h1>
+          <h1 className="page-title">Plans &amp; Subscription</h1>
           <p className="page-subtitle">
-            Choose your level: Assistant, Engineer, Professional, or Consultant.
+            Choose your level: Assistant, Engineer, Professional Engineer, or
+            Consultant Engineer.
           </p>
 
-          {/* ===== GRID 4 CARDS ===== */}
+          {errorMsg && (
+            <p
+              style={{
+                color: "#b91c1c",
+                marginBottom: 12,
+                fontSize: 14,
+              }}
+            >
+              {errorMsg}
+            </p>
+          )}
+
+          {infoMsg && (
+            <p
+              style={{
+                color: "#16a34a",
+                marginBottom: 12,
+                fontSize: 14,
+              }}
+            >
+              {infoMsg}
+            </p>
+          )}
+
+          {/* GRID مشابه لصفحة التسجيل */}
           <div
+            className="plans-grid"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "22px",
-              marginTop: 20,
+              gap: 24,
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
             }}
           >
             {PLANS.map((plan) => {
-              const isSelected = selectedPlanId === plan.id;
-              const color = PLAN_COLORS[plan.id];
-              const letter = plan.shortName;
+              const id = plan.id as PlanId;
+              const color = PLAN_COLORS[id];
+              const lightBg = PLAN_LIGHT_BG[id];
+              const isSelected = selectedPlanId === id;
+              const isSaving = savingPlanId === id;
+
+              const letter = (plan.shortName || plan.name || "E")
+                .charAt(0)
+                .toUpperCase();
 
               return (
                 <div
                   key={plan.id}
-                  onClick={() => setSelectedPlanId(plan.id)}
+                  className="plan-card"
                   style={{
-                    cursor: "pointer",
-                    border: `2px solid ${isSelected ? color : "#e5e7eb"}`,
-                    borderRadius: 22,
-                    padding: "26px 24px",
-                    background: "white",
-                    transition: "0.15s ease",
+                    borderRadius: 28,
+                    border: isSelected
+                      ? `2px solid ${color}`
+                      : "1px solid #e5e7eb",
+                    padding: 24,
+                    backgroundColor: "#ffffff",
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: 360,
                     boxShadow: isSelected
-                      ? "0 14px 35px rgba(15,23,42,0.16)"
-                      : "0 2px 8px rgba(0,0,0,0.05)",
-                    transform: isSelected ? "translateY(-3px)" : "none",
+                      ? "0 14px 35px rgba(15,23,42,0.18)"
+                      : "0 4px 12px rgba(15,23,42,0.04)",
+                    transition:
+                      "box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease",
                   }}
                 >
-                  {/* ICON + TITLE */}
-                  <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+                  {/* رأس الكرت: دائرة الحرف + الاسم + الوصف القصير */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      marginBottom: 14,
+                    }}
+                  >
                     <div
                       style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: "50%",
-                        backgroundColor: color,
-                        color: "white",
+                        width: 44,
+                        height: 44,
+                        borderRadius: "9999px",
+                        backgroundColor: lightBg,
+                        color: color,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: 700,
                         marginRight: 14,
+                        flexShrink: 0,
                       }}
                     >
                       {letter}
                     </div>
 
                     <div>
-                      <h2
+                      <div
                         style={{
-                          margin: 0,
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: 700,
                           color: "#111827",
+                          marginBottom: 2,
                         }}
                       >
                         {plan.name}
-                      </h2>
-                      <p
+                      </div>
+                      <div
                         style={{
-                          margin: 0,
-                          marginTop: 4,
-                          fontSize: 14,
+                          fontSize: 13,
                           color: "#6b7280",
+                          lineHeight: 1.35,
                         }}
                       >
                         {plan.tagline}
-                      </p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* PRICE */}
-                  <div style={{ marginBottom: 12 }}>
+                  {/* السعر */}
+                  <div style={{ marginBottom: 10 }}>
                     <div
                       style={{
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: 700,
                         color,
                       }}
@@ -121,7 +213,7 @@ export default function SubscriptionPage() {
                     </div>
                     <div
                       style={{
-                        fontSize: 13,
+                        fontSize: 12,
                         color: "#6b7280",
                         marginTop: 2,
                       }}
@@ -130,15 +222,16 @@ export default function SubscriptionPage() {
                     </div>
                   </div>
 
-                  {/* FEATURES */}
+                  {/* المميزات – تملأ ارتفاع الكرت */}
                   <ul
                     style={{
                       listStyle: "disc",
                       paddingLeft: 20,
-                      marginTop: 8,
-                      marginBottom: 0,
+                      margin: 0,
+                      marginTop: 4,
                       fontSize: 14,
                       color: "#374151",
+                      flexGrow: 1,
                     }}
                   >
                     {plan.features.map((f) => (
@@ -148,43 +241,57 @@ export default function SubscriptionPage() {
                     ))}
                   </ul>
 
-                  {/* SELECT BUTTON */}
+                  {/* زر الاختيار في الأسفل */}
                   <button
+                    type="button"
+                    onClick={() => handleSelect(id)}
+                    disabled={isSaving}
                     style={{
-                      marginTop: 20,
+                      marginTop: 18,
                       width: "100%",
-                      backgroundColor: color,
-                      color: "white",
-                      padding: "10px 14px",
-                      borderRadius: 12,
+                      padding: "10px 16px",
+                      borderRadius: 9999,
                       border: "none",
-                      fontSize: 15,
+                      backgroundColor: lightBg,
+                      color,
                       fontWeight: 600,
+                      fontSize: 14,
                       cursor: "pointer",
                     }}
                   >
-                    {isSelected ? "Selected ✓" : "Select"}
+                    {isSaving
+                      ? "Saving..."
+                      : isSelected
+                      ? "Selected ✓"
+                      : "Select"}
                   </button>
                 </div>
               );
             })}
           </div>
 
-          {/* BACK BUTTON */}
-          <div style={{ marginTop: 32, textAlign: "center" }}>
+          {/* زر الرجوع للبروفايل */}
+          <div
+            style={{
+              marginTop: 32,
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
             <Link
               href="/profile"
+              className="btn"
               style={{
-                background: "#2563eb",
-                color: "white",
-                padding: "12px 22px",
-                borderRadius: 12,
                 textDecoration: "none",
-                fontSize: 15,
-                fontWeight: 600,
+                padding: "10px 20px",
+                borderRadius: 9999,
+                backgroundColor: "#e5e7eb",
+                color: "#111827",
+                fontSize: 14,
+                fontWeight: 500,
               }}
             >
-              Back to Profile
+              Back to profile
             </Link>
           </div>
         </div>
