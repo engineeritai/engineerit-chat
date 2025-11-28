@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Supabase client مرتبط بالكوكيز (سيشن المستخدم)
     const supabase = createRouteHandlerClient<any>({ cookies });
 
     const {
