@@ -1,98 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
-import { plans } from "@/lib/subscriptions";
+import Link from "next/link";
+import { PLANS } from "@/lib/plans";
 
-const planFeatures: Record<
-  string,
-  { subtitle: string; bullets: string[] }
-> = {
-  assistant: {
-    subtitle: "Basic access to Engineerit AI",
-    bullets: [
-      "AI chat in all disciplines",
-      "Read Word, Excel, PowerPoint, PDF",
-      "Simple PFD / P&ID / block diagrams",
-      "Basic data digitization (tables & tags)",
-    ],
-  },
-  engineer: {
-    subtitle: "More AI power and extended limits",
-    bullets: [
-      "Everything in Assistant plan",
-      "Export Word, Excel & PowerPoint outputs",
-      "Technical report drafts",
-      "Engineering calculation sheets",
-    ],
-  },
-  professional: {
-    subtitle: "Advanced AI tools and design checks",
-    bullets: [
-      "Everything in Engineer plan",
-      "Advanced designs, equations, & formulas",
-      "Finite element & modeling (where available)",
-      "ITP & QA/QC checklist templates",
-    ],
-  },
-  consultant: {
-    subtitle: "Full professional suite for consultants",
-    bullets: [
-      "Everything in Professional plan",
-      "Equipment list & BOQ extraction",
-      "Value engineering packages",
-      "Resource, cost, and schedule helpers",
-    ],
-  },
-};
-
-// ألوان وأيقونات كل خطة (مثل صفحة التسجيل تقريباً)
-const planIcons: Record<
-  string,
-  { label: string; fg: string; bg: string }
-> = {
-  assistant: { label: "A", fg: "#1d4ed8", bg: "#eff6ff" }, // أزرق
-  engineer: { label: "E", fg: "#ea580c", bg: "#fff7ed" }, // برتقالي
-  professional: { label: "P", fg: "#059669", bg: "#ecfdf3" }, // أخضر
-  consultant: { label: "C", fg: "#7c3aed", bg: "#f5f3ff" }, // بنفسجي
+const PLAN_COLORS: Record<string, string> = {
+  assistant: "#2563eb",      // Blue
+  engineer: "#f97316",       // Orange
+  professional: "#0f766e",   // Teal/Green
+  consultant: "#7c3aed",     // Purple
 };
 
 export default function SubscriptionPage() {
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const router = useRouter();
-
-  async function handleSelect(planId: string) {
-    try {
-      setErrorMsg(null);
-      setSelectedPlan(planId);
-      setLoadingPlan(planId);
-
-      const res = await fetch("/api/subscription/select", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ plan: planId }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || "Could not save subscription choice.");
-      }
-
-      // بعد حفظ الخطة نرجّع المستخدم للبروفايل
-      router.push("/profile");
-    } catch (err: any) {
-      console.error("SUBSCRIPTION SELECT ERROR:", err);
-      setErrorMsg(err.message ?? "Something went wrong.");
-      setLoadingPlan(null);
-    }
-  }
+  const [selectedPlanId, setSelectedPlanId] = useState("");
 
   return (
     <div className="app-shell">
@@ -102,188 +25,167 @@ export default function SubscriptionPage() {
       />
 
       <div className="main">
-        <Header
-          onToggleSidebar={() =>
-            setIsSidebarOpenMobile((v) => !v)
-          }
-        />
+        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
         <div className="page-wrap">
-          <h1 className="page-title">Plans &amp; Subscription</h1>
+          <h1 className="page-title">Plans & Subscription</h1>
           <p className="page-subtitle">
             Choose your level: Assistant, Engineer, Professional, or Consultant.
           </p>
 
-          {errorMsg && (
-            <p
-              style={{
-                color: "#b91c1c",
-                marginBottom: 12,
-                fontSize: 14,
-              }}
-            >
-              {errorMsg}
-            </p>
-          )}
-
-          {/* GRID للكروت */}
-          <div className="plans-grid">
-            {plans.map((plan) => {
-              const isSelected = selectedPlan === plan.id;
-              const isLoading = loadingPlan === plan.id;
-
-              const extra =
-                planFeatures[plan.id] ||
-                ({
-                  subtitle: plan.description,
-                  bullets: [],
-                } as (typeof planFeatures)[string]);
-
-              const icon = planIcons[plan.id] || {
-                label: plan.name.charAt(0),
-                fg: "#2563eb",
-                bg: "#eff6ff",
-              };
+          {/* ===== GRID 4 CARDS ===== */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "22px",
+              marginTop: 20,
+            }}
+          >
+            {PLANS.map((plan) => {
+              const isSelected = selectedPlanId === plan.id;
+              const color = PLAN_COLORS[plan.id];
+              const letter = plan.shortName;
 
               return (
                 <div
                   key={plan.id}
+                  onClick={() => setSelectedPlanId(plan.id)}
                   style={{
-                    background: "#fff",
-                    borderRadius: 24,
-                    padding: 24,
-                    border: isSelected
-                      ? "2px solid #2563eb"
-                      : "1px solid #e5e7eb",
+                    cursor: "pointer",
+                    border: `2px solid ${isSelected ? color : "#e5e7eb"}`,
+                    borderRadius: 22,
+                    padding: "26px 24px",
+                    background: "white",
+                    transition: "0.15s ease",
                     boxShadow: isSelected
-                      ? "0 0 0 3px rgba(37,99,235,0.15)"
-                      : "0 1px 2px rgba(0,0,0,0.04)",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    minHeight: 280,
+                      ? "0 14px 35px rgba(15,23,42,0.16)"
+                      : "0 2px 8px rgba(0,0,0,0.05)",
+                    transform: isSelected ? "translateY(-3px)" : "none",
                   }}
                 >
-                  <div>
-                    {/* الأيقونة + اسم الخطة */}
+                  {/* ICON + TITLE */}
+                  <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
                     <div
                       style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: "50%",
+                        backgroundColor: color,
+                        color: "white",
                         display: "flex",
                         alignItems: "center",
-                        gap: 12,
-                        marginBottom: 8,
+                        justifyContent: "center",
+                        fontSize: 22,
+                        fontWeight: 700,
+                        marginRight: 14,
                       }}
                     >
-                      <div
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: "999px",
-                          background: icon.bg,
-                          color: icon.fg,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: 700,
-                          fontSize: 18,
-                        }}
-                      >
-                        {icon.label}
-                      </div>
+                      {letter}
+                    </div>
+
+                    <div>
                       <h2
                         style={{
+                          margin: 0,
                           fontSize: 20,
                           fontWeight: 700,
+                          color: "#111827",
                         }}
                       >
                         {plan.name}
                       </h2>
-                    </div>
-
-                    <p
-                      style={{
-                        color: "#6b7280",
-                        fontSize: 14,
-                        marginBottom: 12,
-                      }}
-                    >
-                      {extra.subtitle}
-                    </p>
-
-                    <p
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 700,
-                        marginBottom: extra.bullets.length ? 8 : 16,
-                      }}
-                    >
-                      {plan.price === 0
-                        ? "Free"
-                        : `${plan.price} SAR / month`}
-                    </p>
-
-                    {extra.bullets.length > 0 && (
-                      <ul
+                      <p
                         style={{
-                          fontSize: 13,
-                          color: "#4b5563",
-                          paddingLeft: 18,
-                          listStyleType: "disc",
+                          margin: 0,
+                          marginTop: 4,
+                          fontSize: 14,
+                          color: "#6b7280",
                         }}
                       >
-                        {extra.bullets.map((b) => (
-                          <li key={b} style={{ marginBottom: 4 }}>
-                            {b}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                        {plan.tagline}
+                      </p>
+                    </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleSelect(plan.id)}
-                    disabled={isLoading}
+                  {/* PRICE */}
+                  <div style={{ marginBottom: 12 }}>
+                    <div
+                      style={{
+                        fontSize: 20,
+                        fontWeight: 700,
+                        color,
+                      }}
+                    >
+                      {plan.priceMonthly}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: "#6b7280",
+                        marginTop: 2,
+                      }}
+                    >
+                      {plan.priceYearly}
+                    </div>
+                  </div>
+
+                  {/* FEATURES */}
+                  <ul
                     style={{
-                      marginTop: 16,
+                      listStyle: "disc",
+                      paddingLeft: 20,
+                      marginTop: 8,
+                      marginBottom: 0,
+                      fontSize: 14,
+                      color: "#374151",
+                    }}
+                  >
+                    {plan.features.map((f) => (
+                      <li key={f} style={{ marginBottom: 6 }}>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* SELECT BUTTON */}
+                  <button
+                    style={{
+                      marginTop: 20,
                       width: "100%",
-                      padding: "12px 0",
-                      borderRadius: 999,
+                      backgroundColor: color,
+                      color: "white",
+                      padding: "10px 14px",
+                      borderRadius: 12,
                       border: "none",
-                      background: "#2563eb",
-                      color: "#fff",
                       fontSize: 15,
                       fontWeight: 600,
                       cursor: "pointer",
                     }}
                   >
-                    {isLoading
-                      ? "Saving..."
-                      : isSelected
-                      ? "Selected ✓"
-                      : "Select"}
+                    {isSelected ? "Selected ✓" : "Select"}
                   </button>
                 </div>
               );
             })}
           </div>
 
-          {/* زر رجوع إلى البروفايل */}
-          <div style={{ marginTop: 32 }}>
-            <button
-              type="button"
-              onClick={() => router.push("/profile")}
+          {/* BACK BUTTON */}
+          <div style={{ marginTop: 32, textAlign: "center" }}>
+            <Link
+              href="/profile"
               style={{
-                padding: "10px 18px",
-                borderRadius: 999,
-                border: "1px solid #e5e7eb",
-                background: "#fff",
-                fontSize: 14,
-                cursor: "pointer",
+                background: "#2563eb",
+                color: "white",
+                padding: "12px 22px",
+                borderRadius: 12,
+                textDecoration: "none",
+                fontSize: 15,
+                fontWeight: 600,
               }}
             >
-              ← Back to Profile
-            </button>
+              Back to Profile
+            </Link>
           </div>
         </div>
       </div>
