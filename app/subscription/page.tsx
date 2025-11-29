@@ -8,12 +8,13 @@ import { PLANS } from "@/lib/plans";
 import type { PlanId } from "@/lib/plans";
 
 const PLAN_COLORS: Record<PlanId, string> = {
-  assistant: "#2563eb",
-  engineer: "#f97316",
-  professional: "#0f766e",
-  consultant: "#7c3aed",
+  assistant: "#2563eb", // blue
+  engineer: "#f97316", // orange
+  professional: "#0f766e", // teal
+  consultant: "#7c3aed", // purple
 };
 
+// خلفية فاتحة للأيقونة والزر
 const PLAN_LIGHT_BG: Record<PlanId, string> = {
   assistant: "rgba(37,99,235,0.08)",
   engineer: "rgba(249,115,22,0.08)",
@@ -28,46 +29,45 @@ export default function SubscriptionPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
-  /** ---------------------------------------------------
-   *  HANDLE SELECT PLAN
-   *  --------------------------------------------------- */
+  /**
+   * ============================================================
+   *    🔥 النسخة النهائية الجديدة من handleSelect (معدل بالكامل)
+   * ============================================================
+   */
   async function handleSelect(planId: PlanId) {
     try {
       setErrorMsg(null);
       setInfoMsg(null);
       setSavingPlanId(planId);
 
-      // 1) حفظ الخطة في Supabase (Assistant + Paid)
-      const saveRes = await fetch("/api/subscription/select", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ plan: planId }),
-      });
-
-      const saveJson = await saveRes.json().catch(() => ({} as any));
-
-      if (!saveRes.ok) {
-        setErrorMsg(
-          saveJson.error ||
-            "Could not save subscription in your profile. Please try again."
-        );
-        return;
-      }
-
-      setSelectedPlanId(planId);
-
-      // 2) خطة Assistant مجّانية
+      // 1) Assistant (free) → يحفظ الخطة بدون دفع
       if (planId === "assistant") {
+        const res = await fetch("/api/subscription/select", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ plan: planId }),
+        });
+
+        const json = await res
+          .json()
+          .catch(() => ({ error: "Could not save subscription." }));
+
+        if (!res.ok) {
+          setErrorMsg(json.error || "Could not save subscription.");
+          return;
+        }
+
+        setSelectedPlanId(planId);
         setInfoMsg(
           "Your plan has been saved. You can continue from your profile page."
         );
         return;
       }
 
-      // 3) الخطط المدفوعة → انشاء فاتورة مويسار
-      const checkoutRes = await fetch("/api/checkout/moyasar", {
+      // 2) Paid plans → Engineer / Professional / Consultant → Moeasar checkout
+      const res = await fetch("/api/checkout/moyasar", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -75,35 +75,35 @@ export default function SubscriptionPage() {
         body: JSON.stringify({ planId }),
       });
 
-      const checkoutJson = await checkoutRes.json().catch(() => ({} as any));
+      const json = await res
+        .json()
+        .catch(() => ({ error: "Could not start payment." }));
 
-      if (!checkoutRes.ok || !checkoutJson.url) {
+      if (!res.ok || !json.url) {
         setErrorMsg(
-          checkoutJson.error ||
-            "Could not start payment. Please try again."
+          json.error || "Could not start payment. Please try again."
         );
         return;
       }
 
-      // 4) توجيه المستخدم لصفحة الدفع
-      window.location.href = checkoutJson.url as string;
+      window.location.href = json.url as string;
     } catch (err) {
       console.error(err);
-      setErrorMsg("Unexpected error while processing your request.");
+      setErrorMsg("Could not process your request. Please try again.");
     } finally {
       setSavingPlanId(null);
     }
   }
 
+  /** --------------------------------------------------------- */
+
   return (
     <div className="app-shell">
-      {/* Sidebar */}
       <NavSidebar
         isMobileOpen={isSidebarOpenMobile}
         onCloseMobile={() => setIsSidebarOpenMobile(false)}
       />
 
-      {/* Main */}
       <div className="main">
         <Header
           onToggleSidebar={() =>
@@ -114,10 +114,10 @@ export default function SubscriptionPage() {
         <div className="page-wrap">
           <h1 className="page-title">Plans &amp; Subscription</h1>
           <p className="page-subtitle">
-            Choose your level: Assistant, Engineer, Professional Engineer, or Consultant Engineer.
+            Choose your level: Assistant, Engineer, Professional Engineer, or
+            Consultant Engineer.
           </p>
 
-          {/* Error Message */}
           {errorMsg && (
             <p
               style={{
@@ -130,7 +130,6 @@ export default function SubscriptionPage() {
             </p>
           )}
 
-          {/* Info Message */}
           {infoMsg && (
             <p
               style={{
@@ -143,13 +142,13 @@ export default function SubscriptionPage() {
             </p>
           )}
 
-          {/* GRID OF PLANS */}
+          {/* GRID مشابه لصفحة التسجيل */}
           <div
             className="plans-grid"
             style={{
               display: "grid",
               gap: 24,
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
             }}
           >
             {PLANS.map((plan) => {
@@ -159,7 +158,7 @@ export default function SubscriptionPage() {
               const isSelected = selectedPlanId === id;
               const isSaving = savingPlanId === id;
 
-              const letter = (plan.shortName || plan.name)
+              const letter = (plan.shortName || plan.name || "E")
                 .charAt(0)
                 .toUpperCase();
 
@@ -173,17 +172,18 @@ export default function SubscriptionPage() {
                       ? `2px solid ${color}`
                       : "1px solid #e5e7eb",
                     padding: 24,
-                    backgroundColor: "#fff",
+                    backgroundColor: "#ffffff",
                     display: "flex",
                     flexDirection: "column",
                     minHeight: 360,
                     boxShadow: isSelected
                       ? "0 14px 35px rgba(15,23,42,0.18)"
-                      : "0 4px 12px rgba(15,23,42,0.05)",
-                    transition: "150ms ease",
+                      : "0 4px 12px rgba(15,23,42,0.04)",
+                    transition:
+                      "box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease",
                   }}
                 >
-                  {/* Header Row */}
+                  {/* رأس الكرت */}
                   <div
                     style={{
                       display: "flex",
@@ -193,8 +193,8 @@ export default function SubscriptionPage() {
                   >
                     <div
                       style={{
-                        width: 44,
-                        height: 44,
+                        width: 48,
+                        height: 48,
                         borderRadius: "9999px",
                         backgroundColor: lightBg,
                         color: color,
@@ -204,6 +204,7 @@ export default function SubscriptionPage() {
                         fontSize: 20,
                         fontWeight: 700,
                         marginRight: 14,
+                        flexShrink: 0,
                       }}
                     >
                       {letter}
@@ -224,6 +225,7 @@ export default function SubscriptionPage() {
                         style={{
                           fontSize: 13,
                           color: "#6b7280",
+                          lineHeight: 1.35,
                         }}
                       >
                         {plan.tagline}
@@ -231,7 +233,7 @@ export default function SubscriptionPage() {
                     </div>
                   </div>
 
-                  {/* Pricing */}
+                  {/* السعر */}
                   <div style={{ marginBottom: 10 }}>
                     <div
                       style={{
@@ -253,12 +255,13 @@ export default function SubscriptionPage() {
                     </div>
                   </div>
 
-                  {/* Features */}
+                  {/* المميزات */}
                   <ul
                     style={{
                       listStyle: "disc",
                       paddingLeft: 20,
                       margin: 0,
+                      marginTop: 4,
                       fontSize: 14,
                       color: "#374151",
                       flexGrow: 1,
@@ -271,7 +274,7 @@ export default function SubscriptionPage() {
                     ))}
                   </ul>
 
-                  {/* Select Button */}
+                  {/* زر الاختيار */}
                   <button
                     type="button"
                     onClick={() => handleSelect(id)}
@@ -283,7 +286,7 @@ export default function SubscriptionPage() {
                       borderRadius: 9999,
                       border: "none",
                       backgroundColor: lightBg,
-                      color: color,
+                      color,
                       fontWeight: 600,
                       fontSize: 14,
                       cursor: "pointer",
@@ -300,7 +303,7 @@ export default function SubscriptionPage() {
             })}
           </div>
 
-          {/* Back to profile */}
+          {/* زر الرجوع للبروفايل */}
           <div
             style={{
               marginTop: 32,

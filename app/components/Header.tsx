@@ -445,8 +445,8 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                 setIsLoginOpen(false);
               }}
               style={{
-                width: 36,
-                height: 24,
+                width: 48,
+                height: 48,
                 borderRadius: "9999px",
                 backgroundColor: avatarUrl ? "transparent" : "#cfd0d4ff",
                 display: "flex",

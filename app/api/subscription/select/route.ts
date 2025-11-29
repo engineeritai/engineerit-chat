@@ -11,18 +11,16 @@ type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => null) as { plan?: PlanId } | null;
+    const body = (await req.json().catch(() => null)) as
+      | { plan?: PlanId }
+      | null;
 
     if (!body?.plan) {
-      return NextResponse.json(
-        { error: "Missing plan." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing plan." }, { status: 400 });
     }
 
     const plan = body.plan;
 
-    // تأكد أن القيمة واحدة من الأربع فقط
     const allowed: PlanId[] = [
       "assistant",
       "engineer",
@@ -30,15 +28,13 @@ export async function POST(req: NextRequest) {
       "consultant",
     ];
     if (!allowed.includes(plan)) {
-      return NextResponse.json(
-        { error: "Invalid plan." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
     }
 
-    const cookieStore = cookies();
-    // لو عندك نوع Database حطه داخل <>
-    const supabase = createRouteHandlerClient(/*<Database>*/ { cookies: () => cookieStore });
+    // ✅ Supabase client مربوط بالكوكيز (جلسة المستخدم)
+    // لو عندك Database types:
+    // const supabase = createRouteHandlerClient<Database>({ cookies });
+    const supabase = createRouteHandlerClient({ cookies });
 
     const {
       data: { user },
@@ -54,16 +50,23 @@ export async function POST(req: NextRequest) {
     }
 
     if (!user) {
+      // المستخدم غير مسجّل دخول
       return NextResponse.json(
         { error: "Not authenticated." },
         { status: 401 }
       );
     }
 
-    // ✅ هنا نحدّث عمود plan في جدول profiles
+    // ✅ نحدّث plan + subscription_tier (للتوافق مع أي كود قديم)
+    const updates: Record<string, any> = {
+      plan,
+      subscription_tier: plan,
+      updated_at: new Date().toISOString(),
+    };
+
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ plan }) // تأكد أن العمود اسمه plan كما في SQL
+      .update(updates)
       .eq("id", user.id);
 
     if (updateError) {
