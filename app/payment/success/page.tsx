@@ -1,96 +1,87 @@
-import Link from "next/link";
-import { cookies } from "next/headers";
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-// import type { Database } from "@/lib/database.types";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import type { PlanId } from "@/lib/plans";
 
-const ALLOWED_PLANS = [
-  "assistant",
-  "engineer",
-  "professional",
-  "consultant",
-] as const;
-type PlanId = (typeof ALLOWED_PLANS)[number];
+export default function PaymentSuccessPage() {
+  const searchParams = useSearchParams();
 
-type PageProps = {
-  searchParams: {
-    status?: string;
-    plan?: string;
-  };
-};
+  const status = searchParams.get("status"); // من مويسار
+  const plan = searchParams.get("plan") as PlanId | null;
 
-export default async function PaymentSuccessPage({ searchParams }: PageProps) {
-  const { status, plan } = searchParams;
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  let mainMessage = "Payment completed successfully.";
-  let errorMsg: string | null = null;
+  useEffect(() => {
+    // نعمل حفظ مرة واحدة فقط
+    if (saved || saving) return;
+    if (status !== "paid") return;
+    if (!plan) return;
 
-  // نحاول نحفظ الخطة فقط إذا كانت الحالة paid وعندنا plan صحيح
-  if (status === "paid" && plan && ALLOWED_PLANS.includes(plan as PlanId)) {
-    try {
-      const supabase = createServerComponentClient/*<Database>*/({ cookies });
+    setSaving(true);
+    setError(null);
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) {
-        console.error("auth.getUser error:", userError);
-        errorMsg = "Authentication error while saving subscription.";
-      } else if (!user) {
-        errorMsg =
-          "Payment completed, but you are not logged in. Please sign in again.";
-      } else {
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .update({
-            subscription_tier: plan,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", user.id);
-
-        if (updateError) {
-          console.error("profiles update error:", updateError);
-          errorMsg = "Unexpected error while saving subscription.";
-        } else {
-          mainMessage = "Payment and subscription updated successfully.";
+    fetch("/api/subscription/select", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to save subscription.");
         }
-      }
-    } catch (err) {
-      console.error("Unexpected error in /payment/success:", err);
-      errorMsg = "Unexpected error while saving subscription.";
-    }
-  } else if (status === "paid") {
-    // الدفع تم لكن مافي plan واضح
-    errorMsg = "Payment succeeded, but plan information is missing.";
-  }
+        setSaved(true);
+      })
+      .catch((err) => {
+        console.error("Save subscription error:", err);
+        setError(err.message || "Unexpected error while saving subscription.");
+      })
+      .finally(() => setSaving(false));
+  }, [status, plan, saving, saved]);
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center space-y-4">
         <h1 className="text-3xl font-semibold">Payment successful</h1>
 
-        <p className="text-sm text-gray-700">{mainMessage}</p>
+        <p className="text-sm text-gray-700">
+          Payment completed successfully.
+        </p>
 
-        {errorMsg && (
-          <p className="text-sm text-red-600">{errorMsg}</p>
+        {saving && (
+          <p className="text-xs text-gray-500">
+            Applying your subscription, please wait...
+          </p>
+        )}
+
+        {saved && !error && (
+          <p className="text-xs text-green-600">
+            Your subscription has been updated.
+          </p>
+        )}
+
+        {error && (
+          <p className="text-xs text-red-600">
+            Could not save your subscription: {error}
+          </p>
         )}
 
         <div className="mt-4 flex items-center justify-center gap-2">
-          <Link
+          <a
             href="/profile"
             className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-transparent text-sm font-medium bg-black text-white hover:opacity-90"
           >
             Go to profile
-          </Link>
-          <Link
+          </a>
+          <a
             href="/subscription"
             className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-gray-300 text-sm font-medium text-gray-800 hover:bg-gray-50"
           >
             Back to subscriptions
-          </Link>
+          </a>
         </div>
       </div>
     </div>
