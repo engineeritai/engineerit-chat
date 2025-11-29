@@ -39,9 +39,9 @@ export const PLANS: Plan[] = [
     priceYearly: `SAR 205 / year (10% off)`,
     features: [
       "Everything in Assistant Engineer",
-      "Export Word, Excel, PowerPoint outputs",
-      "Technical report drafts",
-      "Engineering calculation sheets",
+      "Analyze Word, Excel, PowerPoint Documents",
+      "Technical report review and analysis",
+      "Engineering calculation sheets review",
       "Presentation outlines for clients and management",
     ],
   },
@@ -56,9 +56,9 @@ export const PLANS: Plan[] = [
     features: [
       "Everything in Engineer",
       "Advanced designs, equations, formulas, design checks",
-      "Finite element & modeling (where available)",
-      "ITP & QA/QC checklist templates",
-      "BOQ & quantities take-off helpers",
+      "Finite element & modeling assesment (where available)",
+      "ITP & QA/QC checklist templates analysis",
+      "BOQ & quantities take-off reviw",
     ],
   },
   {
@@ -71,9 +71,9 @@ export const PLANS: Plan[] = [
     priceYearly: `SAR 787 / year (17% off)`,
     features: [
       "Everything in Professional Engineer",
-      "Equipment list & BOQ extraction",
-      "Value Engineering packages",
-      "Resource & cost estimation & schedule generator",
+      "Equipment list & BOQ analysis",
+      "Value Engineering outlines",
+      "Resource & cost estimation & schedule check",
       "Project dashboards and portfolio overview",
     ],
   },

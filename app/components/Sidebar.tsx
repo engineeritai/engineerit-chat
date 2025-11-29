@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type React from "react";
 
 type Props = {
   discipline: string;
@@ -45,7 +46,7 @@ export default function Sidebar({
   const pathname = usePathname();
 
   const content = (
-    <aside className="sidebar-inner">
+    <aside className="sidebar-inner" style={{ maxWidth: "100%" }}>
       {/* MAIN CONTENT */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* New chat */}
@@ -100,7 +101,16 @@ export default function Sidebar({
         {/* History */}
         <div>
           <h3>History</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              maxHeight: 160,
+              overflowY: "auto",
+              paddingRight: 2,
+            }}
+          >
             {threads.length === 0 && (
               <div style={{ fontSize: 13, color: "#6b7280" }}>
                 No conversations yet
@@ -131,11 +141,11 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* FOOTER + AUTH BADGE */}
+      {/* FOOTER + AUTH BADGE + SOCIAL & APPS ICONS */}
       <div
         style={{
-          marginTop: 24,
-          paddingTop: 12,
+          marginTop: 20,
+          paddingTop: 10,
           borderTop: "1px solid #e5e7eb",
           fontSize: 11,
           color: "#6b7280",
@@ -147,7 +157,7 @@ export default function Sidebar({
         </div>
 
         <div style={{ marginBottom: 2 }}>
-          © 2025 <span style={{ fontWeight: 500 }}>engineerit</span>. All rights
+          © 2025 <span style={{ fontWeight: 500 }}>engineerit.ai</span>. All rights
           reserved.
         </div>
 
@@ -159,25 +169,24 @@ export default function Sidebar({
           .
         </div>
 
-        {/* VERIFIED BADGE */}
+        {/* VERIFIED BADGE (مختصر + زر تحقق واضح) */}
         <div
           style={{
             marginTop: 10,
-            padding: "8px 10px",
+            padding: "7px 9px",
             borderRadius: 10,
             background: "#EEF2FF",
             border: "1px solid #E0E7FF",
             display: "flex",
             alignItems: "center",
             gap: 8,
-            overflow: "hidden", // prevents wide expansion
+            overflow: "hidden",
           }}
         >
-          {/* Icon Circle */}
           <div
             style={{
-              width: 28,
-              height: 28,
+              width: 26,
+              height: 26,
               borderRadius: "9999px",
               background: "#DBEAFE",
               display: "flex",
@@ -187,8 +196,8 @@ export default function Sidebar({
             }}
           >
             <svg
-              width="18"
-              height="18"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="#1D4ED8"
@@ -201,8 +210,7 @@ export default function Sidebar({
             </svg>
           </div>
 
-          {/* Badge Text */}
-          <div style={{ fontSize: 10.5, lineHeight: 1.4, whiteSpace: "normal" }}>
+          <div style={{ fontSize: 10.5, lineHeight: 1.35, flex: 1 }}>
             <div
               style={{
                 fontSize: 9,
@@ -214,25 +222,131 @@ export default function Sidebar({
             >
               Verified Store
             </div>
-
-            <div style={{ fontWeight: 600, color: "#111827" }}>
-              E-Commerce Authentication
-            </div>
-
             <div style={{ color: "#374151" }}>
-              Auth No.: <span style={{ fontWeight: 600 }}>0000204877</span>
+              Auth No.:{" "}
+              <span style={{ fontWeight: 600 }}>0000204877</span>
             </div>
 
-            <div style={{ marginTop: 1 }}>
-              <Link
-                href="https://eauthenticate.saudibusiness.gov.sa/inquiry"
-                target="_blank"
-                className="sidebar-legal-link"
-                style={{ fontSize: 9.5 }}
+            {/* زر التحقق عبر مركز الأعمال السعودي */}
+            <Link
+              href="https://eauthenticate.saudibusiness.gov.sa/inquiry"
+              target="_blank"
+              className="sidebar-legal-link"
+              style={{
+                marginTop: 4,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "2px 8px",
+                borderRadius: 9999,
+                border: "1px solid #BFDBFE",
+                background: "#EFF6FF",
+                fontSize: 9.5,
+                color: "#1D4ED8",
+                fontWeight: 500,
+              }}
+            >
+              <span>Verify via Saudi Business Center</span>
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#1D4ED8"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                Verify store
-              </Link>
-            </div>
+                <path d="M18 13V6H11" />
+                <path d="M6 18L18 6" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+
+        {/* SOCIAL + APPS ICONS (مربعات مرتبة في النص تحت صندوق التوثيق) */}
+        <div
+          style={{
+            marginTop: 10,
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          {/* LinkedIn */}
+          <a
+            href="https://www.linkedin.com/in/engineerit-ai-40788339a"
+            target="_blank"
+            rel="noreferrer"
+            title="LinkedIn"
+            aria-label="LinkedIn"
+            style={squareIcon("#0A66C2", "#F9FAFB", 12, 700)}
+          >
+            in
+          </a>
+
+          {/* X (Twitter) */}
+          <a
+            href="https://x.com/engineeritai"
+            target="_blank"
+            rel="noreferrer"
+            title="X (Twitter)"
+            aria-label="X (Twitter)"
+            style={squareIcon("#000000", "#F9FAFB", 13, 700)}
+          >
+            X
+          </a>
+
+          {/* TikTok */}
+          <a
+            href="https://www.tiktok.com/@engineerit.ai"
+            target="_blank"
+            rel="noreferrer"
+            title="TikTok"
+            aria-label="TikTok"
+            style={squareIcon("#000000", "#F9FAFB", 13, 700)}
+          >
+            ♫
+          </a>
+
+          {/* Snapchat */}
+          <a
+            href="https://www.snapchat.com/add/engineerit.ai"
+            target="_blank"
+            rel="noreferrer"
+            title="Snapchat"
+            aria-label="Snapchat"
+            style={squareIcon("#FFFC00", "#111827", 16, 700)}
+          >
+            👻
+          </a>
+
+          {/* Apple (coming soon) */}
+          <div
+            title="App Store (coming soon)"
+            aria-label="App Store (coming soon)"
+            style={squareIcon("#F3F4F6", "#111827", 16, 600)}
+          >
+            
+          </div>
+
+          {/* Android (coming soon) */}
+          <div
+            title="Google Play (coming soon)"
+            aria-label="Google Play (coming soon)"
+            style={squareIcon("#22C55E", "#F9FAFB", 14, 700)}
+          >
+            A
+          </div>
+
+          {/* Huawei (coming soon) */}
+          <div
+            title="Huawei AppGallery (coming soon)"
+            aria-label="Huawei AppGallery (coming soon)"
+            style={squareIcon("#DC2626", "#F9FAFB", 13, 700)}
+          >
+            H
           </div>
         </div>
       </div>
@@ -280,4 +394,27 @@ function SidebarLink({
       {label}
     </Link>
   );
+}
+
+// helper for square icons (social + stores)
+function squareIcon(
+  bg: string,
+  fg: string,
+  fontSize: number,
+  fontWeight: number
+): React.CSSProperties {
+  return {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    background: bg,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: fg,
+    fontSize,
+    textDecoration: "none",
+    fontWeight,
+    flexShrink: 0,
+  };
 }

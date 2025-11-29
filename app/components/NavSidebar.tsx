@@ -58,7 +58,7 @@ export default function NavSidebar({ isMobileOpen, onCloseMobile }: Props) {
           AI Engineering Assistant
         </div>
         <div style={{ marginBottom: 2 }}>
-          © 2025 <span style={{ fontWeight: 500 }}>engineerit</span>. All rights
+          © 2025 <span style={{ fontWeight: 500 }}>engineerit.ai</span>. All rights
           reserved.
         </div>
         <div>
