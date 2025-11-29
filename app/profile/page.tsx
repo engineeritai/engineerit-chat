@@ -92,28 +92,23 @@ export default function ProfilePage() {
 
           if (status === "paid" && planParam && allowedPlans.includes(planParam)) {
             try {
-              const res = await fetch("/api/subscription/select", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ plan: planParam }),
-              });
+              // نحدّث الخطة مباشرة في Supabase بدون API route
+              const { error: updateError } = await supabase
+                .from("profiles")
+                .update({ subscription_tier: planParam })
+                .eq("id", user.id);
 
-              const json = await res
-                .json()
-                .catch(() => ({ error: "Unknown error from server." }));
-
-              if (!res.ok) {
-                console.error("subscription/select error:", json);
+              if (updateError) {
+                console.error("PROFILE SUBSCRIPTION UPDATE ERROR:", updateError);
                 setErrorMsg(
-                  json?.error ||
-                    "Unexpected error while saving subscription after payment."
+                  "Could not save subscription after payment. Please contact support."
                 );
               } else {
                 subscriptionTierOverride = planParam;
                 setInfoMsg("Payment successful and subscription updated.");
               }
             } catch (err) {
-              console.error("Error calling /api/subscription/select:", err);
+              console.error("PROFILE SUBSCRIPTION UPDATE ERROR:", err);
               setErrorMsg(
                 "Unexpected error while saving subscription after payment."
               );
@@ -121,7 +116,7 @@ export default function ProfilePage() {
           }
         }
 
-        // ---------- 2) تحميل بيانات البروفايل من Supabase ----------
+        // ---------- 2) تحميل بيانات البروفايل ----------
         let initialFullName =
           (user.user_metadata?.full_name as string | undefined) ??
           (user.user_metadata?.name as string | undefined) ??
@@ -150,11 +145,12 @@ export default function ProfilePage() {
           console.error("PROFILE SELECT ERROR:", error);
         }
 
-        // لو الدفع نجح نستخدم الخطة الجديدة بدل القديمة من الجدول
+        // لو الدفع نجح نستخدم الخطة الجديدة
         if (subscriptionTierOverride) {
           subscriptionTier = subscriptionTierOverride;
         }
 
+        // ضمان وجود صف
         const { error: upsertError } = await supabase
           .from("profiles")
           .upsert(
@@ -180,7 +176,7 @@ export default function ProfilePage() {
         setProfile(row);
         setFullName(initialFullName);
 
-        // ---------- 3) تحميل بيانات الاشتراك من جدول subscriptions ----------
+        // ---------- 3) بيانات الاشتراك من جدول subscriptions (اختياري) ----------
         const { data: subs, error: subsError } = await supabase
           .from("subscriptions")
           .select("plan, price, currency, status, start_date, end_date")
