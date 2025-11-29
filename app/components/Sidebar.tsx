@@ -130,7 +130,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* BOTTOM: legal block */}
+      {/* BOTTOM: legal block + authentication badge */}
       <div
         style={{
           marginTop: 24,
@@ -154,6 +154,78 @@ export default function Sidebar({
             User Policy &amp; Agreement
           </Link>
           .
+        </div>
+
+        {/* E-Commerce Authentication badge */}
+        <div
+          style={{
+            marginTop: 14,
+            padding: "10px 12px",
+            borderRadius: 12,
+            background: "#EEF2FF",
+            border: "1px solid #E0E7FF",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          {/* Icon in soft circle */}
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 9999,
+              background: "#DBEAFE",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#1D4ED8"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+          </div>
+
+          <div style={{ fontSize: 11, lineHeight: 1.5 }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: "#1D4ED8",
+              }}
+            >
+              Verified Store
+            </div>
+            <div style={{ fontWeight: 600, color: "#111827" }}>
+              E-Commerce Authentication Certificate
+            </div>
+            <div style={{ color: "#374151" }}>
+              Authentication No.:{" "}
+              <span style={{ fontWeight: 600 }}>0000204877</span>
+            </div>
+            <div style={{ marginTop: 2 }}>
+              <Link
+                href="https://eauthenticate.saudibusiness.gov.sa/inquiry"
+                target="_blank"
+                className="sidebar-legal-link"
+              >
+                Verify on Saudi Business Center
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </aside>
