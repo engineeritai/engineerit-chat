@@ -5,7 +5,6 @@ import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import { supabase } from "../../lib/supabaseClient";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 
 type ProfileRow = {
   full_name: string | null;
@@ -53,8 +52,6 @@ export default function ProfilePage() {
   const [chatCount, setChatCount] = useState<number | null>(null);
   const [docCount, setDocCount] = useState<number | null>(null);
 
-  const searchParams = useSearchParams();
-
   // ─────────────────────────────
   // Load profile + handle payment + subscription + counts
   // ─────────────────────────────
@@ -81,9 +78,10 @@ export default function ProfilePage() {
         // ---------- 1) معالجة رجوع الدفع من Moyasar ----------
         let subscriptionTierOverride: PlanId | null = null;
 
-        if (searchParams) {
-          const status = searchParams.get("status");
-          const planParam = searchParams.get("plan") as PlanId | null;
+        if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          const status = params.get("status");
+          const planParam = params.get("plan") as PlanId | null;
 
           const allowedPlans: PlanId[] = [
             "assistant",
@@ -232,7 +230,7 @@ export default function ProfilePage() {
     }
 
     void loadProfileAndPayment();
-  }, [searchParams]);
+  }, []);
 
   // ─────────────────────────────
   // Save name
