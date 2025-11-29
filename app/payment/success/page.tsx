@@ -2,45 +2,72 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { PlanId } from "@/lib/plans";
+
+type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
-
-  const status = searchParams.get("status"); // من مويسار
-  const plan = searchParams.get("plan") as PlanId | null;
-
+  const [message, setMessage] = useState(
+    "Payment completed successfully. Updating your subscription…"
+  );
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // نعمل حفظ مرة واحدة فقط
-    if (saved || saving) return;
-    if (status !== "paid") return;
-    if (!plan) return;
+    const status = searchParams.get("status");
+    const plan = searchParams.get("plan") as PlanId | null;
 
-    setSaving(true);
-    setError(null);
+    // لو Moyasar ما رجّع plan، أو status مو paid → لا نحاول التحديث
+    if (status !== "paid" || !plan) {
+      setMessage("Payment completed successfully.");
+      return;
+    }
 
-    fetch("/api/subscription/select", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan }),
-    })
-      .then(async (res) => {
+    let cancelled = false;
+
+    const savePlan = async () => {
+      try {
+        setSaving(true);
+
+        const res = await fetch("/api/subscription/select", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan }),
+        });
+
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "Failed to save subscription.");
+          const data = await res.json().catch(() => null);
+          if (!cancelled) {
+            setMessage(
+              data?.error
+                ? `Payment completed, but could not update plan: ${data.error}`
+                : "Payment completed, but could not update your plan. You can change it from the Subscription page."
+            );
+          }
+          return;
         }
-        setSaved(true);
-      })
-      .catch((err) => {
-        console.error("Save subscription error:", err);
-        setError(err.message || "Unexpected error while saving subscription.");
-      })
-      .finally(() => setSaving(false));
-  }, [status, plan, saving, saved]);
+
+        if (!cancelled) {
+          setMessage(
+            "Payment completed successfully. Your subscription has been updated."
+          );
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setMessage(
+            "Payment completed, but there was an error saving your subscription."
+          );
+        }
+      } finally {
+        if (!cancelled) setSaving(false);
+      }
+    };
+
+    savePlan();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
@@ -48,26 +75,8 @@ export default function PaymentSuccessPage() {
         <h1 className="text-3xl font-semibold">Payment successful</h1>
 
         <p className="text-sm text-gray-700">
-          Payment completed successfully.
+          {message} {saving && " (please wait…)"}
         </p>
-
-        {saving && (
-          <p className="text-xs text-gray-500">
-            Applying your subscription, please wait...
-          </p>
-        )}
-
-        {saved && !error && (
-          <p className="text-xs text-green-600">
-            Your subscription has been updated.
-          </p>
-        )}
-
-        {error && (
-          <p className="text-xs text-red-600">
-            Could not save your subscription: {error}
-          </p>
-        )}
 
         <div className="mt-4 flex items-center justify-center gap-2">
           <a
