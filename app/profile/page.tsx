@@ -5,6 +5,7 @@ import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import { supabase } from "../../lib/supabaseClient";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 type ProfileRow = {
   full_name: string | null;
@@ -20,6 +21,8 @@ type SubscriptionRow = {
   start_date: string | null;
   end_date: string | null;
 };
+
+type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
@@ -49,6 +52,9 @@ export default function ProfilePage() {
   const [activeSub, setActiveSub] = useState<SubscriptionRow | null>(null);
   const [chatCount, setChatCount] = useState<number | null>(null);
   const [docCount, setDocCount] = useState<number | null>(null);
+
+  const [paymentHandled, setPaymentHandled] = useState(false);
+  const searchParams = useSearchParams();
 
   // ─────────────────────────────
   // Load profile + subscription + counts
@@ -129,12 +135,11 @@ export default function ProfilePage() {
         setFullName(initialFullName);
 
         // ✅ اشتراك المستخدم من جدول subscriptions
-        // نختار فقط الصف المطابق لنفس الخطة في البروفايل
         const { data: subs, error: subsError } = await supabase
           .from("subscriptions")
           .select("plan, price, currency, status, start_date, end_date")
           .eq("user_id", user.id)
-          .eq("plan", subscriptionTier) // هنا نضمن ألا يظهر سعر خطة أخرى
+          .eq("plan", subscriptionTier) // نختار نفس الخطة الموجودة في البروفايل
           .order("start_date", { ascending: false })
           .limit(1);
 
@@ -181,6 +186,82 @@ export default function ProfilePage() {
 
     void loadProfile();
   }, []);
+
+  // ─────────────────────────────
+  // إذا رجعنا من بوابة الدفع: status=paid & plan=...
+  // نحدّث الاشتراك عن طريق /api/subscription/select ثم نضبط الرسالة
+  // ─────────────────────────────
+  useEffect(() => {
+    if (paymentHandled) return;
+    if (!searchParams) return;
+
+    const status = searchParams.get("status");
+    const planParam = searchParams.get("plan") as PlanId | null;
+
+    if (status !== "paid" || !planParam) {
+      return;
+    }
+
+    const allowedPlans: PlanId[] = [
+      "assistant",
+      "engineer",
+      "professional",
+      "consultant",
+    ];
+    if (!allowedPlans.includes(planParam)) {
+      return;
+    }
+
+    const saveFromPayment = async () => {
+      try {
+        setPaymentHandled(true);
+        setErrorMsg(null);
+        setInfoMsg(
+          "Processing your payment and updating your subscription..."
+        );
+
+        const res = await fetch("/api/subscription/select", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan: planParam }),
+        });
+
+        const json = await res
+          .json()
+          .catch(() => ({ error: "Unknown error from server." }));
+
+        if (!res.ok) {
+          console.error("subscription/select error:", json);
+          setErrorMsg(
+            json?.error ||
+              "Unexpected error while saving subscription after payment."
+          );
+          setInfoMsg(null);
+          return;
+        }
+
+        // ✅ تم التحديث في الـ API، نحدّث حالة الصفحة فقط
+        setProfile((prev) =>
+          prev
+            ? { ...prev, subscription_tier: planParam }
+            : {
+                full_name: fullName || null,
+                avatar_url: null,
+                subscription_tier: planParam,
+              }
+        );
+
+        setInfoMsg("Payment successful and subscription updated.");
+      } catch (err) {
+        console.error("Error calling /api/subscription/select:", err);
+        setErrorMsg(
+          "Unexpected error while saving subscription after payment."
+        );
+      }
+    };
+
+    void saveFromPayment();
+  }, [paymentHandled, searchParams, fullName]);
 
   // ─────────────────────────────
   // Save name
@@ -474,7 +555,6 @@ export default function ProfilePage() {
               Current plan: <strong>{currentPlanLabel}</strong>
             </p>
 
-            {/* لو الخطة Assistant (Free) نبيّن إنه مجاني، بدون سعر 79 أو غيره */}
             {currentPlan === "assistant" ? (
               <p
                 style={{
@@ -488,7 +568,6 @@ export default function ProfilePage() {
                 plan.
               </p>
             ) : activeSub ? (
-              // خطط مدفوعة – نعرض تفاصيل الفاتورة
               <div
                 style={{
                   display: "flex",

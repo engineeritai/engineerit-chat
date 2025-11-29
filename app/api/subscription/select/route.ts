@@ -10,14 +10,21 @@ type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => null)) as { plan?: PlanId } | null;
+    const body = (await req.json().catch(() => null)) as
+      | { plan?: PlanId }
+      | null;
 
     if (!body?.plan) {
       return NextResponse.json({ error: "Missing plan." }, { status: 400 });
     }
 
     const plan = body.plan;
-    const allowed: PlanId[] = ["assistant", "engineer", "professional", "consultant"];
+    const allowed: PlanId[] = [
+      "assistant",
+      "engineer",
+      "professional",
+      "consultant",
+    ];
 
     if (!allowed.includes(plan)) {
       return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
@@ -49,19 +56,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // نحدّث subscription_tier فقط (نستخدمه كخطة المستخدم)
-    const updates: Record<string, any> = {
-      subscription_tier: plan,
-      updated_at: new Date().toISOString(),
-    };
+    const now = new Date().toISOString();
 
-    const { error: updateError } = await supabase
+    // ✅ upsert بدلاً من update لضمان وجود صف للمستخدم
+    const { error: upsertError } = await supabase
       .from("profiles")
-      .update(updates)
-      .eq("id", user.id);
+      .upsert(
+        {
+          id: user.id,
+          subscription_tier: plan,
+          updated_at: now,
+        },
+        { onConflict: "id" }
+      );
 
-    if (updateError) {
-      console.error("profiles update error:", updateError);
+    if (upsertError) {
+      console.error("profiles upsert error:", upsertError);
       return NextResponse.json(
         { error: "Failed to save subscription." },
         { status: 500 }

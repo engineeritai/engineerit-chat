@@ -69,7 +69,11 @@ export async function POST(req: NextRequest) {
     const { amount, label, description } = PLAN_CONFIG[planId];
 
     const baseUrl = getAppBaseUrl(req);
-    const successUrl = `${baseUrl}/payment/success?plan=${planId}`;
+
+    // ⬇⬇⬇ التعديل المهم هنا ⬇⬇⬇
+    const successUrl = `${baseUrl}/profile?status=paid&plan=${planId}`;
+    // ⬆⬆⬆ بدلاً من /payment/success ⬆⬆⬆
+
     const backUrl = `${baseUrl}/subscription`;
 
     const authHeader =
