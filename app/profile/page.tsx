@@ -53,17 +53,17 @@ export default function ProfilePage() {
   const [chatCount, setChatCount] = useState<number | null>(null);
   const [docCount, setDocCount] = useState<number | null>(null);
 
-  const [paymentHandled, setPaymentHandled] = useState(false);
   const searchParams = useSearchParams();
 
   // ─────────────────────────────
-  // Load profile + subscription + counts
+  // Load profile + handle payment + subscription + counts
   // ─────────────────────────────
   useEffect(() => {
-    async function loadProfile() {
+    async function loadProfileAndPayment() {
       try {
         setLoading(true);
         setErrorMsg(null);
+        setInfoMsg(null);
 
         const {
           data: { user },
@@ -78,7 +78,52 @@ export default function ProfilePage() {
 
         setEmail(user.email ?? null);
 
-        // اسم ابتدائي من الميتاداتا أو الإيميل
+        // ---------- 1) معالجة رجوع الدفع من Moyasar ----------
+        let subscriptionTierOverride: PlanId | null = null;
+
+        if (searchParams) {
+          const status = searchParams.get("status");
+          const planParam = searchParams.get("plan") as PlanId | null;
+
+          const allowedPlans: PlanId[] = [
+            "assistant",
+            "engineer",
+            "professional",
+            "consultant",
+          ];
+
+          if (status === "paid" && planParam && allowedPlans.includes(planParam)) {
+            try {
+              const res = await fetch("/api/subscription/select", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ plan: planParam }),
+              });
+
+              const json = await res
+                .json()
+                .catch(() => ({ error: "Unknown error from server." }));
+
+              if (!res.ok) {
+                console.error("subscription/select error:", json);
+                setErrorMsg(
+                  json?.error ||
+                    "Unexpected error while saving subscription after payment."
+                );
+              } else {
+                subscriptionTierOverride = planParam;
+                setInfoMsg("Payment successful and subscription updated.");
+              }
+            } catch (err) {
+              console.error("Error calling /api/subscription/select:", err);
+              setErrorMsg(
+                "Unexpected error while saving subscription after payment."
+              );
+            }
+          }
+        }
+
+        // ---------- 2) تحميل بيانات البروفايل من Supabase ----------
         let initialFullName =
           (user.user_metadata?.full_name as string | undefined) ??
           (user.user_metadata?.name as string | undefined) ??
@@ -92,7 +137,6 @@ export default function ProfilePage() {
 
         let subscriptionTier: string | null = "assistant";
 
-        // قراءة صف profile لو موجود
         const { data, error } = await supabase
           .from("profiles")
           .select("full_name, avatar_url, subscription_tier")
@@ -108,7 +152,11 @@ export default function ProfilePage() {
           console.error("PROFILE SELECT ERROR:", error);
         }
 
-        // upsert للتأكد من وجود الصف
+        // لو الدفع نجح نستخدم الخطة الجديدة بدل القديمة من الجدول
+        if (subscriptionTierOverride) {
+          subscriptionTier = subscriptionTierOverride;
+        }
+
         const { error: upsertError } = await supabase
           .from("profiles")
           .upsert(
@@ -134,12 +182,12 @@ export default function ProfilePage() {
         setProfile(row);
         setFullName(initialFullName);
 
-        // ✅ اشتراك المستخدم من جدول subscriptions
+        // ---------- 3) تحميل بيانات الاشتراك من جدول subscriptions ----------
         const { data: subs, error: subsError } = await supabase
           .from("subscriptions")
           .select("plan, price, currency, status, start_date, end_date")
           .eq("user_id", user.id)
-          .eq("plan", subscriptionTier) // نختار نفس الخطة الموجودة في البروفايل
+          .eq("plan", subscriptionTier)
           .order("start_date", { ascending: false })
           .limit(1);
 
@@ -149,7 +197,7 @@ export default function ProfilePage() {
           console.error("SUBSCRIPTIONS SELECT ERROR:", subsError);
         }
 
-        // عدد الرسائل في الشات (اختياري)
+        // ---------- 4) عدد الرسائل والملفات ----------
         try {
           const { count: cCount, error: cErr } = await supabase
             .from("chat_messages")
@@ -163,7 +211,6 @@ export default function ProfilePage() {
           console.warn("CHAT COUNT ERROR (optional):", e);
         }
 
-        // عدد الملفات (اختياري)
         try {
           const { count: dCount, error: dErr } = await supabase
             .from("documents")
@@ -184,84 +231,8 @@ export default function ProfilePage() {
       }
     }
 
-    void loadProfile();
-  }, []);
-
-  // ─────────────────────────────
-  // إذا رجعنا من بوابة الدفع: status=paid & plan=...
-  // نحدّث الاشتراك عن طريق /api/subscription/select ثم نضبط الرسالة
-  // ─────────────────────────────
-  useEffect(() => {
-    if (paymentHandled) return;
-    if (!searchParams) return;
-
-    const status = searchParams.get("status");
-    const planParam = searchParams.get("plan") as PlanId | null;
-
-    if (status !== "paid" || !planParam) {
-      return;
-    }
-
-    const allowedPlans: PlanId[] = [
-      "assistant",
-      "engineer",
-      "professional",
-      "consultant",
-    ];
-    if (!allowedPlans.includes(planParam)) {
-      return;
-    }
-
-    const saveFromPayment = async () => {
-      try {
-        setPaymentHandled(true);
-        setErrorMsg(null);
-        setInfoMsg(
-          "Processing your payment and updating your subscription..."
-        );
-
-        const res = await fetch("/api/subscription/select", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan: planParam }),
-        });
-
-        const json = await res
-          .json()
-          .catch(() => ({ error: "Unknown error from server." }));
-
-        if (!res.ok) {
-          console.error("subscription/select error:", json);
-          setErrorMsg(
-            json?.error ||
-              "Unexpected error while saving subscription after payment."
-          );
-          setInfoMsg(null);
-          return;
-        }
-
-        // ✅ تم التحديث في الـ API، نحدّث حالة الصفحة فقط
-        setProfile((prev) =>
-          prev
-            ? { ...prev, subscription_tier: planParam }
-            : {
-                full_name: fullName || null,
-                avatar_url: null,
-                subscription_tier: planParam,
-              }
-        );
-
-        setInfoMsg("Payment successful and subscription updated.");
-      } catch (err) {
-        console.error("Error calling /api/subscription/select:", err);
-        setErrorMsg(
-          "Unexpected error while saving subscription after payment."
-        );
-      }
-    };
-
-    void saveFromPayment();
-  }, [paymentHandled, searchParams, fullName]);
+    void loadProfileAndPayment();
+  }, [searchParams]);
 
   // ─────────────────────────────
   // Save name
@@ -550,7 +521,6 @@ export default function ProfilePage() {
           <div className="card" style={{ marginTop: 24 }}>
             <h2 className="card-title">Subscription</h2>
 
-            {/* سطر الخطة الحالية */}
             <p style={{ marginBottom: 12, fontSize: 15 }}>
               Current plan: <strong>{currentPlanLabel}</strong>
             </p>
