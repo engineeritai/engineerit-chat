@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+// import type { Database } from "@/lib/database.types";
 
 export const runtime = "nodejs";
 
@@ -9,28 +10,21 @@ type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => null)) as
-      | { plan?: PlanId }
-      | null;
+    const body = (await req.json().catch(() => null)) as { plan?: PlanId } | null;
 
     if (!body?.plan) {
       return NextResponse.json({ error: "Missing plan." }, { status: 400 });
     }
 
     const plan = body.plan;
+    const allowed: PlanId[] = ["assistant", "engineer", "professional", "consultant"];
 
-    const allowed: PlanId[] = [
-      "assistant",
-      "engineer",
-      "professional",
-      "consultant",
-    ];
     if (!allowed.includes(plan)) {
       return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
     }
 
-    // Supabase client مرتبط بالكوكيز (الـ session)
-    const supabase = createRouteHandlerClient({ cookies });
+    // Supabase client مرتبط بالكوكيز (session)
+    const supabase = createRouteHandlerClient/*<Database>*/({ cookies });
 
     const {
       data: { user },
@@ -43,23 +37,27 @@ export async function POST(req: NextRequest) {
         {
           error: "Authentication error from Supabase.",
           details: userError.message,
-          hint: userError.hint,
         },
         { status: 500 }
       );
     }
 
     if (!user) {
-      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Not authenticated." },
+        { status: 401 }
+      );
     }
 
-    // ✅ جدول profiles الآن فيه فقط subscription_tier
+    // نحدّث subscription_tier فقط (نستخدمه كخطة المستخدم)
+    const updates: Record<string, any> = {
+      subscription_tier: plan,
+      updated_at: new Date().toISOString(),
+    };
+
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({
-        subscription_tier: plan,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updates)
       .eq("id", user.id);
 
     if (updateError) {
