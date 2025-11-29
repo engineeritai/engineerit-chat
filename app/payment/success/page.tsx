@@ -1,99 +1,96 @@
-// app/payment/success/page.tsx
-"use client";
-
-import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-// لو عندك نوع Database استعمله هنا، وإلا خل السطر كما هو
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
 // import type { Database } from "@/lib/database.types";
-
-type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 export const dynamic = "force-dynamic";
 
-export default function PaymentSuccessPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const supabase = createClientComponentClient(/* <Database> */);
-  const [message, setMessage] = useState(
-    "Processing your subscription..."
-  );
+const ALLOWED_PLANS = [
+  "assistant",
+  "engineer",
+  "professional",
+  "consultant",
+] as const;
+type PlanId = (typeof ALLOWED_PLANS)[number];
 
-  useEffect(() => {
-    async function run() {
-      // 1) نقرأ الخطة من رابط Moyasar  ?plan=engineer / professional / consultant
-      const planParam = searchParams.get("plan") as PlanId | null;
-      const allowed: PlanId[] = [
-        "assistant",
-        "engineer",
-        "professional",
-        "consultant",
-      ];
+type PageProps = {
+  searchParams: {
+    status?: string;
+    plan?: string;
+  };
+};
 
-      if (!planParam || !allowed.includes(planParam)) {
-        setMessage("Payment succeeded, but plan information is missing.");
-        return;
-      }
+export default async function PaymentSuccessPage({ searchParams }: PageProps) {
+  const { status, plan } = searchParams;
 
-      // 2) نحصل على المستخدم الحالي
+  let mainMessage = "Payment completed successfully.";
+  let errorMsg: string | null = null;
+
+  // نحاول نحفظ الخطة فقط إذا كانت الحالة paid وعندنا plan صحيح
+  if (status === "paid" && plan && ALLOWED_PLANS.includes(plan as PlanId)) {
+    try {
+      const supabase = createServerComponentClient/*<Database>*/({ cookies });
+
       const {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
 
-      if (userError || !user) {
+      if (userError) {
         console.error("auth.getUser error:", userError);
-        setMessage(
-          "Payment completed, but you are not logged in. Please sign in again."
-        );
-        return;
+        errorMsg = "Authentication error while saving subscription.";
+      } else if (!user) {
+        errorMsg =
+          "Payment completed, but you are not logged in. Please sign in again.";
+      } else {
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({
+            subscription_tier: plan,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", user.id);
+
+        if (updateError) {
+          console.error("profiles update error:", updateError);
+          errorMsg = "Unexpected error while saving subscription.";
+        } else {
+          mainMessage = "Payment and subscription updated successfully.";
+        }
       }
-
-      // 3) نحدث جدول profiles مباشرة
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          // لو عندك عمود plan استخدمه، لو ما عندك احذف السطر التالي
-          plan: planParam,
-          subscription_tier: planParam,
-        })
-        .eq("id", user.id);
-
-      if (updateError) {
-        console.error("profiles update error:", updateError);
-        setMessage("Unexpected error while saving subscription.");
-        return;
-      }
-
-      // 4) تم التحديث بنجاح → تحويل إلى الصفحة الشخصية
-      setMessage("Subscription updated. Redirecting to your profile...");
-      router.replace("/profile");
+    } catch (err) {
+      console.error("Unexpected error in /payment/success:", err);
+      errorMsg = "Unexpected error while saving subscription.";
     }
-
-    run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  } else if (status === "paid") {
+    // الدفع تم لكن مافي plan واضح
+    errorMsg = "Payment succeeded, but plan information is missing.";
+  }
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center space-y-4">
         <h1 className="text-3xl font-semibold">Payment successful</h1>
 
-        <p className="text-sm text-gray-700">{message}</p>
+        <p className="text-sm text-gray-700">{mainMessage}</p>
+
+        {errorMsg && (
+          <p className="text-sm text-red-600">{errorMsg}</p>
+        )}
 
         <div className="mt-4 flex items-center justify-center gap-2">
-          <a
+          <Link
             href="/profile"
             className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-transparent text-sm font-medium bg-black text-white hover:opacity-90"
           >
             Go to profile
-          </a>
-          <a
+          </Link>
+          <Link
             href="/subscription"
             className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-gray-300 text-sm font-medium text-gray-800 hover:bg-gray-50"
           >
             Back to subscriptions
-          </a>
+          </Link>
         </div>
       </div>
     </div>

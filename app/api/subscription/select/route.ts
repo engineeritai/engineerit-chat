@@ -13,11 +13,11 @@ export async function POST(req: NextRequest) {
       | { plan?: PlanId }
       | null;
 
-    const plan = body?.plan;
-
-    if (!plan) {
+    if (!body?.plan) {
       return NextResponse.json({ error: "Missing plan." }, { status: 400 });
     }
+
+    const plan = body.plan;
 
     const allowed: PlanId[] = [
       "assistant",
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
     }
 
-    // Supabase client مرتبط بالكوكيز (جلسة المستخدم)
+    // Supabase client مرتبط بالكوكيز (الـ session)
     const supabase = createRouteHandlerClient({ cookies });
 
     const {
@@ -40,19 +40,20 @@ export async function POST(req: NextRequest) {
     if (userError) {
       console.error("auth.getUser error:", userError);
       return NextResponse.json(
-        { error: "Authentication error." },
+        {
+          error: "Authentication error from Supabase.",
+          details: userError.message,
+          hint: userError.hint,
+        },
         { status: 500 }
       );
     }
 
     if (!user) {
-      return NextResponse.json(
-        { error: "Not authenticated." },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
 
-    // ✅ ركّز هنا: نحدّث subscription_tier فقط
+    // ✅ جدول profiles الآن فيه فقط subscription_tier
     const { error: updateError } = await supabase
       .from("profiles")
       .update({
@@ -63,12 +64,8 @@ export async function POST(req: NextRequest) {
 
     if (updateError) {
       console.error("profiles update error:", updateError);
-      // مؤقتًا نرجع رسالة أوضح لو صار خطأ
       return NextResponse.json(
-        {
-          error: "DB update failed",
-          details: updateError.message ?? updateError,
-        },
+        { error: "Failed to save subscription." },
         { status: 500 }
       );
     }
