@@ -131,12 +131,12 @@ export default function Page() {
 
         const { data: profile, error } = await supabase
           .from("profiles")
-          .select("plan")
+          .select("subscription_tier")
           .eq("id", user.id)
           .maybeSingle();
 
-        if (!error && profile?.plan) {
-          const p = profile.plan as PlanId;
+        if (!error && profile?.subscription_tier) {
+          const p = profile.subscription_tier as PlanId;
           if (
             p === "assistant" ||
             p === "engineer" ||
@@ -602,7 +602,9 @@ export default function Page() {
       />
 
       <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
+        <Header
+          onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)}
+        />
 
         {/* Landing post (banner) */}
         {showLanding && (
@@ -634,10 +636,11 @@ export default function Page() {
                   lineHeight: 1.4,
                 }}
               >
-                A digital AI-powered platform providing engineering intelligence services, 
-                including automated engineering analysis, data processing, 
-                remote technical consulting, and operating an interactive system that utilizes AI technologies 
-                to analyze documents, drawings, and enhance engineering experience.
+                A digital AI-powered platform providing engineering intelligence
+                services, including automated engineering analysis, data
+                processing, remote technical consulting, and operating an
+                interactive system that utilizes AI technologies to analyze
+                documents, drawings, and enhance engineering experience.
               </div>
             </div>
             <button
@@ -684,55 +687,58 @@ export default function Page() {
         </div>
 
         {/* Engineer tools – mobile dropdown */}
-<div className="engineer-tools-mobile">
-  <button
-    type="button"
-    className="engineer-tools-mobile-toggle"
-    onClick={() => setShowMobileTools((v) => !v)}
-  >
-    <span>Engineer tools for your plan</span>
-    <span style={{ fontSize: 12 }}>{showMobileTools ? "▲" : "▼"}</span>
-  </button>
+        <div className="engineer-tools-mobile">
+          <button
+            type="button"
+            className="engineer-tools-mobile-toggle"
+            onClick={() => setShowMobileTools((v) => !v)}
+          >
+            <span>Engineer tools for your plan</span>
+            <span style={{ fontSize: 12 }}>
+              {showMobileTools ? "▲" : "▼"}
+            </span>
+          </button>
 
-  {showMobileTools && (
-    <div className="engineer-tools-mobile-panel">
-      <div className="engineer-tools-mobile-list">
-        {ENGINEER_TOOLS.map((tool) => {
-          const enabled = hasAccess(planId, tool.id);
-          return (
-            <button
-              key={tool.id}
-              type="button"
-              className={
-                "engineer-tools-mobile-item" +
-                (enabled ? "" : " engineer-tools-mobile-item-locked")
-              }
-              disabled={!enabled}
-              onClick={() => {
-                if (!enabled) {
-                  alert("This tool requires a higher subscription plan.");
-                  return;
-                }
-                handleEngineerToolClick(tool.id);
-                setShowMobileTools(false);
-              }}
-            >
-              <div>
-                {enabled ? "✅" : "🔒"} <span>{tool.label}</span>
+          {showMobileTools && (
+            <div className="engineer-tools-mobile-panel">
+              <div className="engineer-tools-mobile-list">
+                {ENGINEER_TOOLS.map((tool) => {
+                  const enabled = hasAccess(planId, tool.id);
+                  return (
+                    <button
+                      key={tool.id}
+                      type="button"
+                      className={
+                        "engineer-tools-mobile-item" +
+                        (enabled ? "" : " engineer-tools-mobile-item-locked")
+                      }
+                      disabled={!enabled}
+                      onClick={() => {
+                        if (!enabled) {
+                          alert(
+                            "This tool requires a higher subscription plan."
+                          );
+                          return;
+                        }
+                        handleEngineerToolClick(tool.id);
+                        setShowMobileTools(false);
+                      }}
+                    >
+                      <div>
+                        {enabled ? "✅" : "🔒"} <span>{tool.label}</span>
+                      </div>
+                      {!enabled && (
+                        <span className="engineer-tools-mobile-plan-hint">
+                          Upgrade
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-              {!enabled && (
-                <span className="engineer-tools-mobile-plan-hint">
-                  Upgrade
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  )}
-</div>
-
+            </div>
+          )}
+        </div>
 
         {/* Conversation */}
         <div className="conversation">

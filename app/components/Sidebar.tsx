@@ -46,7 +46,7 @@ export default function Sidebar({
 
   const content = (
     <aside className="sidebar-inner">
-      {/* TOP: main controls */}
+      {/* MAIN CONTENT */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* New chat */}
         <button className="btn w-full mb-3" onClick={onNewChat}>
@@ -69,7 +69,7 @@ export default function Sidebar({
           </select>
         </div>
 
-        {/* Pages navigation */}
+        {/* Pages */}
         <div>
           <h3>Pages</h3>
           <nav className="sidebar-nav">
@@ -106,6 +106,7 @@ export default function Sidebar({
                 No conversations yet
               </div>
             )}
+
             {threads.map((t) => (
               <button
                 key={t.id}
@@ -130,7 +131,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* BOTTOM: legal block + authentication badge */}
+      {/* FOOTER + AUTH BADGE */}
       <div
         style={{
           marginTop: 24,
@@ -144,10 +145,12 @@ export default function Sidebar({
         <div style={{ fontWeight: 600, color: "#111827", marginBottom: 4 }}>
           AI Engineering Assistant
         </div>
+
         <div style={{ marginBottom: 2 }}>
           © 2025 <span style={{ fontWeight: 500 }}>engineerit</span>. All rights
           reserved.
         </div>
+
         <div>
           Use of engineerit as per{" "}
           <Link href="/legal/terms" className="sidebar-legal-link">
@@ -156,25 +159,26 @@ export default function Sidebar({
           .
         </div>
 
-        {/* E-Commerce Authentication badge */}
+        {/* VERIFIED BADGE */}
         <div
           style={{
-            marginTop: 14,
-            padding: "10px 12px",
-            borderRadius: 12,
+            marginTop: 10,
+            padding: "8px 10px",
+            borderRadius: 10,
             background: "#EEF2FF",
             border: "1px solid #E0E7FF",
             display: "flex",
             alignItems: "center",
-            gap: 10,
+            gap: 8,
+            overflow: "hidden", // prevents wide expansion
           }}
         >
-          {/* Icon in soft circle */}
+          {/* Icon Circle */}
           <div
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 9999,
+              width: 28,
+              height: 28,
+              borderRadius: "9999px",
               background: "#DBEAFE",
               display: "flex",
               alignItems: "center",
@@ -183,8 +187,8 @@ export default function Sidebar({
             }}
           >
             <svg
-              width="20"
-              height="20"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="#1D4ED8"
@@ -197,10 +201,11 @@ export default function Sidebar({
             </svg>
           </div>
 
-          <div style={{ fontSize: 11, lineHeight: 1.5 }}>
+          {/* Badge Text */}
+          <div style={{ fontSize: 10.5, lineHeight: 1.4, whiteSpace: "normal" }}>
             <div
               style={{
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
@@ -209,20 +214,23 @@ export default function Sidebar({
             >
               Verified Store
             </div>
+
             <div style={{ fontWeight: 600, color: "#111827" }}>
-              E-Commerce Authentication Certificate
+              E-Commerce Authentication
             </div>
+
             <div style={{ color: "#374151" }}>
-              Authentication No.:{" "}
-              <span style={{ fontWeight: 600 }}>0000204877</span>
+              Auth No.: <span style={{ fontWeight: 600 }}>0000204877</span>
             </div>
-            <div style={{ marginTop: 2 }}>
+
+            <div style={{ marginTop: 1 }}>
               <Link
                 href="https://eauthenticate.saudibusiness.gov.sa/inquiry"
                 target="_blank"
                 className="sidebar-legal-link"
+                style={{ fontSize: 9.5 }}
               >
-                Verify on Saudi Business Center
+                Verify store
               </Link>
             </div>
           </div>
@@ -233,10 +241,10 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Desktop sidebar */}
+      {/* Desktop */}
       <div className="sidebar desktop-only">{content}</div>
 
-      {/* Mobile overlay sidebar */}
+      {/* Mobile */}
       {isMobileOpen && (
         <div className="sidebar-mobile-overlay" onClick={onCloseMobile}>
           <div
@@ -263,6 +271,7 @@ function SidebarLink({
   const active =
     currentPath === href ||
     (href !== "/" && currentPath && currentPath.startsWith(href));
+
   return (
     <Link
       href={href}
