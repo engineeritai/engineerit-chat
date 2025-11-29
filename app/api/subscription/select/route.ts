@@ -1,7 +1,7 @@
+// app/api/subscription/select/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-// لو عندك نوع Database ممكن تضيفه هنا (اختياري)
 // import type { Database } from "@/lib/database.types";
 
 export const runtime = "nodejs";
@@ -17,20 +17,14 @@ export async function POST(req: NextRequest) {
     }
 
     const plan = body.plan;
-
-    const allowed: PlanId[] = [
-      "assistant",
-      "engineer",
-      "professional",
-      "consultant",
-    ];
+    const allowed: PlanId[] = ["assistant", "engineer", "professional", "consultant"];
 
     if (!allowed.includes(plan)) {
       return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
     }
 
     // Supabase client مرتبط بالكوكيز (session)
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = createRouteHandlerClient/*<Database>*/({ cookies });
 
     const {
       data: { user },
@@ -40,7 +34,10 @@ export async function POST(req: NextRequest) {
     if (userError) {
       console.error("auth.getUser error:", userError);
       return NextResponse.json(
-        { error: "Authentication error from Supabase." },
+        {
+          error: "Authentication error from Supabase.",
+          details: userError.message,
+        },
         { status: 500 }
       );
     }
@@ -52,12 +49,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ نحدّث subscription_tier فقط (لأن جدولك فيه هذا العمود)
+    // نحدّث subscription_tier فقط (نستخدمه كخطة المستخدم)
+    const updates: Record<string, any> = {
+      subscription_tier: plan,
+      updated_at: new Date().toISOString(),
+    };
+
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({
-        subscription_tier: plan,
-      })
+      .update(updates)
       .eq("id", user.id);
 
     if (updateError) {

@@ -1,84 +1,107 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 export default function PaymentSuccessPage() {
-  const searchParams = useSearchParams();
-  const [message, setMessage] = useState(
-    "Payment completed successfully. Updating your subscription…"
+  const [message, setMessage] = useState<string>(
+    "Processing your payment and updating your subscription..."
   );
-  const [saving, setSaving] = useState(false);
+  const [subMessage, setSubMessage] = useState<string>(
+    "Please wait a moment. You will be redirected to your profile if everything is OK."
+  );
+  const [statusText, setStatusText] = useState<"ok" | "error" | "info">("info");
 
   useEffect(() => {
-    const status = searchParams.get("status");
-    const plan = searchParams.get("plan") as PlanId | null;
+    // نقرأ الباراميترات من الـ URL مباشرة لتجنب useSearchParams
+    if (typeof window === "undefined") return;
 
-    // لو Moyasar ما رجّع plan، أو status مو paid → لا نحاول التحديث
-    if (status !== "paid" || !plan) {
-      setMessage("Payment completed successfully.");
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status");
+    const planParam = params.get("plan") as PlanId | null;
+
+    if (status !== "paid") {
+      setStatusText("error");
+      setMessage("Payment status is not 'paid'.");
+      setSubMessage(
+        "If you believe this is an error, please check your payment or contact support."
+      );
       return;
     }
 
-    let cancelled = false;
+    if (!planParam) {
+      setStatusText("error");
+      setMessage("Payment completed, but plan information is missing.");
+      setSubMessage(
+        "We could not detect which plan you purchased. Please contact support or try again."
+      );
+      return;
+    }
 
-    const savePlan = async () => {
+    // ⬇️ هنا نرسل الطلب لحفظ الخطة
+    const saveSubscription = async () => {
       try {
-        setSaving(true);
-
         const res = await fetch("/api/subscription/select", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan }),
+          body: JSON.stringify({ plan: planParam }),
         });
 
+        const json = await res
+          .json()
+          .catch(() => ({ error: "Unknown error from server." }));
+
         if (!res.ok) {
-          const data = await res.json().catch(() => null);
-          if (!cancelled) {
-            setMessage(
-              data?.error
-                ? `Payment completed, but could not update plan: ${data.error}`
-                : "Payment completed, but could not update your plan. You can change it from the Subscription page."
-            );
-          }
+          setStatusText("error");
+          setMessage("Unexpected error while saving subscription.");
+          setSubMessage(
+            json?.error ||
+              "Please open your profile page and check your current plan. If it is not updated, contact support."
+          );
           return;
         }
 
-        if (!cancelled) {
-          setMessage(
-            "Payment completed successfully. Your subscription has been updated."
-          );
-        }
+        // ✅ تم التحديث
+        setStatusText("ok");
+        setMessage("Payment successful and subscription updated.");
+        setSubMessage("You will be redirected to your profile shortly...");
+
+        // تحويل تلقائي للبروفايل بعد ثانيتين
+        setTimeout(() => {
+          window.location.href = "/profile";
+        }, 2000);
       } catch (err) {
-        if (!cancelled) {
-          setMessage(
-            "Payment completed, but there was an error saving your subscription."
-          );
-        }
-      } finally {
-        if (!cancelled) setSaving(false);
+        console.error("Error calling /api/subscription/select:", err);
+        setStatusText("error");
+        setMessage("Unexpected error while saving subscription.");
+        setSubMessage(
+          "Please open your profile page and verify your plan. If it did not change, contact support."
+        );
       }
     };
 
-    savePlan();
+    saveSubscription();
+  }, []);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [searchParams]);
+  const titleColor =
+    statusText === "ok"
+      ? "#16a34a"
+      : statusText === "error"
+      ? "#b91c1c"
+      : "#111827";
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
-      <div className="max-w-md w-full text-center space-y-4">
-        <h1 className="text-3xl font-semibold">Payment successful</h1>
+      <div className="max-w-2xl w-full text-left space-y-4">
+        <h1 className="text-3xl font-semibold" style={{ color: titleColor }}>
+          Payment successful
+        </h1>
 
-        <p className="text-sm text-gray-700">
-          {message} {saving && " (please wait…)"}
-        </p>
+        <p className="text-sm text-gray-800">{message}</p>
+        <p className="text-xs text-gray-600">{subMessage}</p>
 
-        <div className="mt-4 flex items-center justify-center gap-2">
+        <div className="mt-4 flex items-center gap-3">
           <a
             href="/profile"
             className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-transparent text-sm font-medium bg-black text-white hover:opacity-90"
