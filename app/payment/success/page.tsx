@@ -1,65 +1,84 @@
+// app/payment/success/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+// لو عندك نوع Database استعمله هنا، وإلا خل السطر كما هو
+// import type { Database } from "@/lib/database.types";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
-export default function PaymentSuccessPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export const dynamic = "force-dynamic";
 
+export default function PaymentSuccessPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const supabase = createClientComponentClient(/* <Database> */);
   const [message, setMessage] = useState(
-    "Payment completed successfully. If your subscription does not appear updated immediately, please refresh your profile page."
+    "Processing your subscription..."
   );
 
   useEffect(() => {
-    const plan = searchParams.get("plan") as PlanId | null;
+    async function run() {
+      // 1) نقرأ الخطة من رابط Moyasar  ?plan=engineer / professional / consultant
+      const planParam = searchParams.get("plan") as PlanId | null;
+      const allowed: PlanId[] = [
+        "assistant",
+        "engineer",
+        "professional",
+        "consultant",
+      ];
 
-    // لو ما فيه plan في الرابط، لا نحاول نحفظ شي
-    if (!plan || plan === "assistant") return;
-
-    async function save() {
-      try {
-        const res = await fetch("/api/subscription/select", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan }),
-        });
-
-        const json = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          console.error("Save subscription failed:", json);
-          setMessage(
-            "Payment succeeded, but we could not update your subscription automatically. Please open your profile and check your plan."
-          );
-          return;
-        }
-
-        setMessage(
-          "Payment and subscription updated successfully. Redirecting to your profile..."
-        );
-
-        // نعطي المستخدم ثانية يشوف الرسالة ثم نرجّعه للبروفايل
-        setTimeout(() => {
-          router.replace("/profile");
-        }, 1500);
-      } catch (err) {
-        console.error("Save subscription error:", err);
-        setMessage(
-          "Payment succeeded, but we could not update your subscription. Please go to your profile and contact support if needed."
-        );
+      if (!planParam || !allowed.includes(planParam)) {
+        setMessage("Payment succeeded, but plan information is missing.");
+        return;
       }
+
+      // 2) نحصل على المستخدم الحالي
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error("auth.getUser error:", userError);
+        setMessage(
+          "Payment completed, but you are not logged in. Please sign in again."
+        );
+        return;
+      }
+
+      // 3) نحدث جدول profiles مباشرة
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          // لو عندك عمود plan استخدمه، لو ما عندك احذف السطر التالي
+          plan: planParam,
+          subscription_tier: planParam,
+        })
+        .eq("id", user.id);
+
+      if (updateError) {
+        console.error("profiles update error:", updateError);
+        setMessage("Unexpected error while saving subscription.");
+        return;
+      }
+
+      // 4) تم التحديث بنجاح → تحويل إلى الصفحة الشخصية
+      setMessage("Subscription updated. Redirecting to your profile...");
+      router.replace("/profile");
     }
 
-    save();
-  }, [router, searchParams]);
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
-      <div className="max-w-2xl w-full text-center space-y-4">
+      <div className="max-w-md w-full text-center space-y-4">
         <h1 className="text-3xl font-semibold">Payment successful</h1>
+
         <p className="text-sm text-gray-700">{message}</p>
 
         <div className="mt-4 flex items-center justify-center gap-2">
