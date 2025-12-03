@@ -37,7 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Favicon (PNG only, correct location) */}
+        {/* Favicon */}
         <link rel="icon" href="/favicon.png" type="image/png" />
         <link rel="shortcut icon" href="/favicon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/favicon.png" />
@@ -54,6 +54,15 @@ export default function RootLayout({
         <meta name="twitter:title" content="engineerit" />
         <meta name="twitter:description" content="AI Engineering Assistant" />
         <meta name="twitter:image" content="https://engineerit.ai/og.png" />
+
+        {/* HubSpot Tracking Code */}
+        <script
+          type="text/javascript"
+          id="hs-script-loader"
+          async
+          defer
+          src={`//js.hs-scripts.com/147368055.js`}
+        ></script>
       </head>
 
       <body className={`${poppins.className} bg-gray-50 text-gray-900`}>
