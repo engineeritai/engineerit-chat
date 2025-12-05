@@ -48,6 +48,19 @@ function formatDate(value: string | null | undefined) {
   });
 }
 
+// نحسب تاريخ انتهاء الاشتراك (شهر واحد بعد تاريخ البداية كافتراض)
+function formatExpiryDate(start: string | null | undefined) {
+  if (!start) return "-";
+  const d = new Date(start);
+  if (Number.isNaN(d.getTime())) return "-";
+  d.setMonth(d.getMonth() + 1);
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function ProfilePage() {
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
@@ -604,52 +617,49 @@ export default function ProfilePage() {
                 plan.
               </p>
             ) : activeSub ? (
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 24,
-                  fontSize: 14,
-                  color: "#374151",
-                  marginBottom: 10,
-                }}
-              >
-                <div>
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 24,
+                    fontSize: 14,
+                    color: "#374151",
+                    marginBottom: 6,
+                  }}
+                >
                   <div>
-                    Status:{" "}
-                    <strong>{activeSub.status ?? "unknown"}</strong>
-                  </div>
-                  {activeSub.price !== null && activeSub.currency && (
                     <div>
-                      Price:{" "}
+                      Status:{" "}
+                      <strong>{activeSub.status ?? "unknown"}</strong>
+                    </div>
+                    {activeSub.price !== null &&
+                      activeSub.currency && (
+                        <div>
+                          Price:{" "}
+                          <strong>
+                            {activeSub.price} {activeSub.currency}
+                          </strong>
+                        </div>
+                      )}
+                  </div>
+                  <div>
+                    <div>
+                      Start date:{" "}
                       <strong>
-                        {activeSub.price} {activeSub.currency}
+                        {formatDate(activeSub.start_date)}
                       </strong>
                     </div>
-                  )}
-                </div>
-                <div>
-                  <div>
-                    Start date:{" "}
-                    <strong>{formatDate(activeSub.start_date)}</strong>
-                  </div>
-                  <div>
-                    End date:{" "}
-                    <strong>{formatDate(activeSub.end_date)}</strong>
+                    <div>
+                      Expiry date:{" "}
+                      <strong>
+                        {formatExpiryDate(activeSub.start_date)}
+                      </strong>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <p
-                style={{
-                  fontSize: 14,
-                  color: "#6b7280",
-                  marginBottom: 10,
-                }}
-              >
-                No active billing record found for this plan yet.
-              </p>
-            )}
+              </>
+            ) : null}
 
             <p style={{ fontSize: 14, color: "#6b7280" }}>
               Plan changes are controlled by engineerit.ai billing
