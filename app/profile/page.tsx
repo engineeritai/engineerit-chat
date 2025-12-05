@@ -23,6 +23,20 @@ type SubscriptionRow = {
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
+// أسعار الخطط (للاستخدام عند تسجيل الدفع في جدول subscriptions)
+const PLAN_PRICING: Record<
+  PlanId,
+  {
+    price: number | null;
+    currency: string | null;
+  }
+> = {
+  assistant: { price: null, currency: null },
+  engineer: { price: 19, currency: "SAR" },
+  professional: { price: 41, currency: "SAR" },
+  consultant: { price: 79, currency: "SAR" },
+};
+
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
   const d = new Date(value);
@@ -92,20 +106,79 @@ export default function ProfilePage() {
 
           if (status === "paid" && planParam && allowedPlans.includes(planParam)) {
             try {
-              // نحدّث الخطة مباشرة في Supabase بدون API route
+              // نحدّث الخطة في جدول profiles
               const { error: updateError } = await supabase
                 .from("profiles")
                 .update({ subscription_tier: planParam })
                 .eq("id", user.id);
 
               if (updateError) {
-                console.error("PROFILE SUBSCRIPTION UPDATE ERROR:", updateError);
+                console.error(
+                  "PROFILE SUBSCRIPTION UPDATE ERROR:",
+                  updateError
+                );
                 setErrorMsg(
                   "Could not save subscription after payment. Please contact support."
                 );
               } else {
                 subscriptionTierOverride = planParam;
                 setInfoMsg("Payment successful and subscription updated.");
+
+                // تسجيل سجل في جدول subscriptions للخطط المدفوعة
+                const pricing = PLAN_PRICING[planParam];
+
+                if (
+                  planParam !== "assistant" &&
+                  pricing?.price &&
+                  pricing?.currency
+                ) {
+                  try {
+                    // نتأكد أولاً إذا كان هناك سجل 'paid' لنفس المستخدم والخطة
+                    const { data: existing, error: existingErr } =
+                      await supabase
+                        .from("subscriptions")
+                        .select("id")
+                        .eq("user_id", user.id)
+                        .eq("plan", planParam)
+                        .eq("status", "paid")
+                        .limit(1);
+
+                    if (existingErr) {
+                      console.warn(
+                        "SUBSCRIPTIONS EXISTING CHECK ERROR:",
+                        existingErr
+                      );
+                    }
+
+                    if (!existing || existing.length === 0) {
+                      const nowIso = new Date().toISOString();
+
+                      const { error: insertErr } = await supabase
+                        .from("subscriptions")
+                        .insert({
+                          user_id: user.id,
+                          plan: planParam,
+                          price: pricing.price,
+                          currency: pricing.currency,
+                          status: "paid",
+                          start_date: nowIso,
+                          end_date: null,
+                        });
+
+                      if (insertErr) {
+                        console.error(
+                          "SUBSCRIPTIONS INSERT ERROR:",
+                          insertErr
+                        );
+                      }
+                    }
+                  } catch (subErr) {
+                    console.error(
+                      "SUBSCRIPTIONS HANDLE AFTER PAYMENT ERROR:",
+                      subErr
+                    );
+                  }
+                }
               }
             } catch (err) {
               console.error("PROFILE SUBSCRIPTION UPDATE ERROR:", err);
@@ -139,8 +212,7 @@ export default function ProfilePage() {
         if (!error && data) {
           if (data.full_name) initialFullName = data.full_name;
           if (data.avatar_url) avatarUrl = data.avatar_url;
-          if (data.subscription_tier)
-            subscriptionTier = data.subscription_tier;
+          if (data.subscription_tier) subscriptionTier = data.subscription_tier;
         } else if (error) {
           console.error("PROFILE SELECT ERROR:", error);
         }
