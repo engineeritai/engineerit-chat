@@ -23,37 +23,10 @@ type SubscriptionRow = {
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
-// أسعار الخطط (للاستخدام عند تسجيل الدفع في جدول subscriptions)
-const PLAN_PRICING: Record<
-  PlanId,
-  {
-    price: number | null;
-    currency: string | null;
-  }
-> = {
-  assistant: { price: null, currency: null },
-  engineer: { price: 19, currency: "SAR" },
-  professional: { price: 41, currency: "SAR" },
-  consultant: { price: 79, currency: "SAR" },
-};
-
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-// نحسب تاريخ انتهاء الاشتراك (شهر واحد بعد تاريخ البداية كافتراض)
-function formatExpiryDate(start: string | null | undefined) {
-  if (!start) return "-";
-  const d = new Date(start);
-  if (Number.isNaN(d.getTime())) return "-";
-  d.setMonth(d.getMonth() + 1);
   return d.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
@@ -119,79 +92,20 @@ export default function ProfilePage() {
 
           if (status === "paid" && planParam && allowedPlans.includes(planParam)) {
             try {
-              // نحدّث الخطة في جدول profiles
+              // نحدّث الخطة مباشرة في Supabase بدون API route
               const { error: updateError } = await supabase
                 .from("profiles")
                 .update({ subscription_tier: planParam })
                 .eq("id", user.id);
 
               if (updateError) {
-                console.error(
-                  "PROFILE SUBSCRIPTION UPDATE ERROR:",
-                  updateError
-                );
+                console.error("PROFILE SUBSCRIPTION UPDATE ERROR:", updateError);
                 setErrorMsg(
                   "Could not save subscription after payment. Please contact support."
                 );
               } else {
                 subscriptionTierOverride = planParam;
                 setInfoMsg("Payment successful and subscription updated.");
-
-                // تسجيل سجل في جدول subscriptions للخطط المدفوعة
-                const pricing = PLAN_PRICING[planParam];
-
-                if (
-                  planParam !== "assistant" &&
-                  pricing?.price &&
-                  pricing?.currency
-                ) {
-                  try {
-                    // نتأكد أولاً إذا كان هناك سجل 'paid' لنفس المستخدم والخطة
-                    const { data: existing, error: existingErr } =
-                      await supabase
-                        .from("subscriptions")
-                        .select("id")
-                        .eq("user_id", user.id)
-                        .eq("plan", planParam)
-                        .eq("status", "paid")
-                        .limit(1);
-
-                    if (existingErr) {
-                      console.warn(
-                        "SUBSCRIPTIONS EXISTING CHECK ERROR:",
-                        existingErr
-                      );
-                    }
-
-                    if (!existing || existing.length === 0) {
-                      const nowIso = new Date().toISOString();
-
-                      const { error: insertErr } = await supabase
-                        .from("subscriptions")
-                        .insert({
-                          user_id: user.id,
-                          plan: planParam,
-                          price: pricing.price,
-                          currency: pricing.currency,
-                          status: "paid",
-                          start_date: nowIso,
-                          end_date: null,
-                        });
-
-                      if (insertErr) {
-                        console.error(
-                          "SUBSCRIPTIONS INSERT ERROR:",
-                          insertErr
-                        );
-                      }
-                    }
-                  } catch (subErr) {
-                    console.error(
-                      "SUBSCRIPTIONS HANDLE AFTER PAYMENT ERROR:",
-                      subErr
-                    );
-                  }
-                }
               }
             } catch (err) {
               console.error("PROFILE SUBSCRIPTION UPDATE ERROR:", err);
@@ -225,7 +139,8 @@ export default function ProfilePage() {
         if (!error && data) {
           if (data.full_name) initialFullName = data.full_name;
           if (data.avatar_url) avatarUrl = data.avatar_url;
-          if (data.subscription_tier) subscriptionTier = data.subscription_tier;
+          if (data.subscription_tier)
+            subscriptionTier = data.subscription_tier;
         } else if (error) {
           console.error("PROFILE SELECT ERROR:", error);
         }
@@ -617,49 +532,52 @@ export default function ProfilePage() {
                 plan.
               </p>
             ) : activeSub ? (
-              <>
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 24,
-                    fontSize: 14,
-                    color: "#374151",
-                    marginBottom: 6,
-                  }}
-                >
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 24,
+                  fontSize: 14,
+                  color: "#374151",
+                  marginBottom: 10,
+                }}
+              >
+                <div>
                   <div>
+                    Status:{" "}
+                    <strong>{activeSub.status ?? "unknown"}</strong>
+                  </div>
+                  {activeSub.price !== null && activeSub.currency && (
                     <div>
-                      Status:{" "}
-                      <strong>{activeSub.status ?? "unknown"}</strong>
+                      Price:{" "}
+                      <strong>
+                        {activeSub.price} {activeSub.currency}
+                      </strong>
                     </div>
-                    {activeSub.price !== null &&
-                      activeSub.currency && (
-                        <div>
-                          Price:{" "}
-                          <strong>
-                            {activeSub.price} {activeSub.currency}
-                          </strong>
-                        </div>
-                      )}
+                  )}
+                </div>
+                <div>
+                  <div>
+                    Start date:{" "}
+                    <strong>{formatDate(activeSub.start_date)}</strong>
                   </div>
                   <div>
-                    <div>
-                      Start date:{" "}
-                      <strong>
-                        {formatDate(activeSub.start_date)}
-                      </strong>
-                    </div>
-                    <div>
-                      Expiry date:{" "}
-                      <strong>
-                        {formatExpiryDate(activeSub.start_date)}
-                      </strong>
-                    </div>
+                    End date:{" "}
+                    <strong>{formatDate(activeSub.end_date)}</strong>
                   </div>
                 </div>
-              </>
-            ) : null}
+              </div>
+            ) : (
+              <p
+                style={{
+                  fontSize: 14,
+                  color: "#6b7280",
+                  marginBottom: 10,
+                }}
+              >
+                No active billing record found for this plan yet.
+              </p>
+            )}
 
             <p style={{ fontSize: 14, color: "#6b7280" }}>
               Plan changes are controlled by engineerit.ai billing

@@ -8,27 +8,6 @@ export const runtime = "nodejs";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
-const ALLOWED: PlanId[] = [
-  "assistant",
-  "engineer",
-  "professional",
-  "consultant",
-];
-
-// أسعار الخطط (نفس التسعير عندك)
-const PLAN_PRICING: Record<
-  PlanId,
-  {
-    price: number | null; // SAR شهري
-    currency: string | null;
-  }
-> = {
-  assistant: { price: null, currency: null },
-  engineer: { price: 19, currency: "SAR" },
-  professional: { price: 41, currency: "SAR" },
-  consultant: { price: 79, currency: "SAR" },
-};
-
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => null)) as
@@ -40,8 +19,14 @@ export async function POST(req: NextRequest) {
     }
 
     const plan = body.plan;
+    const allowed: PlanId[] = [
+      "assistant",
+      "engineer",
+      "professional",
+      "consultant",
+    ];
 
-    if (!ALLOWED.includes(plan)) {
+    if (!allowed.includes(plan)) {
       return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
     }
 
@@ -71,59 +56,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const nowIso = new Date().toISOString();
+    const now = new Date().toISOString();
 
-    // ⬅️ 1) نحدّث profile.subscription_tier
-    const updates: Record<string, any> = {
-      subscription_tier: plan,
-      updated_at: nowIso,
-    };
-
-    const { error: updateError } = await supabase
+    // ✅ upsert بدلاً من update لضمان وجود صف للمستخدم
+    const { error: upsertError } = await supabase
       .from("profiles")
-      .update(updates)
-      .eq("id", user.id);
+      .upsert(
+        {
+          id: user.id,
+          subscription_tier: plan,
+          updated_at: now,
+        },
+        { onConflict: "id" }
+      );
 
-    if (updateError) {
-      console.error("profiles update error:", updateError);
+    if (upsertError) {
+      console.error("profiles upsert error:", upsertError);
       return NextResponse.json(
         { error: "Failed to save subscription." },
         { status: 500 }
       );
-    }
-
-    // ⬅️ 2) نُسجّل سجل بسيط في جدول subscriptions للخطط المدفوعة
-    const pricing = PLAN_PRICING[plan];
-
-    if (plan !== "assistant" && pricing.price && pricing.currency) {
-      // اختيارياً: نعلّم أي اشتراكات سابقة أنها قديمة / غير نشطة
-      // (لا تؤثر على عرض آخر صف؛ فقط تنظيم)
-      try {
-        await supabase
-          .from("subscriptions")
-          .update({ status: "replaced" })
-          .eq("user_id", user.id)
-          .neq("plan", plan);
-      } catch (e) {
-        console.warn("subscriptions old rows update warn:", e);
-      }
-
-      const { error: subInsertError } = await supabase
-        .from("subscriptions")
-        .insert({
-          user_id: user.id,
-          plan,
-          price: pricing.price,
-          currency: pricing.currency,
-          status: "paid", // لأننا لا نستدعي هذا المسار إلا بعد نجاح الدفع
-          start_date: nowIso,
-          end_date: null,
-        });
-
-      if (subInsertError) {
-        // لن نُفشل الطلب للمستخدم، لكن نسجّل الخطأ للمتابعة
-        console.error("subscriptions insert error:", subInsertError);
-      }
     }
 
     return NextResponse.json({ success: true });
