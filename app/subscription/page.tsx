@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PLANS } from "@/lib/plans";
 import type { PlanId } from "@/lib/plans";
+import { supabase } from "@/lib/supabaseClient";
 
 const PLAN_COLORS: Record<PlanId, string> = {
   assistant: "#2563eb", // blue
@@ -70,11 +72,35 @@ export default function SubscriptionPage() {
   const [savingPlanId, setSavingPlanId] = useState<PlanId | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  const router = useRouter();
+
+  // نتحقق هل المستخدم مسجل دخول أو لا
+  useEffect(() => {
+    const checkAuth = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setIsLoggedIn(!!user);
+    };
+
+    void checkAuth();
+  }, []);
 
   async function handleSelect(planId: PlanId) {
     try {
       setErrorMsg(null);
       setInfoMsg(null);
+
+      // لو المستخدم مو مسجل → نمنع الاشتراك ونحوّله للتسجيل
+      if (!isLoggedIn) {
+        setErrorMsg("Please login or register before selecting a plan.");
+        router.push("/register");
+        return;
+      }
+
       setSavingPlanId(planId);
 
       // 1) Assistant (free) → يحفظ الخطة بدون دفع
