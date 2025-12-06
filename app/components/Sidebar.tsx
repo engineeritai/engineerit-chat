@@ -55,13 +55,13 @@ export default function Sidebar({
       className="sidebar-inner"
       style={{
         maxWidth: "100%",
-        height: "100vh",      // ارتفاع ثابت
-        overflow: "hidden",   // منع scroll عام
+        height: "100vh",
+        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
       }}
     >
-      {/* MAIN CONTENT (قابل للتمرير داخلي لو المحتوى كثير) */}
+      {/* MAIN AREA (scrollable) */}
       <div
         style={{
           display: "flex",
@@ -72,7 +72,7 @@ export default function Sidebar({
           paddingRight: 6,
         }}
       >
-        {/* New chat */}
+        {/* New Chat */}
         <button className="btn w-full mb-3" onClick={onNewChat}>
           + New chat
         </button>
@@ -164,7 +164,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* FOOTER + AUTH BADGE + SOCIAL & ICONS (ثابت أسفل الـ sidebar) */}
+      {/* FOOTER */}
       <div
         style={{
           marginTop: 10,
@@ -247,8 +247,7 @@ export default function Sidebar({
               Verified Store
             </div>
             <div style={{ color: "#374151" }}>
-              Auth No.:{" "}
-              <span style={{ fontWeight: 600 }}>0000204877</span>
+              Auth No.: <span style={{ fontWeight: 600 }}>0000204877</span>
             </div>
 
             <Link
@@ -287,17 +286,17 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* SOCIAL + ICONS (buttons مع شعارات حديثة) */}
+        {/* SOCIAL ICON ROW (using your files in /public) */}
         <div
           style={{
             marginTop: 10,
             display: "flex",
             flexWrap: "wrap",
             justifyContent: "center",
-            gap: 6,
+            gap: 8,
           }}
         >
-          {/* LinkedIn (نفسه بحرف in) */}
+          {/* LinkedIn (نصي بسيط) */}
           <button
             type="button"
             onClick={() =>
@@ -311,89 +310,41 @@ export default function Sidebar({
           >
             <span
               style={{
-                width: 18,
-                height: 18,
-                borderRadius: 4,
-                background: "#0A66C2",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#F9FAFB",
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 700,
+                color: "#0A66C2",
               }}
             >
               in
             </span>
           </button>
 
-          {/* X (حديث) */}
-          <button
-            type="button"
+          {/* X */}
+          <IconImageButton
+            src="/x.png"
+            alt="X"
+            title="X"
             onClick={() => openExternal("https://x.com/engineeritai")}
-            title="X (Twitter)"
-            aria-label="X (Twitter)"
-            style={iconButtonStyle}
-          >
-            <XIcon />
-          </button>
+          />
 
-          {/* TikTok (حديث) */}
-          <button
-            type="button"
+          {/* TikTok */}
+          <IconImageButton
+            src="/tiktok.png"
+            alt="TikTok"
+            title="TikTok"
             onClick={() =>
               openExternal("https://www.tiktok.com/@engineerit.ai")
             }
-            title="TikTok"
-            aria-label="TikTok"
-            style={iconButtonStyle}
-          >
-            <TikTokIcon />
-          </button>
+          />
 
-          {/* Snapchat (حديث) */}
-          <button
-            type="button"
-            onClick={() =>
-              openExternal("https://www.snapchat.com/add/engineerit.ai")
-            }
-            title="Snapchat"
-            aria-label="Snapchat"
-            style={iconButtonStyle}
-          >
-            <SnapchatIcon />
-          </button>
-
-          {/* Moyasar (حديث) */}
-          <button
-            type="button"
-            onClick={() => openExternal("https://moyasar.com")}
-            title="Payment processed and controlled by Moyasar"
-            aria-label="Moyasar"
-            style={iconButtonStyle}
-          >
-            <MoyasarIcon />
-          </button>
-
-          {/* engineerit favicon → feedback */}
-          <button
-            type="button"
-            onClick={() => openExternal("https://engineerit.ai/feedback")}
+          {/* engineerit → favicon كـ eit */}
+          <IconImageButton
+            src="/favicon.ico"
+            alt="eit"
             title="Contact us"
-            aria-label="Contact us"
-            style={iconButtonStyle}
-          >
-            <img
-              src="/favicon.ico"
-              alt="engineerit"
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: 4,
-                objectFit: "contain",
-              }}
-            />
-          </button>
+            onClick={() => openExternal("https://engineerit.ai/feedback")}
+            imgSize={20}
+          />
         </div>
       </div>
     </aside>
@@ -442,94 +393,57 @@ function SidebarLink({
   );
 }
 
+/* ==== styles for icons ==== */
+
 const iconButtonStyle: React.CSSProperties = {
-  width: 26,
-  height: 26,
-  borderRadius: 6,
-  background: "#F9FAFB",
-  border: "1px solid #E5E7EB",
+  width: 24,
+  height: 24,
+  borderRadius: 9999,
+  border: "none",
+  background: "transparent",
+  padding: 0,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: 0,
   cursor: "pointer",
 };
 
-// ===== SVG ICONS =====
+/* helper: button that shows <img> icon with configurable size */
 
-function XIcon() {
+type IconImageButtonProps = {
+  src: string;
+  alt: string;
+  title: string;
+  onClick: () => void;
+  imgSize?: number; // px, default 22
+};
+
+function IconImageButton({
+  src,
+  alt,
+  title,
+  onClick,
+  imgSize = 22,
+}: IconImageButtonProps) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      aria-hidden="true"
-      style={{ display: "block" }}
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={alt}
+      style={iconButtonStyle}
     >
-      <rect x="0" y="0" width="24" height="24" rx="4" fill="#000000" />
-      <path
-        d="M7 6.5L13.2 15.1L7.4 17.5H6.8L10.8 12.9L6 6.5H8L11.6 11.3L15.4 6.5H17L12.3 12.5L17.2 17.5H15.2L11 12.5L7 17.5H5.8L10.2 11.9L6.6 6.5H7Z"
-        fill="#FFFFFF"
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        style={{
+          width: imgSize,
+          height: imgSize,
+          objectFit: "contain",
+          display: "block",
+        }}
       />
-    </svg>
-  );
-}
-
-function TikTokIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      aria-hidden="true"
-      style={{ display: "block" }}
-    >
-      <rect x="0" y="0" width="24" height="24" rx="4" fill="#000000" />
-      <path
-        d="M14.5 6.5c.5 1.1 1.4 1.8 2.6 2v2.1c-1.1-.1-2-.4-2.8-.9v4.2a3.6 3.6 0 1 1-3.6-3.6c.3 0 .6 0 .9.1v2a1.6 1.6 0 1 0 1.1 1.6V6.5h1.8z"
-        fill="#FFFFFF"
-      />
-      <path
-        d="M11 10.3a3.6 3.6 0 0 1 1.6.4V9.3c-.3-.1-.6-.1-.9-.1a3.6 3.6 0 0 0-3.6 3.6c0 1 .4 1.9 1 2.5a3.6 3.6 0 0 1 3.2-4.9Z"
-        fill="#22D3EE"
-      />
-      <path
-        d="M17.1 8.5c-1.2-.2-2.1-.9-2.6-2v1.5c.8.5 1.7.8 2.8.9v-1.4h-.2z"
-        fill="#F97316"
-      />
-    </svg>
-  );
-}
-
-function SnapchatIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      aria-hidden="true"
-      style={{ display: "block" }}
-    >
-      <rect x="0" y="0" width="24" height="24" rx="4" fill="#FFFC00" />
-      <path
-        d="M12 5.5c-2 0-3.1 1.4-3.2 3-.1 1.1 0 1.7-.6 2.4-.3.4-.8.6-1.3.7-.4.1-.6.5-.4.9.3.5.9.6 1.5.7.6.1 1.1.3 1.4.7.4.4.4 1 .6 1.5.2.5.7.9 1.3.9h1.4c.6 0 1.1-.4 1.3-.9.2-.5.2-1.1.6-1.5.3-.4.8-.6 1.4-.7.6-.1 1.2-.2 1.5-.7.2-.4 0-.8-.4-.9-.5-.1-1-.3-1.3-.7-.6-.7-.5-1.3-.6-2.4-.1-1.6-1.2-3-3.2-3Z"
-        fill="#111827"
-      />
-    </svg>
-  );
-}
-
-function MoyasarIcon() {
-  return (
-    <img
-      src="/moyasar-icon.png"
-      alt="Moyasar"
-      style={{
-        width: 18,
-        height: 18,
-        display: "block",
-        objectFit: "contain",
-      }}
-    />
+    </button>
   );
 }
