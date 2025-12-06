@@ -51,7 +51,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     );
   }
 
-  // Load user + profile
+  // تحميل بيانات المستخدم والبروفايل من Supabase فقط
   useEffect(() => {
     const load = async () => {
       const {
@@ -147,7 +147,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         return;
       }
 
-      // After sign in, load profile
+      // بعد تسجيل الدخول، حمّل البروفايل بنفس المنطق
       setIsLoggedIn(true);
       setEmail(data.user.email || null);
 
@@ -192,30 +192,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     } catch (err) {
       console.error(err);
       setLoginError("Something went wrong. Please try again.");
-    } finally {
-      setLoginLoading(false);
-    }
-  };
-
-  const handleOAuthLogin = async (provider: "google" | "apple") => {
-    try {
-      setLoginError(null);
-      setLoginLoading(true);
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: window.location.origin + "/profile",
-        },
-      });
-
-      if (error) {
-        console.error("OAuth error:", error);
-        setLoginError(error.message);
-      }
-    } catch (err) {
-      console.error(err);
-      setLoginError("OAuth login failed. Please try again.");
     } finally {
       setLoginLoading(false);
     }
@@ -302,57 +278,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                     Sign in to engineerit.ai
                   </div>
 
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 6,
-                      marginBottom: 8,
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleOAuthLogin("google")}
-                      style={{
-                        width: "100%",
-                        padding: "6px 8px",
-                        borderRadius: 999,
-                        border: "1px solid #d1d5db",
-                        backgroundColor: "white",
-                        fontSize: 13,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Continue with Google
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleOAuthLogin("apple")}
-                      style={{
-                        width: "100%",
-                        padding: "6px 8px",
-                        borderRadius: 999,
-                        border: "1px solid #d1d5db",
-                        backgroundColor: "white",
-                        fontSize: 13,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Continue with Apple
-                    </button>
-                  </div>
-
-                  <div
-                    style={{
-                      textAlign: "center",
-                      fontSize: 11,
-                      color: "#9ca3af",
-                      margin: "4px 0 6px",
-                    }}
-                  >
-                    or use your email
-                  </div>
-
+                  {/* Email */}
                   <div style={{ marginBottom: 6 }}>
                     <input
                       type="email"
@@ -370,6 +296,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                     />
                   </div>
 
+                  {/* Password */}
                   <div style={{ marginBottom: 6 }}>
                     <input
                       type="password"
@@ -416,6 +343,38 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   >
                     {loginLoading ? "Signing in…" : "Sign in"}
                   </button>
+
+                  {/* Register link */}
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 11,
+                      color: "#6b7280",
+                      textAlign: "center",
+                    }}
+                  >
+                    Don&apos;t have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLoginOpen(false);
+                        router.push("/register");
+                      }}
+                      style={{
+                        border: "none",
+                        background: "none",
+                        padding: 0,
+                        margin: 0,
+                        color: "#2563eb",
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Register
+                    </button>
+                  </div>
                 </form>
               </div>
             )}
@@ -527,16 +486,14 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   My Profile
                 </button>
 
-                {/* NEW: Registration page */}
                 <button
                   type="button"
                   onClick={() => goTo("/register")}
                   style={menuItemStyle}
                 >
-                  Register
+                  Plans &amp; Registration
                 </button>
 
-                {/* UPDATED: Subscribe / Upgrade */}
                 <button
                   type="button"
                   onClick={() => goTo("/subscription")}
