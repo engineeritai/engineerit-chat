@@ -521,18 +521,15 @@ function SnapchatIcon() {
 
 function MoyasarIcon() {
   return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 200 200"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ display: "block" }}
-    >
-      <path
-        d="M46 40c-12 0-21 10-21 22v76c0 12 9 22 21 22 7 0 13-3 18-9l40-50 40 50c5 6 11 9 18 9 12 0 21-10 21-22V62c0-12-9-22-21-22-7 0-13 3-18 9l-40 50-40-50c-5-6-11-9-18-9Z"
-        fill="#000000"
-      />
-    </svg>
+    <img
+      src="/moyasar-icon.png"
+      alt="Moyasar"
+      style={{
+        width: 18,
+        height: 18,
+        display: "block",
+        objectFit: "contain",
+      }}
+    />
   );
 }
