@@ -33,6 +33,11 @@ const DISCIPLINES = [
   "HSE / HAZOP",
 ];
 
+function openExternal(url: string) {
+  if (typeof window === "undefined") return;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 export default function Sidebar({
   discipline,
   onDisciplineChange,
@@ -46,9 +51,27 @@ export default function Sidebar({
   const pathname = usePathname();
 
   const content = (
-    <aside className="sidebar-inner" style={{ maxWidth: "100%" }}>
-      {/* MAIN CONTENT */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <aside
+      className="sidebar-inner"
+      style={{
+        maxWidth: "100%",
+        height: "100vh",      // ارتفاع ثابت
+        overflow: "hidden",   // منع scroll عام
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* MAIN CONTENT (قابل للتمرير داخلي لو المحتوى كثير) */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+          flexGrow: 1,
+          overflowY: "auto",
+          paddingRight: 6,
+        }}
+      >
         {/* New chat */}
         <button className="btn w-full mb-3" onClick={onNewChat}>
           + New chat
@@ -141,15 +164,16 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* FOOTER + AUTH BADGE + SOCIAL & APPS ICONS */}
+      {/* FOOTER + AUTH BADGE + SOCIAL & ICONS (ثابت أسفل الـ sidebar) */}
       <div
         style={{
-          marginTop: 20,
+          marginTop: 10,
           paddingTop: 10,
           borderTop: "1px solid #e5e7eb",
           fontSize: 11,
           color: "#6b7280",
           lineHeight: 1.5,
+          flexShrink: 0,
         }}
       >
         <div style={{ fontWeight: 600, color: "#111827", marginBottom: 4 }}>
@@ -157,8 +181,8 @@ export default function Sidebar({
         </div>
 
         <div style={{ marginBottom: 2 }}>
-          © 2025 <span style={{ fontWeight: 500 }}>engineerit.ai</span>. All rights
-          reserved.
+          © 2025 <span style={{ fontWeight: 500 }}>engineerit.ai</span>. All
+          rights reserved.
         </div>
 
         <div>
@@ -169,7 +193,7 @@ export default function Sidebar({
           .
         </div>
 
-        {/* VERIFIED BADGE (مختصر + زر تحقق واضح) */}
+        {/* VERIFIED BADGE */}
         <div
           style={{
             marginTop: 10,
@@ -227,7 +251,6 @@ export default function Sidebar({
               <span style={{ fontWeight: 600 }}>0000204877</span>
             </div>
 
-            {/* زر التحقق عبر مركز الأعمال السعودي */}
             <Link
               href="https://eauthenticate.saudibusiness.gov.sa/inquiry"
               target="_blank"
@@ -264,7 +287,7 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* SOCIAL + APPS ICONS (مربعات مرتبة في النص تحت صندوق التوثيق) */}
+        {/* SOCIAL + ICONS (buttons مع شعارات حديثة) */}
         <div
           style={{
             marginTop: 10,
@@ -274,80 +297,103 @@ export default function Sidebar({
             gap: 6,
           }}
         >
-          {/* LinkedIn */}
-          <a
-            href="https://www.linkedin.com/in/engineerit-ai-40788339a"
-            target="_blank"
-            rel="noreferrer"
+          {/* LinkedIn (نفسه بحرف in) */}
+          <button
+            type="button"
+            onClick={() =>
+              openExternal(
+                "https://www.linkedin.com/in/engineerit-ai-40788339a"
+              )
+            }
             title="LinkedIn"
             aria-label="LinkedIn"
-            style={squareIcon("#0A66C2", "#F9FAFB", 12, 700)}
+            style={iconButtonStyle}
           >
-            in
-          </a>
+            <span
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 4,
+                background: "#0A66C2",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#F9FAFB",
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+            >
+              in
+            </span>
+          </button>
 
-          {/* X (Twitter) */}
-          <a
-            href="https://x.com/engineeritai"
-            target="_blank"
-            rel="noreferrer"
+          {/* X (حديث) */}
+          <button
+            type="button"
+            onClick={() => openExternal("https://x.com/engineeritai")}
             title="X (Twitter)"
             aria-label="X (Twitter)"
-            style={squareIcon("#000000", "#F9FAFB", 13, 700)}
+            style={iconButtonStyle}
           >
-            X
-          </a>
+            <XIcon />
+          </button>
 
-          {/* TikTok */}
-          <a
-            href="https://www.tiktok.com/@engineerit.ai"
-            target="_blank"
-            rel="noreferrer"
+          {/* TikTok (حديث) */}
+          <button
+            type="button"
+            onClick={() =>
+              openExternal("https://www.tiktok.com/@engineerit.ai")
+            }
             title="TikTok"
             aria-label="TikTok"
-            style={squareIcon("#000000", "#F9FAFB", 13, 700)}
+            style={iconButtonStyle}
           >
-            ♫
-          </a>
+            <TikTokIcon />
+          </button>
 
-          {/* Snapchat */}
-          <a
-            href="https://www.snapchat.com/add/engineerit.ai"
-            target="_blank"
-            rel="noreferrer"
+          {/* Snapchat (حديث) */}
+          <button
+            type="button"
+            onClick={() =>
+              openExternal("https://www.snapchat.com/add/engineerit.ai")
+            }
             title="Snapchat"
             aria-label="Snapchat"
-            style={squareIcon("#FFFC00", "#111827", 16, 700)}
+            style={iconButtonStyle}
           >
-            👻
-          </a>
+            <SnapchatIcon />
+          </button>
 
-          {/* Apple (coming soon) */}
-          <div
-            title="App Store (coming soon)"
-            aria-label="App Store (coming soon)"
-            style={squareIcon("#F3F4F6", "#111827", 16, 600)}
+          {/* Moyasar (حديث) */}
+          <button
+            type="button"
+            onClick={() => openExternal("https://moyasar.com")}
+            title="Payment processed and controlled by Moyasar"
+            aria-label="Moyasar"
+            style={iconButtonStyle}
           >
-            
-          </div>
+            <MoyasarIcon />
+          </button>
 
-          {/* Android (coming soon) */}
-          <div
-            title="Google Play (coming soon)"
-            aria-label="Google Play (coming soon)"
-            style={squareIcon("#22C55E", "#F9FAFB", 14, 700)}
+          {/* engineerit favicon → feedback */}
+          <button
+            type="button"
+            onClick={() => openExternal("https://engineerit.ai/feedback")}
+            title="Contact us"
+            aria-label="Contact us"
+            style={iconButtonStyle}
           >
-            A
-          </div>
-
-          {/* Huawei (coming soon) */}
-          <div
-            title="Huawei AppGallery (coming soon)"
-            aria-label="Huawei AppGallery (coming soon)"
-            style={squareIcon("#DC2626", "#F9FAFB", 13, 700)}
-          >
-            H
-          </div>
+            <img
+              src="/favicon.ico"
+              alt="engineerit"
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 4,
+                objectFit: "contain",
+              }}
+            />
+          </button>
         </div>
       </div>
     </aside>
@@ -396,25 +442,97 @@ function SidebarLink({
   );
 }
 
-// helper for square icons (social + stores)
-function squareIcon(
-  bg: string,
-  fg: string,
-  fontSize: number,
-  fontWeight: number
-): React.CSSProperties {
-  return {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
-    background: bg,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: fg,
-    fontSize,
-    textDecoration: "none",
-    fontWeight,
-    flexShrink: 0,
-  };
+const iconButtonStyle: React.CSSProperties = {
+  width: 26,
+  height: 26,
+  borderRadius: 6,
+  background: "#F9FAFB",
+  border: "1px solid #E5E7EB",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  cursor: "pointer",
+};
+
+// ===== SVG ICONS =====
+
+function XIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      aria-hidden="true"
+      style={{ display: "block" }}
+    >
+      <rect x="0" y="0" width="24" height="24" rx="4" fill="#000000" />
+      <path
+        d="M7 6.5L13.2 15.1L7.4 17.5H6.8L10.8 12.9L6 6.5H8L11.6 11.3L15.4 6.5H17L12.3 12.5L17.2 17.5H15.2L11 12.5L7 17.5H5.8L10.2 11.9L6.6 6.5H7Z"
+        fill="#FFFFFF"
+      />
+    </svg>
+  );
+}
+
+function TikTokIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      aria-hidden="true"
+      style={{ display: "block" }}
+    >
+      <rect x="0" y="0" width="24" height="24" rx="4" fill="#000000" />
+      <path
+        d="M14.5 6.5c.5 1.1 1.4 1.8 2.6 2v2.1c-1.1-.1-2-.4-2.8-.9v4.2a3.6 3.6 0 1 1-3.6-3.6c.3 0 .6 0 .9.1v2a1.6 1.6 0 1 0 1.1 1.6V6.5h1.8z"
+        fill="#FFFFFF"
+      />
+      <path
+        d="M11 10.3a3.6 3.6 0 0 1 1.6.4V9.3c-.3-.1-.6-.1-.9-.1a3.6 3.6 0 0 0-3.6 3.6c0 1 .4 1.9 1 2.5a3.6 3.6 0 0 1 3.2-4.9Z"
+        fill="#22D3EE"
+      />
+      <path
+        d="M17.1 8.5c-1.2-.2-2.1-.9-2.6-2v1.5c.8.5 1.7.8 2.8.9v-1.4h-.2z"
+        fill="#F97316"
+      />
+    </svg>
+  );
+}
+
+function SnapchatIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      aria-hidden="true"
+      style={{ display: "block" }}
+    >
+      <rect x="0" y="0" width="24" height="24" rx="4" fill="#FFFC00" />
+      <path
+        d="M12 5.5c-2 0-3.1 1.4-3.2 3-.1 1.1 0 1.7-.6 2.4-.3.4-.8.6-1.3.7-.4.1-.6.5-.4.9.3.5.9.6 1.5.7.6.1 1.1.3 1.4.7.4.4.4 1 .6 1.5.2.5.7.9 1.3.9h1.4c.6 0 1.1-.4 1.3-.9.2-.5.2-1.1.6-1.5.3-.4.8-.6 1.4-.7.6-.1 1.2-.2 1.5-.7.2-.4 0-.8-.4-.9-.5-.1-1-.3-1.3-.7-.6-.7-.5-1.3-.6-2.4-.1-1.6-1.2-3-3.2-3Z"
+        fill="#111827"
+      />
+    </svg>
+  );
+}
+
+function MoyasarIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 200 200"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ display: "block" }}
+    >
+      <path
+        d="M46 40c-12 0-21 10-21 22v76c0 12 9 22 21 22 7 0 13-3 18-9l40-50 40 50c5 6 11 9 18 9 12 0 21-10 21-22V62c0-12-9-22-21-22-7 0-13 3-18 9l-40 50-40-50c-5-6-11-9-18-9Z"
+        fill="#000000"
+      />
+    </svg>
+  );
 }
