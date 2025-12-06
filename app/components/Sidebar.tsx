@@ -396,8 +396,8 @@ function SidebarLink({
 /* ==== styles for icons ==== */
 
 const iconButtonStyle: React.CSSProperties = {
-  width: 24,
-  height: 24,
+  width: 20,
+  height: 20,
   borderRadius: 9999,
   border: "none",
   background: "transparent",
