@@ -51,7 +51,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     );
   }
 
-  // تحميل بيانات المستخدم والبروفايل من Supabase فقط
+  // Load user + profile
   useEffect(() => {
     const load = async () => {
       const {
@@ -147,7 +147,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         return;
       }
 
-      // بعد تسجيل الدخول، حمّل البروفايل بنفس المنطق
+      // After sign in, load profile
       setIsLoggedIn(true);
       setEmail(data.user.email || null);
 
@@ -527,12 +527,22 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   My Profile
                 </button>
 
+                {/* NEW: Registration page */}
                 <button
                   type="button"
                   onClick={() => goTo("/register")}
                   style={menuItemStyle}
                 >
-                  Plans &amp; Registration (Upgrade)
+                  Register
+                </button>
+
+                {/* UPDATED: Subscribe / Upgrade */}
+                <button
+                  type="button"
+                  onClick={() => goTo("/subscription")}
+                  style={menuItemStyle}
+                >
+                  Subscribe / Upgrade
                 </button>
 
                 <div

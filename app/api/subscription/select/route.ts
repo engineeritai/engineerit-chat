@@ -15,7 +15,7 @@ const ALLOWED: PlanId[] = [
   "consultant",
 ];
 
-// أسعار الخطط (نفس التسعير عندك)
+// أسعار الخطط (شهرياً بالريال)
 const PLAN_PRICING: Record<
   PlanId,
   {
@@ -28,6 +28,9 @@ const PLAN_PRICING: Record<
   professional: { price: 41, currency: "SAR" },
   consultant: { price: 79, currency: "SAR" },
 };
+
+// مدة الاشتراك المبدئية لكل عملية دفع (30 يوم)
+const PLAN_DURATION_DAYS = 30;
 
 export async function POST(req: NextRequest) {
   try {
@@ -71,9 +74,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const nowIso = new Date().toISOString();
+    const now = new Date();
+    const nowIso = now.toISOString();
 
-    // ⬅️ 1) نحدّث profile.subscription_tier
+    // لو الخطة مدفوعة نحسب تاريخ انتهاء بعد 30 يوم
+    const pricing = PLAN_PRICING[plan];
+    const endDateIso =
+      plan !== "assistant" && pricing.price && pricing.currency
+        ? new Date(
+            now.getTime() + PLAN_DURATION_DAYS * 24 * 60 * 60 * 1000
+          ).toISOString()
+        : null;
+
+    // 1) تحديث profile.subscription_tier
     const updates: Record<string, any> = {
       subscription_tier: plan,
       updated_at: nowIso,
@@ -92,18 +105,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ⬅️ 2) نُسجّل سجل بسيط في جدول subscriptions للخطط المدفوعة
-    const pricing = PLAN_PRICING[plan];
-
+    // 2) تسجيل اشتراك في جدول subscriptions للخطط المدفوعة فقط
     if (plan !== "assistant" && pricing.price && pricing.currency) {
-      // اختيارياً: نعلّم أي اشتراكات سابقة أنها قديمة / غير نشطة
-      // (لا تؤثر على عرض آخر صف؛ فقط تنظيم)
       try {
+        // نعلّم أي اشتراكات سابقة لنفس المستخدم بأنها منتهية / مستبدلة
         await supabase
           .from("subscriptions")
           .update({ status: "replaced" })
-          .eq("user_id", user.id)
-          .neq("plan", plan);
+          .eq("user_id", user.id);
       } catch (e) {
         console.warn("subscriptions old rows update warn:", e);
       }
@@ -115,13 +124,13 @@ export async function POST(req: NextRequest) {
           plan,
           price: pricing.price,
           currency: pricing.currency,
-          status: "paid", // لأننا لا نستدعي هذا المسار إلا بعد نجاح الدفع
+          status: "paid", // هذا المسار يُستدعى بعد نجاح الدفع
           start_date: nowIso,
-          end_date: null,
+          end_date: endDateIso,
         });
 
       if (subInsertError) {
-        // لن نُفشل الطلب للمستخدم، لكن نسجّل الخطأ للمتابعة
+        // لا نفشل الطلب للمستخدم، فقط نسجل الخطأ
         console.error("subscriptions insert error:", subInsertError);
       }
     }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { PLANS } from "@/lib/plans";
 
@@ -20,54 +21,56 @@ const PLAN_BADGES: Record<
   consultant: { fg: "#7c3aed", bg: "#f5f3ff" }, // بنفسجي
 };
 
-// الأسعار الشهرية الحالية بالريال السعودي – تستخدم عند الإنشاء في subscriptions
-const PLAN_PRICES: Record<PlanId, number> = {
-  assistant: 0,
-  engineer: 19,
-  professional: 41,
-  consultant: 79,
+/* ============
+   Engineer tools
+   ============ */
+const ENGINEER_TOOLS = [
+  { id: "drawing", label: "Drawing & Diagrams" },
+  { id: "design", label: "Design & Code Check" },
+  { id: "itp", label: "ITP & QA/QC" },
+  { id: "boq", label: "BOQ & Quantities" },
+  { id: "schedule", label: "Schedule & Resources" },
+  { id: "value", label: "Value Engineering" },
+  { id: "dashboard", label: "Project Dashboards" },
+] as const;
+
+type ToolId = (typeof ENGINEER_TOOLS)[number]["id"];
+
+/**
+ * صلاحيات الأدوات حسب نوع الاشتراك:
+ * - Assistant: الكل مقفول
+ * - Engineer: Drawing + Design
+ * - Professional: Drawing + Design + ITP + BOQ
+ * - Consultant: جميع الأدوات
+ */
+const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
+  assistant: [],
+  engineer: ["drawing", "design"],
+  professional: ["drawing", "design", "itp", "boq"],
+  consultant: [
+    "drawing",
+    "design",
+    "itp",
+    "boq",
+    "schedule",
+    "value",
+    "dashboard",
+  ],
 };
 
-const PLAN_DURATION_DAYS = 30; // مدة الاشتراك الأولية
-
 export default function RegisterPage() {
-  const [selectedPlanId, setSelectedPlanId] = useState<PlanId>("assistant");
-  const [accepted, setAccepted] = useState(false);
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [accepted, setAccepted] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // OAuth login with Supabase (Google / Apple)
-  const handleOAuthLogin = async (provider: "google" | "apple") => {
-    try {
-      setErrorMessage("");
-      setLoading(true);
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: window.location.origin + "/profile",
-        },
-      });
-
-      if (error) {
-        console.error("OAuth error:", error);
-        setErrorMessage(
-          error.message || "Could not sign in. Please try again."
-        );
-      }
-    } catch (err) {
-      console.error(err);
-      setErrorMessage("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,18 +79,6 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // 0) حساب تواريخ الاشتراك والسعر
-      const now = new Date();
-      const expires =
-        selectedPlanId === "assistant"
-          ? null
-          : new Date(
-              now.getTime() + PLAN_DURATION_DAYS * 24 * 60 * 60 * 1000
-            );
-
-      const price = PLAN_PRICES[selectedPlanId] ?? 0;
-      const currency = "SAR";
-
       // 1) إنشاء مستخدم Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -95,7 +86,6 @@ export default function RegisterPage() {
         options: {
           data: {
             full_name: fullName,
-            plan: selectedPlanId,
           },
         },
       });
@@ -107,53 +97,48 @@ export default function RegisterPage() {
       }
 
       if (!data.user) {
-        setErrorMessage("Unable to create account. Please try again.");
+        // في حالة تفعيل تأكيد الإيميل، قد لا يرجع user مباشرة
+        setSuccessMessage(
+          "Account created. Please check your email to confirm and then sign in from the top bar."
+        );
+        setFullName("");
+        setEmail("");
+        setPassword("");
         setLoading(false);
         return;
       }
 
       const userId = data.user.id;
 
-      // 2) upsert في جدول profiles
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .upsert({
-          id: userId,
-          full_name: fullName,
-          avatar_url: null,
-          plan: selectedPlanId,
-          billing_currency: currency,
-          plan_started_at: now.toISOString(),
-          plan_expires_at: expires ? expires.toISOString() : null,
-        });
+      // 2) upsert في جدول profiles – خطة Assistant بشكل افتراضي
+      try {
+        const { error: profileError } = await supabase.from("profiles").upsert(
+          {
+            id: userId,
+            full_name:
+              fullName || data.user.email?.split("@")[0] || "New user",
+            avatar_url: null,
+            subscription_tier: "assistant", // خطة البداية
+          },
+          { onConflict: "id" }
+        );
 
-      if (profileError) {
-        console.error("Profile upsert error:", profileError);
-        // لا نوقف المستخدم، فقط نطبع للمتابعة لاحقاً
+        if (profileError) {
+          console.error("Profile upsert error:", profileError);
+        }
+      } catch (err) {
+        console.error("Profile upsert unexpected error:", err);
       }
 
-      // 3) إدخال سجل الاشتراك في subscriptions
-      const { error: subError } = await supabase
-        .from("subscriptions")
-        .insert({
-          user_id: userId,
-          plan: selectedPlanId,
-          price,
-          currency,
-          status: "active",
-          start_date: now.toISOString(),
-          end_date: expires ? expires.toISOString() : null,
-        });
+      setSuccessMessage(
+        "Account created. Redirecting to your profile..."
+      );
+      setFullName("");
+      setEmail("");
+      setPassword("");
 
-      if (subError) {
-        console.error("Subscription insert error:", subError);
-        // أيضاً لا نوقف المستخدم
-      }
-
-      // 4) رسالة نجاح وتحويل للبروفايل
-      setSuccessMessage("Account created. Redirecting to your profile...");
       setTimeout(() => {
-        window.location.href = "/profile";
+        router.push("/profile");
       }, 1200);
     } catch (err) {
       console.error(err);
@@ -162,10 +147,6 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
-
-  const selectedPlanName =
-    PLANS.find((p) => p.id === selectedPlanId)?.name ||
-    "Assistant Engineer";
 
   return (
     <div className="app-shell">
@@ -182,291 +163,361 @@ export default function RegisterPage() {
         />
 
         <div className="page-wrap">
-          <h1 className="page-title">Plans &amp; Registration</h1>
+          <h1 className="page-title">Register to engineerit.ai</h1>
           <p className="page-subtitle">
-            Choose your level: Assistant Engineer, Engineer, Professional
-            Engineer, or Consultant Engineer.
+            Create your account, start with the free Assistant plan, and
+            upgrade later to Engineer, Professional, or Consultant.
           </p>
 
-          {/* ===== PLANS GRID (نفس شكل صفحة /subscription) ===== */}
-          <div className="plans-grid">
-            {PLANS.map((plan) => {
-              const isSelected = plan.id === selectedPlanId;
-              const badge =
-                PLAN_BADGES[plan.id as PlanId] || PLAN_BADGES.assistant;
-              const letter = (
-                plan.shortName ||
-                plan.name ||
-                "E"
-              )
-                .charAt(0)
-                .toUpperCase();
+          {/* ===== بطاقة التسجيل في الأعلى ===== */}
+          <div className="card" style={{ marginBottom: 24 }}>
+            <h2 className="card-title" style={{ marginBottom: 12 }}>
+              Create your account
+            </h2>
 
-              return (
-                <button
-                  key={plan.id}
-                  type="button"
-                  onClick={() => setSelectedPlanId(plan.id as PlanId)}
-                  className="plan-card"
+            <form
+              onSubmit={handleSubmit}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
+            >
+              <div className="form-row">
+                <label>
+                  Full name
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Your full name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div className="form-row">
+                <label>
+                  Email address
+                  <input
+                    type="email"
+                    className="input"
+                    required
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div className="form-row">
+                <label>
+                  Password
+                  <input
+                    type="password"
+                    className="input"
+                    required
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div className="form-row form-checkbox-row">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={accepted}
+                    onChange={(e) => setAccepted(e.target.checked)}
+                    required
+                  />
+                  <span>
+                    I have read and agree to the{" "}
+                    <Link href="/legal/terms" className="link">
+                      User Policy &amp; Agreement
+                    </Link>
+                    , including cancellation and refund policies, and I
+                    understand that engineerit.ai is not responsible or
+                    liable for any decisions or mistakes based on the
+                    outputs.
+                  </span>
+                </label>
+              </div>
+
+              {errorMessage && (
+                <div
                   style={{
-                    borderColor: isSelected ? badge.fg : undefined,
-                    boxShadow: isSelected
-                      ? "0 14px 35px rgba(15,23,42,0.18)"
-                      : undefined,
-                    transform: isSelected ? "translateY(-2px)" : undefined,
-                    transition:
-                      "box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease",
+                    marginBottom: 6,
+                    fontSize: 13,
+                    color: "#b91c1c",
                   }}
                 >
-                  {/* الأيقونة + العنوان */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      marginBottom: 14,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: "999px",
-                        backgroundColor: badge.bg,
-                        color: badge.fg,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 20,
-                        fontWeight: 700,
-                        marginRight: 14,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {letter}
-                    </div>
+                  {errorMessage}
+                </div>
+              )}
 
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 20,
-                          fontWeight: 700,
-                          color: "#111827",
-                          marginBottom: 2,
-                        }}
-                      >
-                        {plan.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 14,
-                          color: "#6b7280",
-                          lineHeight: 1.35,
-                        }}
-                      >
-                        {plan.tagline}
-                      </div>
-                    </div>
-                  </div>
+              {successMessage && (
+                <div
+                  style={{
+                    marginBottom: 6,
+                    fontSize: 13,
+                    color: "#15803d",
+                  }}
+                >
+                  {successMessage}
+                </div>
+              )}
 
-                  {/* السعر */}
-                  <div style={{ marginBottom: 12 }}>
-                    <div
-                      style={{
-                        fontSize: 18,
-                        fontWeight: 700,
-                        color: badge.fg,
-                      }}
-                    >
-                      {plan.priceMonthly}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "#6b7280",
-                        marginTop: 2,
-                      }}
-                    >
-                      {plan.priceYearly}
-                    </div>
-                  </div>
-
-                  {/* المميزات */}
-                  <ul
-                    style={{
-                      listStyle: "disc",
-                      paddingLeft: 20,
-                      margin: 0,
-                      marginTop: 4,
-                      fontSize: 14,
-                      color: "#374151",
-                      flexGrow: 1,
-                    }}
-                  >
-                    {plan.features.map((f) => (
-                      <li key={f} style={{ marginBottom: 6 }}>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </button>
-              );
-            })}
+              <button
+                className="btn"
+                type="submit"
+                disabled={loading || !accepted}
+                style={{ marginTop: 4 }}
+              >
+                {loading ? "Creating account..." : "Create account"}
+              </button>
+            </form>
           </div>
 
-          {/* ===== نموذج التسجيل ===== */}
-          <form className="register-form" onSubmit={handleSubmit}>
-            <h2 className="section-heading">Create your account</h2>
-
-            <div className="form-row">
-              <label>
-                Full name
-                <input
-                  type="text"
-                  className="input"
-                  required
-                  placeholder="Your full name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
-              </label>
-            </div>
-
-            <div className="form-row">
-              <label>
-                Email address
-                <input
-                  type="email"
-                  className="input"
-                  required
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </label>
-            </div>
-
-            <div className="form-row">
-              <label>
-                Password
-                <input
-                  type="password"
-                  className="input"
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </label>
-            </div>
-
-            <div className="form-row">
-              <label>
-                Selected plan
-                <input
-                  type="text"
-                  className="input"
-                  readOnly
-                  value={selectedPlanName}
-                />
-              </label>
-            </div>
-
-            {/* تسجيل عبر المنصات */}
-            <div className="form-row">
-              <div className="section-heading" style={{ marginBottom: 6 }}>
-                Or continue with
-              </div>
-              <div className="social-login-row">
-                <button
-                  type="button"
-                  className="social-btn social-btn-google"
-                  onClick={() => handleOAuthLogin("google")}
-                  disabled={loading}
-                >
-                  <span className="social-icon">G</span>
-                  <span>Google</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="social-btn social-btn-apple"
-                  onClick={() => handleOAuthLogin("apple")}
-                  disabled={loading}
-                >
-                  <span className="social-icon"></span>
-                  <span>Apple</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="social-btn social-btn-microsoft"
-                  disabled
-                  style={{ opacity: 0.5, cursor: "not-allowed" }}
-                >
-                  <span className="social-icon">MS</span>
-                  <span>Microsoft / Outlook (soon)</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="social-btn social-btn-huawei"
-                  disabled
-                  style={{ opacity: 0.5, cursor: "not-allowed" }}
-                >
-                  <span className="social-icon">H</span>
-                  <span>Huawei (soon)</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="form-row form-checkbox-row">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={accepted}
-                  onChange={(e) => setAccepted(e.target.checked)}
-                  required
-                />
-                <span>
-                  I have read and agree to the{" "}
-                  <Link href="/legal/terms" className="link">
-                    User Policy &amp; Agreement
-                  </Link>
-                  , including cancellation and refund policies, and I
-                  understand that engineerit.ai is not responsible or liable
-                  for any decisions or mistakes based on the outputs.
-                </span>
-              </label>
-            </div>
-
-            {errorMessage && (
-              <div
-                style={{
-                  marginBottom: 12,
-                  fontSize: 13,
-                  color: "#b91c1c",
-                }}
-              >
-                {errorMessage}
-              </div>
-            )}
-
-            {successMessage && (
-              <div
-                style={{
-                  marginBottom: 12,
-                  fontSize: 13,
-                  color: "#15803d",
-                }}
-              >
-                {successMessage}
-              </div>
-            )}
-
-            <button className="btn" disabled={!accepted || loading}>
-              {loading ? "Creating account..." : "Continue registration"}
+          {/* ===== كرت زر الانتقال لصفحة الاشتراكات ===== */}
+          <div
+            className="card"
+            style={{
+              marginBottom: 16,
+              padding: "12px 16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            <p
+              style={{
+                fontSize: 14,
+                color: "#374151",
+                margin: 0,
+              }}
+            >
+              After registration, your account will start on the free
+              Assistant plan. When you are ready to upgrade, go to the
+              subscription page to select Engineer, Professional, or
+              Consultant with secure payment.
+            </p>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => router.push("/subscription")}
+              style={{ alignSelf: "flex-start", marginTop: 4 }}
+            >
+              View plans &amp; subscribe
             </button>
-          </form>
+          </div>
+
+          {/* ===== قسم الخطط أسفل التسجيل – مع إبراز Engineer tools لكل خطة ===== */}
+          <div className="card" style={{ marginTop: 8 }}>
+            <h2 className="card-title" style={{ marginBottom: 16 }}>
+              Plans overview &amp; engineer tools
+            </h2>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: 16,
+              }}
+            >
+              {PLANS.map((plan) => {
+                const badge =
+                  PLAN_BADGES[plan.id as PlanId] ||
+                  PLAN_BADGES.assistant;
+                const letter = (
+                  plan.shortName || plan.name || "E"
+                )
+                  .charAt(0)
+                  .toUpperCase();
+
+                const planId = plan.id as PlanId;
+                const enabledTools = TOOL_ACCESS[planId] || [];
+
+                return (
+                  <div
+                    key={plan.id}
+                    className="plan-card"
+                    style={{
+                      borderRadius: 20,
+                      border: "1px solid #e5e7eb",
+                      padding: 14,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                      backgroundColor:
+                        plan.id === "professional"
+                          ? "rgba(37, 99, 235, 0.04)"
+                          : "white",
+                    }}
+                  >
+                    {/* الأيقونة + العنوان */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: "999px",
+                          backgroundColor: badge.bg,
+                          color: badge.fg,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 20,
+                          fontWeight: 700,
+                          marginRight: 14,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {letter}
+                      </div>
+
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 18,
+                            fontWeight: 700,
+                            color: "#111827",
+                            marginBottom: 2,
+                          }}
+                        >
+                          {plan.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: "#6b7280",
+                            lineHeight: 1.35,
+                          }}
+                        >
+                          {plan.tagline}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* السعر */}
+                    <div style={{ marginBottom: 8 }}>
+                      <div
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 700,
+                          color: badge.fg,
+                        }}
+                      >
+                        {plan.priceMonthly}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "#6b7280",
+                          marginTop: 2,
+                        }}
+                      >
+                        {plan.priceYearly}
+                      </div>
+                    </div>
+
+                    {/* المميزات العامة */}
+                    <ul
+                      style={{
+                        listStyle: "disc",
+                        paddingLeft: 20,
+                        margin: 0,
+                        marginTop: 4,
+                        fontSize: 13,
+                        color: "#374151",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {plan.features.map((f) => (
+                        <li key={f} style={{ marginBottom: 4 }}>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* ===== إبراز Engineer tools لكل خطة ===== */}
+                    <div
+                      style={{
+                        marginTop: 10,
+                        paddingTop: 8,
+                        borderTop: "1px dashed #e5e7eb",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#4b5563",
+                          marginBottom: 6,
+                        }}
+                      >
+                        Engineer tools in this plan
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 6,
+                        }}
+                      >
+                        {ENGINEER_TOOLS.map((tool) => {
+                          const enabled = enabledTools.includes(tool.id);
+                          return (
+                            <span
+                              key={tool.id}
+                              style={{
+                                fontSize: 11,
+                                padding: "3px 8px",
+                                borderRadius: 999,
+                                border: enabled
+                                  ? "1px solid rgba(37,99,235,0.45)"
+                                  : "1px solid #e5e7eb",
+                                backgroundColor: enabled
+                                  ? "rgba(37,99,235,0.06)"
+                                  : "#f9fafb",
+                                color: enabled ? "#1d4ed8" : "#9ca3af",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {enabled ? "✅" : "🔒"} {tool.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p
+              style={{
+                fontSize: 12,
+                color: "#6b7280",
+                marginTop: 16,
+              }}
+            >
+              You can upgrade or change your plan any time from your profile
+              or the subscription page.
+            </p>
+          </div>
         </div>
       </div>
     </div>

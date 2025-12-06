@@ -14,13 +14,55 @@ const PLAN_COLORS: Record<PlanId, string> = {
   consultant: "#7c3aed", // purple
 };
 
-// خلفية فاتحة للأيقونة والزر
+// خلفية فاتحة للأيقونة
 const PLAN_LIGHT_BG: Record<PlanId, string> = {
   assistant: "rgba(37,99,235,0.08)",
   engineer: "rgba(249,115,22,0.08)",
   professional: "rgba(15,118,110,0.08)",
   consultant: "rgba(124,58,237,0.08)",
 };
+
+/* ============================
+   Engineer tools configuration
+   ============================ */
+
+const ENGINEER_TOOLS = [
+  { id: "drawing", label: "Drawing & Diagrams" },
+  { id: "design", label: "Design & Code Check" },
+  { id: "itp", label: "ITP & QA/QC" },
+  { id: "boq", label: "BOQ & Quantities" },
+  { id: "schedule", label: "Schedule & Resources" },
+  { id: "value", label: "Value Engineering" },
+  { id: "dashboard", label: "Project Dashboards" },
+] as const;
+
+type ToolId = (typeof ENGINEER_TOOLS)[number]["id"];
+
+/**
+ * صلاحيات الأدوات حسب نوع الاشتراك:
+ * - Assistant: الكل مقفول
+ * - Engineer: Drawing + Design
+ * - Professional: + ITP & BOQ
+ * - Consultant: كل الأدوات
+ */
+const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
+  assistant: [],
+  engineer: ["drawing", "design"],
+  professional: ["drawing", "design", "itp", "boq"],
+  consultant: [
+    "drawing",
+    "design",
+    "itp",
+    "boq",
+    "schedule",
+    "value",
+    "dashboard",
+  ],
+};
+
+function hasTool(planId: PlanId, toolId: ToolId) {
+  return TOOL_ACCESS[planId]?.includes(toolId);
+}
 
 export default function SubscriptionPage() {
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
@@ -29,11 +71,6 @@ export default function SubscriptionPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
-  /**
-   * ============================================================
-   *    🔥 النسخة النهائية الجديدة من handleSelect (معدل بالكامل)
-   * ============================================================
-   */
   async function handleSelect(planId: PlanId) {
     try {
       setErrorMsg(null);
@@ -61,12 +98,12 @@ export default function SubscriptionPage() {
 
         setSelectedPlanId(planId);
         setInfoMsg(
-          "Your plan has been saved. You can continue from your profile page."
+          "Your free Assistant plan has been saved. You can continue from your profile page."
         );
         return;
       }
 
-      // 2) Paid plans → Engineer / Professional / Consultant → Moeasar checkout
+      // 2) Paid plans → Engineer / Professional / Consultant → Moyasar checkout
       const res = await fetch("/api/checkout/moyasar", {
         method: "POST",
         headers: {
@@ -94,8 +131,6 @@ export default function SubscriptionPage() {
       setSavingPlanId(null);
     }
   }
-
-  /** --------------------------------------------------------- */
 
   return (
     <div className="app-shell">
@@ -142,7 +177,7 @@ export default function SubscriptionPage() {
             </p>
           )}
 
-          {/* GRID مشابه لصفحة التسجيل */}
+          {/* GRID – نفس روح صفحة التسجيل، بدون سكرول أفقي */}
           <div
             className="plans-grid"
             style={{
@@ -175,7 +210,7 @@ export default function SubscriptionPage() {
                     backgroundColor: "#ffffff",
                     display: "flex",
                     flexDirection: "column",
-                    minHeight: 360,
+                    minHeight: 380,
                     boxShadow: isSelected
                       ? "0 14px 35px rgba(15,23,42,0.18)"
                       : "0 4px 12px rgba(15,23,42,0.04)",
@@ -255,7 +290,7 @@ export default function SubscriptionPage() {
                     </div>
                   </div>
 
-                  {/* المميزات */}
+                  {/* المميزات العامة */}
                   <ul
                     style={{
                       listStyle: "disc",
@@ -264,7 +299,6 @@ export default function SubscriptionPage() {
                       marginTop: 4,
                       fontSize: 14,
                       color: "#374151",
-                      flexGrow: 1,
                     }}
                   >
                     {plan.features.map((f) => (
@@ -274,30 +308,99 @@ export default function SubscriptionPage() {
                     ))}
                   </ul>
 
-                  {/* زر الاختيار */}
-                  <button
-                    type="button"
-                    onClick={() => handleSelect(id)}
-                    disabled={isSaving}
+                  {/* Engineer tools لهذه الخطة */}
+                  <div
                     style={{
-                      marginTop: 18,
-                      width: "100%",
-                      padding: "10px 16px",
-                      borderRadius: 9999,
-                      border: "none",
-                      backgroundColor: lightBg,
-                      color,
-                      fontWeight: 600,
-                      fontSize: 14,
-                      cursor: "pointer",
+                      marginTop: 10,
+                      paddingTop: 10,
+                      borderTop: "1px solid #e5e7eb",
                     }}
                   >
-                    {isSaving
-                      ? "Saving..."
-                      : isSelected
-                      ? "Selected ✓"
-                      : "Select"}
-                  </button>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#6b7280",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Engineer tools in this plan:
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 6,
+                      }}
+                    >
+                      {ENGINEER_TOOLS.map((tool) => {
+                        const enabled = hasTool(id, tool.id);
+                        return (
+                          <div
+                            key={tool.id}
+                            style={{
+                              fontSize: 11,
+                              padding: "4px 8px",
+                              borderRadius: 999,
+                              border: enabled
+                                ? `1px solid ${color}`
+                                : "1px solid #e5e7eb",
+                              backgroundColor: enabled ? lightBg : "#f9fafb",
+                              color: enabled ? color : "#6b7280",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            {enabled ? "✅" : "🔒"} {tool.label}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* زر الاشتراك / الترقية أو شريط الخطة المجانية */}
+                  {id === "assistant" ? (
+                    <div
+                      style={{
+                        marginTop: 16,
+                        width: "100%",
+                        padding: "10px 0",
+                        borderRadius: 9999,
+                        backgroundColor: lightBg,
+                        color,
+                        textAlign: "center",
+                        fontWeight: 600,
+                        fontSize: 14,
+                        opacity: 0.95,
+                      }}
+                    >
+                      This is your free plan
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(id)}
+                      disabled={isSaving}
+                      style={{
+                        marginTop: 16,
+                        width: "100%",
+                        padding: "10px 16px",
+                        borderRadius: 9999,
+                        border: "none",
+                        backgroundColor: color,
+                        color: "#ffffff",
+                        fontWeight: 600,
+                        fontSize: 14,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {isSaving
+                        ? "Processing..."
+                        : "Subscribe / Upgrade"}
+                    </button>
+                  )}
                 </div>
               );
             })}

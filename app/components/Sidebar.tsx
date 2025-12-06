@@ -77,7 +77,7 @@ export default function Sidebar({
             <SidebarLink href="/" label="Chat" currentPath={pathname} />
             <SidebarLink
               href="/register"
-              label="Plans & Registration"
+              label="Registration & Plans"
               currentPath={pathname}
             />
             <SidebarLink

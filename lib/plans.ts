@@ -58,7 +58,7 @@ export const PLANS: Plan[] = [
       "Advanced designs, equations, formulas, design checks",
       "Finite element & modeling assesment (where available)",
       "ITP & QA/QC checklist templates analysis",
-      "BOQ & quantities take-off reviw",
+      "BOQ & quantities take-off review",
     ],
   },
   {
