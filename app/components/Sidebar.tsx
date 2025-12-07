@@ -61,7 +61,7 @@ export default function Sidebar({
         flexDirection: "column",
       }}
     >
-      {/* MAIN AREA (scrollable) */}
+      {/* MAIN CONTENT (scroll only here if needed) */}
       <div
         style={{
           display: "flex",
@@ -72,7 +72,7 @@ export default function Sidebar({
           paddingRight: 6,
         }}
       >
-        {/* New Chat */}
+        {/* New chat */}
         <button className="btn w-full mb-3" onClick={onNewChat}>
           + New chat
         </button>
@@ -164,7 +164,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* FOOTER */}
+      {/* FOOTER + VERIFIED + ICONS */}
       <div
         style={{
           marginTop: 10,
@@ -247,7 +247,8 @@ export default function Sidebar({
               Verified Store
             </div>
             <div style={{ color: "#374151" }}>
-              Auth No.: <span style={{ fontWeight: 600 }}>0000204877</span>
+              Auth No.:{" "}
+              <span style={{ fontWeight: 600 }}>0000204877</span>
             </div>
 
             <Link
@@ -286,65 +287,117 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* SOCIAL ICON ROW (using your files in /public) */}
+        {/* SOCIAL + OTHER ICONS */}
         <div
           style={{
             marginTop: 10,
             display: "flex",
             flexWrap: "wrap",
             justifyContent: "center",
-            gap: 8,
+            gap: 6,
           }}
         >
-          {/* LinkedIn (نصي بسيط) */}
+          {/* LinkedIn */}
+<button
+  type="button"
+  onClick={() =>
+    openExternal("https://www.linkedin.com/in/engineerit-ai-40788339a")
+  }
+  title="LinkedIn"
+  aria-label="LinkedIn"
+  style={iconButtonStyle}
+>
+  <img
+    src="/linkedin.png"
+    alt="LinkedIn"
+    style={iconImageStyle}
+  />
+</button>
+
+          {/* X */}
+          <button
+            type="button"
+            onClick={() => openExternal("https://x.com/engineeritai")}
+            title="X"
+            aria-label="X"
+            style={iconButtonStyle}
+          >
+            <img src="/x.png" alt="X" style={iconImageStyle} />
+          </button>
+
+          {/* TikTok */}
           <button
             type="button"
             onClick={() =>
-              openExternal(
-                "https://www.linkedin.com/in/engineerit-ai-40788339a"
-              )
-            }
-            title="LinkedIn"
-            aria-label="LinkedIn"
-            style={iconButtonStyle}
-          >
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: "#0A66C2",
-              }}
-            >
-              in
-            </span>
-          </button>
-
-          {/* X */}
-          <IconImageButton
-            src="/x.png"
-            alt="X"
-            title="X"
-            onClick={() => openExternal("https://x.com/engineeritai")}
-          />
-
-          {/* TikTok */}
-          <IconImageButton
-            src="/tiktok.png"
-            alt="TikTok"
-            title="TikTok"
-            onClick={() =>
               openExternal("https://www.tiktok.com/@engineerit.ai")
             }
-          />
+            title="TikTok"
+            aria-label="TikTok"
+            style={iconButtonStyle}
+          >
+            <img
+              src="/tiktok.png"
+              alt="TikTok"
+              style={iconImageStyle}
+            />
+          </button>
 
-          {/* engineerit → favicon كـ eit */}
-          <IconImageButton
-            src="/favicon.ico"
-            alt="eit"
-            title="Contact us"
+          {/* Snapchat (قليل أكبر من الباقي) */}
+          <button
+            type="button"
+            onClick={() =>
+              openExternal("https://www.snapchat.com/add/engineerit.ai")
+            }
+            title="Snapchat"
+            aria-label="Snapchat"
+            style={iconButtonStyle}
+          >
+            <img
+              src="/snapchat.png"
+              alt="Snapchat"
+              style={{
+                width: 14,
+                height: 14,
+                display: "block",
+                objectFit: "contain",
+              }}
+            />
+          </button>
+
+          {/* Moyasar (أصغر 30–40٪) */}
+          <button
+            type="button"
+            onClick={() => openExternal("https://moyasar.com")}
+            title="Payment processed and controlled by Moyasar"
+            aria-label="Moyasar"
+            style={iconButtonStyle}
+          >
+            <img
+              src="/moyasar-icon.png"
+              alt="Moyasar"
+              style={{
+                width: 12,
+                height: 12,
+                display: "block",
+                objectFit: "contain",
+              }}
+            />
+          </button>
+
+          {/* engineerit → eit (favicon) */}
+          <button
+            type="button"
             onClick={() => openExternal("https://engineerit.ai/feedback")}
-            imgSize={20}
-          />
+            title="Contact us"
+            aria-label="Contact us"
+            style={iconButtonStyle}
+          >
+            <img
+              src="/favicon.ico"
+              alt="eit"
+              style={iconImageStyle}
+            />
+          </button>
         </div>
       </div>
     </aside>
@@ -393,57 +446,23 @@ function SidebarLink({
   );
 }
 
-/* ==== styles for icons ==== */
-
+/* base style for all small icon buttons */
 const iconButtonStyle: React.CSSProperties = {
-  width: 20,
-  height: 20,
-  borderRadius: 9999,
-  border: "none",
-  background: "transparent",
-  padding: 0,
+  width: 30,
+  height: 30,
+  borderRadius: 8,
+  background: "#F9FAFB",
+  border: "1px solid #E5E7EB",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  padding: 0,
   cursor: "pointer",
 };
 
-/* helper: button that shows <img> icon with configurable size */
-
-type IconImageButtonProps = {
-  src: string;
-  alt: string;
-  title: string;
-  onClick: () => void;
-  imgSize?: number; // px, default 22
+const iconImageStyle: React.CSSProperties = {
+  width: 18,
+  height: 18,
+  display: "block",
+  objectFit: "contain",
 };
-
-function IconImageButton({
-  src,
-  alt,
-  title,
-  onClick,
-  imgSize = 22,
-}: IconImageButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      aria-label={alt}
-      style={iconButtonStyle}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        style={{
-          width: imgSize,
-          height: imgSize,
-          objectFit: "contain",
-          display: "block",
-        }}
-      />
-    </button>
-  );
-}
