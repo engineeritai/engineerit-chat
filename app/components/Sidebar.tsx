@@ -298,21 +298,28 @@ export default function Sidebar({
           }}
         >
           {/* LinkedIn */}
-<button
-  type="button"
-  onClick={() =>
-    openExternal("https://www.linkedin.com/in/engineerit-ai-40788339a")
-  }
-  title="LinkedIn"
-  aria-label="LinkedIn"
-  style={iconButtonStyle}
->
-  <img
-    src="/linkedin.png"
-    alt="LinkedIn"
-    style={iconImageStyle}
-  />
-</button>
+          <button
+            type="button"
+            onClick={() =>
+              openExternal(
+                "https://www.linkedin.com/in/engineerit-ai-40788339a"
+              )
+            }
+            title="LinkedIn"
+            aria-label="LinkedIn"
+            style={iconButtonStyle}
+          >
+            <img
+              src="/linkedin.png"
+              alt="LinkedIn"
+              style={{
+                width: 14,
+                height: 14,
+                display: "block",
+                objectFit: "contain",
+              }}
+            />
+          </button>
 
           {/* X */}
           <button
@@ -335,14 +342,10 @@ export default function Sidebar({
             aria-label="TikTok"
             style={iconButtonStyle}
           >
-            <img
-              src="/tiktok.png"
-              alt="TikTok"
-              style={iconImageStyle}
-            />
+            <img src="/tiktok.png" alt="TikTok" style={iconImageStyle} />
           </button>
 
-          {/* Snapchat (قليل أكبر من الباقي) */}
+          {/* Snapchat (14px) */}
           <button
             type="button"
             onClick={() =>
@@ -364,7 +367,7 @@ export default function Sidebar({
             />
           </button>
 
-          {/* Moyasar (أصغر 30–40٪) */}
+          {/* Moyasar (smaller) */}
           <button
             type="button"
             onClick={() => openExternal("https://moyasar.com")}
@@ -392,11 +395,7 @@ export default function Sidebar({
             aria-label="Contact us"
             style={iconButtonStyle}
           >
-            <img
-              src="/favicon.ico"
-              alt="eit"
-              style={iconImageStyle}
-            />
+            <img src="/favicon.ico" alt="eit" style={iconImageStyle} />
           </button>
         </div>
       </div>
