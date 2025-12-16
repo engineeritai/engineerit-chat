@@ -11,10 +11,7 @@ import { PLANS } from "@/lib/plans";
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 // ألوان الشعار (الأيقونة الدائرية) لكل خطة – نفس القيم المستخدمة في صفحة /subscription
-const PLAN_BADGES: Record<
-  PlanId,
-  { fg: string; bg: string }
-> = {
+const PLAN_BADGES: Record<PlanId, { fg: string; bg: string }> = {
   assistant: { fg: "#1d4ed8", bg: "#eff6ff" }, // أزرق
   engineer: { fg: "#ea580c", bg: "#fff7ed" }, // برتقالي
   professional: { fg: "#059669", bg: "#ecfdf3" }, // أخضر
@@ -70,12 +67,16 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  // ✅ NEW: show email verification hint
+  const [showEmailHint, setShowEmailHint] = useState(false);
+
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
+    setShowEmailHint(false);
     setLoading(true);
 
     try {
@@ -96,8 +97,30 @@ export default function RegisterPage() {
         return;
       }
 
-      if (!data.user) {
-        // في حالة تفعيل تأكيد الإيميل، قد لا يرجع user مباشرة
+      // ✅ Always show the hint after successful signUp request
+      setShowEmailHint(true);
+
+      /**
+       * ✅ IMPORTANT:
+       * If email confirmation is enabled, Supabase often returns:
+       * - data.user موجود
+       * - data.session = null
+       * In this case: DO NOT redirect to /profile.
+       */
+      if (!data.session) {
+        setSuccessMessage(
+          "Account created. Please verify your email first, then sign in from the top bar."
+        );
+        setFullName("");
+        setEmail("");
+        setPassword("");
+        setLoading(false);
+        return;
+      }
+
+      // If we have a session, user is effectively signed-in
+      const user = data.user;
+      if (!user) {
         setSuccessMessage(
           "Account created. Please check your email to confirm and then sign in from the top bar."
         );
@@ -108,15 +131,14 @@ export default function RegisterPage() {
         return;
       }
 
-      const userId = data.user.id;
+      const userId = user.id;
 
       // 2) upsert في جدول profiles – خطة Assistant بشكل افتراضي
       try {
         const { error: profileError } = await supabase.from("profiles").upsert(
           {
             id: userId,
-            full_name:
-              fullName || data.user.email?.split("@")[0] || "New user",
+            full_name: fullName || user.email?.split("@")[0] || "New user",
             avatar_url: null,
             subscription_tier: "assistant", // خطة البداية
           },
@@ -130,9 +152,7 @@ export default function RegisterPage() {
         console.error("Profile upsert unexpected error:", err);
       }
 
-      setSuccessMessage(
-        "Account created. Redirecting to your profile..."
-      );
+      setSuccessMessage("Account created. Redirecting to your profile...");
       setFullName("");
       setEmail("");
       setPassword("");
@@ -157,9 +177,7 @@ export default function RegisterPage() {
 
       <div className="main">
         <Header
-          onToggleSidebar={() =>
-            setIsSidebarOpenMobile((v) => !v)
-          }
+          onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)}
         />
 
         <div className="page-wrap">
@@ -263,9 +281,33 @@ export default function RegisterPage() {
                     marginBottom: 6,
                     fontSize: 13,
                     color: "#15803d",
+                    lineHeight: 1.6,
                   }}
                 >
                   {successMessage}
+                </div>
+              )}
+
+              {/* ✅ NEW: Spam/Junk clear message */}
+              {showEmailHint && !errorMessage && (
+                <div
+                  style={{
+                    marginTop: 2,
+                    padding: "10px 12px",
+                    borderRadius: 12,
+                    background: "#FFFBEB",
+                    border: "1px solid #FDE68A",
+                    fontSize: 13,
+                    color: "#92400E",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <strong>📩 Verification email sent</strong>
+                  <div>
+                    Please check your inbox. If you don’t see it, check{" "}
+                    <strong>Junk / Spam</strong> and mark it as{" "}
+                    <strong>Not Spam</strong>.
+                  </div>
                 </div>
               )}
 
@@ -329,11 +371,8 @@ export default function RegisterPage() {
             >
               {PLANS.map((plan) => {
                 const badge =
-                  PLAN_BADGES[plan.id as PlanId] ||
-                  PLAN_BADGES.assistant;
-                const letter = (
-                  plan.shortName || plan.name || "E"
-                )
+                  PLAN_BADGES[plan.id as PlanId] || PLAN_BADGES.assistant;
+                const letter = (plan.shortName || plan.name || "E")
                   .charAt(0)
                   .toUpperCase();
 

@@ -1174,3 +1174,20 @@ body {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+@media (max-width: 640px) {
+  .sidebar-inner {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .sidebar-inner h3 {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  .sidebar-nav .sidebar-link {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}

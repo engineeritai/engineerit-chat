@@ -55,8 +55,6 @@ export default function Sidebar({
       className="sidebar-inner"
       style={{
         maxWidth: "100%",
-        height: "100vh",
-        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
       }}
@@ -68,7 +66,6 @@ export default function Sidebar({
           flexDirection: "column",
           gap: 16,
           flexGrow: 1,
-          overflowY: "auto",
           paddingRight: 6,
         }}
       >
