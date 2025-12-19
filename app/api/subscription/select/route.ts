@@ -129,9 +129,13 @@ export async function POST(req: NextRequest) {
           end_date: endDateIso,
         });
 
+      // ✅ التعديل الوحيد الضروري: لا نكمل success إذا فشل الإدخال
       if (subInsertError) {
-        // لا نفشل الطلب للمستخدم، فقط نسجل الخطأ
         console.error("subscriptions insert error:", subInsertError);
+        return NextResponse.json(
+          { error: "Failed to record billing subscription." },
+          { status: 500 }
+        );
       }
     }
 
