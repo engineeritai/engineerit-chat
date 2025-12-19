@@ -68,10 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!user) {
-      return NextResponse.json(
-        { error: "Not authenticated." },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
     }
 
     const now = new Date();
@@ -124,12 +121,12 @@ export async function POST(req: NextRequest) {
           plan,
           price: pricing.price,
           currency: pricing.currency,
-          status: "paid", // هذا المسار يُستدعى بعد نجاح الدفع
+          status: "active", // ✅ بدل paid (يتوافق مع check constraint)
           start_date: nowIso,
           end_date: endDateIso,
         });
 
-      // ✅ التعديل الوحيد الضروري: لا نكمل success إذا فشل الإدخال
+      // ✅ لا نكمل success إذا فشل الإدخال
       if (subInsertError) {
         console.error("subscriptions insert error:", subInsertError);
         return NextResponse.json(
