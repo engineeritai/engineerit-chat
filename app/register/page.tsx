@@ -10,17 +10,13 @@ import { PLANS } from "@/lib/plans";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
-// ألوان الشعار (الأيقونة الدائرية) لكل خطة – نفس القيم المستخدمة في صفحة /subscription
 const PLAN_BADGES: Record<PlanId, { fg: string; bg: string }> = {
-  assistant: { fg: "#1d4ed8", bg: "#eff6ff" }, // أزرق
-  engineer: { fg: "#ea580c", bg: "#fff7ed" }, // برتقالي
-  professional: { fg: "#059669", bg: "#ecfdf3" }, // أخضر
-  consultant: { fg: "#7c3aed", bg: "#f5f3ff" }, // بنفسجي
+  assistant: { fg: "#1d4ed8", bg: "#eff6ff" },
+  engineer: { fg: "#ea580c", bg: "#fff7ed" },
+  professional: { fg: "#059669", bg: "#ecfdf3" },
+  consultant: { fg: "#7c3aed", bg: "#f5f3ff" },
 };
 
-/* ============
-   Engineer tools
-   ============ */
 const ENGINEER_TOOLS = [
   { id: "drawing", label: "Drawing & Diagrams" },
   { id: "design", label: "Design & Code Check" },
@@ -33,26 +29,11 @@ const ENGINEER_TOOLS = [
 
 type ToolId = (typeof ENGINEER_TOOLS)[number]["id"];
 
-/**
- * صلاحيات الأدوات حسب نوع الاشتراك:
- * - Assistant: الكل مقفول
- * - Engineer: Drawing + Design
- * - Professional: Drawing + Design + ITP + BOQ
- * - Consultant: جميع الأدوات
- */
 const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
   assistant: [],
   engineer: ["drawing", "design"],
   professional: ["drawing", "design", "itp", "boq"],
-  consultant: [
-    "drawing",
-    "design",
-    "itp",
-    "boq",
-    "schedule",
-    "value",
-    "dashboard",
-  ],
+  consultant: ["drawing", "design", "itp", "boq", "schedule", "value", "dashboard"],
 };
 
 export default function RegisterPage() {
@@ -67,99 +48,47 @@ export default function RegisterPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // ✅ NEW: show email verification hint
-  const [showEmailHint, setShowEmailHint] = useState(false);
-
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
-    setShowEmailHint(false);
     setLoading(true);
 
     try {
-      // 1) إنشاء مستخدم Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: {
-            full_name: fullName,
-          },
+          data: { full_name: fullName },
         },
       });
 
       if (error) {
         setErrorMessage(error.message);
-        setLoading(false);
         return;
       }
 
-      // ✅ Always show the hint after successful signUp request
-      setShowEmailHint(true);
+      // ✅ IMPORTANT:
+      // We DO NOT insert into profiles here anymore.
+      // Profiles row is created by DB trigger (handle_new_user) to avoid RLS/session issues.
 
-      /**
-       * ✅ IMPORTANT:
-       * If email confirmation is enabled, Supabase often returns:
-       * - data.user موجود
-       * - data.session = null
-       * In this case: DO NOT redirect to /profile.
-       */
-      if (!data.session) {
-        setSuccessMessage(
-          "Account created. Please verify your email first, then sign in from the top bar."
-        );
-        setFullName("");
-        setEmail("");
-        setPassword("");
-        setLoading(false);
-        return;
-      }
-
-      // If we have a session, user is effectively signed-in
-      const user = data.user;
-      if (!user) {
-        setSuccessMessage(
-          "Account created. Please check your email to confirm and then sign in from the top bar."
-        );
-        setFullName("");
-        setEmail("");
-        setPassword("");
-        setLoading(false);
-        return;
-      }
-
-      const userId = user.id;
-
-      // 2) upsert في جدول profiles – خطة Assistant بشكل افتراضي
-      try {
-        const { error: profileError } = await supabase.from("profiles").upsert(
-          {
-            id: userId,
-            full_name: fullName || user.email?.split("@")[0] || "New user",
-            avatar_url: null,
-            subscription_tier: "assistant", // خطة البداية
-          },
-          { onConflict: "id" }
-        );
-
-        if (profileError) {
-          console.error("Profile upsert error:", profileError);
-        }
-      } catch (err) {
-        console.error("Profile upsert unexpected error:", err);
-      }
-
-      setSuccessMessage("Account created. Redirecting to your profile...");
       setFullName("");
       setEmail("");
       setPassword("");
 
-      setTimeout(() => {
-        router.push("/profile");
-      }, 1200);
+      // If email confirmation is ON -> session is null
+      if (!data.session) {
+        setSuccessMessage(
+          "Account created. We sent you a confirmation email. Please check your Inbox, and also Junk/Spam, then confirm your email and sign in from the top bar."
+        );
+        return;
+      }
+
+      // If confirmation is OFF -> user is logged in
+      setSuccessMessage("Account created. Redirecting to your profile...");
+      setTimeout(() => router.push("/profile"), 900);
     } catch (err) {
       console.error(err);
       setErrorMessage("Something went wrong. Please try again.");
@@ -176,31 +105,21 @@ export default function RegisterPage() {
       />
 
       <div className="main">
-        <Header
-          onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)}
-        />
+        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
         <div className="page-wrap">
           <h1 className="page-title">Register to engineerit.ai</h1>
           <p className="page-subtitle">
-            Create your account, start with the free Assistant plan, and
-            upgrade later to Engineer, Professional, or Consultant.
+            Create your account, start with the free Assistant plan, and upgrade later to Engineer, Professional, or Consultant.
           </p>
 
-          {/* ===== بطاقة التسجيل في الأعلى ===== */}
+          {/* Registration card */}
           <div className="card" style={{ marginBottom: 24 }}>
             <h2 className="card-title" style={{ marginBottom: 12 }}>
               Create your account
             </h2>
 
-            <form
-              onSubmit={handleSubmit}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 12,
-              }}
-            >
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div className="form-row">
                 <label>
                   Full name
@@ -255,74 +174,31 @@ export default function RegisterPage() {
                     <Link href="/legal/terms" className="link">
                       User Policy &amp; Agreement
                     </Link>
-                    , including cancellation and refund policies, and I
-                    understand that engineerit.ai is not responsible or
-                    liable for any decisions or mistakes based on the
-                    outputs.
+                    , including cancellation and refund policies, and I understand that engineerit.ai is not responsible or liable
+                    for any decisions or mistakes based on the outputs.
                   </span>
                 </label>
               </div>
 
               {errorMessage && (
-                <div
-                  style={{
-                    marginBottom: 6,
-                    fontSize: 13,
-                    color: "#b91c1c",
-                  }}
-                >
+                <div style={{ marginBottom: 6, fontSize: 13, color: "#b91c1c" }}>
                   {errorMessage}
                 </div>
               )}
 
               {successMessage && (
-                <div
-                  style={{
-                    marginBottom: 6,
-                    fontSize: 13,
-                    color: "#15803d",
-                    lineHeight: 1.6,
-                  }}
-                >
+                <div style={{ marginBottom: 6, fontSize: 13, color: "#15803d" }}>
                   {successMessage}
                 </div>
               )}
 
-              {/* ✅ NEW: Spam/Junk clear message */}
-              {showEmailHint && !errorMessage && (
-                <div
-                  style={{
-                    marginTop: 2,
-                    padding: "10px 12px",
-                    borderRadius: 12,
-                    background: "#FFFBEB",
-                    border: "1px solid #FDE68A",
-                    fontSize: 13,
-                    color: "#92400E",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  <strong>📩 Verification email sent</strong>
-                  <div>
-                    Please check your inbox. If you don’t see it, check{" "}
-                    <strong>Junk / Spam</strong> and mark it as{" "}
-                    <strong>Not Spam</strong>.
-                  </div>
-                </div>
-              )}
-
-              <button
-                className="btn"
-                type="submit"
-                disabled={loading || !accepted}
-                style={{ marginTop: 4 }}
-              >
+              <button className="btn" type="submit" disabled={loading || !accepted} style={{ marginTop: 4 }}>
                 {loading ? "Creating account..." : "Create account"}
               </button>
             </form>
           </div>
 
-          {/* ===== كرت زر الانتقال لصفحة الاشتراكات ===== */}
+          {/* Subscription hint */}
           <div
             className="card"
             style={{
@@ -333,17 +209,9 @@ export default function RegisterPage() {
               gap: 8,
             }}
           >
-            <p
-              style={{
-                fontSize: 14,
-                color: "#374151",
-                margin: 0,
-              }}
-            >
-              After registration, your account will start on the free
-              Assistant plan. When you are ready to upgrade, go to the
-              subscription page to select Engineer, Professional, or
-              Consultant with secure payment.
+            <p style={{ fontSize: 14, color: "#374151", margin: 0 }}>
+              After registration, your account will start on the free Assistant plan.
+              When you are ready to upgrade, go to the subscription page to select Engineer, Professional, or Consultant with secure payment.
             </p>
             <button
               type="button"
@@ -355,7 +223,7 @@ export default function RegisterPage() {
             </button>
           </div>
 
-          {/* ===== قسم الخطط أسفل التسجيل – مع إبراز Engineer tools لكل خطة ===== */}
+          {/* Plans overview */}
           <div className="card" style={{ marginTop: 8 }}>
             <h2 className="card-title" style={{ marginBottom: 16 }}>
               Plans overview &amp; engineer tools
@@ -364,17 +232,13 @@ export default function RegisterPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(220px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                 gap: 16,
               }}
             >
               {PLANS.map((plan) => {
-                const badge =
-                  PLAN_BADGES[plan.id as PlanId] || PLAN_BADGES.assistant;
-                const letter = (plan.shortName || plan.name || "E")
-                  .charAt(0)
-                  .toUpperCase();
+                const badge = PLAN_BADGES[plan.id as PlanId] || PLAN_BADGES.assistant;
+                const letter = (plan.shortName || plan.name || "E").charAt(0).toUpperCase();
 
                 const planId = plan.id as PlanId;
                 const enabledTools = TOOL_ACCESS[planId] || [];
@@ -390,20 +254,10 @@ export default function RegisterPage() {
                       display: "flex",
                       flexDirection: "column",
                       gap: 6,
-                      backgroundColor:
-                        plan.id === "professional"
-                          ? "rgba(37, 99, 235, 0.04)"
-                          : "white",
+                      backgroundColor: "white",
                     }}
                   >
-                    {/* الأيقونة + العنوان */}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        marginBottom: 10,
-                      }}
-                    >
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
                       <div
                         style={{
                           width: 44,
@@ -424,62 +278,25 @@ export default function RegisterPage() {
                       </div>
 
                       <div>
-                        <div
-                          style={{
-                            fontSize: 18,
-                            fontWeight: 700,
-                            color: "#111827",
-                            marginBottom: 2,
-                          }}
-                        >
+                        <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 2 }}>
                           {plan.name}
                         </div>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#6b7280",
-                            lineHeight: 1.35,
-                          }}
-                        >
+                        <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.35 }}>
                           {plan.tagline}
                         </div>
                       </div>
                     </div>
 
-                    {/* السعر */}
                     <div style={{ marginBottom: 8 }}>
-                      <div
-                        style={{
-                          fontSize: 16,
-                          fontWeight: 700,
-                          color: badge.fg,
-                        }}
-                      >
+                      <div style={{ fontSize: 16, fontWeight: 700, color: badge.fg }}>
                         {plan.priceMonthly}
                       </div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: "#6b7280",
-                          marginTop: 2,
-                        }}
-                      >
+                      <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
                         {plan.priceYearly}
                       </div>
                     </div>
 
-                    {/* المميزات العامة */}
-                    <ul
-                      style={{
-                        listStyle: "disc",
-                        paddingLeft: 20,
-                        margin: 0,
-                        marginTop: 4,
-                        fontSize: 13,
-                        color: "#374151",
-                        lineHeight: 1.5,
-                      }}
-                    >
+                    <ul style={{ listStyle: "disc", paddingLeft: 20, margin: 0, marginTop: 4, fontSize: 13, color: "#374151", lineHeight: 1.5 }}>
                       {plan.features.map((f) => (
                         <li key={f} style={{ marginBottom: 4 }}>
                           {f}
@@ -487,32 +304,12 @@ export default function RegisterPage() {
                       ))}
                     </ul>
 
-                    {/* ===== إبراز Engineer tools لكل خطة ===== */}
-                    <div
-                      style={{
-                        marginTop: 10,
-                        paddingTop: 8,
-                        borderTop: "1px dashed #e5e7eb",
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: "#4b5563",
-                          marginBottom: 6,
-                        }}
-                      >
+                    <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px dashed #e5e7eb" }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "#4b5563", marginBottom: 6 }}>
                         Engineer tools in this plan
                       </div>
 
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: 6,
-                        }}
-                      >
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                         {ENGINEER_TOOLS.map((tool) => {
                           const enabled = enabledTools.includes(tool.id);
                           return (
@@ -522,12 +319,8 @@ export default function RegisterPage() {
                                 fontSize: 11,
                                 padding: "3px 8px",
                                 borderRadius: 999,
-                                border: enabled
-                                  ? "1px solid rgba(37,99,235,0.45)"
-                                  : "1px solid #e5e7eb",
-                                backgroundColor: enabled
-                                  ? "rgba(37,99,235,0.06)"
-                                  : "#f9fafb",
+                                border: enabled ? "1px solid rgba(37,99,235,0.45)" : "1px solid #e5e7eb",
+                                backgroundColor: enabled ? "rgba(37,99,235,0.06)" : "#f9fafb",
                                 color: enabled ? "#1d4ed8" : "#9ca3af",
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -546,15 +339,8 @@ export default function RegisterPage() {
               })}
             </div>
 
-            <p
-              style={{
-                fontSize: 12,
-                color: "#6b7280",
-                marginTop: 16,
-              }}
-            >
-              You can upgrade or change your plan any time from your profile
-              or the subscription page.
+            <p style={{ fontSize: 12, color: "#6b7280", marginTop: 16 }}>
+              You can upgrade or change your plan any time from your profile or the subscription page.
             </p>
           </div>
         </div>
