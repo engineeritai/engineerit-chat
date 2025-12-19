@@ -10,7 +10,6 @@ type ProfileRow = {
   full_name: string | null;
   avatar_url: string | null;
   subscription_tier: string | null;
-  registration_code: string | null;
 };
 
 type SubscriptionRow = {
@@ -51,11 +50,9 @@ export default function ProfilePage() {
 
   const [activeSub, setActiveSub] = useState<SubscriptionRow | null>(null);
   const [subHistory, setSubHistory] = useState<SubscriptionRow[]>([]);
-  const [chatCount, setChatCount] = useState<number | null>(null);
-  const [docCount, setDocCount] = useState<number | null>(null);
 
   useEffect(() => {
-    async function loadProfileAndPayment() {
+    async function loadAll() {
       try {
         setLoading(true);
         setErrorMsg(null);
@@ -68,29 +65,19 @@ export default function ProfilePage() {
 
         if (userErr || !user) {
           setErrorMsg("You are not logged in.");
-          setLoading(false);
           return;
         }
 
         setEmail(user.email ?? null);
 
-        // ---------- 1) Moyasar return handling (IMPORTANT FIX) ----------
-        let subscriptionTierOverride: PlanId | null = null;
-
+        // 1) Handle return from Moyasar (use API route to save subscription)
         if (typeof window !== "undefined") {
-          const url = new URL(window.location.href);
-          const params = url.searchParams;
+          const params = new URLSearchParams(window.location.search);
           const status = params.get("status");
           const planParam = params.get("plan") as PlanId | null;
 
-          const allowedPlans: PlanId[] = [
-            "assistant",
-            "engineer",
-            "professional",
-            "consultant",
-          ];
+          const allowedPlans: PlanId[] = ["assistant", "engineer", "professional", "consultant"];
 
-          // ✅ Instead of updating profiles from client, call server route:
           if (status === "paid" && planParam && allowedPlans.includes(planParam)) {
             try {
               const res = await fetch("/api/subscription/select", {
@@ -99,34 +86,24 @@ export default function ProfilePage() {
                 body: JSON.stringify({ plan: planParam }),
               });
 
-              const json = await res
-                .json()
-                .catch(() => ({ error: "Could not save subscription." }));
+              const json = await res.json().catch(() => ({}));
 
-              if (!res.ok) {
-                console.error("API /subscription/select error:", json);
-                setErrorMsg(
-                  "Could not save subscription after payment. Please contact support."
-                );
+              if (!res.ok || !json?.success) {
+                setErrorMsg("Could not save subscription after payment. Please contact support.");
               } else {
-                subscriptionTierOverride = planParam;
                 setInfoMsg("Payment successful and subscription updated.");
               }
-            } catch (err) {
-              console.error("API /subscription/select unexpected error:", err);
-              setErrorMsg(
-                "Unexpected error while saving subscription after payment."
-              );
-            } finally {
-              // ✅ remove query params so it doesn't repeat on refresh
-              params.delete("status");
-              params.delete("plan");
-              window.history.replaceState({}, "", url.pathname);
+
+              // تنظيف الرابط
+              const cleanUrl = window.location.pathname;
+              window.history.replaceState({}, "", cleanUrl);
+            } catch {
+              setErrorMsg("Could not save subscription after payment. Please contact support.");
             }
           }
         }
 
-        // ---------- 2) Load profile ----------
+        // 2) Load profile row
         let initialFullName =
           (user.user_metadata?.full_name as string | undefined) ??
           (user.user_metadata?.name as string | undefined) ??
@@ -139,161 +116,69 @@ export default function ProfilePage() {
           null;
 
         let subscriptionTier: string | null = "assistant";
-        let registrationCode: string | null = null;
 
-        const { data, error } = await supabase
+        const { data: prof, error: profErr } = await supabase
           .from("profiles")
-          .select("full_name, avatar_url, subscription_tier, registration_code")
+          .select("full_name, avatar_url, subscription_tier")
           .eq("id", user.id)
           .maybeSingle();
 
-        if (!error && data) {
-          if (data.full_name) initialFullName = data.full_name;
-          if (data.avatar_url) avatarUrl = data.avatar_url;
-          if (data.subscription_tier) subscriptionTier = data.subscription_tier;
-          if (data.registration_code) registrationCode = data.registration_code;
-        } else if (error) {
-          console.error("PROFILE SELECT ERROR:", error);
+        if (!profErr && prof) {
+          if (prof.full_name) initialFullName = prof.full_name;
+          if (prof.avatar_url) avatarUrl = prof.avatar_url;
+          if (prof.subscription_tier) subscriptionTier = prof.subscription_tier;
         }
 
-        if (subscriptionTierOverride) {
-          subscriptionTier = subscriptionTierOverride;
-        }
+        // Ensure row exists (safe upsert)
+        await supabase.from("profiles").upsert(
+          {
+            id: user.id,
+            full_name: initialFullName,
+            avatar_url: avatarUrl,
+            subscription_tier: subscriptionTier ?? "assistant",
+          },
+          { onConflict: "id" }
+        );
 
-        // ---------- 2.a Generate registration_code if missing ----------
-        if (!registrationCode) {
-          try {
-            const now = new Date();
-            const yy = String(now.getFullYear()).slice(-2);
-            const mm = String(now.getMonth() + 1).padStart(2, "0");
-            const prefix = yy + mm;
-
-            const { data: sameMonthProfiles, error: regErr } = await supabase
-              .from("profiles")
-              .select("registration_code")
-              .ilike("registration_code", `${prefix}%`);
-
-            if (regErr) {
-              console.error("REGISTRATION CODE COUNT ERROR:", regErr);
-            }
-
-            const count = sameMonthProfiles?.length ?? 0;
-            const sequence = count + 1;
-            const seqStr = String(sequence).padStart(4, "0");
-            registrationCode = `${prefix}${seqStr}`;
-
-            const { error: regUpdateErr } = await supabase
-              .from("profiles")
-              .update({ registration_code: registrationCode })
-              .eq("id", user.id);
-
-            if (regUpdateErr) {
-              console.error("REGISTRATION CODE UPDATE ERROR:", regUpdateErr);
-            }
-          } catch (e) {
-            console.error("REGISTRATION CODE GENERATION ERROR:", e);
-          }
-        }
-
-        // ensure row exists
-        const { error: upsertError } = await supabase
-          .from("profiles")
-          .upsert(
-            {
-              id: user.id,
-              full_name: initialFullName,
-              avatar_url: avatarUrl,
-              subscription_tier: subscriptionTier,
-              registration_code: registrationCode,
-            },
-            { onConflict: "id" }
-          );
-
-        if (upsertError) {
-          console.error("PROFILE UPSERT ERROR:", upsertError);
-        }
-
-        const row: ProfileRow = {
+        setProfile({
           full_name: initialFullName,
           avatar_url: avatarUrl,
-          subscription_tier: subscriptionTier,
-          registration_code: registrationCode,
-        };
-
-        setProfile(row);
+          subscription_tier: subscriptionTier ?? "assistant",
+        });
         setFullName(initialFullName);
 
-        // ---------- 3) Active subscription row (latest for user & plan) ----------
-        if (subscriptionTier) {
-          const { data: subs, error: subsError } = await supabase
-            .from("subscriptions")
-            .select("plan, price, currency, status, start_date, end_date")
-            .eq("user_id", user.id)
-            .eq("plan", subscriptionTier)
-            .order("start_date", { ascending: false })
-            .limit(1);
+        // 3) Load current subscription billing data (latest paid row for user)
+        const { data: subs, error: subsErr } = await supabase
+          .from("subscriptions")
+          .select("plan, price, currency, status, start_date, end_date")
+          .eq("user_id", user.id)
+          .order("start_date", { ascending: false })
+          .limit(1);
 
-          if (!subsError && subs && subs.length > 0) {
-            setActiveSub(subs[0] as SubscriptionRow);
-          } else {
-            setActiveSub(null);
-            if (subsError) console.error("SUBSCRIPTIONS SELECT ERROR:", subsError);
-          }
+        if (!subsErr && subs && subs.length > 0) {
+          setActiveSub(subs[0] as SubscriptionRow);
+        } else {
+          setActiveSub(null);
         }
 
-        // ---------- 4) History ----------
-        try {
-          const { data: history, error: histError } = await supabase
-            .from("subscriptions")
-            .select("plan, price, currency, status, start_date, end_date")
-            .eq("user_id", user.id)
-            .order("start_date", { ascending: false })
-            .limit(5);
+        // 4) History (last 10)
+        const { data: history, error: histErr } = await supabase
+          .from("subscriptions")
+          .select("plan, price, currency, status, start_date, end_date")
+          .eq("user_id", user.id)
+          .order("start_date", { ascending: false })
+          .limit(10);
 
-          if (!histError && history) {
-            setSubHistory(history as SubscriptionRow[]);
-          } else if (histError) {
-            console.error("SUBSCRIPTIONS HISTORY ERROR:", histError);
-          }
-        } catch (e) {
-          console.warn("SUBSCRIPTIONS HISTORY WARN:", e);
-        }
-
-        // ---------- 5) Counts (optional) ----------
-        try {
-          const { count: cCount, error: cErr } = await supabase
-            .from("chat_messages")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", user.id);
-
-          if (!cErr && typeof cCount === "number") {
-            setChatCount(cCount);
-          }
-        } catch (e) {
-          console.warn("CHAT COUNT ERROR (optional):", e);
-        }
-
-        try {
-          const { count: dCount, error: dErr } = await supabase
-            .from("documents")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", user.id);
-
-          if (!dErr && typeof dCount === "number") {
-            setDocCount(dCount);
-          }
-        } catch (e) {
-          console.warn("DOC COUNT ERROR (optional):", e);
-        }
-      } catch (err) {
-        console.error("PROFILE LOAD ERROR:", err);
+        if (!histErr && history) setSubHistory(history as SubscriptionRow[]);
+      } catch (e) {
+        console.error(e);
         setErrorMsg("Could not load profile.");
       } finally {
         setLoading(false);
       }
     }
 
-    void loadProfileAndPayment();
+    void loadAll();
   }, []);
 
   async function handleSaveName() {
@@ -304,10 +189,8 @@ export default function ProfilePage() {
 
       const {
         data: { user },
-        error: userErr,
       } = await supabase.auth.getUser();
-
-      if (userErr || !user) {
+      if (!user) {
         setErrorMsg("You are not logged in.");
         return;
       }
@@ -318,25 +201,13 @@ export default function ProfilePage() {
         .eq("id", user.id);
 
       if (error) {
-        console.error("PROFILE SAVE ERROR:", error);
+        console.error(error);
         setErrorMsg("Could not save profile.");
         return;
       }
 
-      setProfile((prev) =>
-        prev
-          ? { ...prev, full_name: fullName }
-          : {
-              full_name: fullName,
-              avatar_url: null,
-              subscription_tier: "assistant",
-              registration_code: null,
-            }
-      );
+      setProfile((prev) => (prev ? { ...prev, full_name: fullName } : prev));
       setInfoMsg("Profile updated successfully.");
-    } catch (err) {
-      console.error("PROFILE SAVE ERROR:", err);
-      setErrorMsg("Could not save profile.");
     } finally {
       setSavingName(false);
     }
@@ -353,10 +224,8 @@ export default function ProfilePage() {
 
       const {
         data: { user },
-        error: userErr,
       } = await supabase.auth.getUser();
-
-      if (userErr || !user) {
+      if (!user) {
         setErrorMsg("You are not logged in.");
         return;
       }
@@ -369,15 +238,12 @@ export default function ProfilePage() {
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
-        console.error("AVATAR UPLOAD ERROR:", uploadError);
+        console.error(uploadError);
         setErrorMsg("Could not upload profile photo.");
         return;
       }
 
-      const { data: publicData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
-
+      const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(filePath);
       const publicUrl = publicData.publicUrl;
 
       const { error: updateError } = await supabase
@@ -386,20 +252,14 @@ export default function ProfilePage() {
         .eq("id", user.id);
 
       if (updateError) {
-        console.error("AVATAR UPDATE ERROR:", updateError);
+        console.error(updateError);
         setErrorMsg("Could not save profile photo.");
         return;
       }
 
-      await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl },
-      });
-
+      await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
       setProfile((prev) => (prev ? { ...prev, avatar_url: publicUrl } : prev));
       setInfoMsg("Profile photo updated.");
-    } catch (err) {
-      console.error("AVATAR UPLOAD ERROR:", err);
-      setErrorMsg("Could not upload profile photo.");
     } finally {
       setSavingAvatar(false);
       e.target.value = "";
@@ -414,10 +274,7 @@ export default function ProfilePage() {
 
   return (
     <div className="app-shell">
-      <NavSidebar
-        isMobileOpen={isSidebarOpenMobile}
-        onCloseMobile={() => setIsSidebarOpenMobile(false)}
-      />
+      <NavSidebar isMobileOpen={isSidebarOpenMobile} onCloseMobile={() => setIsSidebarOpenMobile(false)} />
 
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
@@ -426,15 +283,37 @@ export default function ProfilePage() {
           <h1 className="page-title">Profile &amp; Subscription</h1>
 
           {errorMsg && (
-            <p style={{ color: "#b91c1c", marginBottom: 12, fontSize: 14 }}>
+            <div
+              style={{
+                border: "1px solid #fecaca",
+                background: "#fef2f2",
+                color: "#b91c1c",
+                padding: "10px 12px",
+                borderRadius: 12,
+                marginBottom: 12,
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
               {errorMsg}
-            </p>
+            </div>
           )}
 
           {infoMsg && (
-            <p style={{ color: "#16a34a", marginBottom: 12, fontSize: 14 }}>
+            <div
+              style={{
+                border: "1px solid #bbf7d0",
+                background: "#f0fdf4",
+                color: "#166534",
+                padding: "10px 12px",
+                borderRadius: 12,
+                marginBottom: 12,
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
               {infoMsg}
-            </p>
+            </div>
           )}
 
           {loading ? (
@@ -518,15 +397,6 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {profile?.registration_code && (
-                <div className="form-row">
-                  <label>
-                    Registered ID
-                    <input className="input" type="text" value={profile.registration_code} readOnly />
-                  </label>
-                </div>
-              )}
-
               <button className="btn" type="button" onClick={handleSaveName} disabled={savingName}>
                 {savingName ? "Saving…" : "Save changes"}
               </button>
@@ -542,28 +412,19 @@ export default function ProfilePage() {
 
             {currentPlan === "assistant" ? (
               <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
-                You are on the <strong>free Assistant</strong> plan. No charges will be applied until
-                you upgrade to a paid plan.
+                You are on the <strong>free Assistant</strong> plan. No charges will be applied until you upgrade.
               </p>
             ) : activeSub ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 24, fontSize: 14, color: "#374151", marginBottom: 10 }}>
                 <div>
-                  <div>
-                    Status: <strong>{activeSub.status ?? "unknown"}</strong>
-                  </div>
+                  <div>Status: <strong>{activeSub.status ?? "paid"}</strong></div>
                   {activeSub.price !== null && activeSub.currency && (
-                    <div>
-                      Price: <strong>{activeSub.price} {activeSub.currency}</strong>
-                    </div>
+                    <div>Price: <strong>{activeSub.price} {activeSub.currency}</strong></div>
                   )}
                 </div>
                 <div>
-                  <div>
-                    Start date: <strong>{formatDate(activeSub.start_date)}</strong>
-                  </div>
-                  <div>
-                    End date: <strong>{formatDate(activeSub.end_date)}</strong>
-                  </div>
+                  <div>Start date: <strong>{formatDate(activeSub.start_date)}</strong></div>
+                  <div>End date: <strong>{formatDate(activeSub.end_date)}</strong></div>
                 </div>
               </div>
             ) : (
@@ -584,25 +445,10 @@ export default function ProfilePage() {
           </div>
 
           <div className="card" style={{ marginTop: 24 }}>
-            <h2 className="card-title">Activity</h2>
-            <ul style={{ paddingLeft: 20, margin: 0, fontSize: 14, color: "#374151", lineHeight: 1.7 }}>
-              <li>
-                Total chats: <strong>{chatCount !== null ? chatCount : "soon"}</strong>
-              </li>
-              <li>
-                Total uploaded documents: <strong>{docCount !== null ? docCount : "soon"}</strong>
-              </li>
-              <li>
-                Saved projects: <strong>soon</strong>
-              </li>
-            </ul>
-          </div>
-
-          <div className="card" style={{ marginTop: 24 }}>
             <h2 className="card-title">Billing history</h2>
             {subHistory.length === 0 ? (
               <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>
-                No payments recorded yet. Your future subscriptions will appear here.
+                No payments recorded yet.
               </p>
             ) : (
               <div style={{ marginTop: 8, fontSize: 13, color: "#374151" }}>
@@ -634,21 +480,16 @@ export default function ProfilePage() {
                       borderBottom: idx === subHistory.length - 1 ? "none" : "1px solid #f3f4f6",
                     }}
                   >
-                    <span>
-                      {(s.plan || "assistant").charAt(0).toUpperCase() + (s.plan || "assistant").slice(1)}
-                    </span>
+                    <span>{(s.plan || "assistant").charAt(0).toUpperCase() + (s.plan || "assistant").slice(1)}</span>
                     <span>{s.price !== null && s.currency ? `${s.price} ${s.currency}` : "-"}</span>
                     <span>{s.status || "-"}</span>
                     <span>{formatDate(s.start_date)}</span>
                   </div>
                 ))}
-
-                <p style={{ marginTop: 8, fontSize: 12, color: "#9ca3af" }}>
-                  Detailed invoices are also emailed to you by the payment provider (Moyasar). Keep those emails as official receipts.
-                </p>
               </div>
             )}
           </div>
+
         </div>
       </div>
     </div>
