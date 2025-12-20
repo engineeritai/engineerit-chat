@@ -186,9 +186,51 @@ export default function RegisterPage() {
                 </div>
               )}
 
+              {/* ✅ UPDATED: Yellow alert style (no other logic changes) */}
               {successMessage && (
-                <div style={{ marginBottom: 6, fontSize: 13, color: "#15803d" }}>
-                  {successMessage}
+                <div
+                  style={{
+                    marginBottom: 10,
+                    borderRadius: 14,
+                    border: "1px solid #FDE68A",
+                    background: "#FFFBEB",
+                    padding: "10px 12px",
+                    color: "#92400E",
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 9999,
+                      background: "#FEF3C7",
+                      border: "1px solid #FDE68A",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      marginTop: 1,
+                      fontWeight: 800,
+                    }}
+                  >
+                    !
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 2 }}>
+                      Email confirmation required
+                    </div>
+                    <div style={{ marginBottom: 6 }}>
+                      We sent you a confirmation email. Please check your <b>Inbox</b> and also <b>Junk/Spam</b>, then click the confirmation link.
+                    </div>
+                    <div style={{ fontSize: 12, color: "#7C2D12" }}>
+                      After confirmation, come back and sign in from the top bar.
+                    </div>
+                  </div>
                 </div>
               )}
 
