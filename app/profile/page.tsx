@@ -10,7 +10,6 @@ type ProfileRow = {
   full_name: string | null;
   avatar_url: string | null;
   subscription_tier: string | null;
-  registration_code: string | null;
 };
 
 type SubscriptionRow = {
@@ -54,9 +53,6 @@ export default function ProfilePage() {
   const [chatCount, setChatCount] = useState<number | null>(null);
   const [docCount, setDocCount] = useState<number | null>(null);
 
-  // ─────────────────────────────
-  // Load profile + handle payment + subscription + counts
-  // ─────────────────────────────
   useEffect(() => {
     async function loadProfileAndPayment() {
       try {
@@ -77,8 +73,7 @@ export default function ProfilePage() {
 
         setEmail(user.email ?? null);
 
-        // ---------- 1) معالجة رجوع الدفع من Moyasar ----------
-        // ✅ التغيير الوحيد: بدل تحديث profiles من المتصفح، ننادي Route ثابتة
+        // 1) Handle payment redirect (Moyasar) -> save subscription via SERVER route
         let subscriptionTierOverride: PlanId | null = null;
 
         if (typeof window !== "undefined") {
@@ -98,30 +93,28 @@ export default function ProfilePage() {
               const res = await fetch("/api/subscription/select", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ plan: planParam }),
+                body: JSON.stringify({ plan: planParam, user_id: user.id }),
               });
 
-              const json = await res.json().catch(() => ({}));
+              const json = await res.json().catch(() => null);
 
               if (!res.ok) {
-                console.error("SUBSCRIPTION API ERROR:", json);
+                console.error("SUBSCRIPTION SELECT ROUTE ERROR:", json);
                 setErrorMsg(
                   "Could not save subscription after payment. Please contact support."
                 );
               } else {
                 subscriptionTierOverride = planParam;
                 setInfoMsg("Payment successful and subscription updated.");
-
-                // امسح باراميترات الدفع حتى لا يعيد يحاول كل Refresh
-                params.delete("status");
-                params.delete("plan");
-                const newUrl = `${window.location.pathname}${
-                  params.toString() ? `?${params.toString()}` : ""
-                }`;
-                window.history.replaceState({}, "", newUrl);
               }
+
+              // تنظيف الرابط من باراميترات الدفع
+              try {
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, "", cleanUrl);
+              } catch {}
             } catch (err) {
-              console.error("SUBSCRIPTION API FETCH ERROR:", err);
+              console.error("SUBSCRIPTION SELECT ROUTE ERROR:", err);
               setErrorMsg(
                 "Could not save subscription after payment. Please contact support."
               );
@@ -129,7 +122,7 @@ export default function ProfilePage() {
           }
         }
 
-        // ---------- 2) تحميل بيانات البروفايل ----------
+        // 2) Load profile data
         let initialFullName =
           (user.user_metadata?.full_name as string | undefined) ??
           (user.user_metadata?.name as string | undefined) ??
@@ -142,11 +135,10 @@ export default function ProfilePage() {
           null;
 
         let subscriptionTier: string | null = "assistant";
-        let registrationCode: string | null = null;
 
         const { data, error } = await supabase
           .from("profiles")
-          .select("full_name, avatar_url, subscription_tier, registration_code")
+          .select("full_name, avatar_url, subscription_tier")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -154,51 +146,13 @@ export default function ProfilePage() {
           if (data.full_name) initialFullName = data.full_name;
           if (data.avatar_url) avatarUrl = data.avatar_url;
           if (data.subscription_tier) subscriptionTier = data.subscription_tier;
-          if (data.registration_code) registrationCode = data.registration_code;
         } else if (error) {
           console.error("PROFILE SELECT ERROR:", error);
         }
 
-        // لو الدفع نجح نستخدم الخطة الجديدة
-        if (subscriptionTierOverride) {
-          subscriptionTier = subscriptionTierOverride;
-        }
+        if (subscriptionTierOverride) subscriptionTier = subscriptionTierOverride;
 
-        // ---------- 2.a توليد رقم التسجيل إذا مافيه ----------
-        // (يبقى كما هو - إذا تبغاه ينشال لاحقاً نقفله في UI بدون كسر DB)
-        if (!registrationCode) {
-          try {
-            const now = new Date();
-            const yy = String(now.getFullYear()).slice(-2);
-            const mm = String(now.getMonth() + 1).padStart(2, "0");
-            const prefix = yy + mm;
-
-            const { data: sameMonthProfiles, error: regErr } = await supabase
-              .from("profiles")
-              .select("registration_code")
-              .ilike("registration_code", `${prefix}%`);
-
-            if (regErr) console.error("REGISTRATION CODE COUNT ERROR:", regErr);
-
-            const count = sameMonthProfiles?.length ?? 0;
-            const sequence = count + 1;
-            const seqStr = String(sequence).padStart(4, "0");
-            registrationCode = `${prefix}${seqStr}`;
-
-            const { error: regUpdateErr } = await supabase
-              .from("profiles")
-              .update({ registration_code: registrationCode })
-              .eq("id", user.id);
-
-            if (regUpdateErr) {
-              console.error("REGISTRATION CODE UPDATE ERROR:", regUpdateErr);
-            }
-          } catch (e) {
-            console.error("REGISTRATION CODE GENERATION ERROR:", e);
-          }
-        }
-
-        // ضمان وجود صف
+        // Ensure row exists (no registration_code here)
         const { error: upsertError } = await supabase
           .from("profiles")
           .upsert(
@@ -207,25 +161,23 @@ export default function ProfilePage() {
               full_name: initialFullName,
               avatar_url: avatarUrl,
               subscription_tier: subscriptionTier,
-              registration_code: registrationCode,
             },
             { onConflict: "id" }
           );
 
-        if (upsertError) console.error("PROFILE UPSERT ERROR:", upsertError);
+        if (upsertError) {
+          console.error("PROFILE UPSERT ERROR:", upsertError);
+        }
 
-        const row: ProfileRow = {
+        setProfile({
           full_name: initialFullName,
           avatar_url: avatarUrl,
           subscription_tier: subscriptionTier,
-          registration_code: registrationCode,
-        };
-
-        setProfile(row);
+        });
         setFullName(initialFullName);
 
-        // ---------- 3) بيانات الاشتراك الحالي ----------
-        if (subscriptionTier) {
+        // 3) Current subscription billing row
+        if (subscriptionTier && subscriptionTier !== "assistant") {
           const { data: subs, error: subsError } = await supabase
             .from("subscriptions")
             .select("plan, price, currency, status, start_date, end_date")
@@ -236,21 +188,22 @@ export default function ProfilePage() {
 
           if (!subsError && subs && subs.length > 0) {
             setActiveSub(subs[0] as SubscriptionRow);
-          } else if (subsError) {
-            console.error("SUBSCRIPTIONS SELECT ERROR:", subsError);
           } else {
             setActiveSub(null);
+            if (subsError) console.error("SUBSCRIPTIONS SELECT ERROR:", subsError);
           }
+        } else {
+          setActiveSub(null);
         }
 
-        // ---------- 4) سجل المدفوعات ----------
+        // 4) Billing history
         try {
           const { data: history, error: histError } = await supabase
             .from("subscriptions")
             .select("plan, price, currency, status, start_date, end_date")
             .eq("user_id", user.id)
             .order("start_date", { ascending: false })
-            .limit(5);
+            .limit(10);
 
           if (!histError && history) {
             setSubHistory(history as SubscriptionRow[]);
@@ -261,7 +214,7 @@ export default function ProfilePage() {
           console.warn("SUBSCRIPTIONS HISTORY WARN:", e);
         }
 
-        // ---------- 5) عدد الرسائل والملفات ----------
+        // 5) counts (optional)
         try {
           const { count: cCount, error: cErr } = await supabase
             .from("chat_messages")
@@ -269,9 +222,7 @@ export default function ProfilePage() {
             .eq("user_id", user.id);
 
           if (!cErr && typeof cCount === "number") setChatCount(cCount);
-        } catch (e) {
-          console.warn("CHAT COUNT ERROR (optional):", e);
-        }
+        } catch {}
 
         try {
           const { count: dCount, error: dErr } = await supabase
@@ -280,9 +231,7 @@ export default function ProfilePage() {
             .eq("user_id", user.id);
 
           if (!dErr && typeof dCount === "number") setDocCount(dCount);
-        } catch (e) {
-          console.warn("DOC COUNT ERROR (optional):", e);
-        }
+        } catch {}
       } catch (err) {
         console.error("PROFILE LOAD ERROR:", err);
         setErrorMsg("Could not load profile.");
@@ -294,9 +243,6 @@ export default function ProfilePage() {
     void loadProfileAndPayment();
   }, []);
 
-  // ─────────────────────────────
-  // Save name
-  // ─────────────────────────────
   async function handleSaveName() {
     try {
       setSavingName(true);
@@ -327,13 +273,9 @@ export default function ProfilePage() {
       setProfile((prev) =>
         prev
           ? { ...prev, full_name: fullName }
-          : {
-              full_name: fullName,
-              avatar_url: null,
-              subscription_tier: "assistant",
-              registration_code: null,
-            }
+          : { full_name: fullName, avatar_url: null, subscription_tier: "assistant" }
       );
+
       setInfoMsg("Profile updated successfully.");
     } catch (err) {
       console.error("PROFILE SAVE ERROR:", err);
@@ -343,9 +285,6 @@ export default function ProfilePage() {
     }
   }
 
-  // ─────────────────────────────
-  // Avatar upload
-  // ─────────────────────────────
   async function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -395,9 +334,7 @@ export default function ProfilePage() {
         return;
       }
 
-      await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl },
-      });
+      await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
 
       setProfile((prev) => (prev ? { ...prev, avatar_url: publicUrl } : prev));
       setInfoMsg("Profile photo updated.");
@@ -411,7 +348,6 @@ export default function ProfilePage() {
   }
 
   const currentPlan = profile?.subscription_tier || "assistant";
-
   const currentPlanLabel =
     currentPlan === "assistant"
       ? "Assistant (Free)"
@@ -431,27 +367,37 @@ export default function ProfilePage() {
           <h1 className="page-title">Profile &amp; Subscription</h1>
 
           {errorMsg && (
-            <p
+            <div
               style={{
+                marginBottom: 14,
+                border: "1px solid #fecaca",
+                background: "#fef2f2",
                 color: "#b91c1c",
-                marginBottom: 12,
+                borderRadius: 12,
+                padding: "10px 12px",
                 fontSize: 14,
+                fontWeight: 600,
               }}
             >
               {errorMsg}
-            </p>
+            </div>
           )}
 
           {infoMsg && (
-            <p
+            <div
               style={{
-                color: "#16a34a",
-                marginBottom: 12,
+                marginBottom: 14,
+                border: "1px solid #bbf7d0",
+                background: "#f0fdf4",
+                color: "#166534",
+                borderRadius: 12,
+                padding: "10px 12px",
                 fontSize: 14,
+                fontWeight: 600,
               }}
             >
               {infoMsg}
-            </p>
+            </div>
           )}
 
           {/* Profile card */}
@@ -459,7 +405,6 @@ export default function ProfilePage() {
             <p>Loading profile…</p>
           ) : (
             <div className="card">
-              {/* Profile photo */}
               <div
                 style={{
                   display: "flex",
@@ -488,11 +433,7 @@ export default function ProfilePage() {
                     <img
                       src={profile.avatar_url}
                       alt="Profile"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   ) : (
                     (fullName?.trim()[0] || "E").toUpperCase()
@@ -528,7 +469,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Full name + email + registered ID */}
               <div className="form-row">
                 <label>
                   Full name
@@ -572,8 +512,8 @@ export default function ProfilePage() {
 
             {currentPlan === "assistant" ? (
               <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
-                You are on the <strong>free Assistant</strong> plan. No charges
-                will be applied until you upgrade to a paid plan.
+                You are on the <strong>free Assistant</strong> plan. No charges will be
+                applied until you upgrade to a paid plan.
               </p>
             ) : activeSub ? (
               <div
@@ -615,8 +555,8 @@ export default function ProfilePage() {
             )}
 
             <p style={{ fontSize: 14, color: "#6b7280" }}>
-              Plan changes are controlled by engineerit.ai billing only. You can
-              manage or upgrade your plan from the subscription page.
+              Plan changes are controlled by engineerit.ai billing only. You can manage
+              or upgrade your plan from the subscription page.
             </p>
 
             <Link href="/subscription">
@@ -654,10 +594,10 @@ export default function ProfilePage() {
           {/* Billing history */}
           <div className="card" style={{ marginTop: 24 }}>
             <h2 className="card-title">Billing history</h2>
+
             {subHistory.length === 0 ? (
               <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>
-                No payments recorded yet. Your future subscriptions will appear
-                here.
+                No payments recorded yet. Your future subscriptions will appear here.
               </p>
             ) : (
               <div style={{ marginTop: 8, fontSize: 13, color: "#374151" }}>
@@ -689,9 +629,7 @@ export default function ProfilePage() {
                       gap: 8,
                       padding: "4px 0",
                       borderBottom:
-                        idx === subHistory.length - 1
-                          ? "none"
-                          : "1px solid #f3f4f6",
+                        idx === subHistory.length - 1 ? "none" : "1px solid #f3f4f6",
                     }}
                   >
                     <span>

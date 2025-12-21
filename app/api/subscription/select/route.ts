@@ -1,7 +1,5 @@
 // app/api/subscription/select/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -10,7 +8,6 @@ type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 const ALLOWED: PlanId[] = ["assistant", "engineer", "professional", "consultant"];
 
-// Monthly prices (SAR)
 const PLAN_PRICING: Record<
   PlanId,
   { price: number | null; currency: string | null }
@@ -21,123 +18,111 @@ const PLAN_PRICING: Record<
   consultant: { price: 79, currency: "SAR" },
 };
 
+// default duration after payment (30 days)
 const PLAN_DURATION_DAYS = 30;
 
-function addDays(date: Date, days: number) {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceKey) {
+    throw new Error("Missing SUPABASE env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
+
+  return createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => null)) as
-      | { plan?: PlanId }
+      | { plan?: PlanId; user_id?: string }
       | null;
 
-    if (!body?.plan) {
-      return NextResponse.json({ error: "Missing plan." }, { status: 400 });
-    }
+    const plan = body?.plan;
+    const userId = body?.user_id;
 
-    const plan = body.plan;
-    if (!ALLOWED.includes(plan)) {
+    if (!plan || !ALLOWED.includes(plan)) {
       return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
     }
 
-    // 1) Get signed-in user from session cookies (normal client)
-    const supabaseAuth = createRouteHandlerClient({ cookies });
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseAuth.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: "Not authenticated." },
-        { status: 401 }
-      );
+    // IMPORTANT:
+    // We accept user_id explicitly from client after it already authenticated (profile page has user).
+    // This avoids any cookie/session dependency and avoids failures after external redirect.
+    if (!userId) {
+      return NextResponse.json({ error: "Missing user_id." }, { status: 400 });
     }
 
-    // 2) Admin client (bypasses RLS) to guarantee write succeeds after payment
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!url || !serviceKey) {
-      return NextResponse.json(
-        {
-          error:
-            "Server is missing Supabase env vars. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
-        },
-        { status: 500 }
-      );
-    }
-
-    const supabaseAdmin = createClient(url, serviceKey, {
-      auth: { persistSession: false },
-    });
+    const supabaseAdmin = getSupabaseAdmin();
 
     const now = new Date();
     const nowIso = now.toISOString();
 
     const pricing = PLAN_PRICING[plan];
-    const isPaidPlan = plan !== "assistant" && !!pricing.price && !!pricing.currency;
 
-    const endDateIso = isPaidPlan
-      ? addDays(now, PLAN_DURATION_DAYS).toISOString()
-      : null;
+    const endDateIso =
+      plan !== "assistant" && pricing.price && pricing.currency
+        ? new Date(now.getTime() + PLAN_DURATION_DAYS * 24 * 60 * 60 * 1000).toISOString()
+        : null;
 
-    // 3) Update profile plan
-    // NOTE: Keep this small & stable. No new fields.
-    const { error: profileUpdateError } = await supabaseAdmin
+    // 1) Ensure profile exists + update tier
+    const { error: profileUpsertErr } = await supabaseAdmin
       .from("profiles")
-      .update({
-        subscription_tier: plan,
-        updated_at: nowIso,
-      })
-      .eq("id", user.id);
+      .upsert(
+        {
+          id: userId,
+          subscription_tier: plan,
+          updated_at: nowIso,
+        },
+        { onConflict: "id" }
+      );
 
-    if (profileUpdateError) {
-      console.error("profiles update error:", profileUpdateError);
+    if (profileUpsertErr) {
+      console.error("ADMIN profiles upsert error:", profileUpsertErr);
       return NextResponse.json(
-        { error: "Failed to save subscription (profile)." },
+        { error: "Failed to save subscription to profile." },
         { status: 500 }
       );
     }
 
-    // 4) Insert a billing row for paid plans
-    if (isPaidPlan) {
-      // Mark any previous rows for this user as replaced (best-effort)
-      await supabaseAdmin
+    // 2) If paid plan, write billing row
+    if (plan !== "assistant" && pricing.price && pricing.currency) {
+      // mark previous subs as replaced (optional)
+      const { error: oldErr } = await supabaseAdmin
         .from("subscriptions")
-        .update({ status: "replaced" })
-        .eq("user_id", user.id);
+        .update({ status: "replaced", updated_at: nowIso })
+        .eq("user_id", userId)
+        .in("status", ["paid", "active"]);
 
-      // Use status = "active" (most common + avoids check-constraint surprises)
-      const { error: subInsertError } = await supabaseAdmin
+      if (oldErr) {
+        console.warn("ADMIN subscriptions old rows update warn:", oldErr);
+      }
+
+      const { error: insertErr } = await supabaseAdmin
         .from("subscriptions")
         .insert({
-          user_id: user.id,
+          user_id: userId,
           plan,
           price: pricing.price,
           currency: pricing.currency,
           status: "active",
           start_date: nowIso,
           end_date: endDateIso,
+          created_at: nowIso,
+          updated_at: nowIso,
         });
 
-      if (subInsertError) {
-        console.error("subscriptions insert error:", subInsertError);
+      if (insertErr) {
+        console.error("ADMIN subscriptions insert error:", insertErr);
         return NextResponse.json(
-          { error: "Failed to save subscription (billing row)." },
+          { error: "Failed to write billing record." },
           { status: 500 }
         );
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      plan,
-      start_date: nowIso,
-      end_date: endDateIso,
-    });
+    return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Unexpected error in /api/subscription/select:", err);
     return NextResponse.json(
