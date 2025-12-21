@@ -2,26 +2,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-// import type { Database } from "@/lib/database.types";
+import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
-const ALLOWED: PlanId[] = [
-  "assistant",
-  "engineer",
-  "professional",
-  "consultant",
-];
+const ALLOWED: PlanId[] = ["assistant", "engineer", "professional", "consultant"];
 
-// أسعار الخطط (شهرياً بالريال)
+// Monthly prices (SAR)
 const PLAN_PRICING: Record<
   PlanId,
-  {
-    price: number | null; // SAR شهري
-    currency: string | null;
-  }
+  { price: number | null; currency: string | null }
 > = {
   assistant: { price: null, currency: null },
   engineer: { price: 19, currency: "SAR" },
@@ -29,8 +21,11 @@ const PLAN_PRICING: Record<
   consultant: { price: 79, currency: "SAR" },
 };
 
-// مدة الاشتراك المبدئية لكل عملية دفع (30 يوم)
 const PLAN_DURATION_DAYS = 30;
+
+function addDays(date: Date, days: number) {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,100 +38,106 @@ export async function POST(req: NextRequest) {
     }
 
     const plan = body.plan;
-
     if (!ALLOWED.includes(plan)) {
       return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
     }
 
-    // Supabase client مرتبط بالكوكيز (session)
-    const supabase = createRouteHandlerClient/*<Database>*/({ cookies });
-
+    // 1) Get signed-in user from session cookies (normal client)
+    const supabaseAuth = createRouteHandlerClient({ cookies });
     const {
       data: { user },
       error: userError,
-    } = await supabase.auth.getUser();
+    } = await supabaseAuth.auth.getUser();
 
-    if (userError) {
-      console.error("auth.getUser error:", userError);
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "Not authenticated." },
+        { status: 401 }
+      );
+    }
+
+    // 2) Admin client (bypasses RLS) to guarantee write succeeds after payment
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !serviceKey) {
       return NextResponse.json(
         {
-          error: "Authentication error from Supabase.",
-          details: userError.message,
+          error:
+            "Server is missing Supabase env vars. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
         },
         { status: 500 }
       );
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
-    }
+    const supabaseAdmin = createClient(url, serviceKey, {
+      auth: { persistSession: false },
+    });
 
     const now = new Date();
     const nowIso = now.toISOString();
 
-    // لو الخطة مدفوعة نحسب تاريخ انتهاء بعد 30 يوم
     const pricing = PLAN_PRICING[plan];
-    const endDateIso =
-      plan !== "assistant" && pricing.price && pricing.currency
-        ? new Date(
-            now.getTime() + PLAN_DURATION_DAYS * 24 * 60 * 60 * 1000
-          ).toISOString()
-        : null;
+    const isPaidPlan = plan !== "assistant" && !!pricing.price && !!pricing.currency;
 
-    // 1) تحديث profile.subscription_tier
-    const updates: Record<string, any> = {
-      subscription_tier: plan,
-      updated_at: nowIso,
-    };
+    const endDateIso = isPaidPlan
+      ? addDays(now, PLAN_DURATION_DAYS).toISOString()
+      : null;
 
-    const { error: updateError } = await supabase
+    // 3) Update profile plan
+    // NOTE: Keep this small & stable. No new fields.
+    const { error: profileUpdateError } = await supabaseAdmin
       .from("profiles")
-      .update(updates)
+      .update({
+        subscription_tier: plan,
+        updated_at: nowIso,
+      })
       .eq("id", user.id);
 
-    if (updateError) {
-      console.error("profiles update error:", updateError);
+    if (profileUpdateError) {
+      console.error("profiles update error:", profileUpdateError);
       return NextResponse.json(
-        { error: "Failed to save subscription." },
+        { error: "Failed to save subscription (profile)." },
         { status: 500 }
       );
     }
 
-    // 2) تسجيل اشتراك في جدول subscriptions للخطط المدفوعة فقط
-    if (plan !== "assistant" && pricing.price && pricing.currency) {
-      try {
-        // نعلّم أي اشتراكات سابقة لنفس المستخدم بأنها منتهية / مستبدلة
-        await supabase
-          .from("subscriptions")
-          .update({ status: "replaced" })
-          .eq("user_id", user.id);
-      } catch (e) {
-        console.warn("subscriptions old rows update warn:", e);
-      }
+    // 4) Insert a billing row for paid plans
+    if (isPaidPlan) {
+      // Mark any previous rows for this user as replaced (best-effort)
+      await supabaseAdmin
+        .from("subscriptions")
+        .update({ status: "replaced" })
+        .eq("user_id", user.id);
 
-      const { error: subInsertError } = await supabase
+      // Use status = "active" (most common + avoids check-constraint surprises)
+      const { error: subInsertError } = await supabaseAdmin
         .from("subscriptions")
         .insert({
           user_id: user.id,
           plan,
           price: pricing.price,
           currency: pricing.currency,
-          status: "active", // ✅ بدل paid (يتوافق مع check constraint)
+          status: "active",
           start_date: nowIso,
           end_date: endDateIso,
         });
 
-      // ✅ لا نكمل success إذا فشل الإدخال
       if (subInsertError) {
         console.error("subscriptions insert error:", subInsertError);
         return NextResponse.json(
-          { error: "Failed to record billing subscription." },
+          { error: "Failed to save subscription (billing row)." },
           { status: 500 }
         );
       }
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      plan,
+      start_date: nowIso,
+      end_date: endDateIso,
+    });
   } catch (err) {
     console.error("Unexpected error in /api/subscription/select:", err);
     return NextResponse.json(
