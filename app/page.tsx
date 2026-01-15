@@ -46,6 +46,49 @@ function uuid() {
 }
 
 /* ============================
+   ✅ ADD-1: Copy + Share helpers
+   (NO CONDITIONS: everyone can copy/share)
+   ============================ */
+
+function appendBranding(text: string) {
+  const clean = (text || "").trim();
+  return clean ? `${clean}\n\nengineerit.ai` : "engineerit.ai";
+}
+
+async function copyToClipboard(text: string) {
+  const payload = appendBranding(text);
+  try {
+    await navigator.clipboard.writeText(payload);
+    // خفيف بدون تغيير ثيم
+    alert("Copied");
+  } catch (e) {
+    console.error("Copy failed:", e);
+    alert("Copy failed");
+  }
+}
+
+async function shareText(text: string) {
+  const payload = appendBranding(text);
+
+  // Web Share API (Mobile)
+  // fallback: WhatsApp share URL
+  try {
+    if (typeof navigator !== "undefined" && (navigator as any).share) {
+      await (navigator as any).share({
+        title: "engineerit.ai",
+        text: payload,
+      });
+      return;
+    }
+  } catch (e) {
+    console.warn("Web share failed, fallback to WhatsApp:", e);
+  }
+
+  const wa = "https://wa.me/?text=" + encodeURIComponent(payload);
+  window.open(wa, "_blank", "noopener,noreferrer");
+}
+
+/* ============================
    Engineer tools configuration
    ============================ */
 
@@ -173,7 +216,6 @@ export default function Page() {
       }
     } catch (err) {
       console.error("Landing localStorage error:", err);
-      // لو صار خطأ، نخليها تظهر مرة واحدة في هذه الجلسة
       setShowLanding(true);
     }
   }, []);
@@ -469,7 +511,6 @@ export default function Page() {
     setAttachments([]);
     setIsAttachMenuOpen(false);
 
-    // add user message
     updateThread((t) => ({
       ...t,
       title:
@@ -524,7 +565,6 @@ export default function Page() {
           ],
         }));
       } else {
-        // text-only chat
         const payloadMessages = (thread.messages || []).concat({
           id: "temp",
           role: "user" as const,
@@ -585,6 +625,42 @@ export default function Page() {
   }
 
   /* ======================
+     ✅ ADD-2: styles for long-response scroll (ONLY inside bubble)
+     This keeps your theme; no global.css changes required.
+     ====================== */
+
+  const assistantScrollWrapStyle: React.CSSProperties = {
+    width: "100%",
+    maxWidth: "100%",
+    overflowX: "auto",
+    WebkitOverflowScrolling: "touch",
+  };
+
+  const assistantActionsStyle: React.CSSProperties = {
+    marginTop: 10,
+    display: "flex",
+    gap: 10,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    flexWrap: "wrap",
+    fontSize: 12,
+    color: "#6b7280",
+  };
+
+  const actionBtnStyle: React.CSSProperties = {
+    border: "1px solid #e5e7eb",
+    background: "#ffffff",
+    borderRadius: 9999,
+    padding: "6px 10px",
+    cursor: "pointer",
+    fontSize: 12,
+    color: "#111827",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+  };
+
+  /* ======================
      Render
      ====================== */
 
@@ -602,11 +678,8 @@ export default function Page() {
       />
 
       <div className="main">
-        <Header
-          onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)}
-        />
+        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
-        {/* Landing post (banner) */}
         {showLanding && (
           <div
             className="card"
@@ -620,13 +693,7 @@ export default function Page() {
             }}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  marginBottom: 4,
-                }}
-              >
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
                 Welcome to engineerit.ai
               </div>
               <div
@@ -661,7 +728,6 @@ export default function Page() {
           </div>
         )}
 
-        {/* Engineer tools – desktop / tablet */}
         <div className="engineer-tools">
           <span className="engineer-tools-label">Engineer tools:</span>
           <div className="engineer-tools-row">
@@ -686,7 +752,6 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Engineer tools – mobile dropdown */}
         <div className="engineer-tools-mobile">
           <button
             type="button"
@@ -694,9 +759,7 @@ export default function Page() {
             onClick={() => setShowMobileTools((v) => !v)}
           >
             <span>Engineer tools for your plan</span>
-            <span style={{ fontSize: 12 }}>
-              {showMobileTools ? "▲" : "▼"}
-            </span>
+            <span style={{ fontSize: 12 }}>{showMobileTools ? "▲" : "▼"}</span>
           </button>
 
           {showMobileTools && (
@@ -715,9 +778,7 @@ export default function Page() {
                       disabled={!enabled}
                       onClick={() => {
                         if (!enabled) {
-                          alert(
-                            "This tool requires a higher subscription plan."
-                          );
+                          alert("This tool requires a higher subscription plan.");
                           return;
                         }
                         handleEngineerToolClick(tool.id);
@@ -755,9 +816,8 @@ export default function Page() {
                   (m.role === "user" ? "message-user" : "message-assistant")
                 }
               >
-                <div className="message-avatar">
-                  {m.role === "user" ? "You" : "AI"}
-                </div>
+                <div className="message-avatar">{m.role === "user" ? "You" : "AI"}</div>
+
                 <div className="message-bubble">
                   {m.attachments && m.attachments.length > 0 && (
                     <div className="msg-attachments">
@@ -775,9 +835,44 @@ export default function Page() {
                       )}
                     </div>
                   )}
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {m.content}
-                  </ReactMarkdown>
+
+                  {/* ✅ ADD-3: wrap assistant markdown with horizontal scroll */}
+                  {m.role === "assistant" ? (
+                    <>
+                      <div style={assistantScrollWrapStyle}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {m.content}
+                        </ReactMarkdown>
+                      </div>
+
+                      {/* ✅ Copy + Share under EACH AI reply */}
+                      <div style={assistantActionsStyle}>
+                        <button
+                          type="button"
+                          style={actionBtnStyle}
+                          onClick={() => copyToClipboard(m.content)}
+                          aria-label="Copy"
+                          title="Copy"
+                        >
+                          📋 <span>Copy</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          style={actionBtnStyle}
+                          onClick={() => shareText(m.content)}
+                          aria-label="Share"
+                          title="Share"
+                        >
+                          🔗 <span>Share</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {m.content}
+                    </ReactMarkdown>
+                  )}
                 </div>
               </div>
             ))
@@ -805,7 +900,6 @@ export default function Page() {
             )}
 
             <div className="chat-input-row">
-              {/* + button */}
               <div className="chat-input-left">
                 <button
                   type="button"
@@ -849,7 +943,6 @@ export default function Page() {
                 )}
               </div>
 
-              {/* textarea */}
               <textarea
                 className="textarea"
                 placeholder="Ask an engineering question…"
@@ -862,7 +955,6 @@ export default function Page() {
                 onKeyDown={onKeyDown}
               />
 
-              {/* mic */}
               <button
                 type="button"
                 className={
@@ -876,13 +968,10 @@ export default function Page() {
                 🎤
               </button>
 
-              {/* send */}
               <button
                 type="button"
                 className="chat-input-send-btn"
-                disabled={
-                  sending || (!input.trim() && attachments.length === 0)
-                }
+                disabled={sending || (!input.trim() && attachments.length === 0)}
                 onClick={send}
                 aria-label="Send message"
               >
@@ -890,7 +979,6 @@ export default function Page() {
               </button>
             </div>
 
-            {/* hidden file inputs */}
             <input
               type="file"
               id="image-upload"
