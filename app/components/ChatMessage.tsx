@@ -1,214 +1,261 @@
-// app/components/ChatMessage.tsx
 "use client";
 
 import React, { useMemo, useState } from "react";
 
-type Role = "user" | "assistant";
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
-function hasArabic(text: string) {
-  // Arabic + Arabic Supplement + Arabic Presentation Forms
-  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(
-    text || ""
-  );
+type Attachment = {
+  id?: string;
+  name?: string;
+  type?: "image" | "file";
+  url?: string;
+};
+
+type Props = {
+  role: "user" | "assistant";
+  content: string;
+
+  // optional: if you render attachments
+  attachments?: Attachment[];
+
+  // optional: pass these if you already have them in parent (recommended)
+  planId?: PlanId; // assistant/engineer/professional/consultant
+  isAuthed?: boolean; // logged-in user?
+  onUpgradeClick?: () => void; // optional action
+};
+
+function isArabicText(text: string) {
+  // Arabic + Persian ranges
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text || "");
 }
 
-function isPaidPlan(plan?: PlanId | null) {
-  return plan === "engineer" || plan === "professional" || plan === "consultant";
+function buildShareText(raw: string) {
+  const txt = (raw || "").trim();
+  if (!txt) return "engineerit.ai";
+  return `${txt}\n\n— engineerit.ai`;
 }
 
-function buildWhatsAppShare(text: string) {
-  const encoded = encodeURIComponent(text);
-  return `https://wa.me/?text=${encoded}`;
+function buildWhatsAppLink(text: string) {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+function buildEmailLink(text: string) {
+  const subject = encodeURIComponent("engineerit.ai");
+  const body = encodeURIComponent(text);
+  return `mailto:?subject=${subject}&body=${body}`;
+}
+
+async function safeCopy(text: string) {
+  const t = text || "";
+  try {
+    await navigator.clipboard.writeText(t);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = t;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      ta.style.top = "-9999px";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
 }
 
 export default function ChatMessage({
   role,
   content,
-  planId, // optional: pass from page.tsx if available
-  isAuthenticated, // optional: pass from page.tsx if available
-  onRequireUpgrade, // optional: show your own UI instead of alert
-}: {
-  role: Role;
-  content: string;
-  planId?: PlanId | null;
-  isAuthenticated?: boolean;
-  onRequireUpgrade?: () => void;
-}) {
-  const dir = useMemo<"rtl" | "ltr">(() => (hasArabic(content) ? "rtl" : "ltr"), [
-    content,
-  ]);
-
-  const canUsePaidActions = useMemo(() => {
-    // paid plans: share + copy enabled
-    // free plan: show icons but gated (register/upgrade message)
-    // non-user: treat as not authenticated
-    return {
-      paid: isPaidPlan(planId),
-      authed: Boolean(isAuthenticated),
-    };
-  }, [planId, isAuthenticated]);
-
+  attachments,
+  planId = "assistant",
+  isAuthed = false,
+  onUpgradeClick,
+}: Props) {
   const [shareOpen, setShareOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
-  async function copyToClipboard() {
-    try {
-      if (!canUsePaidActions.authed) {
-        if (onRequireUpgrade) onRequireUpgrade();
-        else alert("Please register / sign in to use copy & share.");
-        return;
-      }
-      if (!canUsePaidActions.paid) {
-        if (onRequireUpgrade) onRequireUpgrade();
-        else alert("Copy & Share are available for paid plans. Please upgrade.");
-        return;
-      }
-      await navigator.clipboard.writeText(content);
-    } catch {
-      // fallback
+  const isPaid = planId === "engineer" || planId === "professional" || planId === "consultant";
+  const canUsePaidActions = isPaid && isAuthed;
+
+  const dir = useMemo(() => (isArabicText(content) ? "rtl" : "ltr"), [content]);
+
+  const shareText = useMemo(() => buildShareText(content), [content]);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 1800);
+  }
+
+  async function onCopyClick() {
+    if (!canUsePaidActions) {
+      showToast(isAuthed ? "Upgrade required to copy." : "Please register to copy.");
+      return;
+    }
+    const ok = await safeCopy(shareText);
+    showToast(ok ? "Copied ✓" : "Copy failed");
+  }
+
+  async function onShareClick() {
+    // Free/non-authed: allow opening share options but show hint inside
+    if (!canUsePaidActions) {
+      setShareOpen(true);
+      return;
+    }
+
+    // Native share (best on mobile)
+    const nav: any = typeof navigator !== "undefined" ? navigator : null;
+    if (nav && typeof nav.share === "function") {
       try {
-        const el = document.createElement("textarea");
-        el.value = content;
-        document.body.appendChild(el);
-        el.select();
-        document.execCommand("copy");
-        document.body.removeChild(el);
-      } catch {}
-    }
-  }
-
-  async function shareSystem() {
-    // Web Share API
-    try {
-      if (!canUsePaidActions.authed) {
-        if (onRequireUpgrade) onRequireUpgrade();
-        else alert("Please register / sign in to share.");
+        await nav.share({ title: "engineerit.ai", text: shareText });
+        return;
+      } catch {
+        // user canceled or not supported -> fallback
+        setShareOpen(true);
         return;
       }
-      if (!canUsePaidActions.paid) {
-        if (onRequireUpgrade) onRequireUpgrade();
-        else alert("Share is available for paid plans. Please upgrade.");
-        return;
-      }
+    }
 
-      const nav: any = navigator;
-      if (nav?.share) {
-        await nav.share({
-          title: "engineerit.ai",
-          text: content,
-        });
-      } else {
-        setShareOpen(true); // fallback menu
-      }
-    } catch {
-      // user canceled or not supported
-    }
-  }
-
-  function openShareMenu() {
-    // For free plan: show gated info
-    if (!canUsePaidActions.authed) {
-      if (onRequireUpgrade) onRequireUpgrade();
-      else alert("Please register / sign in to share.");
-      return;
-    }
-    if (!canUsePaidActions.paid) {
-      if (onRequireUpgrade) onRequireUpgrade();
-      else alert("Share is available for paid plans. Please upgrade.");
-      return;
-    }
     setShareOpen(true);
   }
 
-  function downloadTxt() {
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "engineerit-response.txt";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function printText() {
+  function onPrint() {
+    if (!canUsePaidActions) {
+      showToast(isAuthed ? "Upgrade required to print." : "Please register to print.");
+      return;
+    }
     const w = window.open("", "_blank", "noopener,noreferrer");
     if (!w) return;
-    w.document.open();
-    w.document.write(`
-      <html>
-        <head><title>engineerit.ai</title></head>
-        <body style="font-family: system-ui, -apple-system, Segoe UI, Arial; padding: 24px; white-space: pre-wrap;">
-          ${String(content)
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")}
-        </body>
-      </html>
-    `);
+    const safe = shareText
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+    w.document.write(
+      `<pre style="white-space:pre-wrap;font-family:system-ui;padding:16px;line-height:1.6">${safe}</pre>`
+    );
     w.document.close();
     w.focus();
     w.print();
+    w.close();
   }
 
-  // Minimal rendering (keeps your existing structure: msg + role)
-  // If your page already renders markdown elsewhere, this component will still work.
-  // We keep it as plain text and allow horizontal scroll for long lines/tables pasted.
+  function onDownloadTxt() {
+    if (!canUsePaidActions) {
+      showToast(isAuthed ? "Upgrade required to download." : "Please register to download.");
+      return;
+    }
+    const blob = new Blob([shareText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "engineerit-ai-response.txt";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function onUpgradeHintClick() {
+    if (onUpgradeClick) onUpgradeClick();
+    else window.location.href = isAuthed ? "/subscription" : "/register";
+  }
+
   return (
     <div className={`msg ${role}`} dir={dir}>
-      {/* content */}
-      <div className="msg-content">{content}</div>
-
-      {/* actions under AI reply only */}
-      {role === "assistant" && (
-        <div className="msg-actions" aria-label="message actions">
-          {/* Copy */}
-          <button
-            type="button"
-            className="msg-action-btn"
-            onClick={copyToClipboard}
-            title={
-              canUsePaidActions.paid && canUsePaidActions.authed
-                ? "Copy"
-                : "Copy (upgrade required)"
-            }
-            aria-label="Copy"
-          >
-            ⧉
-          </button>
-
-          {/* Share (system share first, then menu fallback) */}
-          <button
-            type="button"
-            className="msg-action-btn"
-            onClick={shareSystem}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              openShareMenu(); // right-click / long-press fallback menu
-            }}
-            title={
-              canUsePaidActions.paid && canUsePaidActions.authed
-                ? "Share"
-                : "Share (upgrade required)"
-            }
-            aria-label="Share"
-          >
-            ⤴
-          </button>
+      <div className="msg-bubble">
+        {/* Content */}
+        <div className="msg-content">
+          {content}
         </div>
-      )}
 
-      {/* Share fallback menu (paid only) */}
-      {role === "assistant" && shareOpen && canUsePaidActions.paid && canUsePaidActions.authed && (
-        <div className="share-sheet" role="dialog" aria-label="Share options">
-          <div className="share-sheet-inner">
+        {/* Attachments (optional) */}
+        {attachments && attachments.length > 0 && (
+          <div className="msg-attachments">
+            {attachments.map((a, idx) => (
+              <div key={a.id || idx} className="msg-attach">
+                {a.type === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.url} alt={a.name || "image"} className="msg-attach-img" />
+                ) : (
+                  <a href={a.url} target="_blank" rel="noreferrer" className="msg-attach-file">
+                    {a.name || "file"}
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ✅ Actions under AI reply only */}
+        {role === "assistant" && (
+          <div className="msg-actions" aria-label="message actions">
+            <button
+              type="button"
+              className="msg-action-btn"
+              onClick={onCopyClick}
+              title={canUsePaidActions ? "Copy" : "Copy (upgrade required)"}
+              aria-label="Copy"
+            >
+              ⧉
+            </button>
+
+            <button
+              type="button"
+              className="msg-action-btn"
+              onClick={onShareClick}
+              title={canUsePaidActions ? "Share" : "Share (upgrade required)"}
+              aria-label="Share"
+            >
+              ⤴
+            </button>
+
+            {toast && <span className="msg-toast">{toast}</span>}
+          </div>
+        )}
+      </div>
+
+      {/* ✅ Share sheet (options) */}
+      {role === "assistant" && shareOpen && (
+        <div
+          className="share-sheet"
+          role="dialog"
+          aria-label="Share options"
+          onClick={() => setShareOpen(false)}
+        >
+          <div className="share-sheet-inner" onClick={(e) => e.stopPropagation()}>
             <div className="share-sheet-title">Share</div>
+
+            {!canUsePaidActions && (
+              <div className="share-upgrade-hint">
+                {isAuthed ? (
+                  <>
+                    Upgrade to unlock full share/copy actions.{" "}
+                    <button type="button" className="share-upgrade-btn" onClick={onUpgradeHintClick}>
+                      Upgrade
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Register to unlock full share/copy actions.{" "}
+                    <button type="button" className="share-upgrade-btn" onClick={onUpgradeHintClick}>
+                      Register
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="share-grid">
               <button
                 type="button"
                 className="share-item"
                 onClick={() => {
-                  window.open(buildWhatsAppShare(content), "_blank", "noopener,noreferrer");
+                  window.open(buildWhatsAppLink(shareText), "_blank", "noopener,noreferrer");
                   setShareOpen(false);
                 }}
               >
@@ -219,7 +266,19 @@ export default function ChatMessage({
                 type="button"
                 className="share-item"
                 onClick={() => {
-                  copyToClipboard();
+                  window.open(buildEmailLink(shareText), "_blank", "noopener,noreferrer");
+                  setShareOpen(false);
+                }}
+              >
+                Email
+              </button>
+
+              <button
+                type="button"
+                className="share-item"
+                onClick={async () => {
+                  const ok = await safeCopy(shareText);
+                  showToast(ok ? "Copied ✓" : "Copy failed");
                   setShareOpen(false);
                 }}
               >
@@ -230,130 +289,114 @@ export default function ChatMessage({
                 type="button"
                 className="share-item"
                 onClick={() => {
-                  downloadTxt();
+                  onPrint();
                   setShareOpen(false);
                 }}
               >
-                Save (TXT)
+                Print
               </button>
 
               <button
                 type="button"
                 className="share-item"
                 onClick={() => {
-                  printText();
+                  onDownloadTxt();
                   setShareOpen(false);
                 }}
               >
-                Print
+                Save (.txt)
+              </button>
+
+              <button type="button" className="share-item" onClick={() => setShareOpen(false)}>
+                Close
               </button>
             </div>
-
-            <button
-              type="button"
-              className="share-close"
-              onClick={() => setShareOpen(false)}
-            >
-              Close
-            </button>
           </div>
         </div>
       )}
 
-      {/* Local styles (no need to touch global.css) */}
+      {/* ✅ Local styles ONLY for buttons/sheet (does not touch your global scroll) */}
       <style jsx global>{`
-        .msg-content {
-          white-space: pre-wrap;
-          overflow-wrap: anywhere;
-          word-break: break-word;
+        .msg-actions{
+          display:flex;
+          align-items:center;
+          gap:8px;
+          margin-top:8px;
+          opacity:0.92;
+        }
+        .msg-action-btn{
+          border:1px solid #e5e7eb;
+          background:#fff;
+          border-radius:10px;
+          padding:6px 10px;
+          cursor:pointer;
+          font-size:14px;
+          line-height:1;
+        }
+        .msg-action-btn:active{ transform:scale(0.98); }
+        .msg-toast{
+          margin-left:8px;
+          font-size:12px;
+          color:#6b7280;
         }
 
-        /* Mobile/table overflow behavior (ChatGPT-like: scroll only inside message) */
-        .msg-content {
-          max-width: 100%;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
+        .share-sheet{
+          position:fixed;
+          inset:0;
+          background:rgba(0,0,0,0.35);
+          display:flex;
+          align-items:flex-end;
+          justify-content:center;
+          z-index:9999;
         }
-
-        .msg-actions {
-          display: flex;
-          gap: 8px;
-          margin-top: 8px;
-          opacity: 0.85;
+        .share-sheet-inner{
+          width:min(560px, 100%);
+          background:#fff;
+          border-top-left-radius:18px;
+          border-top-right-radius:18px;
+          padding:14px;
+          box-shadow:0 -12px 32px rgba(0,0,0,0.18);
         }
-
-        .msg-action-btn {
-          border: 1px solid rgba(229, 231, 235, 1);
-          background: #ffffff;
-          border-radius: 9999px;
-          width: 32px;
-          height: 32px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          font-size: 14px;
-          line-height: 1;
+        .share-sheet-title{
+          font-weight:700;
+          font-size:14px;
+          margin-bottom:8px;
         }
-
-        .msg-action-btn:active {
-          transform: translateY(1px);
+        .share-upgrade-hint{
+          font-size:12px;
+          color:#b45309;
+          background:#fffbeb;
+          border:1px solid #fcd34d;
+          padding:8px 10px;
+          border-radius:12px;
+          margin-bottom:10px;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:10px;
         }
-
-        .share-sheet {
-          position: fixed;
-          inset: 0;
-          background: rgba(17, 24, 39, 0.45);
-          display: flex;
-          align-items: flex-end;
-          justify-content: center;
-          padding: 12px;
-          z-index: 9999;
+        .share-upgrade-btn{
+          border:1px solid #f59e0b;
+          background:#fff;
+          border-radius:10px;
+          padding:6px 10px;
+          cursor:pointer;
+          font-size:12px;
+          white-space:nowrap;
         }
-
-        .share-sheet-inner {
-          width: 100%;
-          max-width: 520px;
-          background: #ffffff;
-          border-radius: 18px;
-          padding: 14px;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        .share-grid{
+          display:grid;
+          grid-template-columns:repeat(2, minmax(0,1fr));
+          gap:10px;
         }
-
-        .share-sheet-title {
-          font-weight: 700;
-          color: #111827;
-          margin-bottom: 10px;
-        }
-
-        .share-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px;
-        }
-
-        .share-item {
-          border: 1px solid #e5e7eb;
-          background: #f9fafb;
-          border-radius: 12px;
-          padding: 10px 12px;
-          cursor: pointer;
-          font-weight: 600;
-          color: #111827;
-          font-size: 13px;
-          text-align: center;
-        }
-
-        .share-close {
-          margin-top: 12px;
-          width: 100%;
-          border: none;
-          background: #111827;
-          color: white;
-          border-radius: 12px;
-          padding: 10px 12px;
-          cursor: pointer;
-          font-weight: 700;
+        .share-item{
+          border:1px solid #e5e7eb;
+          background:#f9fafb;
+          border-radius:14px;
+          padding:10px 12px;
+          cursor:pointer;
+          font-size:13px;
+          text-align:center;
         }
       `}</style>
     </div>
