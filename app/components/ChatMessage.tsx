@@ -1,126 +1,138 @@
 "use client";
 
-import { useState } from "react";
+import React from "react";
 
-type ChatMessageProps = {
+type Props = {
   role: "user" | "assistant";
   content: string;
 };
 
-export default function ChatMessage({ role, content }: ChatMessageProps) {
-  const [copied, setCopied] = useState(false);
+export default function ChatMessage({ role, content }: Props) {
+  const isAI = role === "assistant";
 
-  const finalText = `${content}\n\n— engineerit.ai`;
-
-  const copyText = async () => {
-    await navigator.clipboard.writeText(finalText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        `${content}\n\n— engineerit.ai`
+      );
+      alert("Copied");
+    } catch {
+      alert("Copy failed");
+    }
   };
 
-  const shareText = async () => {
+  const handleShare = async () => {
+    const text = `${content}\n\n— engineerit.ai`;
+
     if (navigator.share) {
-      await navigator.share({
-        text: finalText,
-      });
+      try {
+        await navigator.share({
+          text,
+        });
+      } catch {
+        /* ignore */
+      }
     } else {
-      copyText();
-      alert("Share not supported, text copied instead");
+      window.open(
+        `https://wa.me/?text=${encodeURIComponent(text)}`,
+        "_blank"
+      );
     }
   };
 
   return (
-    <div className={`msg ${role}`}>
-      <div className="msg-bubble">
-        {/* CONTENT */}
-        <div className="msg-content">
-          {content}
-        </div>
+    <div className={`chat-row ${isAI ? "ai" : "user"}`}>
+      <div className="bubble">
+        <div className="bubble-content">{content}</div>
 
-        {/* ACTIONS – only under AI replies */}
-        {role === "assistant" && (
-          <div className="msg-actions">
-            <button onClick={copyText} className="msg-btn">
-              {copied ? "✓ Copied" : "Copy"}
+        {isAI && (
+          <div className="ai-actions">
+            <button onClick={handleCopy} title="Copy">
+              📋 Copy
             </button>
-
-            <button onClick={shareText} className="msg-btn">
-              Share
+            <button onClick={handleShare} title="Share">
+              🔗 Share
             </button>
           </div>
         )}
       </div>
 
-      {/* Local styles – DO NOT touch global.css */}
       <style jsx>{`
-        .msg {
+        .chat-row {
           display: flex;
           margin-bottom: 14px;
         }
 
-        .msg.user {
+        .chat-row.user {
           justify-content: flex-end;
         }
 
-        .msg.assistant {
+        .chat-row.ai {
           justify-content: flex-start;
         }
 
-        .msg-bubble {
-          max-width: 92%;
-          background: ${role === "assistant" ? "#ffffff" : "#e6f3ff"};
+        .bubble {
+          max-width: 100%;
+          background: ${isAI ? "#ffffff" : "#2563eb"};
+          color: ${isAI ? "#111827" : "#ffffff"};
           border-radius: 16px;
-          padding: 14px 14px 10px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+          padding: 14px 16px;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+          overflow: hidden;
         }
 
-        .msg-content {
-          font-size: 15px;
-          line-height: 1.55;
-          color: #111827;
-
-          /* ChatGPT-like behavior */
-          white-space: pre-wrap;
+        .bubble-content {
+          font-size: 14px;
+          line-height: 1.6;
           word-break: break-word;
-
-          /* Horizontal scroll ONLY if needed */
           overflow-x: auto;
-          max-width: 100%;
-          -webkit-overflow-scrolling: touch;
         }
 
-        /* Fix big tables / code blocks */
-        .msg-content :global(table),
-        .msg-content :global(pre) {
+        /* Horizontal scroll for tables / long content */
+        .bubble-content table,
+        .bubble-content pre {
           display: block;
+          width: 100%;
           overflow-x: auto;
-          max-width: 100%;
         }
 
-        .msg-actions {
+        .bubble-content::-webkit-scrollbar {
+          height: 6px;
+        }
+
+        .bubble-content::-webkit-scrollbar-thumb {
+          background: #c7c7c7;
+          border-radius: 6px;
+        }
+
+        .ai-actions {
+          margin-top: 10px;
           display: flex;
           gap: 10px;
-          margin-top: 8px;
-        }
-
-        .msg-btn {
           font-size: 12px;
+        }
+
+        .ai-actions button {
           background: transparent;
-          border: 1px solid #e5e7eb;
-          padding: 4px 10px;
-          border-radius: 999px;
+          border: none;
+          color: #2563eb;
           cursor: pointer;
-          color: #374151;
+          padding: 0;
+          font-size: 12px;
         }
 
-        .msg-btn:hover {
-          background: #f3f4f6;
+        .ai-actions button:hover {
+          text-decoration: underline;
         }
 
-        /* Mobile tuning */
         @media (max-width: 640px) {
-          .msg-content {
-            font-size: 14px;
+          .bubble {
+            max-width: 100%;
+            padding: 12px 14px;
+          }
+
+          .bubble-content {
+            font-size: 13px;
           }
         }
       `}</style>
