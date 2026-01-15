@@ -327,7 +327,7 @@ export default function SubscriptionPage() {
                       color: "#374151",
                     }}
                   >
-                    {plan.features.map((f) => (
+                    {plan.features.map((f:string) => (
                       <li key={f} style={{ marginBottom: 6 }}>
                         {f}
                       </li>
