@@ -1280,3 +1280,9 @@ body {
     line-height: 1.45;
   }
 }
+
+/* Chat message horizontal scroll safety */
+.chat-message,
+.chat-message * {
+  max-width: 100%;
+}
