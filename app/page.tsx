@@ -46,49 +46,6 @@ function uuid() {
 }
 
 /* ============================
-   ✅ ADD-1: Copy + Share helpers
-   (NO CONDITIONS: everyone can copy/share)
-   ============================ */
-
-function appendBranding(text: string) {
-  const clean = (text || "").trim();
-  return clean ? `${clean}\n\nengineerit.ai` : "engineerit.ai";
-}
-
-async function copyToClipboard(text: string) {
-  const payload = appendBranding(text);
-  try {
-    await navigator.clipboard.writeText(payload);
-    // خفيف بدون تغيير ثيم
-    alert("Copied");
-  } catch (e) {
-    console.error("Copy failed:", e);
-    alert("Copy failed");
-  }
-}
-
-async function shareText(text: string) {
-  const payload = appendBranding(text);
-
-  // Web Share API (Mobile)
-  // fallback: WhatsApp share URL
-  try {
-    if (typeof navigator !== "undefined" && (navigator as any).share) {
-      await (navigator as any).share({
-        title: "engineerit.ai",
-        text: payload,
-      });
-      return;
-    }
-  } catch (e) {
-    console.warn("Web share failed, fallback to WhatsApp:", e);
-  }
-
-  const wa = "https://wa.me/?text=" + encodeURIComponent(payload);
-  window.open(wa, "_blank", "noopener,noreferrer");
-}
-
-/* ============================
    Engineer tools configuration
    ============================ */
 
@@ -130,6 +87,19 @@ function hasAccess(planId: PlanId, toolId: ToolId) {
   return TOOL_ACCESS[planId]?.includes(toolId);
 }
 
+/* ============================
+   Helpers: RTL detect + Copy/Share
+   ============================ */
+
+function isArabicText(text: string) {
+  // Arabic + Arabic Supplement + Arabic Extended ranges
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text);
+}
+
+function buildShareText(aiText: string) {
+  return `${aiText}\n\n— engineerit.ai`;
+}
+
 export default function Page() {
   const [discipline, setDiscipline] = useState("General");
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -155,6 +125,9 @@ export default function Page() {
 
   // landing post (one-time per browser)
   const [showLanding, setShowLanding] = useState(false);
+
+  // share menu per message
+  const [openShareFor, setOpenShareFor] = useState<string | null>(null);
 
   /* ======================
      Load user plan (Supabase)
@@ -216,6 +189,7 @@ export default function Page() {
       }
     } catch (err) {
       console.error("Landing localStorage error:", err);
+      // لو صار خطأ، نخليها تظهر مرة واحدة في هذه الجلسة
       setShowLanding(true);
     }
   }, []);
@@ -498,6 +472,84 @@ export default function Page() {
   };
 
   /* ======================
+     Copy / Share actions
+     ====================== */
+
+  async function handleCopy(text: string) {
+    const payload = buildShareText(text);
+    try {
+      await navigator.clipboard.writeText(payload);
+      // optional tiny feedback without changing UI/theme:
+      // alert("Copied");
+    } catch (e) {
+      console.error("Copy failed:", e);
+      // fallback
+      try {
+        const el = document.createElement("textarea");
+        el.value = payload;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+      } catch {}
+    }
+  }
+
+  async function handleNativeShare(text: string) {
+    const payload = buildShareText(text);
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "engineerit.ai",
+          text: payload,
+        });
+        return true;
+      }
+    } catch (e) {
+      console.warn("Native share canceled/failed:", e);
+    }
+    return false;
+  }
+
+  function shareWhatsApp(text: string) {
+    const payload = encodeURIComponent(buildShareText(text));
+    window.open(`https://wa.me/?text=${payload}`, "_blank", "noopener,noreferrer");
+  }
+
+  function shareEmail(text: string) {
+    const subject = encodeURIComponent("engineerit.ai");
+    const body = encodeURIComponent(buildShareText(text));
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  }
+
+  function printText(text: string) {
+    const payload = buildShareText(text);
+    const w = window.open("", "_blank", "noopener,noreferrer");
+    if (!w) return;
+    w.document.write(
+      `<pre style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; white-space: pre-wrap; padding: 16px;">${payload
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")}</pre>`
+    );
+    w.document.close();
+    w.focus();
+    w.print();
+  }
+
+  function downloadTxt(text: string) {
+    const payload = buildShareText(text);
+    const blob = new Blob([payload], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "engineerit-ai-reply.txt";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /* ======================
      Send message
      ====================== */
 
@@ -511,6 +563,7 @@ export default function Page() {
     setAttachments([]);
     setIsAttachMenuOpen(false);
 
+    // add user message
     updateThread((t) => ({
       ...t,
       title:
@@ -565,6 +618,7 @@ export default function Page() {
           ],
         }));
       } else {
+        // text-only chat
         const payloadMessages = (thread.messages || []).concat({
           id: "temp",
           role: "user" as const,
@@ -625,42 +679,6 @@ export default function Page() {
   }
 
   /* ======================
-     ✅ ADD-2: styles for long-response scroll (ONLY inside bubble)
-     This keeps your theme; no global.css changes required.
-     ====================== */
-
-  const assistantScrollWrapStyle: React.CSSProperties = {
-    width: "100%",
-    maxWidth: "100%",
-    overflowX: "auto",
-    WebkitOverflowScrolling: "touch",
-  };
-
-  const assistantActionsStyle: React.CSSProperties = {
-    marginTop: 10,
-    display: "flex",
-    gap: 10,
-    alignItems: "center",
-    justifyContent: "flex-start",
-    flexWrap: "wrap",
-    fontSize: 12,
-    color: "#6b7280",
-  };
-
-  const actionBtnStyle: React.CSSProperties = {
-    border: "1px solid #e5e7eb",
-    background: "#ffffff",
-    borderRadius: 9999,
-    padding: "6px 10px",
-    cursor: "pointer",
-    fontSize: 12,
-    color: "#111827",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-  };
-
-  /* ======================
      Render
      ====================== */
 
@@ -680,6 +698,7 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
+        {/* Landing post (banner) */}
         {showLanding && (
           <div
             className="card"
@@ -728,6 +747,7 @@ export default function Page() {
           </div>
         )}
 
+        {/* Engineer tools – desktop / tablet */}
         <div className="engineer-tools">
           <span className="engineer-tools-label">Engineer tools:</span>
           <div className="engineer-tools-row">
@@ -752,6 +772,7 @@ export default function Page() {
           </div>
         </div>
 
+        {/* Engineer tools – mobile dropdown */}
         <div className="engineer-tools-mobile">
           <button
             type="button"
@@ -808,74 +829,126 @@ export default function Page() {
               <p>Ask an engineering question to start the conversation.</p>
             </div>
           ) : (
-            messages.map((m) => (
-              <div
-                key={m.id}
-                className={
-                  "message-row " +
-                  (m.role === "user" ? "message-user" : "message-assistant")
-                }
-              >
-                <div className="message-avatar">{m.role === "user" ? "You" : "AI"}</div>
+            messages.map((m) => {
+              const rtl = isArabicText(m.content);
+              return (
+                <div
+                  key={m.id}
+                  className={
+                    "message-row " +
+                    (m.role === "user" ? "message-user" : "message-assistant")
+                  }
+                >
+                  <div className="message-avatar">
+                    {m.role === "user" ? "You" : "AI"}
+                  </div>
 
-                <div className="message-bubble">
-                  {m.attachments && m.attachments.length > 0 && (
-                    <div className="msg-attachments">
-                      {m.attachments.map((a) =>
-                        a.type === "image" ? (
-                          <div key={a.id} className="msg-attachment">
-                            <img src={a.url} alt={a.name} />
-                            <span>{a.name}</span>
-                          </div>
-                        ) : (
-                          <div key={a.id} className="msg-attachment">
-                            <span>📄 {a.name}</span>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
-
-                  {/* ✅ ADD-3: wrap assistant markdown with horizontal scroll */}
-                  {m.role === "assistant" ? (
-                    <>
-                      <div style={assistantScrollWrapStyle}>
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {m.content}
-                        </ReactMarkdown>
+                  <div className="message-bubble">
+                    {m.attachments && m.attachments.length > 0 && (
+                      <div className="msg-attachments">
+                        {m.attachments.map((a) =>
+                          a.type === "image" ? (
+                            <div key={a.id} className="msg-attachment">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={a.url} alt={a.name} />
+                              <span>{a.name}</span>
+                            </div>
+                          ) : (
+                            <div key={a.id} className="msg-attachment">
+                              <span>📄 {a.name}</span>
+                            </div>
+                          )
+                        )}
                       </div>
+                    )}
 
-                      {/* ✅ Copy + Share under EACH AI reply */}
-                      <div style={assistantActionsStyle}>
+                    {/* ✅ IMPORTANT: msg-content wrapper so mobile scroll CSS applies */}
+                    <div className="msg-content" dir={rtl ? "rtl" : "ltr"}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
+
+                    {/* ✅ ChatGPT-like actions under EACH AI reply */}
+                    {m.role === "assistant" && (
+                      <div className="msg-actions">
                         <button
                           type="button"
-                          style={actionBtnStyle}
-                          onClick={() => copyToClipboard(m.content)}
+                          className="msg-action-btn"
+                          onClick={() => handleCopy(m.content)}
                           aria-label="Copy"
                           title="Copy"
                         >
-                          📋 <span>Copy</span>
+                          📋 Copy
                         </button>
 
                         <button
                           type="button"
-                          style={actionBtnStyle}
-                          onClick={() => shareText(m.content)}
+                          className="msg-action-btn"
+                          onClick={async () => {
+                            const ok = await handleNativeShare(m.content);
+                            if (!ok) setOpenShareFor((prev) => (prev === m.id ? null : m.id));
+                          }}
                           aria-label="Share"
                           title="Share"
                         >
-                          🔗 <span>Share</span>
+                          🔗 Share
                         </button>
+
+                        {/* share menu (only when native share not available or user wants options) */}
+                        {openShareFor === m.id && (
+                          <div
+                            style={{
+                              marginTop: 6,
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 8,
+                              paddingLeft: 8,
+                            }}
+                          >
+                            <button
+                              type="button"
+                              className="msg-action-btn"
+                              onClick={() => shareWhatsApp(m.content)}
+                            >
+                              WhatsApp
+                            </button>
+                            <button
+                              type="button"
+                              className="msg-action-btn"
+                              onClick={() => shareEmail(m.content)}
+                            >
+                              Email
+                            </button>
+                            <button
+                              type="button"
+                              className="msg-action-btn"
+                              onClick={() => printText(m.content)}
+                            >
+                              Print
+                            </button>
+                            <button
+                              type="button"
+                              className="msg-action-btn"
+                              onClick={() => downloadTxt(m.content)}
+                            >
+                              Save (.txt)
+                            </button>
+                            <button
+                              type="button"
+                              className="msg-action-btn"
+                              onClick={() => setOpenShareFor(null)}
+                            >
+                              ✕ Close
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </>
-                  ) : (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {m.content}
-                    </ReactMarkdown>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -900,6 +973,7 @@ export default function Page() {
             )}
 
             <div className="chat-input-row">
+              {/* + button */}
               <div className="chat-input-left">
                 <button
                   type="button"
@@ -943,6 +1017,7 @@ export default function Page() {
                 )}
               </div>
 
+              {/* textarea */}
               <textarea
                 className="textarea"
                 placeholder="Ask an engineering question…"
@@ -955,6 +1030,7 @@ export default function Page() {
                 onKeyDown={onKeyDown}
               />
 
+              {/* mic */}
               <button
                 type="button"
                 className={
@@ -968,6 +1044,7 @@ export default function Page() {
                 🎤
               </button>
 
+              {/* send */}
               <button
                 type="button"
                 className="chat-input-send-btn"
@@ -979,6 +1056,7 @@ export default function Page() {
               </button>
             </div>
 
+            {/* hidden file inputs */}
             <input
               type="file"
               id="image-upload"
