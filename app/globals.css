@@ -1286,3 +1286,24 @@ body {
 .chat-message * {
   max-width: 100%;
 }
+
+/* ChatGPT-like actions under AI message */
+.msg-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding-left: 8px;
+}
+
+.msg-action-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.msg-action-btn:hover {
+  color: #111827;
+}

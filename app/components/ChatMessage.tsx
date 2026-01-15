@@ -8,146 +8,122 @@ type ChatMessageProps = {
 };
 
 export default function ChatMessage({ role, content }: ChatMessageProps) {
-  const [showShareOptions, setShowShareOptions] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const finalText = `${content}\n\n— engineerit.ai`;
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(finalText);
-      alert("Copied");
-    } catch {
-      alert("Copy failed");
-    }
+  const copyText = async () => {
+    await navigator.clipboard.writeText(finalText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
-  const handleShare = async () => {
+  const shareText = async () => {
     if (navigator.share) {
-      try {
-        await navigator.share({
-          text: finalText,
-        });
-      } catch {}
+      await navigator.share({
+        text: finalText,
+      });
     } else {
-      setShowShareOptions((v) => !v);
+      copyText();
+      alert("Share not supported, text copied instead");
     }
-  };
-
-  const shareWhatsApp = () => {
-    window.open(
-      `https://wa.me/?text=${encodeURIComponent(finalText)}`,
-      "_blank",
-      "noopener,noreferrer"
-    );
-    setShowShareOptions(false);
-  };
-
-  const shareEmail = () => {
-    window.location.href = `mailto:?body=${encodeURIComponent(finalText)}`;
-    setShowShareOptions(false);
   };
 
   return (
-    <div
-      style={{
-        marginBottom: 20,
-        display: "flex",
-        justifyContent: role === "user" ? "flex-end" : "flex-start",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "100%",
-          background: role === "assistant" ? "#f9fafb" : "#2563eb",
-          color: role === "assistant" ? "#111827" : "#ffffff",
-          padding: "12px 14px",
-          borderRadius: 12,
-          fontSize: 15,
-          lineHeight: 1.6,
-          overflowX: "auto",
-        }}
-      >
-        {/* message content */}
-        <div style={{ whiteSpace: "pre-wrap" }}>{content}</div>
+    <div className={`msg ${role}`}>
+      <div className="msg-bubble">
+        {/* CONTENT */}
+        <div className="msg-content">
+          {content}
+        </div>
 
-        {/* ACTIONS (always visible under AI messages) */}
+        {/* ACTIONS – only under AI replies */}
         {role === "assistant" && (
-          <div
-            style={{
-              marginTop: 10,
-              display: "flex",
-              gap: 14,
-              alignItems: "center",
-              fontSize: 13,
-              color: "#6b7280",
-            }}
-          >
-            <button
-              onClick={handleCopy}
-              style={{
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                color: "#2563eb",
-                fontWeight: 500,
-              }}
-            >
-              📋 Copy
+          <div className="msg-actions">
+            <button onClick={copyText} className="msg-btn">
+              {copied ? "✓ Copied" : "Copy"}
             </button>
 
-            <button
-              onClick={handleShare}
-              style={{
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                color: "#2563eb",
-                fontWeight: 500,
-              }}
-            >
-              🔗 Share
-            </button>
-          </div>
-        )}
-
-        {/* Share options */}
-        {showShareOptions && (
-          <div
-            style={{
-              marginTop: 8,
-              display: "flex",
-              gap: 10,
-              fontSize: 13,
-            }}
-          >
-            <button
-              onClick={shareWhatsApp}
-              style={{
-                border: "1px solid #e5e7eb",
-                padding: "4px 8px",
-                borderRadius: 6,
-                background: "#ffffff",
-                cursor: "pointer",
-              }}
-            >
-              WhatsApp
-            </button>
-
-            <button
-              onClick={shareEmail}
-              style={{
-                border: "1px solid #e5e7eb",
-                padding: "4px 8px",
-                borderRadius: 6,
-                background: "#ffffff",
-                cursor: "pointer",
-              }}
-            >
-              Email
+            <button onClick={shareText} className="msg-btn">
+              Share
             </button>
           </div>
         )}
       </div>
+
+      {/* Local styles – DO NOT touch global.css */}
+      <style jsx>{`
+        .msg {
+          display: flex;
+          margin-bottom: 14px;
+        }
+
+        .msg.user {
+          justify-content: flex-end;
+        }
+
+        .msg.assistant {
+          justify-content: flex-start;
+        }
+
+        .msg-bubble {
+          max-width: 92%;
+          background: ${role === "assistant" ? "#ffffff" : "#e6f3ff"};
+          border-radius: 16px;
+          padding: 14px 14px 10px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .msg-content {
+          font-size: 15px;
+          line-height: 1.55;
+          color: #111827;
+
+          /* ChatGPT-like behavior */
+          white-space: pre-wrap;
+          word-break: break-word;
+
+          /* Horizontal scroll ONLY if needed */
+          overflow-x: auto;
+          max-width: 100%;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        /* Fix big tables / code blocks */
+        .msg-content :global(table),
+        .msg-content :global(pre) {
+          display: block;
+          overflow-x: auto;
+          max-width: 100%;
+        }
+
+        .msg-actions {
+          display: flex;
+          gap: 10px;
+          margin-top: 8px;
+        }
+
+        .msg-btn {
+          font-size: 12px;
+          background: transparent;
+          border: 1px solid #e5e7eb;
+          padding: 4px 10px;
+          border-radius: 999px;
+          cursor: pointer;
+          color: #374151;
+        }
+
+        .msg-btn:hover {
+          background: #f3f4f6;
+        }
+
+        /* Mobile tuning */
+        @media (max-width: 640px) {
+          .msg-content {
+            font-size: 14px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
