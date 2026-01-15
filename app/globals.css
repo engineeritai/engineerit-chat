@@ -1150,3 +1150,118 @@ body {
 .msg-action-btn:hover {
   color: #111827;
 }
+/* =========================
+   FIX: ChatGPT-like scrolling + stable typography (MOBILE + DESKTOP)
+   Paste at END of globals.css
+   ========================= */
+
+/* Make the app take the full viewport height so the chat area can scroll */
+html,
+body {
+  height: 100%;
+}
+
+/* Lock page vertical scrolling; allow ONLY the conversation area to scroll */
+body {
+  overflow: hidden;
+}
+
+/* Flex parents MUST allow children to shrink for overflow scrolling to work */
+.app-shell {
+  height: 100vh;
+  min-height: 0;
+}
+
+.main {
+  height: 100vh;
+  min-height: 0;
+}
+
+/* The chat area becomes the scroll container (like ChatGPT) */
+.conversation {
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent bubbles from forcing width overflow */
+.message-bubble {
+  max-width: 100%;
+}
+
+/* =========
+   Stable markdown typography (prevents huge text)
+   ========= */
+.msg-content {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Normalize markdown spacing */
+.msg-content > :first-child {
+  margin-top: 0;
+}
+.msg-content > :last-child {
+  margin-bottom: 0;
+}
+
+.msg-content p,
+.msg-content li {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Headings (keep them reasonable everywhere) */
+.msg-content h1 {
+  font-size: 18px;
+  line-height: 1.35;
+  margin: 10px 0 6px;
+}
+.msg-content h2 {
+  font-size: 16px;
+  line-height: 1.35;
+  margin: 10px 0 6px;
+}
+.msg-content h3 {
+  font-size: 15px;
+  line-height: 1.35;
+  margin: 10px 0 6px;
+}
+
+/* Tables: scroll horizontally inside message only */
+.msg-content table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-collapse: collapse;
+}
+
+.msg-content th,
+.msg-content td {
+  white-space: nowrap;
+}
+
+/* Code blocks: scroll horizontally inside message only */
+.msg-content pre {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.msg-content code {
+  white-space: pre;
+}
+
+/* Mobile text sizing (constant and not huge) */
+@media (max-width: 768px) {
+  .msg-content {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* iOS input zoom prevention WITHOUT affecting message sizes */
+  .textarea {
+    font-size: 16px;
+  }
+}
