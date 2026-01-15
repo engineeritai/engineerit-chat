@@ -1,3 +1,4 @@
+// app/register/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -33,7 +34,15 @@ const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
   assistant: [],
   engineer: ["drawing", "design"],
   professional: ["drawing", "design", "itp", "boq"],
-  consultant: ["drawing", "design", "itp", "boq", "schedule", "value", "dashboard"],
+  consultant: [
+    "drawing",
+    "design",
+    "itp",
+    "boq",
+    "schedule",
+    "value",
+    "dashboard",
+  ],
 };
 
 export default function RegisterPage() {
@@ -41,7 +50,9 @@ export default function RegisterPage() {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [accepted, setAccepted] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -54,11 +65,33 @@ export default function RegisterPage() {
     e.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
+
+    // ✅ Validate BEFORE sending email / creating account
+    const e1 = email.trim().toLowerCase();
+    const e2 = confirmEmail.trim().toLowerCase();
+
+    if (!e1 || !e2) {
+      setErrorMessage("Please enter and confirm your email.");
+      return;
+    }
+    if (e1 !== e2) {
+      setErrorMessage("Email and confirmation email do not match.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage("Password and confirmation password do not match.");
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMessage("Password must be at least 8 characters.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: e1,
         password,
         options: {
           data: { full_name: fullName },
@@ -76,7 +109,9 @@ export default function RegisterPage() {
 
       setFullName("");
       setEmail("");
+      setConfirmEmail("");
       setPassword("");
+      setConfirmPassword("");
 
       // If email confirmation is ON -> session is null
       if (!data.session) {
@@ -110,7 +145,8 @@ export default function RegisterPage() {
         <div className="page-wrap">
           <h1 className="page-title">Register to engineerit.ai</h1>
           <p className="page-subtitle">
-            Create your account, start with the free Assistant plan, and upgrade later to Engineer, Professional, or Consultant.
+            Create your account, start with the free Assistant plan, and upgrade
+            later to Engineer, Professional, or Consultant.
           </p>
 
           {/* Registration card */}
@@ -119,7 +155,14 @@ export default function RegisterPage() {
               Create your account
             </h2>
 
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <form
+              onSubmit={handleSubmit}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
+            >
               <div className="form-row">
                 <label>
                   Full name
@@ -149,6 +192,20 @@ export default function RegisterPage() {
 
               <div className="form-row">
                 <label>
+                  Confirm email
+                  <input
+                    type="email"
+                    className="input"
+                    required
+                    placeholder="repeat your email"
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div className="form-row">
+                <label>
                   Password
                   <input
                     type="password"
@@ -157,6 +214,20 @@ export default function RegisterPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div className="form-row">
+                <label>
+                  Confirm password
+                  <input
+                    type="password"
+                    className="input"
+                    required
+                    placeholder="repeat your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                   />
                 </label>
               </div>
@@ -174,19 +245,26 @@ export default function RegisterPage() {
                     <Link href="/legal/terms" className="link">
                       User Policy &amp; Agreement
                     </Link>
-                    , including cancellation and refund policies, and I understand that engineerit.ai is not responsible or liable
+                    , including cancellation and refund policies, and I
+                    understand that engineerit.ai is not responsible or liable
                     for any decisions or mistakes based on the outputs.
                   </span>
                 </label>
               </div>
 
               {errorMessage && (
-                <div style={{ marginBottom: 6, fontSize: 13, color: "#b91c1c" }}>
+                <div
+                  style={{
+                    marginBottom: 6,
+                    fontSize: 13,
+                    color: "#b91c1c",
+                  }}
+                >
                   {errorMessage}
                 </div>
               )}
 
-              {/* ✅ UPDATED: Yellow alert style (no other logic changes) */}
+              {/* ✅ Yellow alert box */}
               {successMessage && (
                 <div
                   style={{
@@ -224,9 +302,7 @@ export default function RegisterPage() {
                     <div style={{ fontWeight: 800, marginBottom: 2 }}>
                       Email confirmation required
                     </div>
-                    <div style={{ marginBottom: 6 }}>
-                      We sent you a confirmation email. Please check your <b>Inbox</b> and also <b>Junk/Spam</b>, then click the confirmation link.
-                    </div>
+                    <div style={{ marginBottom: 6 }}>{successMessage}</div>
                     <div style={{ fontSize: 12, color: "#7C2D12" }}>
                       After confirmation, come back and sign in from the top bar.
                     </div>
@@ -234,7 +310,12 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              <button className="btn" type="submit" disabled={loading || !accepted} style={{ marginTop: 4 }}>
+              <button
+                className="btn"
+                type="submit"
+                disabled={loading || !accepted}
+                style={{ marginTop: 4 }}
+              >
                 {loading ? "Creating account..." : "Create account"}
               </button>
             </form>
@@ -252,8 +333,10 @@ export default function RegisterPage() {
             }}
           >
             <p style={{ fontSize: 14, color: "#374151", margin: 0 }}>
-              After registration, your account will start on the free Assistant plan.
-              When you are ready to upgrade, go to the subscription page to select Engineer, Professional, or Consultant with secure payment.
+              After registration, your account will start on the free Assistant
+              plan. When you are ready to upgrade, go to the subscription page
+              to select Engineer, Professional, or Consultant with secure
+              payment.
             </p>
             <button
               type="button"
@@ -279,8 +362,11 @@ export default function RegisterPage() {
               }}
             >
               {PLANS.map((plan) => {
-                const badge = PLAN_BADGES[plan.id as PlanId] || PLAN_BADGES.assistant;
-                const letter = (plan.shortName || plan.name || "E").charAt(0).toUpperCase();
+                const badge =
+                  PLAN_BADGES[plan.id as PlanId] || PLAN_BADGES.assistant;
+                const letter = (plan.shortName || plan.name || "E")
+                  .charAt(0)
+                  .toUpperCase();
 
                 const planId = plan.id as PlanId;
                 const enabledTools = TOOL_ACCESS[planId] || [];
@@ -299,7 +385,13 @@ export default function RegisterPage() {
                       backgroundColor: "white",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        marginBottom: 10,
+                      }}
+                    >
                       <div
                         style={{
                           width: 44,
@@ -320,25 +412,60 @@ export default function RegisterPage() {
                       </div>
 
                       <div>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 2 }}>
+                        <div
+                          style={{
+                            fontSize: 18,
+                            fontWeight: 700,
+                            color: "#111827",
+                            marginBottom: 2,
+                          }}
+                        >
                           {plan.name}
                         </div>
-                        <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.35 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: "#6b7280",
+                            lineHeight: 1.35,
+                          }}
+                        >
                           {plan.tagline}
                         </div>
                       </div>
                     </div>
 
                     <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: badge.fg }}>
+                      <div
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 700,
+                          color: badge.fg,
+                        }}
+                      >
                         {plan.priceMonthly}
                       </div>
-                      <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "#6b7280",
+                          marginTop: 2,
+                        }}
+                      >
                         {plan.priceYearly}
                       </div>
                     </div>
 
-                    <ul style={{ listStyle: "disc", paddingLeft: 20, margin: 0, marginTop: 4, fontSize: 13, color: "#374151", lineHeight: 1.5 }}>
+                    <ul
+                      style={{
+                        listStyle: "disc",
+                        paddingLeft: 20,
+                        margin: 0,
+                        marginTop: 4,
+                        fontSize: 13,
+                        color: "#374151",
+                        lineHeight: 1.5,
+                      }}
+                    >
                       {plan.features.map((f) => (
                         <li key={f} style={{ marginBottom: 4 }}>
                           {f}
@@ -346,12 +473,31 @@ export default function RegisterPage() {
                       ))}
                     </ul>
 
-                    <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px dashed #e5e7eb" }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "#4b5563", marginBottom: 6 }}>
+                    <div
+                      style={{
+                        marginTop: 10,
+                        paddingTop: 8,
+                        borderTop: "1px dashed #e5e7eb",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#4b5563",
+                          marginBottom: 6,
+                        }}
+                      >
                         Engineer tools in this plan
                       </div>
 
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 6,
+                        }}
+                      >
                         {ENGINEER_TOOLS.map((tool) => {
                           const enabled = enabledTools.includes(tool.id);
                           return (
@@ -361,8 +507,12 @@ export default function RegisterPage() {
                                 fontSize: 11,
                                 padding: "3px 8px",
                                 borderRadius: 999,
-                                border: enabled ? "1px solid rgba(37,99,235,0.45)" : "1px solid #e5e7eb",
-                                backgroundColor: enabled ? "rgba(37,99,235,0.06)" : "#f9fafb",
+                                border: enabled
+                                  ? "1px solid rgba(37,99,235,0.45)"
+                                  : "1px solid #e5e7eb",
+                                backgroundColor: enabled
+                                  ? "rgba(37,99,235,0.06)"
+                                  : "#f9fafb",
                                 color: enabled ? "#1d4ed8" : "#9ca3af",
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -382,7 +532,8 @@ export default function RegisterPage() {
             </div>
 
             <p style={{ fontSize: 12, color: "#6b7280", marginTop: 16 }}>
-              You can upgrade or change your plan any time from your profile or the subscription page.
+              You can upgrade or change your plan any time from your profile or
+              the subscription page.
             </p>
           </div>
         </div>
