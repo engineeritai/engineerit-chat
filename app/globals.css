@@ -1191,3 +1191,57 @@ body {
     font-size: 12px;
   }
 }
+
+/* =========================
+   Mobile chat overflow fix
+   (tables/code/long text)
+   ========================= */
+
+/* Keep message bubble/layout safe on small screens */
+.chat-message,
+.message-bubble,
+.ai-bubble,
+.user-bubble,
+.chat-bubble {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Only scroll inside the message content if needed */
+.chat-message-content,
+.message-content,
+.markdown,
+.prose {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tables should scroll horizontally inside bubble (like ChatGPT) */
+.chat-message-content table,
+.message-content table,
+.markdown table,
+.prose table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+/* Prevent big words/links from breaking layout */
+.chat-message-content,
+.message-content,
+.markdown,
+.prose {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Code blocks */
+.chat-message-content pre,
+.message-content pre,
+.markdown pre,
+.prose pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
