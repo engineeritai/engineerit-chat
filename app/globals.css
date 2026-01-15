@@ -1014,12 +1014,6 @@ button {
   }
 }
 
-/* Prevent page horizontal scroll (but allow msg-content to scroll internally) */
-html,
-body {
-  overflow-x: hidden;
-}
-
 /* Ensure chat doesn't exceed width */
 .conversation,
 .composer,
@@ -1150,118 +1144,96 @@ body {
 .msg-action-btn:hover {
   color: #111827;
 }
-/* =========================
-   FIX: ChatGPT-like scrolling + stable typography (MOBILE + DESKTOP)
-   Paste at END of globals.css
-   ========================= */
 
-/* Make the app take the full viewport height so the chat area can scroll */
+/* =========================================================
+   SAFE MOBILE SCROLL + FONT FIX (DO NOT BREAK OTHER PAGES)
+   ========================================================= */
+
+/* 1) Never allow global horizontal scroll */
 html,
 body {
-  height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
-/* Lock page vertical scrolling; allow ONLY the conversation area to scroll */
+/* 2) Keep vertical scroll NORMAL for all pages */
 body {
-  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
-/* Flex parents MUST allow children to shrink for overflow scrolling to work */
-.app-shell {
-  height: 100vh;
-  min-height: 0;
-}
-
-.main {
-  height: 100vh;
-  min-height: 0;
-}
-
-/* The chat area becomes the scroll container (like ChatGPT) */
+/* 3) Chat page: allow the conversation area to scroll vertically */
 .conversation {
-  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
-/* Prevent bubbles from forcing width overflow */
-.message-bubble {
-  max-width: 100%;
+/* IMPORTANT: allow flex children to shrink so .conversation can scroll */
+.main {
+  min-height: 0;
 }
 
-/* =========
-   Stable markdown typography (prevents huge text)
-   ========= */
+/* 4) Only the AI/user message CONTENT can scroll horizontally if needed */
 .msg-content {
-  font-size: 14px;
-  line-height: 1.6;
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+
+  /* keep normal paragraphs readable */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
-/* Normalize markdown spacing */
-.msg-content > :first-child {
-  margin-top: 0;
-}
-.msg-content > :last-child {
-  margin-bottom: 0;
-}
-
-.msg-content p,
-.msg-content li {
-  font-size: inherit;
-  line-height: inherit;
-}
-
-/* Headings (keep them reasonable everywhere) */
-.msg-content h1 {
-  font-size: 18px;
-  line-height: 1.35;
-  margin: 10px 0 6px;
-}
-.msg-content h2 {
-  font-size: 16px;
-  line-height: 1.35;
-  margin: 10px 0 6px;
-}
-.msg-content h3 {
-  font-size: 15px;
-  line-height: 1.35;
-  margin: 10px 0 6px;
-}
-
-/* Tables: scroll horizontally inside message only */
+/* 5) Tables: scroll horizontally inside the message only */
 .msg-content table {
   display: block;
-  width: max-content;
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   border-collapse: collapse;
 }
 
+/* keep table cells in one line so the table becomes scrollable */
 .msg-content th,
 .msg-content td {
   white-space: nowrap;
 }
 
-/* Code blocks: scroll horizontally inside message only */
+/* 6) Code blocks: scroll horizontally inside the message only */
 .msg-content pre {
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
 .msg-content code {
   white-space: pre;
 }
 
-/* Mobile text sizing (constant and not huge) */
+/* 7) Mobile font sizing ONLY (do not affect desktop theme) */
 @media (max-width: 768px) {
-  .msg-content {
-    font-size: 15px;
+  body {
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  /* Message text slightly smaller than body, consistent */
+  .message-bubble {
+    font-size: 14px;
     line-height: 1.6;
   }
 
-  /* iOS input zoom prevention WITHOUT affecting message sizes */
-  .textarea {
-    font-size: 16px;
+  .msg-content {
+    font-size: 14px;
+    line-height: 1.6;
   }
+
+  /* Prevent headings inside AI reply from becoming too large */
+  .msg-content h1 { font-size: 18px; line-height: 1.35; }
+  .msg-content h2 { font-size: 16px; line-height: 1.35; }
+  .msg-content h3 { font-size: 15px; line-height: 1.35; }
 }
