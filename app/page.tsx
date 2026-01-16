@@ -109,6 +109,10 @@ export default function Page() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
+  // guest / one-try
+  const [isGuest, setIsGuest] = useState(true);
+  const [guestMessagesCount, setGuestMessagesCount] = useState(0);
+
   // voice
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -129,6 +133,10 @@ export default function Page() {
   // share menu per message
   const [openShareFor, setOpenShareFor] = useState<string | null>(null);
 
+  const isPaidPlan =
+    planId === "engineer" || planId === "professional" || planId === "consultant";
+  const attachmentsAllowed = isPaidPlan && !isGuest;
+
   /* ======================
      Load user plan (Supabase)
      ====================== */
@@ -142,8 +150,11 @@ export default function Page() {
 
         if (!user) {
           setPlanId("assistant");
+          setIsGuest(true);
           return;
         }
+
+        setIsGuest(false);
 
         const { data: profile, error } = await supabase
           .from("profiles")
@@ -169,6 +180,7 @@ export default function Page() {
       } catch (err) {
         console.error("Failed to load plan for engineer tools", err);
         setPlanId("assistant");
+        setIsGuest(true);
       }
     };
 
@@ -189,7 +201,6 @@ export default function Page() {
       }
     } catch (err) {
       console.error("Landing localStorage error:", err);
-      // لو صار خطأ، نخليها تظهر مرة واحدة في هذه الجلسة
       setShowLanding(true);
     }
   }, []);
@@ -239,6 +250,9 @@ export default function Page() {
     };
     setThreads((prev) => [t, ...prev]);
     setCurrentThreadId(t.id);
+
+    // reset guest allowance per new chat
+    setGuestMessagesCount(0);
   }
 
   function onSelectThread(id: string) {
@@ -256,6 +270,8 @@ export default function Page() {
      ====================== */
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!attachmentsAllowed) return;
+
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -278,6 +294,8 @@ export default function Page() {
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!attachmentsAllowed) return;
+
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -479,11 +497,8 @@ export default function Page() {
     const payload = buildShareText(text);
     try {
       await navigator.clipboard.writeText(payload);
-      // optional tiny feedback without changing UI/theme:
-      // alert("Copied");
     } catch (e) {
       console.error("Copy failed:", e);
-      // fallback
       try {
         const el = document.createElement("textarea");
         el.value = payload;
@@ -554,8 +569,23 @@ export default function Page() {
      ====================== */
 
   async function send() {
-    if (!thread || (!input.trim() && attachments.length === 0) || sending)
+    if (!thread || (!input.trim() && attachments.length === 0) || sending) return;
+
+    // Guest: only ONE message total (per chat)
+    if (isGuest && guestMessagesCount >= 1) {
+      updateThread((t) => ({
+        ...t,
+        messages: [
+          ...t.messages,
+          {
+            id: uuid(),
+            role: "assistant",
+            content: "Please register or log in to continue using engineerit.ai",
+          },
+        ],
+      }));
       return;
+    }
 
     const userText = input.trim();
     const userAttachments = attachments;
@@ -580,6 +610,10 @@ export default function Page() {
         },
       ],
     }));
+
+    if (isGuest) {
+      setGuestMessagesCount((c) => c + 1);
+    }
 
     setSending(true);
 
@@ -862,86 +896,137 @@ export default function Page() {
                       </div>
                     )}
 
-                    {/* ✅ IMPORTANT: msg-content wrapper so mobile scroll CSS applies */}
-                    <div className="msg-content" dir={rtl ? "rtl" : "ltr"}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {/* msg-content wrapper (keeps scroll INSIDE message only) */}
+                    <div
+                      className="msg-content"
+                      dir={rtl ? "rtl" : "ltr"}
+                      style={{
+                        maxWidth: "100%",
+                        overflowX: "auto",
+                        WebkitOverflowScrolling: "touch",
+                      }}
+                    >
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          table: ({ ...props }) => (
+                            <div
+                              style={{
+                                maxWidth: "100%",
+                                overflowX: "auto",
+                                WebkitOverflowScrolling: "touch",
+                              }}
+                            >
+                              <table {...props} />
+                            </div>
+                          ),
+                          th: ({ ...props }) => (
+                            <th
+                              {...props}
+                              style={{
+                                fontWeight: 400,
+                                fontSize: "inherit",
+                              }}
+                            />
+                          ),
+                          td: ({ ...props }) => (
+                            <td
+                              {...props}
+                              style={{
+                                fontWeight: 400,
+                                fontSize: "inherit",
+                              }}
+                            />
+                          ),
+                        }}
+                      >
                         {m.content}
                       </ReactMarkdown>
                     </div>
 
-                    {/* ✅ ChatGPT-like actions under EACH AI reply */}
+                    {/* Actions under AI messages */}
                     {m.role === "assistant" && (
                       <div className="msg-actions">
-                        <button
-                          type="button"
-                          className="msg-action-btn"
-                          onClick={() => handleCopy(m.content)}
-                          aria-label="Copy"
-                          title="Copy"
-                        >
-                          📋 Copy
-                        </button>
+                        {!isPaidPlan ? (
+                          <span style={{ fontSize: 12, color: "#6b7280" }}>
+                            Upgrade to copy/share and attach files
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className="msg-action-btn"
+                              onClick={() => handleCopy(m.content)}
+                              aria-label="Copy"
+                              title="Copy"
+                            >
+                              📋 Copy
+                            </button>
 
-                        <button
-                          type="button"
-                          className="msg-action-btn"
-                          onClick={async () => {
-                            const ok = await handleNativeShare(m.content);
-                            if (!ok) setOpenShareFor((prev) => (prev === m.id ? null : m.id));
-                          }}
-                          aria-label="Share"
-                          title="Share"
-                        >
-                          🔗 Share
-                        </button>
+                            <button
+                              type="button"
+                              className="msg-action-btn"
+                              onClick={async () => {
+                                const ok = await handleNativeShare(m.content);
+                                if (!ok)
+                                  setOpenShareFor((prev) =>
+                                    prev === m.id ? null : m.id
+                                  );
+                              }}
+                              aria-label="Share"
+                              title="Share"
+                            >
+                              🔗 Share
+                            </button>
 
-                        {/* share menu (only when native share not available or user wants options) */}
-                        {openShareFor === m.id && (
-                          <div
-                            style={{
-                              marginTop: 6,
-                              display: "flex",
-                              flexWrap: "wrap",
-                              gap: 8,
-                              paddingLeft: 8,
-                            }}
-                          >
-                            <button
-                              type="button"
-                              className="msg-action-btn"
-                              onClick={() => shareWhatsApp(m.content)}
-                            >
-                              WhatsApp
-                            </button>
-                            <button
-                              type="button"
-                              className="msg-action-btn"
-                              onClick={() => shareEmail(m.content)}
-                            >
-                              Email
-                            </button>
-                            <button
-                              type="button"
-                              className="msg-action-btn"
-                              onClick={() => printText(m.content)}
-                            >
-                              Print
-                            </button>
-                            <button
-                              type="button"
-                              className="msg-action-btn"
-                              onClick={() => downloadTxt(m.content)}
-                            >
-                              Save (.txt)
-                            </button>
-                            <button
-                              type="button"
-                              className="msg-action-btn"
-                              onClick={() => setOpenShareFor(null)}
-                            >
-                              ✕ Close
-                            </button>
-                          </div>
+                            {openShareFor === m.id && (
+                              <div
+                                style={{
+                                  marginTop: 6,
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: 8,
+                                  paddingLeft: 8,
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={() => shareWhatsApp(m.content)}
+                                >
+                                  WhatsApp
+                                </button>
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={() => shareEmail(m.content)}
+                                >
+                                  Email
+                                </button>
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={() => printText(m.content)}
+                                >
+                                  Print
+                                </button>
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={() => downloadTxt(m.content)}
+                                >
+                                  Save (.txt)
+                                </button>
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={() => setOpenShareFor(null)}
+                                >
+                                  ✕ Close
+                                </button>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
@@ -979,12 +1064,20 @@ export default function Page() {
                   type="button"
                   className="chat-input-icon-btn"
                   aria-label="Add attachments"
-                  onClick={() => setIsAttachMenuOpen((v) => !v)}
+                  disabled={!attachmentsAllowed}
+                  title={
+                    attachmentsAllowed
+                      ? "Add attachments"
+                      : isGuest
+                      ? "Register to attach files"
+                      : "Upgrade to attach files"
+                  }
+                  onClick={() => attachmentsAllowed && setIsAttachMenuOpen((v) => !v)}
                 >
                   <span className="chat-input-plus">+</span>
                 </button>
 
-                {isAttachMenuOpen && (
+                {isAttachMenuOpen && attachmentsAllowed && (
                   <div className="attach-menu">
                     <button
                       type="button"
@@ -1063,6 +1156,7 @@ export default function Page() {
               accept="image/*"
               hidden
               onChange={handleImageChange}
+              disabled={!attachmentsAllowed}
             />
             <input
               type="file"
@@ -1070,6 +1164,7 @@ export default function Page() {
               accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.mpp,.dwg,.dxf,.m,.mat,.slx,.sldprt,.sldasm,.step,.stp,.iges,.inp"
               hidden
               onChange={handleFileChange}
+              disabled={!attachmentsAllowed}
             />
           </div>
         </div>

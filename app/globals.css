@@ -1035,3 +1035,17 @@ body {
     font-size: 12px;
   }
 }
+/* === Normalize table font inside AI messages === */
+.msg-content table {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.msg-content th,
+.msg-content td {
+  font-weight: 400 !important;
+}
+
+.msg-content th {
+  background: transparent;
+}
