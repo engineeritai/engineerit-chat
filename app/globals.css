@@ -960,11 +960,6 @@ body {
   border-collapse: collapse;
 }
 
-.msg-content th,
-.msg-content td {
-  white-space: nowrap;
-}
-
 /* Code blocks: scroll horizontally INSIDE message */
 .msg-content pre {
   max-width: 100%;
@@ -1034,4 +1029,51 @@ body {
     padding: 6px 8px;
     font-size: 12px;
   }
+}
+
+/* ======================================================
+   FINAL FIX: Chat tables (ChatGPT-like behavior)
+   ====================================================== */
+
+/* Only affect tables inside AI chat messages */
+.msg-content table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Keep header bold */
+.msg-content th {
+  font-weight: 600;
+}
+
+/* Body cells normal weight */
+.msg-content td {
+  font-weight: 400;
+}
+
+/* Allow wrapping (CRITICAL for mobile) */
+.msg-content th,
+.msg-content td {
+  white-space: normal;
+  word-break: break-word;
+  padding: 6px 8px;
+  vertical-align: top;
+}
+
+/* Prevent markdown from inflating text inside cells */
+.msg-content td p,
+.msg-content td strong,
+.msg-content td em,
+.msg-content td ul,
+.msg-content td li {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  margin: 0;
+  padding: 0;
 }
