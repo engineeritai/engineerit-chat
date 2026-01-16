@@ -962,7 +962,7 @@ body {
 
 .msg-content th,
 .msg-content td {
-  white-space: normal;
+  white-space: nowrap;
 }
 
 /* Code blocks: scroll horizontally INSIDE message */
