@@ -1035,58 +1035,68 @@ body {
     font-size: 12px;
   }
 }
-/* === Normalize table font inside AI messages === */
+
+/* =========================================
+   FINAL FIX: tables inside AI chat only
+   - keep page scrolling normal
+   - allow horizontal scroll only inside table
+   - normalize font-size/weight in ALL columns/cells
+   ========================================= */
+
+/* ONLY inside chat message content */
 .msg-content table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  /* your preferred table text size inside chat */
   font-size: 13px;
-  font-weight: 400;
+  line-height: 1.45;
+
+  border-collapse: collapse;
 }
 
-.msg-content th,
-.msg-content td {
-  font-weight: 400 !important;
-}
-
-.msg-content th {
-  background: transparent;
-}
-
-/* =========================
-   FIX: Table cell font mismatch in chat (mobile/desktop)
-   - Forces uniform font inside markdown tables only (within .msg-content)
-   ========================= */
-
-.msg-content table {
-  font-size: 13px;              /* keep table text stable */
-  line-height: 1.4;
-}
-
+/* Force ALL cells (including headers) to same typography */
 .msg-content table th,
 .msg-content table td {
   font-size: inherit !important;
-  font-weight: 400 !important;  /* remove random bold columns */
+  line-height: inherit !important;
+  font-weight: 400 !important; /* remove bold anywhere */
+  vertical-align: top;
 }
 
-/* Anything inside table cells must NOT change font size/weight */
+/* Prevent markdown tags inside cells from changing font/weight */
 .msg-content table th *,
 .msg-content table td * {
   font-size: inherit !important;
-  font-weight: inherit !important;
   line-height: inherit !important;
-}
-
-/* If AI outputs headings inside a cell, normalize them */
-.msg-content table h1,
-.msg-content table h2,
-.msg-content table h3,
-.msg-content table h4,
-.msg-content table h5,
-.msg-content table h6 {
-  font-size: inherit !important;
   font-weight: inherit !important;
-  margin: 0 !important;
 }
 
-/* Optional: prevent huge spacing inside table cells */
-.msg-content table p {
+/* Remove extra spacing inside cells that makes columns look “different” */
+.msg-content table td p,
+.msg-content table td ul,
+.msg-content table td ol,
+.msg-content table td li,
+.msg-content table td strong,
+.msg-content table td em,
+.msg-content table td code,
+.msg-content table th p,
+.msg-content table th ul,
+.msg-content table th ol,
+.msg-content table th li,
+.msg-content table th strong,
+.msg-content table th em,
+.msg-content table th code {
   margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Keep long text readable (don’t force you to rotate) */
+.msg-content table td,
+.msg-content table th {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
