@@ -1049,3 +1049,44 @@ body {
 .msg-content th {
   background: transparent;
 }
+
+/* =========================
+   FIX: Table cell font mismatch in chat (mobile/desktop)
+   - Forces uniform font inside markdown tables only (within .msg-content)
+   ========================= */
+
+.msg-content table {
+  font-size: 13px;              /* keep table text stable */
+  line-height: 1.4;
+}
+
+.msg-content table th,
+.msg-content table td {
+  font-size: inherit !important;
+  font-weight: 400 !important;  /* remove random bold columns */
+}
+
+/* Anything inside table cells must NOT change font size/weight */
+.msg-content table th *,
+.msg-content table td * {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+}
+
+/* If AI outputs headings inside a cell, normalize them */
+.msg-content table h1,
+.msg-content table h2,
+.msg-content table h3,
+.msg-content table h4,
+.msg-content table h5,
+.msg-content table h6 {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  margin: 0 !important;
+}
+
+/* Optional: prevent huge spacing inside table cells */
+.msg-content table p {
+  margin: 0 !important;
+}
