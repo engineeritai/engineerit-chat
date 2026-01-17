@@ -80,7 +80,9 @@ function hasAccess(planId: PlanId, toolId: ToolId) {
 }
 
 /* ============================
-   Helpers: RTL + HTML Share
+   Helpers: RTL + Export/Share (FIXED)
+   - Reliable Print/PDF via hidden iframe (no popups)
+   - Better Web Share (proper filename + fallbacks)
    ============================ */
 
 function isArabicText(text: string) {
@@ -107,10 +109,11 @@ function buildHtmlDocument(aiText: string) {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>engineerit.ai</title>
 <style>
-  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px;color:#111827;background:#fff;}
-  .wrap{max-width:980px;margin:0 auto;}
-  .card{border:1px solid #e5e7eb;border-radius:16px;padding:18px;background:#fff;}
-  pre{white-space:pre-wrap;word-break:break-word;margin:0;font:inherit;line-height:1.6;}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px;color:#111827;background:#fff}
+  .wrap{max-width:980px;margin:0 auto}
+  .card{border:1px solid #e5e7eb;border-radius:16px;padding:18px;background:#fff}
+  pre{white-space:pre-wrap;word-break:break-word;margin:0;font:inherit;line-height:1.6}
   .footer{margin-top:14px;color:#6b7280;font-size:12px}
 </style>
 </head>
@@ -126,9 +129,12 @@ function buildHtmlDocument(aiText: string) {
 function htmlFileFromText(aiText: string) {
   const html = buildHtmlDocument(aiText);
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const file = new File([blob], "engineerit.ai", {
+
+  // IMPORTANT: add extension for iOS/Share compatibility
+  const file = new File([blob], "engineerit.ai.html", {
     type: "text/html",
   });
+
   return { html, blob, file };
 }
 
@@ -158,31 +164,69 @@ function saveHtml(aiText: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "engineerit.ai";
+  a.download = "engineerit.ai.html";
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Reliable print that avoids popup blockers and "blank print" issues.
+ * Works on desktop browsers and much better on iOS/Safari than window.open().
+ */
 function printHtml(aiText: string) {
   const html = buildHtmlDocument(aiText);
-  const w = window.open("", "_blank", "noopener,noreferrer");
-  if (!w) return;
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  w.print();
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.setAttribute("aria-hidden", "true");
+
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    iframe.remove();
+    return;
+  }
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  // Wait a tick for rendering then print
+  setTimeout(() => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } finally {
+      // cleanup
+      setTimeout(() => iframe.remove(), 800);
+    }
+  }, 200);
 }
 
+/**
+ * PDF export: use print dialog -> "Save as PDF"
+ * This is the only method that is truly cross-platform reliable without a server PDF renderer.
+ */
 function pdfHtml(aiText: string) {
-  // browser print -> Save as PDF
   printHtml(aiText);
 }
 
+/**
+ * Share:
+ * - On mobile: native share (files if supported, else text)
+ * - On desktop: fallback to WhatsApp Web + copy
+ */
 async function nativeShareHtml(aiText: string) {
   const { file } = htmlFileFromText(aiText);
+
   try {
     // @ts-ignore
     if (navigator.share) {
@@ -196,15 +240,23 @@ async function nativeShareHtml(aiText: string) {
         });
         return true;
       }
+
+      // If files not supported (common on desktop), share text only
       // @ts-ignore
       await navigator.share({
         title: "engineerit.ai",
-        text: "engineerit.ai",
+        text: aiText.slice(0, 4000),
       });
       return true;
     }
   } catch {}
   return false;
+}
+
+function shareToWhatsApp(aiText: string) {
+  const text = aiText.slice(0, 8000); // keep it safe for URL length
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(waUrl, "_blank", "noopener,noreferrer");
 }
 
 /* ============================
@@ -266,7 +318,9 @@ export default function Page() {
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
 
   const isPaidPlan =
-    planId === "engineer" || planId === "professional" || planId === "consultant";
+    planId === "engineer" ||
+    planId === "professional" ||
+    planId === "consultant";
 
   const attachmentsAllowed = isPaidPlan && !isGuest;
 
@@ -295,7 +349,12 @@ export default function Page() {
 
         if (!error && profile?.subscription_tier) {
           const p = profile.subscription_tier as PlanId;
-          if (p === "assistant" || p === "engineer" || p === "professional" || p === "consultant") {
+          if (
+            p === "assistant" ||
+            p === "engineer" ||
+            p === "professional" ||
+            p === "consultant"
+          ) {
             setPlanId(p);
           } else {
             setPlanId("assistant");
@@ -434,10 +493,14 @@ export default function Page() {
   const handleEngineerToolClick = (toolId: ToolId) => {
     switch (toolId) {
       case "drawing":
-        insertTemplate("Explain and analyze the attached engineering drawing (PFD / P&ID / block diagram).");
+        insertTemplate(
+          "Explain and analyze the attached engineering drawing (PFD / P&ID / block diagram)."
+        );
         break;
       case "design":
-        insertTemplate("Check this engineering design against relevant codes and standards.");
+        insertTemplate(
+          "Check this engineering design against relevant codes and standards."
+        );
         break;
       case "itp":
         insertTemplate("Generate an Inspection & Test Plan (ITP) and QA/QC checklist.");
@@ -512,7 +575,10 @@ export default function Page() {
 
     updateThread((t) => ({
       ...t,
-      title: t.messages.length === 0 ? userText.slice(0, 64) || "New conversation" : t.title,
+      title:
+        t.messages.length === 0
+          ? userText.slice(0, 64) || "New conversation"
+          : t.title,
       messages: [
         ...t.messages,
         {
@@ -603,7 +669,10 @@ export default function Page() {
       console.error(e);
       updateThread((t) => ({
         ...t,
-        messages: [...t.messages, { id: uuid(), role: "assistant", content: "Sorry, something failed. Please try again." }],
+        messages: [
+          ...t.messages,
+          { id: uuid(), role: "assistant", content: "Sorry, something failed. Please try again." },
+        ],
       }));
     } finally {
       setSending(false);
@@ -684,8 +753,7 @@ export default function Page() {
                   key={tool.id}
                   type="button"
                   className={
-                    "engineer-tools-btn" +
-                    (enabled ? "" : " engineer-tools-btn-locked")
+                    "engineer-tools-btn" + (enabled ? "" : " engineer-tools-btn-locked")
                   }
                   disabled={!enabled}
                   onClick={() => enabled && handleEngineerToolClick(tool.id)}
@@ -756,8 +824,7 @@ export default function Page() {
                 <div
                   key={m.id}
                   className={
-                    "message-row " +
-                    (m.role === "user" ? "message-user" : "message-assistant")
+                    "message-row " + (m.role === "user" ? "message-user" : "message-assistant")
                   }
                 >
                   <div className="message-avatar">{m.role === "user" ? "You" : "AI"}</div>
@@ -818,16 +885,43 @@ export default function Page() {
                                   paddingLeft: 8,
                                 }}
                               >
-                                <button type="button" className="msg-action-btn" onClick={() => saveHtml(m.content)}>
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={() => saveHtml(m.content)}
+                                >
                                   Save HTML
                                 </button>
-                                <button type="button" className="msg-action-btn" onClick={() => printHtml(m.content)}>
+
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={() => printHtml(m.content)}
+                                >
                                   Print
                                 </button>
-                                <button type="button" className="msg-action-btn" onClick={() => pdfHtml(m.content)}>
+
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={() => pdfHtml(m.content)}
+                                >
                                   PDF
                                 </button>
-                                <button type="button" className="msg-action-btn" onClick={() => setOpenShareFor(null)}>
+
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={() => shareToWhatsApp(m.content)}
+                                >
+                                  WhatsApp
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={() => setOpenShareFor(null)}
+                                >
                                   ✕ Close
                                 </button>
                               </div>
@@ -955,12 +1049,14 @@ export default function Page() {
 
               {gateMode === "register" ? (
                 <div className="gate-body">
-                  <div className="gate-text">
-                    Please register or login to continue.
-                  </div>
+                  <div className="gate-text">Please register or login to continue.</div>
                   <div className="gate-actions">
-                    <a className="gate-btn" href="/login">Login</a>
-                    <a className="gate-btn gate-btn-primary" href="/register">Register</a>
+                    <a className="gate-btn" href="/login">
+                      Login
+                    </a>
+                    <a className="gate-btn gate-btn-primary" href="/register">
+                      Register
+                    </a>
                     <button className="gate-btn" type="button" onClick={() => setShowGate(false)}>
                       Close
                     </button>
@@ -968,11 +1064,11 @@ export default function Page() {
                 </div>
               ) : (
                 <div className="gate-body">
-                  <div className="gate-text">
-                    Upgrade to continue without limits.
-                  </div>
+                  <div className="gate-text">Upgrade to continue without limits.</div>
                   <div className="gate-actions">
-                    <a className="gate-btn gate-btn-primary" href="/subscription">Upgrade</a>
+                    <a className="gate-btn gate-btn-primary" href="/subscription">
+                      Upgrade
+                    </a>
                     <button className="gate-btn" type="button" onClick={() => setShowGate(false)}>
                       Close
                     </button>
