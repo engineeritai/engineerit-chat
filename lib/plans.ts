@@ -8,7 +8,7 @@ export type Plan = {
   shortName: string;
   tagline: string;
   priceMonthly: string; // formatted for display
-  priceYearly: string;  // formatted for display
+  priceYearly: string;  // formatted for display (keep field for UI compatibility)
   features: string[];
 };
 
@@ -21,7 +21,7 @@ export const PLANS: Plan[] = [
     shortName: "A",
     tagline: "Ideal for students and junior engineers.",
     priceMonthly: "Free",
-    priceYearly: "Free",
+    priceYearly: "",
     features: [
       "AI chat in all disciplines",
       "Read Word, Excel, PowerPoint, PDF",
@@ -34,9 +34,8 @@ export const PLANS: Plan[] = [
     name: "Engineer",
     shortName: "E",
     tagline: "For practicing engineers who need faster documentation.",
-    //  SAR 19 / month, 10% yearly discount → SAR 205 / year
     priceMonthly: `SAR 19 / month`,
-    priceYearly: `SAR 205 / year (10% off)`,
+    priceYearly: "",
     features: [
       "Everything in Assistant Engineer",
       "Analyze Word, Excel, PowerPoint Documents",
@@ -50,9 +49,8 @@ export const PLANS: Plan[] = [
     name: "Professional Engineer",
     shortName: "P",
     tagline: "For senior engineers and lead designers.",
-    //  SAR 41 / month, 13% yearly discount → SAR 428 / year
     priceMonthly: `SAR 41 / month`,
-    priceYearly: `SAR 428 / year (13% off)`,
+    priceYearly: "",
     features: [
       "Everything in Engineer",
       "Advanced designs, equations, formulas, design checks",
@@ -66,9 +64,8 @@ export const PLANS: Plan[] = [
     name: "Consultant Engineer",
     shortName: "C",
     tagline: "For consultants and firms managing full projects.",
-    //  SAR 79 / month, 17% yearly discount → SAR 787 / year
     priceMonthly: `SAR 79 / month`,
-    priceYearly: `SAR 787 / year (17% off)`,
+    priceYearly: "",
     features: [
       "Everything in Professional Engineer",
       "Equipment list & BOQ analysis",

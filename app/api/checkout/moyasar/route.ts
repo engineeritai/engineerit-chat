@@ -16,19 +16,19 @@ const PLAN_CONFIG: Record<
     amount: 19 * 100,
     label: "Engineer",
     description:
-      "engineerit.ai Engineer plan (SAR 19 monthly, 10% yearly discount)",
+      "engineerit.ai Engineer plan (SAR 19 monthly)",
   },
   professional: {
     amount: 41 * 100,
     label: "Professional",
     description:
-      "engineerit.ai Professional plan (SAR 41 monthly, 13% yearly discount)",
+      "engineerit.ai Professional plan (SAR 41 monthly)",
   },
   consultant: {
     amount: 79 * 100,
     label: "Consultant",
     description:
-      "engineerit.ai Consultant plan (SAR 79 monthly, 17% yearly discount)",
+      "engineerit.ai Consultant plan (SAR 79 monthly)",
   },
 };
 

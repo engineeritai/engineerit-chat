@@ -3,7 +3,6 @@
 import React, {
   useEffect,
   useMemo,
-  useRef,
   useState,
   KeyboardEvent,
   ChangeEvent,
@@ -21,7 +20,7 @@ type Attachment = {
   id: string;
   name: string;
   type: "image" | "file";
-  url: string;
+  url: string; // data URL for images, object URL for files
   file?: File;
 };
 
@@ -81,7 +80,7 @@ function hasAccess(planId: PlanId, toolId: ToolId) {
 }
 
 /* ============================
-   Helpers: RTL + HTML export/share
+   Helpers: RTL + HTML Share
    ============================ */
 
 function isArabicText(text: string) {
@@ -178,22 +177,15 @@ function printHtml(aiText: string) {
 }
 
 function pdfHtml(aiText: string) {
-  // browser print dialog -> Save as PDF
+  // browser print -> Save as PDF
   printHtml(aiText);
-}
-
-function shareWhatsAppLink() {
-  const msg = encodeURIComponent("engineerit.ai");
-  window.open(`https://wa.me/?text=${msg}`, "_blank", "noopener,noreferrer");
 }
 
 async function nativeShareHtml(aiText: string) {
   const { file } = htmlFileFromText(aiText);
-
   try {
     // @ts-ignore
     if (navigator.share) {
-      // If canShare with files works (mobile), share file.
       // @ts-ignore
       if (navigator.canShare?.({ files: [file] })) {
         // @ts-ignore
@@ -204,23 +196,47 @@ async function nativeShareHtml(aiText: string) {
         });
         return true;
       }
-
-      // Fallback: share text only
       // @ts-ignore
       await navigator.share({
         title: "engineerit.ai",
-        text: "engineerit.ai reply (open and save/share as HTML if needed).",
+        text: "engineerit.ai reply",
       });
       return true;
     }
   } catch {}
-
   return false;
 }
 
-/* ======================
-   Page
-   ====================== */
+/* ============================
+   Daily limits (client quick)
+   - Guest: 1/day (browser)
+   - Assistant: 3/day (browser)
+   - Paid: open
+   NOTE: Real IP/day enforced in /api/chat route.ts
+   ============================ */
+
+function todayUTCKey() {
+  const d = new Date();
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function getLocalCount(key: string) {
+  try {
+    const v = window.localStorage.getItem(key);
+    return v ? Number(v) || 0 : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function setLocalCount(key: string, n: number) {
+  try {
+    window.localStorage.setItem(key, String(n));
+  } catch {}
+}
 
 export default function Page() {
   const [discipline, setDiscipline] = useState("General");
@@ -232,7 +248,7 @@ export default function Page() {
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
   const [isGuest, setIsGuest] = useState(true);
-  const [guestMessagesCount, setGuestMessagesCount] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
 
@@ -240,20 +256,20 @@ export default function Page() {
 
   const [showMobileTools, setShowMobileTools] = useState(false);
 
-  // Landing (DO NOT REMOVE)
   const [showLanding, setShowLanding] = useState(false);
 
-  // Share popup (desktop fallback)
   const [openShareFor, setOpenShareFor] = useState<string | null>(null);
 
+  // Gate modal (Register / Upgrade)
+  const [showGate, setShowGate] = useState(false);
+  const [gateMode, setGateMode] = useState<"register" | "upgrade">("register");
+  const [limitNotice, setLimitNotice] = useState<string | null>(null);
+
   const isPaidPlan =
-    planId === "engineer" ||
-    planId === "professional" ||
-    planId === "consultant";
+    planId === "engineer" || planId === "professional" || planId === "consultant";
 
   const attachmentsAllowed = isPaidPlan && !isGuest;
 
-  /* Load plan */
   useEffect(() => {
     const loadPlan = async () => {
       try {
@@ -264,10 +280,12 @@ export default function Page() {
         if (!user) {
           setPlanId("assistant");
           setIsGuest(true);
+          setUserId(null);
           return;
         }
 
         setIsGuest(false);
+        setUserId(user.id);
 
         const { data: profile, error } = await supabase
           .from("profiles")
@@ -277,12 +295,7 @@ export default function Page() {
 
         if (!error && profile?.subscription_tier) {
           const p = profile.subscription_tier as PlanId;
-          if (
-            p === "assistant" ||
-            p === "engineer" ||
-            p === "professional" ||
-            p === "consultant"
-          ) {
+          if (p === "assistant" || p === "engineer" || p === "professional" || p === "consultant") {
             setPlanId(p);
           } else {
             setPlanId("assistant");
@@ -294,17 +307,16 @@ export default function Page() {
         console.error(err);
         setPlanId("assistant");
         setIsGuest(true);
+        setUserId(null);
       }
     };
 
     void loadPlan();
   }, []);
 
-  /* Landing show once */
   useEffect(() => {
     try {
       const KEY = "engineerit_landing_seen_v1";
-      if (typeof window === "undefined") return;
       const seen = window.localStorage.getItem(KEY);
       if (!seen) setShowLanding(true);
     } catch {
@@ -320,7 +332,6 @@ export default function Page() {
     setShowLanding(false);
   };
 
-  /* Threads */
   useEffect(() => {
     if (!currentThreadId) {
       const t: Thread = {
@@ -350,7 +361,6 @@ export default function Page() {
     };
     setThreads((prev) => [t, ...prev]);
     setCurrentThreadId(t.id);
-    setGuestMessagesCount(0);
   }
 
   function onSelectThread(id: string) {
@@ -361,7 +371,6 @@ export default function Page() {
     setThreads((all) => all.map((t) => (t.id === currentThreadId ? fn(t) : t)));
   }
 
-  /* Attachments */
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (!attachmentsAllowed) return;
     const file = e.target.files?.[0];
@@ -396,7 +405,6 @@ export default function Page() {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  /* APIs */
   async function analyzeImage(question: string, imageFile: File): Promise<string> {
     const formData = new FormData();
     formData.append("file", imageFile, imageFile.name);
@@ -419,7 +427,6 @@ export default function Page() {
     return data.reply || "";
   }
 
-  /* Engineer tools template */
   function insertTemplate(template: string) {
     setInput((prev) => (prev ? `${prev}\n\n${template}` : template));
   }
@@ -427,19 +434,13 @@ export default function Page() {
   const handleEngineerToolClick = (toolId: ToolId) => {
     switch (toolId) {
       case "drawing":
-        insertTemplate(
-          "Explain and analyze the attached engineering drawing (PFD / P&ID / block diagram)."
-        );
+        insertTemplate("Explain and analyze the attached engineering drawing (PFD / P&ID / block diagram).");
         break;
       case "design":
-        insertTemplate(
-          "Check this engineering design against relevant codes and standards."
-        );
+        insertTemplate("Check this engineering design against relevant codes and standards.");
         break;
       case "itp":
-        insertTemplate(
-          "Generate an Inspection & Test Plan (ITP) and QA/QC checklist."
-        );
+        insertTemplate("Generate an Inspection & Test Plan (ITP) and QA/QC checklist.");
         break;
       case "boq":
         insertTemplate("Propose a structured BOQ with items and units.");
@@ -458,24 +459,50 @@ export default function Page() {
     }
   };
 
-  /* Send */
+  function openRegisterGate(msg?: string) {
+    setGateMode("register");
+    setLimitNotice(msg || null);
+    setShowGate(true);
+  }
+
+  function openUpgradeGate(msg?: string) {
+    setGateMode("upgrade");
+    setLimitNotice(msg || null);
+    setShowGate(true);
+  }
+
+  function checkDailyLimitOrGate() {
+    if (typeof window === "undefined") return { ok: true as const, key: "", cur: 0 };
+
+    const day = todayUTCKey();
+    const planKey = isGuest ? "guest" : planId;
+    const key = `engineerit_daily_${planKey}_${day}`;
+    const cur = getLocalCount(key);
+
+    const max = isGuest ? 1 : planId === "assistant" ? 3 : Number.POSITIVE_INFINITY;
+    if (Number.isFinite(max) && cur >= max) {
+      const msg =
+        isGuest
+          ? "Daily limit reached. Please register or log in."
+          : "Daily limit reached. Please upgrade.";
+      if (isGuest) openRegisterGate(msg);
+      else if (planId === "assistant") openUpgradeGate(msg);
+      return { ok: false as const, key, cur };
+    }
+    return { ok: true as const, key, cur };
+  }
+
+  function incrementLocalDailyCount(key: string, cur: number) {
+    if (!key) return;
+    setLocalCount(key, cur + 1);
+  }
+
   async function send() {
     if (!thread || (!input.trim() && attachments.length === 0) || sending) return;
 
-    if (isGuest && guestMessagesCount >= 1) {
-      updateThread((t) => ({
-        ...t,
-        messages: [
-          ...t.messages,
-          {
-            id: uuid(),
-            role: "assistant",
-            content: "Please register or log in to continue using engineerit.ai",
-          },
-        ],
-      }));
-      return;
-    }
+    // Daily limits
+    const check = checkDailyLimitOrGate();
+    if (!check.ok) return;
 
     const userText = input.trim();
     const userAttachments = attachments;
@@ -485,10 +512,7 @@ export default function Page() {
 
     updateThread((t) => ({
       ...t,
-      title:
-        t.messages.length === 0
-          ? userText.slice(0, 64) || "New conversation"
-          : t.title,
+      title: t.messages.length === 0 ? userText.slice(0, 64) || "New conversation" : t.title,
       messages: [
         ...t.messages,
         {
@@ -499,8 +523,6 @@ export default function Page() {
         },
       ],
     }));
-
-    if (isGuest) setGuestMessagesCount((c) => c + 1);
 
     setSending(true);
 
@@ -514,12 +536,14 @@ export default function Page() {
           ...t,
           messages: [...t.messages, { id: uuid(), role: "assistant", content: reply }],
         }));
+        incrementLocalDailyCount(check.key, check.cur);
       } else if (imgAttachment) {
         const reply = await analyzeImage(userText, imgAttachment.file!);
         updateThread((t) => ({
           ...t,
           messages: [...t.messages, { id: uuid(), role: "assistant", content: reply }],
         }));
+        incrementLocalDailyCount(check.key, check.cur);
       } else {
         const payloadMessages = (thread.messages || []).concat({
           id: "temp",
@@ -530,29 +554,56 @@ export default function Page() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ discipline, messages: payloadMessages }),
+          body: JSON.stringify({
+            discipline,
+            messages: payloadMessages,
+            planId: isGuest ? "guest" : planId,
+            userId: userId,
+          }),
         });
 
+        if (res.status === 429) {
+          const data = await res.json().catch(() => null);
+          const msg =
+            data?.error ||
+            (isGuest
+              ? "Daily limit reached. Please register or log in."
+              : "Daily limit reached. Please upgrade.");
+          if (isGuest) openRegisterGate(msg);
+          else if (planId === "assistant") openUpgradeGate(msg);
+
+          updateThread((t) => ({
+            ...t,
+            messages: [
+              ...t.messages,
+              {
+                id: uuid(),
+                role: "assistant",
+                content: isGuest
+                  ? "Daily limit reached. Please register or log in to continue using engineerit.ai."
+                  : "Daily limit reached. Please upgrade to continue.",
+              },
+            ],
+          }));
+          return;
+        }
+
         if (!res.ok) throw new Error(await res.text());
+
         const data = (await res.json()) as { reply: string };
 
         updateThread((t) => ({
           ...t,
           messages: [...t.messages, { id: uuid(), role: "assistant", content: data.reply || "" }],
         }));
+
+        incrementLocalDailyCount(check.key, check.cur);
       }
     } catch (e) {
       console.error(e);
       updateThread((t) => ({
         ...t,
-        messages: [
-          ...t.messages,
-          {
-            id: uuid(),
-            role: "assistant",
-            content: "Sorry, something failed. Please try again.",
-          },
-        ],
+        messages: [...t.messages, { id: uuid(), role: "assistant", content: "Sorry, something failed. Please try again." }],
       }));
     } finally {
       setSending(false);
@@ -567,7 +618,7 @@ export default function Page() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell chat-page">
       <Sidebar
         discipline={discipline}
         onDisciplineChange={setDiscipline}
@@ -582,7 +633,6 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
-        {/* Landing (RESTORED) */}
         {showLanding && (
           <div
             className="card"
@@ -601,9 +651,9 @@ export default function Page() {
               </div>
               <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
                 A digital AI-powered platform providing engineering intelligence services,
-                including automated engineering analysis, data processing, remote technical
-                consulting, and operating an interactive system that utilizes AI technologies
-                to analyze documents, drawings, and enhance engineering experience.
+                including automated engineering analysis, data processing, remote technical consulting,
+                and operating an interactive system that utilizes AI technologies to analyze documents,
+                drawings, and enhance engineering experience.
               </div>
             </div>
             <button
@@ -624,7 +674,6 @@ export default function Page() {
           </div>
         )}
 
-        {/* Engineer tools – desktop */}
         <div className="engineer-tools">
           <span className="engineer-tools-label">Engineer tools:</span>
           <div className="engineer-tools-row">
@@ -634,7 +683,10 @@ export default function Page() {
                 <button
                   key={tool.id}
                   type="button"
-                  className={"engineer-tools-btn" + (enabled ? "" : " engineer-tools-btn-locked")}
+                  className={
+                    "engineer-tools-btn" +
+                    (enabled ? "" : " engineer-tools-btn-locked")
+                  }
                   disabled={!enabled}
                   onClick={() => enabled && handleEngineerToolClick(tool.id)}
                 >
@@ -646,7 +698,6 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Engineer tools – mobile dropdown */}
         <div className="engineer-tools-mobile">
           <button
             type="button"
@@ -673,7 +724,7 @@ export default function Page() {
                       disabled={!enabled}
                       onClick={() => {
                         if (!enabled) {
-                          alert("This tool requires a higher subscription plan.");
+                          openUpgradeGate("This tool requires a higher subscription plan.");
                           return;
                         }
                         handleEngineerToolClick(tool.id);
@@ -692,7 +743,6 @@ export default function Page() {
           )}
         </div>
 
-        {/* Conversation */}
         <div className="conversation">
           {messages.length === 0 ? (
             <div className="empty-state">
@@ -705,60 +755,29 @@ export default function Page() {
               return (
                 <div
                   key={m.id}
-                  className={"message-row " + (m.role === "user" ? "message-user" : "message-assistant")}
+                  className={
+                    "message-row " +
+                    (m.role === "user" ? "message-user" : "message-assistant")
+                  }
                 >
                   <div className="message-avatar">{m.role === "user" ? "You" : "AI"}</div>
 
                   <div className="message-bubble">
-                    {m.attachments && m.attachments.length > 0 && (
-                      <div className="msg-attachments">
-                        {m.attachments.map((a) =>
-                          a.type === "image" ? (
-                            <div key={a.id} className="msg-attachment">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={a.url} alt={a.name} />
-                              <span>{a.name}</span>
-                            </div>
-                          ) : (
-                            <div key={a.id} className="msg-attachment">
-                              <span>📄 {a.name}</span>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    )}
-
-                    <div
-                      className="msg-content"
-                      dir={rtl ? "rtl" : "ltr"}
-                      style={{
-                        maxWidth: "100%",
-                        overflowX: "auto",
-                        WebkitOverflowScrolling: "touch",
-                      }}
-                    >
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          table: ({ ...props }) => (
-                            <div style={{ maxWidth: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-                              <table {...props} />
-                            </div>
-                          ),
-                          th: ({ ...props }) => <th {...props} style={{ fontWeight: 400, fontSize: "inherit" }} />,
-                          td: ({ ...props }) => <td {...props} style={{ fontWeight: 400, fontSize: "inherit" }} />,
-                        }}
-                      >
+                    <div className="msg-content" dir={rtl ? "rtl" : "ltr"}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {m.content}
                       </ReactMarkdown>
                     </div>
 
-                    {/* Actions under AI messages */}
                     {m.role === "assistant" && (
                       <div className="msg-actions">
-                        {!isPaidPlan ? (
+                        {planId === "assistant" && isGuest ? (
                           <span style={{ fontSize: 12, color: "#6b7280" }}>
-                            Upgrade to copy/share and attach files
+                            Register to copy/share and attach files
+                          </span>
+                        ) : planId === "assistant" && !isGuest ? (
+                          <span style={{ fontSize: 12, color: "#6b7280" }}>
+                            Upgrade to copy, share and attach files
                           </span>
                         ) : (
                           <>
@@ -769,22 +788,22 @@ export default function Page() {
                                 const ok = await copyAsHtml(m.content);
                                 if (!ok) alert("Copy failed on this browser.");
                               }}
+                              aria-label="Copy"
+                              title="Copy"
                             >
                               📋 Copy
                             </button>
 
-                            {/* Share: open native share sheet if available; otherwise popup menu */}
                             <button
                               type="button"
                               className="msg-action-btn"
                               onClick={async () => {
-                                // Try native share first (mobile share sheet)
                                 const ok = await nativeShareHtml(m.content);
                                 if (ok) return;
-
-                                // Desktop fallback: open popup options
                                 setOpenShareFor((prev) => (prev === m.id ? null : m.id));
                               }}
+                              aria-label="Share"
+                              title="Share"
                             >
                               🔗 Share
                             </button>
@@ -799,9 +818,6 @@ export default function Page() {
                                   paddingLeft: 8,
                                 }}
                               >
-                                <button type="button" className="msg-action-btn" onClick={() => shareWhatsAppLink()}>
-                                  WhatsApp
-                                </button>
                                 <button type="button" className="msg-action-btn" onClick={() => saveHtml(m.content)}>
                                   Save HTML
                                 </button>
@@ -810,17 +826,6 @@ export default function Page() {
                                 </button>
                                 <button type="button" className="msg-action-btn" onClick={() => pdfHtml(m.content)}>
                                   PDF
-                                </button>
-                                <button
-                                  type="button"
-                                  className="msg-action-btn"
-                                  onClick={async () => {
-                                    // if share exists but cannot share files (desktop), at least show system share if it works.
-                                    const ok = await nativeShareHtml(m.content);
-                                    if (!ok) alert("Native share not available on this browser. Use Save HTML / Print / PDF.");
-                                  }}
-                                >
-                                  Share popup
                                 </button>
                                 <button type="button" className="msg-action-btn" onClick={() => setOpenShareFor(null)}>
                                   ✕ Close
@@ -838,7 +843,6 @@ export default function Page() {
           )}
         </div>
 
-        {/* Composer */}
         <div className="composer">
           <div className="composer-box">
             {attachments.length > 0 && (
@@ -861,15 +865,14 @@ export default function Page() {
                   type="button"
                   className="chat-input-icon-btn"
                   aria-label="Add attachments"
-                  disabled={!attachmentsAllowed}
-                  title={
-                    attachmentsAllowed
-                      ? "Add attachments"
-                      : isGuest
-                      ? "Register to attach files"
-                      : "Upgrade to attach files"
-                  }
-                  onClick={() => attachmentsAllowed && setIsAttachMenuOpen((v) => !v)}
+                  onClick={() => {
+                    if (!attachmentsAllowed) {
+                      if (isGuest) openRegisterGate("Subscribe to Attach photos or documents.");
+                      else openUpgradeGate("Subscribe to Attach photos or documents.");
+                      return;
+                    }
+                    setIsAttachMenuOpen((v) => !v);
+                  }}
                 >
                   <span className="chat-input-plus">+</span>
                 </button>
@@ -939,6 +942,46 @@ export default function Page() {
             />
           </div>
         </div>
+
+        {/* Gate modal */}
+        {showGate && (
+          <div className="gate-overlay" role="dialog" aria-modal="true">
+            <div className="gate-modal">
+              <div className="gate-title">
+                {gateMode === "register" ? "Register / Login required" : "Upgrade required"}
+              </div>
+
+              {limitNotice && <div className="gate-note">{limitNotice}</div>}
+
+              {gateMode === "register" ? (
+                <div className="gate-body">
+                  <div className="gate-text">
+                    Please register or login to continue.
+                  </div>
+                  <div className="gate-actions">
+                    <a className="gate-btn" href="/login">Login</a>
+                    <a className="gate-btn gate-btn-primary" href="/register">Register</a>
+                    <button className="gate-btn" type="button" onClick={() => setShowGate(false)}>
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="gate-body">
+                  <div className="gate-text">
+                    Upgrade to continue without limits.
+                  </div>
+                  <div className="gate-actions">
+                    <a className="gate-btn gate-btn-primary" href="/subscription">Upgrade</a>
+                    <button className="gate-btn" type="button" onClick={() => setShowGate(false)}>
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
