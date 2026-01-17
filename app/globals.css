@@ -1526,3 +1526,63 @@ body {
 .sidebar-link-active{
   font-weight: 600 !important; /* active only, not too bold */
 }
+/* =========================
+   FIX: Header mobile = desktop + freeze
+   ========================= */
+:root{
+  --header-h: 64px;
+  --brand-blue: #2563eb;
+}
+
+.header{
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 120 !important;
+  height: var(--header-h) !important;
+  background: #fff !important;
+  border-bottom: 1px solid #e5e7eb !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 14px !important;
+}
+
+/* Make left/right always align like desktop */
+.header-left,
+.header-right{
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+/* Brand stays consistent */
+.brand{
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  line-height: 1 !important;
+}
+
+/* Avatar size consistent on mobile */
+.avatar,
+.avatar-btn,
+.avatar-img{
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 999px !important;
+}
+
+/* Hamburger visible on mobile only (keeps desktop look) */
+@media (max-width: 900px){
+  .mobile-menu-btn{
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+}
+@media (min-width: 901px){
+  .mobile-menu-btn{
+    display: none !important;
+  }
+}
