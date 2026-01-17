@@ -68,6 +68,12 @@ body {
 .sidebar {
   background: #f3f4f6;
   border-right: 1px solid #e5e7eb;
+
+  /* FREEZE sidebar */
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar-inner {
@@ -123,6 +129,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  /* FREEZE header */
+  position: sticky;
+  top: 0;
+  z-index: 60;
 }
 
 .header-left {
@@ -524,7 +535,10 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
-  z-index: 40;
+
+  /* must be ABOVE sticky header */
+  z-index: 90;
+
   display: flex;
   align-items: stretch;
   justify-content: flex-start;
@@ -554,6 +568,13 @@ body {
 
   .page-wrap {
     padding: 18px 14px 90px;
+  }
+
+  /* on mobile, sidebar is overlay; don't force sticky */
+  .sidebar {
+    position: static;
+    height: auto;
+    overflow: visible;
   }
 }
 
@@ -913,7 +934,7 @@ body {
 }
 
 /* =========
-   ChatGPT-like Copy/Share actions
+   Chat actions
    ========= */
 
 .msg-actions {
@@ -1003,17 +1024,14 @@ body {
     padding: 14px 12px 80px;
   }
 
-  /* Make bubble fit screen */
   .message-bubble {
     max-width: 100%;
   }
 
-  /* Prevent iOS zoom on focus (only for textarea) */
   .textarea {
     font-size: 16px;
   }
 
-  /* Keep message text consistent (not huge) */
   .msg-content {
     font-size: 14px;
   }
@@ -1033,5 +1051,87 @@ body {
   .sidebar-nav .sidebar-link {
     padding: 6px 8px;
     font-size: 12px;
+  }
+}
+/* ============================
+   ChatGPT-like freeze (SAFE)
+   - Desktop: Header + engineer-tools + Sidebar stay visible
+   - Only .conversation scrolls
+   - Mobile overlay NavSidebar stays on top
+   ============================ */
+
+/* Desktop only */
+@media (min-width: 901px) {
+  .main {
+    height: calc(100vh - 0px);
+    min-height: 0;
+    overflow: hidden; /* prevent body scroll in main column */
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header pinned */
+  .header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 60 !important;
+    background: #fff !important;
+  }
+
+  /* Engineer tools pinned under header */
+  .engineer-tools {
+    position: sticky !important;
+    top: 64px !important; /* if your header height differs, adjust */
+    z-index: 55 !important;
+    background: #f9fafb !important;
+  }
+
+  /* Sidebar pinned */
+  .sidebar.desktop-only {
+    position: sticky !important;
+    top: 0 !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  .sidebar.desktop-only .sidebar-inner {
+    height: 100% !important;
+    overflow-y: auto !important;
+  }
+
+  /* ONLY the chat body scrolls */
+  .conversation {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* Mobile */
+@media (max-width: 900px) {
+  /* Keep header visible */
+  .header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 60 !important;
+    background: #fff !important;
+  }
+
+  /* Mobile engineer tools dropdown stays visible when scrolling */
+  .engineer-tools-mobile {
+    position: sticky !important;
+    top: 64px !important;
+    z-index: 55 !important;
+    background: #f9fafb !important;
+  }
+
+  /* Mobile overlay sidebar always above header */
+  .sidebar-mobile-overlay {
+    z-index: 100 !important;
+  }
+
+  /* Allow normal mobile flow; chat area still scrolls naturally */
+  .conversation {
+    overflow-y: auto !important;
   }
 }

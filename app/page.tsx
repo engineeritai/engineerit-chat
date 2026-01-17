@@ -21,7 +21,7 @@ type Attachment = {
   id: string;
   name: string;
   type: "image" | "file";
-  url: string; // data URL for images, object URL for files
+  url: string;
   file?: File;
 };
 
@@ -61,13 +61,6 @@ const ENGINEER_TOOLS = [
 
 type ToolId = (typeof ENGINEER_TOOLS)[number]["id"];
 
-/**
- * صلاحيات الأدوات حسب نوع الاشتراك:
- * - Assistant: الكل مقفول (إعلان للترقية فقط)
- * - Engineer: Drawing + Design
- * - Professional: كل أدوات Engineer + ITP & QA/QC + BOQ & Quantities
- * - Consultant: كل ما سبق + Schedule & Resources + Value Engineering + Project Dashboards
- */
 const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
   assistant: [],
   engineer: ["drawing", "design"],
@@ -88,17 +81,146 @@ function hasAccess(planId: PlanId, toolId: ToolId) {
 }
 
 /* ============================
-   Helpers: RTL detect + Copy/Share
+   Helpers: RTL + HTML export/share
    ============================ */
 
 function isArabicText(text: string) {
-  // Arabic + Arabic Supplement + Arabic Extended ranges
   return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text);
 }
 
-function buildShareText(aiText: string) {
-  return `${aiText}\n\n— engineerit.ai`;
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
+
+function buildHtmlDocument(aiText: string) {
+  const rtl = isArabicText(aiText);
+  const safe = escapeHtml(aiText);
+
+  return `<!doctype html>
+<html lang="${rtl ? "ar" : "en"}" dir="${rtl ? "rtl" : "ltr"}">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>engineerit.ai</title>
+<style>
+  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px;color:#111827;background:#fff;}
+  .wrap{max-width:980px;margin:0 auto;}
+  .card{border:1px solid #e5e7eb;border-radius:16px;padding:18px;background:#fff;}
+  pre{white-space:pre-wrap;word-break:break-word;margin:0;font:inherit;line-height:1.6;}
+  .footer{margin-top:14px;color:#6b7280;font-size:12px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card"><pre>${safe}</pre></div>
+    <div class="footer">— engineerit.ai</div>
+  </div>
+</body>
+</html>`;
+}
+
+function htmlFileFromText(aiText: string) {
+  const html = buildHtmlDocument(aiText);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const file = new File([blob], "engineerit-ai-reply.html", {
+    type: "text/html",
+  });
+  return { html, blob, file };
+}
+
+async function copyAsHtml(aiText: string) {
+  const { html } = htmlFileFromText(aiText);
+  try {
+    // @ts-ignore
+    if (navigator.clipboard && window.ClipboardItem) {
+      const item = new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([aiText], { type: "text/plain" }),
+      });
+      // @ts-ignore
+      await navigator.clipboard.write([item]);
+      return true;
+    }
+  } catch {}
+  try {
+    await navigator.clipboard.writeText(aiText);
+    return true;
+  } catch {}
+  return false;
+}
+
+function saveHtml(aiText: string) {
+  const { blob } = htmlFileFromText(aiText);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "engineerit-ai-reply.html";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function printHtml(aiText: string) {
+  const html = buildHtmlDocument(aiText);
+  const w = window.open("", "_blank", "noopener,noreferrer");
+  if (!w) return;
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+
+function pdfHtml(aiText: string) {
+  // browser print dialog -> Save as PDF
+  printHtml(aiText);
+}
+
+function shareWhatsAppLink() {
+  const msg = encodeURIComponent("engineerit.ai");
+  window.open(`https://wa.me/?text=${msg}`, "_blank", "noopener,noreferrer");
+}
+
+async function nativeShareHtml(aiText: string) {
+  const { file } = htmlFileFromText(aiText);
+
+  try {
+    // @ts-ignore
+    if (navigator.share) {
+      // If canShare with files works (mobile), share file.
+      // @ts-ignore
+      if (navigator.canShare?.({ files: [file] })) {
+        // @ts-ignore
+        await navigator.share({
+          title: "engineerit.ai",
+          text: "engineerit.ai reply (HTML)",
+          files: [file],
+        });
+        return true;
+      }
+
+      // Fallback: share text only
+      // @ts-ignore
+      await navigator.share({
+        title: "engineerit.ai",
+        text: "engineerit.ai reply (open and save/share as HTML if needed).",
+      });
+      return true;
+    }
+  } catch {}
+
+  return false;
+}
+
+/* ======================
+   Page
+   ====================== */
 
 export default function Page() {
   const [discipline, setDiscipline] = useState("General");
@@ -109,38 +231,29 @@ export default function Page() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
-  // guest / one-try
   const [isGuest, setIsGuest] = useState(true);
   const [guestMessagesCount, setGuestMessagesCount] = useState(0);
 
-  // voice
-  const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<BlobPart[]>([]);
-
-  // "+" mini attach menu
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
 
-  // plan (لربط الأدوات بالاشتراك)
   const [planId, setPlanId] = useState<PlanId>("assistant");
 
-  // mobile tools dropdown
   const [showMobileTools, setShowMobileTools] = useState(false);
 
-  // landing post (one-time per browser)
+  // Landing (DO NOT REMOVE)
   const [showLanding, setShowLanding] = useState(false);
 
-  // share menu per message
+  // Share popup (desktop fallback)
   const [openShareFor, setOpenShareFor] = useState<string | null>(null);
 
   const isPaidPlan =
-    planId === "engineer" || planId === "professional" || planId === "consultant";
+    planId === "engineer" ||
+    planId === "professional" ||
+    planId === "consultant";
+
   const attachmentsAllowed = isPaidPlan && !isGuest;
 
-  /* ======================
-     Load user plan (Supabase)
-     ====================== */
-
+  /* Load plan */
   useEffect(() => {
     const loadPlan = async () => {
       try {
@@ -178,7 +291,7 @@ export default function Page() {
           setPlanId("assistant");
         }
       } catch (err) {
-        console.error("Failed to load plan for engineer tools", err);
+        console.error(err);
         setPlanId("assistant");
         setIsGuest(true);
       }
@@ -187,20 +300,14 @@ export default function Page() {
     void loadPlan();
   }, []);
 
-  /* ======================
-     Landing post visibility
-     ====================== */
-
+  /* Landing show once */
   useEffect(() => {
     try {
       const KEY = "engineerit_landing_seen_v1";
       if (typeof window === "undefined") return;
       const seen = window.localStorage.getItem(KEY);
-      if (!seen) {
-        setShowLanding(true);
-      }
-    } catch (err) {
-      console.error("Landing localStorage error:", err);
+      if (!seen) setShowLanding(true);
+    } catch {
       setShowLanding(true);
     }
   }, []);
@@ -208,19 +315,12 @@ export default function Page() {
   const handleCloseLanding = () => {
     try {
       const KEY = "engineerit_landing_seen_v1";
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(KEY, "yes");
-      }
-    } catch {
-      // ignore
-    }
+      window.localStorage.setItem(KEY, "yes");
+    } catch {}
     setShowLanding(false);
   };
 
-  /* ======================
-     Threads management
-     ====================== */
-
+  /* Threads */
   useEffect(() => {
     if (!currentThreadId) {
       const t: Thread = {
@@ -250,8 +350,6 @@ export default function Page() {
     };
     setThreads((prev) => [t, ...prev]);
     setCurrentThreadId(t.id);
-
-    // reset guest allowance per new chat
     setGuestMessagesCount(0);
   }
 
@@ -260,18 +358,12 @@ export default function Page() {
   }
 
   function updateThread(fn: (t: Thread) => Thread) {
-    setThreads((all) =>
-      all.map((t) => (t.id === currentThreadId ? fn(t) : t))
-    );
+    setThreads((all) => all.map((t) => (t.id === currentThreadId ? fn(t) : t)));
   }
 
-  /* ======================
-     Attachments
-     ====================== */
-
+  /* Attachments */
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (!attachmentsAllowed) return;
-
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -280,13 +372,7 @@ export default function Page() {
       const url = reader.result as string;
       setAttachments((prev) => [
         ...prev,
-        {
-          id: uuid(),
-          name: file.name,
-          type: "image",
-          url,
-          file,
-        },
+        { id: uuid(), name: file.name, type: "image", url, file },
       ]);
     };
     reader.readAsDataURL(file);
@@ -295,20 +381,13 @@ export default function Page() {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (!attachmentsAllowed) return;
-
     const file = e.target.files?.[0];
     if (!file) return;
 
     const url = URL.createObjectURL(file);
     setAttachments((prev) => [
       ...prev,
-      {
-        id: uuid(),
-        name: file.name,
-        type: "file",
-        url,
-        file,
-      },
+      { id: uuid(), name: file.name, type: "file", url, file },
     ]);
     e.target.value = "";
   };
@@ -317,132 +396,30 @@ export default function Page() {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  /* ======================
-     Voice
-     ====================== */
-
-  async function startRecording() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        audioChunksRef.current = [];
-
-        const formData = new FormData();
-        formData.append("file", blob, "recording.webm");
-
-        try {
-          const res = await fetch("/api/voice", {
-            method: "POST",
-            body: formData,
-          });
-
-          if (!res.ok) {
-            const errText = await res.text();
-            console.error("Voice API error:", errText);
-            alert("Transcription failed: " + errText);
-            return;
-          }
-
-          const data = (await res.json()) as { text?: string };
-          const text = data?.text ?? "";
-          if (text) {
-            setInput((prev) => (prev ? `${prev} ${text}` : text));
-          }
-        } catch (err) {
-          console.error(err);
-          alert("Voice transcription failed. Please try again.");
-        }
-      };
-
-      recorder.start();
-      setIsRecording(true);
-    } catch (err) {
-      console.error(err);
-      alert("Could not access microphone. Check browser permissions.");
-    }
-  }
-
-  function stopRecording() {
-    setIsRecording(false);
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state !== "inactive") {
-      recorder.stop();
-    }
-  }
-
-  /* ======================
-     Helper APIs: image / document
-     ====================== */
-
-  async function analyzeImage(
-    question: string,
-    imageFile: File
-  ): Promise<string> {
+  /* APIs */
+  async function analyzeImage(question: string, imageFile: File): Promise<string> {
     const formData = new FormData();
     formData.append("file", imageFile, imageFile.name);
-    formData.append(
-      "question",
-      question ||
-        "Please analyze this engineering image and explain it with headings and bullet points."
-    );
+    formData.append("question", question || "Analyze this engineering image.");
 
-    const res = await fetch("/api/image", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(txt || `Image request failed: ${res.status}`);
-    }
-
+    const res = await fetch("/api/image", { method: "POST", body: formData });
+    if (!res.ok) throw new Error(await res.text());
     const data = (await res.json()) as { reply: string };
     return data.reply || "";
   }
 
-  async function analyzeDocument(
-    question: string,
-    docFile: File
-  ): Promise<string> {
+  async function analyzeDocument(question: string, docFile: File): Promise<string> {
     const formData = new FormData();
     formData.append("file", docFile, docFile.name);
-    formData.append(
-      "question",
-      question ||
-        "Extract the important information from this document and summarize it for an engineer."
-    );
+    formData.append("question", question || "Extract and summarize this document.");
 
-    const res = await fetch("/api/document", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(txt || `Document request failed: ${res.status}`);
-    }
-
+    const res = await fetch("/api/document", { method: "POST", body: formData });
+    if (!res.ok) throw new Error(await res.text());
     const data = (await res.json()) as { reply: string };
     return data.reply || "";
   }
 
-  /* ======================
-     Engineer tools helpers
-     ====================== */
-
+  /* Engineer tools template */
   function insertTemplate(template: string) {
     setInput((prev) => (prev ? `${prev}\n\n${template}` : template));
   }
@@ -451,127 +428,40 @@ export default function Page() {
     switch (toolId) {
       case "drawing":
         insertTemplate(
-          "Explain and analyze the attached engineering drawing (PFD / P&ID / block diagram). Describe the main units, flows, and key engineering notes in Arabic and English."
+          "Explain and analyze the attached engineering drawing (PFD / P&ID / block diagram)."
         );
         break;
       case "design":
         insertTemplate(
-          "Check this engineering design against relevant codes and standards. List assumptions, checks, and any non-compliance items, in Arabic and English."
+          "Check this engineering design against relevant codes and standards."
         );
         break;
       case "itp":
         insertTemplate(
-          "Generate an Inspection & Test Plan (ITP) and QA/QC checklist for this engineering activity. Include hold points, responsible party, and acceptance criteria."
+          "Generate an Inspection & Test Plan (ITP) and QA/QC checklist."
         );
         break;
       case "boq":
-        insertTemplate(
-          "From this project description, propose a structured Bill of Quantities (BOQ) with main items, units, and estimated quantities (if possible)."
-        );
+        insertTemplate("Propose a structured BOQ with items and units.");
         break;
       case "schedule":
-        insertTemplate(
-          "Build a high-level project schedule with main activities, approximate durations, and logical sequence. Present it in a table format suitable for MS Project or Primavera."
-        );
+        insertTemplate("Build a high-level project schedule.");
         break;
       case "value":
-        insertTemplate(
-          "Perform a value engineering review: suggest alternative materials, construction methods, or design optimizations to reduce cost and improve performance."
-        );
+        insertTemplate("Perform a value engineering review.");
         break;
       case "dashboard":
-        insertTemplate(
-          "Create a management-level dashboard summary for this project: key KPIs, main risks, status summary, and next actions in bullet points."
-        );
+        insertTemplate("Create a management dashboard summary (KPIs, risks, actions).");
         break;
       default:
         break;
     }
   };
 
-  /* ======================
-     Copy / Share actions
-     ====================== */
-
-  async function handleCopy(text: string) {
-    const payload = buildShareText(text);
-    try {
-      await navigator.clipboard.writeText(payload);
-    } catch (e) {
-      console.error("Copy failed:", e);
-      try {
-        const el = document.createElement("textarea");
-        el.value = payload;
-        document.body.appendChild(el);
-        el.select();
-        document.execCommand("copy");
-        document.body.removeChild(el);
-      } catch {}
-    }
-  }
-
-  async function handleNativeShare(text: string) {
-    const payload = buildShareText(text);
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "engineerit.ai",
-          text: payload,
-        });
-        return true;
-      }
-    } catch (e) {
-      console.warn("Native share canceled/failed:", e);
-    }
-    return false;
-  }
-
-  function shareWhatsApp(text: string) {
-    const payload = encodeURIComponent(buildShareText(text));
-    window.open(`https://wa.me/?text=${payload}`, "_blank", "noopener,noreferrer");
-  }
-
-  function shareEmail(text: string) {
-    const subject = encodeURIComponent("engineerit.ai");
-    const body = encodeURIComponent(buildShareText(text));
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
-  }
-
-  function printText(text: string) {
-    const payload = buildShareText(text);
-    const w = window.open("", "_blank", "noopener,noreferrer");
-    if (!w) return;
-    w.document.write(
-      `<pre style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; white-space: pre-wrap; padding: 16px;">${payload
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")}</pre>`
-    );
-    w.document.close();
-    w.focus();
-    w.print();
-  }
-
-  function downloadTxt(text: string) {
-    const payload = buildShareText(text);
-    const blob = new Blob([payload], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "engineerit-ai-reply.txt";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  /* ======================
-     Send message
-     ====================== */
-
+  /* Send */
   async function send() {
     if (!thread || (!input.trim() && attachments.length === 0) || sending) return;
 
-    // Guest: only ONE message total (per chat)
     if (isGuest && guestMessagesCount >= 1) {
       updateThread((t) => ({
         ...t,
@@ -593,7 +483,6 @@ export default function Page() {
     setAttachments([]);
     setIsAttachMenuOpen(false);
 
-    // add user message
     updateThread((t) => ({
       ...t,
       title:
@@ -611,48 +500,27 @@ export default function Page() {
       ],
     }));
 
-    if (isGuest) {
-      setGuestMessagesCount((c) => c + 1);
-    }
+    if (isGuest) setGuestMessagesCount((c) => c + 1);
 
     setSending(true);
 
     try {
-      const docAttachment = userAttachments.find(
-        (a) => a.type === "file" && a.file
-      );
-      const imgAttachment = userAttachments.find(
-        (a) => a.type === "image" && a.file
-      );
+      const docAttachment = userAttachments.find((a) => a.type === "file" && a.file);
+      const imgAttachment = userAttachments.find((a) => a.type === "image" && a.file);
 
       if (docAttachment) {
         const reply = await analyzeDocument(userText, docAttachment.file!);
         updateThread((t) => ({
           ...t,
-          messages: [
-            ...t.messages,
-            {
-              id: uuid(),
-              role: "assistant",
-              content: reply,
-            },
-          ],
+          messages: [...t.messages, { id: uuid(), role: "assistant", content: reply }],
         }));
       } else if (imgAttachment) {
         const reply = await analyzeImage(userText, imgAttachment.file!);
         updateThread((t) => ({
           ...t,
-          messages: [
-            ...t.messages,
-            {
-              id: uuid(),
-              role: "assistant",
-              content: reply,
-            },
-          ],
+          messages: [...t.messages, { id: uuid(), role: "assistant", content: reply }],
         }));
       } else {
-        // text-only chat
         const payloadMessages = (thread.messages || []).concat({
           id: "temp",
           role: "user" as const,
@@ -662,28 +530,15 @@ export default function Page() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            discipline,
-            messages: payloadMessages,
-          }),
+          body: JSON.stringify({ discipline, messages: payloadMessages }),
         });
 
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `Request failed: ${res.status}`);
-        }
-
+        if (!res.ok) throw new Error(await res.text());
         const data = (await res.json()) as { reply: string };
+
         updateThread((t) => ({
           ...t,
-          messages: [
-            ...t.messages,
-            {
-              id: uuid(),
-              role: "assistant",
-              content: data.reply || "",
-            },
-          ],
+          messages: [...t.messages, { id: uuid(), role: "assistant", content: data.reply || "" }],
         }));
       }
     } catch (e) {
@@ -695,8 +550,7 @@ export default function Page() {
           {
             id: uuid(),
             role: "assistant",
-            content:
-              "Sorry, I couldn’t complete that request. Make sure your image/document/chat APIs are working.",
+            content: "Sorry, something failed. Please try again.",
           },
         ],
       }));
@@ -711,10 +565,6 @@ export default function Page() {
       void send();
     }
   }
-
-  /* ======================
-     Render
-     ====================== */
 
   return (
     <div className="app-shell">
@@ -732,7 +582,7 @@ export default function Page() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
-        {/* Landing post (banner) */}
+        {/* Landing (RESTORED) */}
         {showLanding && (
           <div
             className="card"
@@ -749,18 +599,11 @@ export default function Page() {
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
                 Welcome to engineerit.ai
               </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "#6b7280",
-                  lineHeight: 1.4,
-                }}
-              >
-                A digital AI-powered platform providing engineering intelligence
-                services, including automated engineering analysis, data
-                processing, remote technical consulting, and operating an
-                interactive system that utilizes AI technologies to analyze
-                documents, drawings, and enhance engineering experience.
+              <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
+                A digital AI-powered platform providing engineering intelligence services,
+                including automated engineering analysis, data processing, remote technical
+                consulting, and operating an interactive system that utilizes AI technologies
+                to analyze documents, drawings, and enhance engineering experience.
               </div>
             </div>
             <button
@@ -781,7 +624,7 @@ export default function Page() {
           </div>
         )}
 
-        {/* Engineer tools – desktop / tablet */}
+        {/* Engineer tools – desktop */}
         <div className="engineer-tools">
           <span className="engineer-tools-label">Engineer tools:</span>
           <div className="engineer-tools-row">
@@ -791,10 +634,7 @@ export default function Page() {
                 <button
                   key={tool.id}
                   type="button"
-                  className={
-                    "engineer-tools-btn" +
-                    (enabled ? "" : " engineer-tools-btn-locked")
-                  }
+                  className={"engineer-tools-btn" + (enabled ? "" : " engineer-tools-btn-locked")}
                   disabled={!enabled}
                   onClick={() => enabled && handleEngineerToolClick(tool.id)}
                 >
@@ -843,11 +683,7 @@ export default function Page() {
                       <div>
                         {enabled ? "✅" : "🔒"} <span>{tool.label}</span>
                       </div>
-                      {!enabled && (
-                        <span className="engineer-tools-mobile-plan-hint">
-                          Upgrade
-                        </span>
-                      )}
+                      {!enabled && <span className="engineer-tools-mobile-plan-hint">Upgrade</span>}
                     </button>
                   );
                 })}
@@ -865,17 +701,13 @@ export default function Page() {
           ) : (
             messages.map((m) => {
               const rtl = isArabicText(m.content);
+
               return (
                 <div
                   key={m.id}
-                  className={
-                    "message-row " +
-                    (m.role === "user" ? "message-user" : "message-assistant")
-                  }
+                  className={"message-row " + (m.role === "user" ? "message-user" : "message-assistant")}
                 >
-                  <div className="message-avatar">
-                    {m.role === "user" ? "You" : "AI"}
-                  </div>
+                  <div className="message-avatar">{m.role === "user" ? "You" : "AI"}</div>
 
                   <div className="message-bubble">
                     {m.attachments && m.attachments.length > 0 && (
@@ -896,7 +728,6 @@ export default function Page() {
                       </div>
                     )}
 
-                    {/* msg-content wrapper (keeps scroll INSIDE message only) */}
                     <div
                       className="msg-content"
                       dir={rtl ? "rtl" : "ltr"}
@@ -910,34 +741,12 @@ export default function Page() {
                         remarkPlugins={[remarkGfm]}
                         components={{
                           table: ({ ...props }) => (
-                            <div
-                              style={{
-                                maxWidth: "100%",
-                                overflowX: "auto",
-                                WebkitOverflowScrolling: "touch",
-                              }}
-                            >
+                            <div style={{ maxWidth: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
                               <table {...props} />
                             </div>
                           ),
-                          th: ({ ...props }) => (
-                            <th
-                              {...props}
-                              style={{
-                                fontWeight: 400,
-                                fontSize: "inherit",
-                              }}
-                            />
-                          ),
-                          td: ({ ...props }) => (
-                            <td
-                              {...props}
-                              style={{
-                                fontWeight: 400,
-                                fontSize: "inherit",
-                              }}
-                            />
-                          ),
+                          th: ({ ...props }) => <th {...props} style={{ fontWeight: 400, fontSize: "inherit" }} />,
+                          td: ({ ...props }) => <td {...props} style={{ fontWeight: 400, fontSize: "inherit" }} />,
                         }}
                       >
                         {m.content}
@@ -956,25 +765,26 @@ export default function Page() {
                             <button
                               type="button"
                               className="msg-action-btn"
-                              onClick={() => handleCopy(m.content)}
-                              aria-label="Copy"
-                              title="Copy"
+                              onClick={async () => {
+                                const ok = await copyAsHtml(m.content);
+                                if (!ok) alert("Copy failed on this browser.");
+                              }}
                             >
                               📋 Copy
                             </button>
 
+                            {/* Share: open native share sheet if available; otherwise popup menu */}
                             <button
                               type="button"
                               className="msg-action-btn"
                               onClick={async () => {
-                                const ok = await handleNativeShare(m.content);
-                                if (!ok)
-                                  setOpenShareFor((prev) =>
-                                    prev === m.id ? null : m.id
-                                  );
+                                // Try native share first (mobile share sheet)
+                                const ok = await nativeShareHtml(m.content);
+                                if (ok) return;
+
+                                // Desktop fallback: open popup options
+                                setOpenShareFor((prev) => (prev === m.id ? null : m.id));
                               }}
-                              aria-label="Share"
-                              title="Share"
                             >
                               🔗 Share
                             </button>
@@ -989,39 +799,30 @@ export default function Page() {
                                   paddingLeft: 8,
                                 }}
                               >
-                                <button
-                                  type="button"
-                                  className="msg-action-btn"
-                                  onClick={() => shareWhatsApp(m.content)}
-                                >
+                                <button type="button" className="msg-action-btn" onClick={() => shareWhatsAppLink()}>
                                   WhatsApp
                                 </button>
-                                <button
-                                  type="button"
-                                  className="msg-action-btn"
-                                  onClick={() => shareEmail(m.content)}
-                                >
-                                  Email
+                                <button type="button" className="msg-action-btn" onClick={() => saveHtml(m.content)}>
+                                  Save HTML
                                 </button>
-                                <button
-                                  type="button"
-                                  className="msg-action-btn"
-                                  onClick={() => printText(m.content)}
-                                >
+                                <button type="button" className="msg-action-btn" onClick={() => printHtml(m.content)}>
                                   Print
                                 </button>
-                                <button
-                                  type="button"
-                                  className="msg-action-btn"
-                                  onClick={() => downloadTxt(m.content)}
-                                >
-                                  Save (.txt)
+                                <button type="button" className="msg-action-btn" onClick={() => pdfHtml(m.content)}>
+                                  PDF
                                 </button>
                                 <button
                                   type="button"
                                   className="msg-action-btn"
-                                  onClick={() => setOpenShareFor(null)}
+                                  onClick={async () => {
+                                    // if share exists but cannot share files (desktop), at least show system share if it works.
+                                    const ok = await nativeShareHtml(m.content);
+                                    if (!ok) alert("Native share not available on this browser. Use Save HTML / Print / PDF.");
+                                  }}
                                 >
+                                  Share popup
+                                </button>
+                                <button type="button" className="msg-action-btn" onClick={() => setOpenShareFor(null)}>
                                   ✕ Close
                                 </button>
                               </div>
@@ -1046,10 +847,7 @@ export default function Page() {
                   <div key={a.id} className="attachment-pill">
                     {a.type === "image" ? "🖼️" : "📄"}{" "}
                     <span className="attachment-name">{a.name}</span>
-                    <button
-                      className="attachment-remove"
-                      onClick={() => removeAttachment(a.id)}
-                    >
+                    <button className="attachment-remove" onClick={() => removeAttachment(a.id)}>
                       ✕
                     </button>
                   </div>
@@ -1058,7 +856,6 @@ export default function Page() {
             )}
 
             <div className="chat-input-row">
-              {/* + button */}
               <div className="chat-input-left">
                 <button
                   type="button"
@@ -1097,20 +894,10 @@ export default function Page() {
                     >
                       📄 Document
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAttachMenuOpen(false);
-                        alert("Scan feature coming soon");
-                      }}
-                    >
-                      🖨️ Scan (coming soon)
-                    </button>
                   </div>
                 )}
               </div>
 
-              {/* textarea */}
               <textarea
                 className="textarea"
                 placeholder="Ask an engineering question…"
@@ -1123,21 +910,6 @@ export default function Page() {
                 onKeyDown={onKeyDown}
               />
 
-              {/* mic */}
-              <button
-                type="button"
-                className={
-                  "chat-input-icon-btn" +
-                  (isRecording ? " chat-input-icon-btn-record" : "")
-                }
-                title="Press and hold to talk"
-                onMouseDown={startRecording}
-                onMouseUp={stopRecording}
-              >
-                🎤
-              </button>
-
-              {/* send */}
               <button
                 type="button"
                 className="chat-input-send-btn"
@@ -1149,7 +921,6 @@ export default function Page() {
               </button>
             </div>
 
-            {/* hidden file inputs */}
             <input
               type="file"
               id="image-upload"

@@ -24,6 +24,8 @@ const PLAN_COLORS: Record<PlanId, string> = {
   consultant: "#7c3aed",
 };
 
+type AuthPanelMode = "login" | "forgot";
+
 export default function Header({ onToggleSidebar }: HeaderProps) {
   const [fullName, setFullName] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
@@ -34,10 +36,23 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
 
+  const [authPanelMode, setAuthPanelMode] = useState<AuthPanelMode>("login");
+
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+
+  // forgot password
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState<string | null>(null);
+
+  // reset password (logged-in)
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetPass1, setResetPass1] = useState("");
+  const [resetPass2, setResetPass2] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -186,14 +201,87 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
       setPlanId(currentPlan);
 
       setIsLoginOpen(false);
+      setAuthPanelMode("login");
       setLoginEmail("");
       setLoginPassword("");
+      setForgotMsg(null);
+
       router.push("/profile");
     } catch (err) {
       console.error(err);
       setLoginError("Something went wrong. Please try again.");
     } finally {
       setLoginLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setLoginError(null);
+    setForgotMsg(null);
+
+    if (!loginEmail || !loginEmail.includes("@")) {
+      setForgotMsg("Enter your email first.");
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/reset-password`
+          : "https://engineerit.ai/reset-password";
+
+      const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
+        redirectTo,
+      });
+
+      if (error) {
+        setForgotMsg(error.message);
+        setForgotLoading(false);
+        return;
+      }
+
+      setForgotMsg("Reset link sent to your email.");
+    } catch (err) {
+      console.error(err);
+      setForgotMsg("Something went wrong. Please try again.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPasswordLoggedIn = async () => {
+    setResetMsg(null);
+
+    if (!resetPass1 || resetPass1.length < 6) {
+      setResetMsg("Password must be at least 6 characters.");
+      return;
+    }
+    if (resetPass1 !== resetPass2) {
+      setResetMsg("Passwords do not match.");
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: resetPass1,
+      });
+
+      if (error) {
+        setResetMsg(error.message);
+        setResetLoading(false);
+        return;
+      }
+
+      setResetMsg("Password updated successfully.");
+      setResetPass1("");
+      setResetPass2("");
+    } catch (err) {
+      console.error(err);
+      setResetMsg("Something went wrong. Please try again.");
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -236,6 +324,10 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
               onClick={() => {
                 setIsLoginOpen((v) => !v);
                 setIsMenuOpen(false);
+                setResetOpen(false);
+                setAuthPanelMode("login");
+                setLoginError(null);
+                setForgotMsg(null);
               }}
               style={{
                 padding: "6px 14px",
@@ -262,120 +354,239 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   borderRadius: 16,
                   boxShadow: "0 10px 25px rgba(15, 23, 42, 0.18)",
                   padding: 10,
-                  zIndex: 50,
+                  zIndex: 90,
                   border: "1px solid rgba(148,163,184,0.3)",
                 }}
               >
-                <form onSubmit={handleInlineLogin}>
-                  <div
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      marginBottom: 8,
-                      color: "#111827",
-                    }}
-                  >
-                    Sign in to engineerit.ai
-                  </div>
-
-                  {/* Email */}
-                  <div style={{ marginBottom: 6 }}>
-                    <input
-                      type="email"
-                      required
-                      placeholder="Email"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "6px 8px",
-                        borderRadius: 8,
-                        border: "1px solid #d1d5db",
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-
-                  {/* Password */}
-                  <div style={{ marginBottom: 6 }}>
-                    <input
-                      type="password"
-                      required
-                      placeholder="Password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      style={{
-                        width: "100%",
-                        padding: "6px 8px",
-                        borderRadius: 8,
-                        border: "1px solid #d1d5db",
-                        fontSize: 13,
-                      }}
-                    />
-                  </div>
-
-                  {loginError && (
+                {authPanelMode === "login" ? (
+                  <form onSubmit={handleInlineLogin}>
                     <div
                       style={{
-                        fontSize: 12,
-                        color: "#b91c1c",
-                        marginBottom: 4,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        marginBottom: 8,
+                        color: "#111827",
                       }}
                     >
-                      {loginError}
+                      Sign in to engineerit.ai
                     </div>
-                  )}
 
-                  <button
-                    type="submit"
-                    disabled={loginLoading}
-                    style={{
-                      width: "100%",
-                      padding: "6px 8px",
-                      borderRadius: 999,
-                      border: "none",
-                      backgroundColor: "#2563eb",
-                      color: "white",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {loginLoading ? "Signing in…" : "Sign in"}
-                  </button>
+                    {/* Email */}
+                    <div style={{ marginBottom: 6 }}>
+                      <input
+                        type="email"
+                        required
+                        placeholder="Email"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "6px 8px",
+                          borderRadius: 8,
+                          border: "1px solid #d1d5db",
+                          fontSize: 13,
+                        }}
+                      />
+                    </div>
 
-                  {/* Register link */}
-                  <div
-                    style={{
-                      marginTop: 8,
-                      fontSize: 11,
-                      color: "#6b7280",
-                      textAlign: "center",
-                    }}
-                  >
-                    Don&apos;t have an account?{" "}
+                    {/* Password */}
+                    <div style={{ marginBottom: 6 }}>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "6px 8px",
+                          borderRadius: 8,
+                          border: "1px solid #d1d5db",
+                          fontSize: 13,
+                        }}
+                      />
+                    </div>
+
+                    {loginError && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "#b91c1c",
+                          marginBottom: 4,
+                        }}
+                      >
+                        {loginError}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loginLoading}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        borderRadius: 999,
+                        border: "none",
+                        backgroundColor: "#2563eb",
+                        color: "white",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {loginLoading ? "Signing in…" : "Sign in"}
+                    </button>
+
+                    {/* Forgot password */}
+                    <div
+                      style={{
+                        marginTop: 8,
+                        display: "flex",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthPanelMode("forgot");
+                          setLoginError(null);
+                          setForgotMsg(null);
+                        }}
+                        style={{
+                          border: "none",
+                          background: "none",
+                          padding: 0,
+                          margin: 0,
+                          color: "#2563eb",
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+
+                    {/* Register link */}
+                    <div
+                      style={{
+                        marginTop: 8,
+                        fontSize: 11,
+                        color: "#6b7280",
+                        textAlign: "center",
+                      }}
+                    >
+                      Don&apos;t have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsLoginOpen(false);
+                          router.push("/register");
+                        }}
+                        style={{
+                          border: "none",
+                          background: "none",
+                          padding: 0,
+                          margin: 0,
+                          color: "#2563eb",
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Register
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        marginBottom: 8,
+                        color: "#111827",
+                      }}
+                    >
+                      Reset your password
+                    </div>
+
+                    <div style={{ marginBottom: 6 }}>
+                      <input
+                        type="email"
+                        required
+                        placeholder="Your email"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "6px 8px",
+                          borderRadius: 8,
+                          border: "1px solid #d1d5db",
+                          fontSize: 13,
+                        }}
+                      />
+                    </div>
+
+                    {forgotMsg && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: forgotMsg.includes("sent")
+                            ? "#15803d"
+                            : "#b91c1c",
+                          marginBottom: 6,
+                        }}
+                      >
+                        {forgotMsg}
+                      </div>
+                    )}
+
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsLoginOpen(false);
-                        router.push("/register");
-                      }}
+                      onClick={handleForgotPassword}
+                      disabled={forgotLoading}
                       style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        borderRadius: 999,
                         border: "none",
-                        background: "none",
-                        padding: 0,
-                        margin: 0,
-                        color: "#2563eb",
-                        cursor: "pointer",
-                        textDecoration: "underline",
-                        fontSize: 11,
+                        backgroundColor: "#2563eb",
+                        color: "white",
+                        fontSize: 13,
                         fontWeight: 600,
+                        cursor: "pointer",
                       }}
                     >
-                      Register
+                      {forgotLoading ? "Sending…" : "Send reset link"}
                     </button>
+
+                    <div style={{ marginTop: 8, textAlign: "center" }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthPanelMode("login");
+                          setForgotMsg(null);
+                        }}
+                        style={{
+                          border: "none",
+                          background: "none",
+                          padding: 0,
+                          margin: 0,
+                          color: "#6b7280",
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Back to login
+                      </button>
+                    </div>
                   </div>
-                </form>
+                )}
               </div>
             )}
           </>
@@ -442,12 +653,12 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   position: "absolute",
                   top: "110%",
                   right: 0,
-                  minWidth: 220,
+                  minWidth: 240,
                   backgroundColor: "white",
                   borderRadius: 16,
                   boxShadow: "0 10px 25px rgba(15, 23, 42, 0.18)",
                   padding: 8,
-                  zIndex: 50,
+                  zIndex: 90,
                   border: "1px solid rgba(148,163,184,0.3)",
                 }}
               >
@@ -478,19 +689,11 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => goTo("/profile")}
-                  style={menuItemStyle}
-                >
+                <button type="button" onClick={() => goTo("/profile")} style={menuItemStyle}>
                   My Profile
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => goTo("/register")}
-                  style={menuItemStyle}
-                >
+                <button type="button" onClick={() => goTo("/register")} style={menuItemStyle}>
                   Plans &amp; Registration
                 </button>
 
@@ -505,9 +708,114 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                 <div
                   style={{
                     borderTop: "1px solid rgba(226,232,240,0.9)",
-                    margin: "4px 0",
+                    margin: "6px 0",
                   }}
                 />
+
+                {/* Reset password (logged in) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetOpen((v) => !v);
+                    setResetMsg(null);
+                  }}
+                  style={menuItemStyle}
+                >
+                  Reset password
+                </button>
+
+                {resetOpen && (
+                  <div
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 12,
+                      border: "1px solid rgba(226,232,240,0.9)",
+                      margin: "6px 0",
+                      background: "#f9fafb",
+                    }}
+                  >
+                    <input
+                      type="password"
+                      placeholder="New password"
+                      value={resetPass1}
+                      onChange={(e) => setResetPass1(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        borderRadius: 8,
+                        border: "1px solid #d1d5db",
+                        fontSize: 13,
+                        marginBottom: 6,
+                      }}
+                    />
+                    <input
+                      type="password"
+                      placeholder="Confirm password"
+                      value={resetPass2}
+                      onChange={(e) => setResetPass2(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        borderRadius: 8,
+                        border: "1px solid #d1d5db",
+                        fontSize: 13,
+                        marginBottom: 6,
+                      }}
+                    />
+
+                    {resetMsg && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          marginBottom: 6,
+                          color: resetMsg.includes("success")
+                            ? "#15803d"
+                            : "#b91c1c",
+                        }}
+                      >
+                        {resetMsg}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleResetPasswordLoggedIn}
+                      disabled={resetLoading}
+                      style={{
+                        width: "100%",
+                        padding: "6px 8px",
+                        borderRadius: 999,
+                        border: "none",
+                        backgroundColor: "#2563eb",
+                        color: "white",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {resetLoading ? "Updating…" : "Update password"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setResetOpen(false)}
+                      style={{
+                        marginTop: 6,
+                        width: "100%",
+                        padding: "6px 8px",
+                        borderRadius: 999,
+                        border: "1px solid #e5e7eb",
+                        backgroundColor: "white",
+                        color: "#374151",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                )}
 
                 <button
                   type="button"
