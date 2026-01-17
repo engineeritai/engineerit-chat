@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 function parseHashParams(hash: string) {
@@ -15,7 +15,6 @@ function parseHashParams(hash: string) {
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -25,17 +24,18 @@ export default function ResetPasswordPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const code = useMemo(() => searchParams?.get("code") || "", [searchParams]);
-
-  // 1) Accept both Supabase styles:
-  // - PKCE: ?code=...
-  // - Implicit: #access_token=...&refresh_token=...&type=recovery
+  // IMPORTANT: do all URL reading inside useEffect (client only)
   useEffect(() => {
     const run = async () => {
       try {
         setStatus("Preparing your reset session…");
 
-        // A) PKCE flow
+        // A) PKCE flow: ?code=...
+        const code =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("code") || ""
+            : "";
+
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
@@ -50,7 +50,7 @@ export default function ResetPasswordPage() {
           return;
         }
 
-        // B) Hash token flow
+        // B) Hash token flow: #access_token=...&refresh_token=...&type=recovery
         const { access_token, refresh_token } = parseHashParams(
           typeof window !== "undefined" ? window.location.hash : ""
         );
@@ -82,7 +82,7 @@ export default function ResetPasswordPage() {
     };
 
     void run();
-  }, [code]);
+  }, []);
 
   const onSave = async () => {
     setMsg(null);
