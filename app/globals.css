@@ -1196,3 +1196,333 @@ body {
   color: #fff;
   border-color: #111827;
 }
+/* ============================
+   FINAL FIX – HEADER & SIDEBAR FREEZE
+   Desktop + Mobile (ChatGPT-like)
+   ============================ */
+
+:root {
+  --header-h: 64px;
+}
+
+/* Header always visible */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--header-h);
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Mobile hamburger */
+.mobile-menu-btn {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-menu-btn span {
+  width: 16px;
+  height: 2px;
+  background: #374151;
+  border-radius: 2px;
+}
+
+/* Desktop sidebar sticky */
+@media (min-width: 901px) {
+  .sidebar.desktop-only {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    z-index: 90;
+  }
+
+  .conversation {
+    overflow-y: auto;
+    height: calc(100vh - var(--header-h) - 56px);
+  }
+}
+
+/* Mobile fixes */
+@media (max-width: 900px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .sidebar-mobile-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(15, 23, 42, 0.45);
+  }
+
+  .sidebar-mobile-panel {
+    height: 100%;
+    background: #f9fafb;
+  }
+
+  /* 👇 THIS WAS THE MISSING PART */
+  .conversation {
+    overflow-y: auto;
+    height: calc(100vh - var(--header-h) - 96px);
+  }
+}
+
+/* Header UI */
+.plan-badge {
+  background: #6d28d9;
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.login-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 14px;
+}
+/* ============================
+   Freeze header + hamburger on mobile
+   + keep sidebar overlay above everything
+   ============================ */
+
+:root {
+  --header-h: 64px;
+}
+
+/* header sticky always */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  background: #fff;
+}
+
+/* make sure hamburger is clickable (above) */
+.mobile-menu-btn {
+  z-index: 130;
+}
+
+/* ensure overlay is above header when opened */
+.sidebar-mobile-overlay {
+  z-index: 200;
+}
+
+/* chat layout: make only conversation scroll on mobile/desktop */
+.chat-page .main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chat-page .conversation {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* if you also have engineer tools sticky on mobile */
+@media (max-width: 900px) {
+  .chat-page .engineer-tools-mobile {
+    position: sticky;
+    top: var(--header-h);
+    z-index: 110;
+    background: #f9fafb;
+  }
+}
+/* ============================
+   GLOBAL FIX (All pages)
+   - Header sticky always
+   - Desktop sidebar sticky
+   - Mobile overlay always above header
+   - Blue buttons styling (no black)
+   - Sidebar link weight normalize
+   ============================ */
+
+:root { --header-h: 64px; --brand-blue: #2563eb; }
+
+.header{
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 120 !important;
+  background: #fff !important;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Sidebar sticky on ALL pages (desktop) */
+@media (min-width: 901px){
+  .sidebar.desktop-only{
+    position: sticky !important;
+    top: 0 !important;
+    height: 100vh !important;
+    z-index: 90 !important;
+  }
+  .sidebar.desktop-only .sidebar-inner{
+    height: 100% !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* Mobile hamburger */
+.mobile-menu-btn{
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  align-items: center;
+  justify-content: center;
+}
+.mobile-menu-btn span{
+  width: 16px; height: 2px; background: #374151; border-radius: 2px;
+}
+@media (max-width: 900px){
+  .mobile-menu-btn{ display: flex; }
+  .sidebar-mobile-overlay{ z-index: 200 !important; }
+}
+
+/* Buttons (make them brand blue) */
+.btn-primary{
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--brand-blue);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+.btn-outline{
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #fff;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+}
+.w-full{ width:100%; }
+
+/* Dropdown UI */
+.dropdown-card{
+  position: absolute;
+  top: 110%;
+  right: 0;
+  min-width: 280px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.18);
+  padding: 10px;
+  z-index: 140;
+  border: 1px solid rgba(148,163,184,0.3);
+}
+.dropdown-title{ font-size:14px; font-weight:700; margin-bottom:8px; color:#111827; }
+.dropdown-input{
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.dropdown-error{ font-size:12px; color:#b91c1c; margin-bottom:8px; }
+.dropdown-success{ font-size:12px; color:#15803d; margin-bottom:8px; }
+.dropdown-links{ margin-top: 8px; text-align:center; }
+.dropdown-hint{ margin-top: 8px; font-size: 11px; color:#6b7280; text-align:center; }
+.link-blue{ border:none; background:none; padding:0; margin:0; color:var(--brand-blue); cursor:pointer; text-decoration:underline; font-size:11px; font-weight:600; }
+.link-gray{ border:none; background:none; padding:0; margin:0; color:#6b7280; cursor:pointer; text-decoration:underline; font-size:11px; font-weight:600; }
+
+/* Avatar larger + nicer */
+.avatar-btn{
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.avatar-img{ width:100%; height:100%; object-fit:cover; display:block; }
+.avatar-initials{ font-weight:700; font-size:13px; color:#374151; }
+
+/* Plan badge */
+.plan-badge{
+  color:#fff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Menu styling */
+.dropdown-menu{ min-width: 240px; }
+.menu-head{ padding: 6px 10px 8px; border-bottom: 1px solid rgba(226,232,240,0.9); margin-bottom: 6px; }
+.menu-name{ font-size: 13px; font-weight: 700; color:#111827; }
+.menu-sub{ font-size: 11px; color:#6b7280; margin-top:2px; }
+.menu-item{
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  color:#111827;
+  font-weight: 500;
+}
+.menu-item:hover{ background:#f9fafb; }
+.menu-item.danger{ color:#b91c1c; font-weight:700; }
+.menu-sep{ border-top: 1px solid rgba(226,232,240,0.9); margin: 6px 0; }
+.reset-box{
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(226,232,240,0.9);
+  background: #f9fafb;
+  margin: 8px 0;
+}
+
+/* Sidebar links: remove bold by default (including Registration) */
+.sidebar-link{
+  font-weight: 500 !important;
+}
+.sidebar-link-active{
+  font-weight: 600 !important; /* active only, not too bold */
+}

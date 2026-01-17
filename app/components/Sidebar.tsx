@@ -59,7 +59,6 @@ export default function Sidebar({
         flexDirection: "column",
       }}
     >
-      {/* MAIN CONTENT (scroll only here if needed) */}
       <div
         style={{
           display: "flex",
@@ -69,12 +68,10 @@ export default function Sidebar({
           paddingRight: 6,
         }}
       >
-        {/* New chat */}
         <button className="btn w-full mb-3" onClick={onNewChat}>
           + New chat
         </button>
 
-        {/* Discipline */}
         <div>
           <h3>Discipline</h3>
           <select
@@ -90,7 +87,6 @@ export default function Sidebar({
           </select>
         </div>
 
-        {/* Pages */}
         <div>
           <h3>Pages</h3>
           <nav className="sidebar-nav">
@@ -118,7 +114,6 @@ export default function Sidebar({
           </nav>
         </div>
 
-        {/* History */}
         <div>
           <h3>History</h3>
           <div
@@ -161,7 +156,6 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* FOOTER + VERIFIED + ICONS */}
       <div
         style={{
           marginTop: 10,
@@ -183,14 +177,13 @@ export default function Sidebar({
         </div>
 
         <div>
-          Use of engineerit as per{" "}
+          Use of engineerit asas per{" "}
           <Link href="/legal/terms" className="sidebar-legal-link">
             User Policy &amp; Agreement
           </Link>
           .
         </div>
 
-        {/* VERIFIED BADGE */}
         <div
           style={{
             marginTop: 10,
@@ -244,8 +237,7 @@ export default function Sidebar({
               Verified Store
             </div>
             <div style={{ color: "#374151" }}>
-              Auth No.:{" "}
-              <span style={{ fontWeight: 600 }}>0000204877</span>
+              Auth No.: <span style={{ fontWeight: 600 }}>0000204877</span>
             </div>
 
             <Link
@@ -284,7 +276,6 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* SOCIAL + OTHER ICONS */}
         <div
           style={{
             marginTop: 10,
@@ -294,13 +285,10 @@ export default function Sidebar({
             gap: 6,
           }}
         >
-          {/* LinkedIn */}
           <button
             type="button"
             onClick={() =>
-              openExternal(
-                "https://www.linkedin.com/in/engineerit-ai-40788339a"
-              )
+              openExternal("https://www.linkedin.com/in/engineerit-ai-40788339a")
             }
             title="LinkedIn"
             aria-label="LinkedIn"
@@ -309,16 +297,10 @@ export default function Sidebar({
             <img
               src="/linkedin.png"
               alt="LinkedIn"
-              style={{
-                width: 14,
-                height: 14,
-                display: "block",
-                objectFit: "contain",
-              }}
+              style={{ width: 14, height: 14, display: "block", objectFit: "contain" }}
             />
           </button>
 
-          {/* X */}
           <button
             type="button"
             onClick={() => openExternal("https://x.com/engineeritai")}
@@ -329,12 +311,9 @@ export default function Sidebar({
             <img src="/x.png" alt="X" style={iconImageStyle} />
           </button>
 
-          {/* TikTok */}
           <button
             type="button"
-            onClick={() =>
-              openExternal("https://www.tiktok.com/@engineerit.ai")
-            }
+            onClick={() => openExternal("https://www.tiktok.com/@engineerit.ai")}
             title="TikTok"
             aria-label="TikTok"
             style={iconButtonStyle}
@@ -342,12 +321,9 @@ export default function Sidebar({
             <img src="/tiktok.png" alt="TikTok" style={iconImageStyle} />
           </button>
 
-          {/* Snapchat (14px) */}
           <button
             type="button"
-            onClick={() =>
-              openExternal("https://www.snapchat.com/add/engineerit.ai")
-            }
+            onClick={() => openExternal("https://www.snapchat.com/add/engineerit.ai")}
             title="Snapchat"
             aria-label="Snapchat"
             style={iconButtonStyle}
@@ -355,16 +331,10 @@ export default function Sidebar({
             <img
               src="/snapchat.png"
               alt="Snapchat"
-              style={{
-                width: 14,
-                height: 14,
-                display: "block",
-                objectFit: "contain",
-              }}
+              style={{ width: 14, height: 14, display: "block", objectFit: "contain" }}
             />
           </button>
 
-          {/* Moyasar (smaller) */}
           <button
             type="button"
             onClick={() => openExternal("https://moyasar.com")}
@@ -375,16 +345,10 @@ export default function Sidebar({
             <img
               src="/moyasar-icon.png"
               alt="Moyasar"
-              style={{
-                width: 12,
-                height: 12,
-                display: "block",
-                objectFit: "contain",
-              }}
+              style={{ width: 12, height: 12, display: "block", objectFit: "contain" }}
             />
           </button>
 
-          {/* engineerit → eit (favicon) */}
           <button
             type="button"
             onClick={() => openExternal("https://engineerit.ai/feedback")}
@@ -401,10 +365,8 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Desktop */}
       <div className="sidebar desktop-only">{content}</div>
 
-      {/* Mobile */}
       {isMobileOpen && (
         <div className="sidebar-mobile-overlay" onClick={onCloseMobile}>
           <div
@@ -433,16 +395,12 @@ function SidebarLink({
     (href !== "/" && currentPath && currentPath.startsWith(href));
 
   return (
-    <Link
-      href={href}
-      className={`sidebar-link ${active ? "sidebar-link-active" : ""}`}
-    >
+    <Link href={href} className={`sidebar-link ${active ? "sidebar-link-active" : ""}`}>
       {label}
     </Link>
   );
 }
 
-/* base style for all small icon buttons */
 const iconButtonStyle: React.CSSProperties = {
   width: 30,
   height: 30,

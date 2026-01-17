@@ -126,7 +126,7 @@ function buildHtmlDocument(aiText: string) {
 function htmlFileFromText(aiText: string) {
   const html = buildHtmlDocument(aiText);
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const file = new File([blob], "engineerit-ai-reply.html", {
+  const file = new File([blob], "engineerit.ai", {
     type: "text/html",
   });
   return { html, blob, file };
@@ -158,7 +158,7 @@ function saveHtml(aiText: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "engineerit-ai-reply.html";
+  a.download = "engineerit.ai";
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -191,7 +191,7 @@ async function nativeShareHtml(aiText: string) {
         // @ts-ignore
         await navigator.share({
           title: "engineerit.ai",
-          text: "engineerit.ai reply (HTML)",
+          text: "engineerit.ai",
           files: [file],
         });
         return true;
@@ -199,7 +199,7 @@ async function nativeShareHtml(aiText: string) {
       // @ts-ignore
       await navigator.share({
         title: "engineerit.ai",
-        text: "engineerit.ai reply",
+        text: "engineerit.ai",
       });
       return true;
     }

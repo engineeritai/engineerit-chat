@@ -13,7 +13,6 @@ export default function NavSidebar({ isMobileOpen, onCloseMobile }: Props) {
 
   const content = (
     <aside className="sidebar-inner">
-      {/* أعلى السايدبار: الروابط والأقسام */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div>
           <h3>Navigation</h3>
@@ -43,7 +42,6 @@ export default function NavSidebar({ isMobileOpen, onCloseMobile }: Props) {
         </div>
       </div>
 
-      {/* أسفل السايدبار: النص القانوني نفسه */}
       <div
         style={{
           marginTop: 24,
@@ -74,10 +72,8 @@ export default function NavSidebar({ isMobileOpen, onCloseMobile }: Props) {
 
   return (
     <>
-      {/* Desktop sidebar */}
       <div className="sidebar desktop-only">{content}</div>
 
-      {/* Mobile overlay sidebar */}
       {isMobileOpen && (
         <div className="sidebar-mobile-overlay" onClick={onCloseMobile}>
           <div

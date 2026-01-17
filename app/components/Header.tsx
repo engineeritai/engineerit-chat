@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -47,6 +48,9 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMsg, setForgotMsg] = useState<string | null>(null);
 
+  // cooldown to avoid rate limit (UI-side only)
+  const [forgotCooldown, setForgotCooldown] = useState(0);
+
   // reset password (logged-in)
   const [resetOpen, setResetOpen] = useState(false);
   const [resetPass1, setResetPass1] = useState("");
@@ -55,6 +59,8 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const [resetMsg, setResetMsg] = useState<string | null>(null);
 
   const router = useRouter();
+
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   function getInitials(name: string | null, fallbackEmail: string | null) {
     const base = name || fallbackEmail || "U";
@@ -66,7 +72,31 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     );
   }
 
-  // تحميل بيانات المستخدم والبروفايل من Supabase فقط
+  // close popups on outside click
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!dropdownRef.current) return;
+      if (!dropdownRef.current.contains(e.target as Node)) {
+        setIsLoginOpen(false);
+        setIsMenuOpen(false);
+        setResetOpen(false);
+        setAuthPanelMode("login");
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  // cooldown timer
+  useEffect(() => {
+    if (forgotCooldown <= 0) return;
+    const t = window.setInterval(() => {
+      setForgotCooldown((c) => (c <= 1 ? 0 : c - 1));
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, [forgotCooldown]);
+
+  // load user/profile
   useEffect(() => {
     const load = async () => {
       const {
@@ -136,6 +166,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
   const goTo = (path: string) => {
     setIsMenuOpen(false);
+    setResetOpen(false);
     router.push(path);
   };
 
@@ -162,7 +193,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         return;
       }
 
-      // بعد تسجيل الدخول، حمّل البروفايل بنفس المنطق
       setIsLoggedIn(true);
       setEmail(data.user.email || null);
 
@@ -219,6 +249,8 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     setLoginError(null);
     setForgotMsg(null);
 
+    if (forgotCooldown > 0) return;
+
     if (!loginEmail || !loginEmail.includes("@")) {
       setForgotMsg("Enter your email first.");
       return;
@@ -235,6 +267,9 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         redirectTo,
       });
 
+      // start cooldown regardless (prevents spam clicks)
+      setForgotCooldown(60);
+
       if (error) {
         setForgotMsg(error.message);
         setForgotLoading(false);
@@ -245,6 +280,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     } catch (err) {
       console.error(err);
       setForgotMsg("Something went wrong. Please try again.");
+      setForgotCooldown(60);
     } finally {
       setForgotLoading(false);
     }
@@ -289,10 +325,12 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     <header className="header">
       {/* LEFT: menu + logo */}
       <div className="header-left">
+        {/* IMPORTANT: three lines button must always be inside header */}
         <button
           className="mobile-menu-btn"
           onClick={onToggleSidebar}
           aria-label="Open menu"
+          type="button"
         >
           <span />
           <span />
@@ -310,6 +348,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
       {/* RIGHT */}
       <div
         className="header-right"
+        ref={dropdownRef}
         style={{
           display: "flex",
           alignItems: "center",
@@ -321,6 +360,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         {!isLoggedIn && (
           <>
             <button
+              type="button"
               onClick={() => {
                 setIsLoginOpen((v) => !v);
                 setIsMenuOpen(false);
@@ -371,7 +411,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       Sign in to engineerit.ai
                     </div>
 
-                    {/* Email */}
                     <div style={{ marginBottom: 6 }}>
                       <input
                         type="email"
@@ -389,7 +428,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       />
                     </div>
 
-                    {/* Password */}
                     <div style={{ marginBottom: 6 }}>
                       <input
                         type="password"
@@ -437,7 +475,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       {loginLoading ? "Signing in…" : "Sign in"}
                     </button>
 
-                    {/* Forgot password */}
                     <div
                       style={{
                         marginTop: 8,
@@ -468,7 +505,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       </button>
                     </div>
 
-                    {/* Register link */}
                     <div
                       style={{
                         marginTop: 8,
@@ -547,7 +583,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                     <button
                       type="button"
                       onClick={handleForgotPassword}
-                      disabled={forgotLoading}
+                      disabled={forgotLoading || forgotCooldown > 0}
                       style={{
                         width: "100%",
                         padding: "6px 8px",
@@ -558,9 +594,14 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                         fontSize: 13,
                         fontWeight: 600,
                         cursor: "pointer",
+                        opacity: forgotLoading || forgotCooldown > 0 ? 0.7 : 1,
                       }}
                     >
-                      {forgotLoading ? "Sending…" : "Send reset link"}
+                      {forgotLoading
+                        ? "Sending…"
+                        : forgotCooldown > 0
+                        ? `Try again in ${forgotCooldown}s`
+                        : "Send reset link"}
                     </button>
 
                     <div style={{ marginTop: 8, textAlign: "center" }}>
@@ -697,11 +738,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   Plans &amp; Registration
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => goTo("/subscription")}
-                  style={menuItemStyle}
-                >
+                <button type="button" onClick={() => goTo("/subscription")} style={menuItemStyle}>
                   Subscribe / Upgrade
                 </button>
 
@@ -712,7 +749,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   }}
                 />
 
-                {/* Reset password (logged in) */}
                 <button
                   type="button"
                   onClick={() => {
