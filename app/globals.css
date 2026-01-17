@@ -1610,3 +1610,66 @@ body {
     -webkit-overflow-scrolling: touch;
   }
 }
+/* ============================
+   PRINT / PDF EXPORT FIX
+   Makes AI chat printable/exportable
+   ============================ */
+@media print {
+  body {
+    overflow: visible !important;
+  }
+
+  /* Hide UI chrome */
+  .header,
+  .sidebar,
+  .nav-sidebar,
+  .mobile-menu-btn,
+  .chat-input,
+  .chat-actions {
+    display: none !important;
+  }
+
+  /* Ensure chat content is fully visible */
+  .app-shell,
+  .main,
+  .conversation {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Prevent message cutting */
+  .chat-message {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+/* ============================
+   Register button color fix
+   (Login/Register modal)
+   ============================ */
+.register-modal button.register,
+.register-modal .btn-register,
+.register-modal button[data-action="register"] {
+  background-color: #2563eb !important; /* engineerit blue */
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.register-modal button.register:hover,
+.register-modal .btn-register:hover,
+.register-modal button[data-action="register"]:hover {
+  background-color: #1e40af !important; /* darker blue on hover */
+}
+/* ============================
+   Gate modal – Register button color
+   ============================ */
+.gate-actions .gate-btn-primary {
+  background-color: #2563eb !important; /* engineerit blue */
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.gate-actions .gate-btn-primary:hover {
+  background-color: #1e40af !important; /* darker blue on hover */
+}
