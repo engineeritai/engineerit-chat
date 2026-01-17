@@ -258,10 +258,8 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
     setForgotLoading(true);
     try {
-      const redirectTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/reset-password`
-          : "https://engineerit.ai/reset-password";
+      // ✅ FIX: always use production reset page
+      const redirectTo = "https://engineerit.ai/reset-password";
 
       const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
         redirectTo,

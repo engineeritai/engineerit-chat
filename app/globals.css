@@ -1586,3 +1586,27 @@ body {
     display: none !important;
   }
 }
+/* ============================
+   MOBILE FIX (chat page only)
+   Freeze header + hamburger + navsidebar during scroll
+   - Does NOT change desktop
+   ============================ */
+@media (max-width: 900px) {
+  .app-shell.chat-page {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  .app-shell.chat-page .main {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell.chat-page .conversation {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
