@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// ✅ IMPORTANT: avoid default import issues in Next/TS
+// IMPORTANT: avoid default import issues in Next/TS
 const PptxGenJS = require("pptxgenjs");
 
 type ReqBody = {
@@ -219,7 +219,7 @@ export async function POST(req: Request) {
       });
     });
 
-    // ✅ Use nodebuffer (most reliable in Next)
+    // Use nodebuffer (most reliable in Next)
     const buf: Buffer = await pptx.write("nodebuffer");
 
     const requested = body.filename
@@ -230,7 +230,10 @@ export async function POST(req: Request) {
       ? requested
       : `${requested}.pptx`;
 
-    return new NextResponse(buf, {
+    // ✅ Vercel/NextResponse type-safe (DON'T return Buffer directly)
+    const bytes = new Uint8Array(buf);
+
+    return new NextResponse(bytes, {
       status: 200,
       headers: {
         "Content-Type":

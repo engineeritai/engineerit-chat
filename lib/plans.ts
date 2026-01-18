@@ -24,7 +24,6 @@ export const PLANS: Plan[] = [
     priceYearly: "",
     features: [
       "AI chat in all disciplines",
-      "Read Word, Excel, PowerPoint, PDF",
       "Understand simple PFD / P&ID / block diagrams",
       "Basic data digitization (tables & simple tags)",
     ],
@@ -56,6 +55,7 @@ export const PLANS: Plan[] = [
       "Advanced designs, equations, formulas, design checks",
       "ITP & QA/QC checklist templates analysis",
       "BOQ & quantities take-off review",
+      "Copy and Share Engineering Outcomes",
       "Export to pdf",
     ],
   },
