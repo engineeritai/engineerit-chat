@@ -80,9 +80,7 @@ function hasAccess(planId: PlanId, toolId: ToolId) {
 }
 
 /* ============================
-   Helpers: RTL + Export/Share (FIXED)
-   - Reliable Print/PDF via hidden iframe (no popups)
-   - Better Web Share (proper filename + fallbacks)
+   Helpers: RTL + Export/Share
    ============================ */
 
 function isArabicText(text: string) {
@@ -110,10 +108,10 @@ function buildHtmlDocument(aiText: string) {
 <title>engineerit.ai</title>
 <style>
   *{box-sizing:border-box}
-  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px;color:#111827;background:#fff}
-  .wrap{max-width:980px;margin:0 auto}
-  .card{border:1px solid #e5e7eb;border-radius:16px;padding:18px;background:#fff}
-  pre{white-space:pre-wrap;word-break:break-word;margin:0;font:inherit;line-height:1.6}
+  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px;color:#111827;background:#fff;}
+  .wrap{max-width:980px;margin:0 auto;}
+  .card{border:1px solid #e5e7eb;border-radius:16px;padding:18px;background:#fff;}
+  pre{white-space:pre-wrap;word-break:break-word;margin:0;font:inherit;line-height:1.6;}
   .footer{margin-top:14px;color:#6b7280;font-size:12px}
 </style>
 </head>
@@ -130,7 +128,7 @@ function htmlFileFromText(aiText: string) {
   const html = buildHtmlDocument(aiText);
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
 
-  // IMPORTANT: add extension for iOS/Share compatibility
+  // IMPORTANT: extension for iOS share + WhatsApp compatibility
   const file = new File([blob], "engineerit.ai.html", {
     type: "text/html",
   });
@@ -172,8 +170,10 @@ function saveHtml(aiText: string) {
 }
 
 /**
- * Reliable print that avoids popup blockers and "blank print" issues.
- * Works on desktop browsers and much better on iOS/Safari than window.open().
+ * Modern reliable print (avoids popup + blank print)
+ * - Creates hidden iframe
+ * - Writes HTML
+ * - Prints after render tick
  */
 function printHtml(aiText: string) {
   const html = buildHtmlDocument(aiText);
@@ -186,7 +186,6 @@ function printHtml(aiText: string) {
   iframe.style.height = "0";
   iframe.style.border = "0";
   iframe.setAttribute("aria-hidden", "true");
-
   document.body.appendChild(iframe);
 
   const doc = iframe.contentWindow?.document;
@@ -199,34 +198,46 @@ function printHtml(aiText: string) {
   doc.write(html);
   doc.close();
 
-  // Wait a tick for rendering then print
   setTimeout(() => {
     try {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
     } finally {
-      // cleanup
-      setTimeout(() => iframe.remove(), 800);
+      setTimeout(() => iframe.remove(), 900);
     }
-  }, 200);
+  }, 250);
 }
 
 /**
- * PDF export: use print dialog -> "Save as PDF"
- * This is the only method that is truly cross-platform reliable without a server PDF renderer.
+ * ✅ REAL PDF export for Professional/Consultant
+ * Downloads a true PDF file from /api/export/pdf (works on Windows + iOS + Android).
  */
-function pdfHtml(aiText: string) {
-  printHtml(aiText);
+async function exportPdf(aiText: string) {
+  const res = await fetch("/api/export/pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: "engineerit.ai",
+      content: aiText,
+      filename: "engineerit.ai",
+    }),
+  });
+
+  if (!res.ok) throw new Error(await res.text());
+  const blob = await res.blob();
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "engineerit.ai.pdf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
-/**
- * Share:
- * - On mobile: native share (files if supported, else text)
- * - On desktop: fallback to WhatsApp Web + copy
- */
 async function nativeShareHtml(aiText: string) {
   const { file } = htmlFileFromText(aiText);
-
   try {
     // @ts-ignore
     if (navigator.share) {
@@ -240,8 +251,6 @@ async function nativeShareHtml(aiText: string) {
         });
         return true;
       }
-
-      // If files not supported (common on desktop), share text only
       // @ts-ignore
       await navigator.share({
         title: "engineerit.ai",
@@ -253,18 +262,52 @@ async function nativeShareHtml(aiText: string) {
   return false;
 }
 
-function shareToWhatsApp(aiText: string) {
-  const text = aiText.slice(0, 8000); // keep it safe for URL length
-  const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-  window.open(waUrl, "_blank", "noopener,noreferrer");
+function shareToWhatsApp(text: string) {
+  const payload = text.slice(0, 8000);
+  const wa = `https://wa.me/?text=${encodeURIComponent(payload)}`;
+  window.open(wa, "_blank", "noopener,noreferrer");
+}
+
+async function exportWordDocx(aiText: string) {
+  const res = await fetch("/api/export/docx", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: aiText }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const blob = await res.blob();
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "engineerit.ai.docx";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function exportPptx(aiText: string) {
+  const res = await fetch("/api/export/pptx", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: aiText }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const blob = await res.blob();
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "engineerit.ai.pptx";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 /* ============================
    Daily limits (client quick)
-   - Guest: 1/day (browser)
-   - Assistant: 3/day (browser)
-   - Paid: open
-   NOTE: Real IP/day enforced in /api/chat route.ts
    ============================ */
 
 function todayUTCKey() {
@@ -318,11 +361,14 @@ export default function Page() {
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
 
   const isPaidPlan =
-    planId === "engineer" ||
-    planId === "professional" ||
-    planId === "consultant";
+    planId === "engineer" || planId === "professional" || planId === "consultant";
 
   const attachmentsAllowed = isPaidPlan && !isGuest;
+
+  const canExportPdf = planId === "professional" || planId === "consultant";
+  const canExportWordPpt = planId === "consultant";
+  const canShareBenefits =
+    planId === "engineer" || planId === "professional" || planId === "consultant";
 
   useEffect(() => {
     const loadPlan = async () => {
@@ -498,9 +544,7 @@ export default function Page() {
         );
         break;
       case "design":
-        insertTemplate(
-          "Check this engineering design against relevant codes and standards."
-        );
+        insertTemplate("Check this engineering design against relevant codes and standards.");
         break;
       case "itp":
         insertTemplate("Generate an Inspection & Test Plan (ITP) and QA/QC checklist.");
@@ -563,7 +607,6 @@ export default function Page() {
   async function send() {
     if (!thread || (!input.trim() && attachments.length === 0) || sending) return;
 
-    // Daily limits
     const check = checkDailyLimitOrGate();
     if (!check.ok) return;
 
@@ -576,9 +619,7 @@ export default function Page() {
     updateThread((t) => ({
       ...t,
       title:
-        t.messages.length === 0
-          ? userText.slice(0, 64) || "New conversation"
-          : t.title,
+        t.messages.length === 0 ? userText.slice(0, 64) || "New conversation" : t.title,
       messages: [
         ...t.messages,
         {
@@ -660,7 +701,10 @@ export default function Page() {
 
         updateThread((t) => ({
           ...t,
-          messages: [...t.messages, { id: uuid(), role: "assistant", content: data.reply || "" }],
+          messages: [
+            ...t.messages,
+            { id: uuid(), role: "assistant", content: data.reply || "" },
+          ],
         }));
 
         incrementLocalDailyCount(check.key, check.cur);
@@ -720,9 +764,9 @@ export default function Page() {
               </div>
               <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
                 A digital AI-powered platform providing engineering intelligence services,
-                including automated engineering analysis, data processing, remote technical consulting,
-                and operating an interactive system that utilizes AI technologies to analyze documents,
-                drawings, and enhance engineering experience.
+                including automated engineering analysis, data processing, remote technical
+                consulting, and operating an interactive system that utilizes AI technologies to
+                analyze documents, drawings, and enhance engineering experience.
               </div>
             </div>
             <button
@@ -802,7 +846,9 @@ export default function Page() {
                       <div>
                         {enabled ? "✅" : "🔒"} <span>{tool.label}</span>
                       </div>
-                      {!enabled && <span className="engineer-tools-mobile-plan-hint">Upgrade</span>}
+                      {!enabled && (
+                        <span className="engineer-tools-mobile-plan-hint">Upgrade</span>
+                      )}
                     </button>
                   );
                 })}
@@ -819,22 +865,89 @@ export default function Page() {
           ) : (
             messages.map((m) => {
               const rtl = isArabicText(m.content);
+              const hasAtt = (m.attachments?.length || 0) > 0;
 
               return (
                 <div
                   key={m.id}
                   className={
-                    "message-row " + (m.role === "user" ? "message-user" : "message-assistant")
+                    "message-row " +
+                    (m.role === "user" ? "message-user" : "message-assistant")
                   }
                 >
                   <div className="message-avatar">{m.role === "user" ? "You" : "AI"}</div>
 
                   <div className="message-bubble">
                     <div className="msg-content" dir={rtl ? "rtl" : "ltr"}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {m.content}
-                      </ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                     </div>
+
+                    {/* ✅ Show attachments under the user question */}
+                    {hasAtt && (
+                      <div
+                        style={{
+                          marginTop: 10,
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 10,
+                        }}
+                      >
+                        {m.attachments!.map((a) => (
+                          <div
+                            key={a.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              padding: "8px 10px",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: 10,
+                              background: "#fff",
+                              maxWidth: 360,
+                            }}
+                          >
+                            <span>{a.type === "image" ? "🖼️" : "📄"}</span>
+
+                            {a.type === "image" ? (
+                              <a
+                                href={a.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ display: "flex", alignItems: "center", gap: 10 }}
+                              >
+                                <img
+                                  src={a.url}
+                                  alt={a.name}
+                                  style={{
+                                    width: 46,
+                                    height: 46,
+                                    objectFit: "cover",
+                                    borderRadius: 8,
+                                    border: "1px solid #e5e7eb",
+                                  }}
+                                />
+                                <span style={{ fontSize: 12, color: "#111827" }}>
+                                  {a.name}
+                                </span>
+                              </a>
+                            ) : (
+                              <a
+                                href={a.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  fontSize: 12,
+                                  color: "#111827",
+                                  textDecoration: "underline",
+                                }}
+                              >
+                                {a.name}
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {m.role === "assistant" && (
                       <div className="msg-actions">
@@ -848,32 +961,92 @@ export default function Page() {
                           </span>
                         ) : (
                           <>
-                            <button
-                              type="button"
-                              className="msg-action-btn"
-                              onClick={async () => {
-                                const ok = await copyAsHtml(m.content);
-                                if (!ok) alert("Copy failed on this browser.");
-                              }}
-                              aria-label="Copy"
-                              title="Copy"
-                            >
-                              📋 Copy
-                            </button>
+                            {canShareBenefits && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={async () => {
+                                    const ok = await copyAsHtml(m.content);
+                                    if (!ok) alert("Copy failed on this browser.");
+                                  }}
+                                  aria-label="Copy"
+                                  title="Copy"
+                                >
+                                  📋 Copy
+                                </button>
 
-                            <button
-                              type="button"
-                              className="msg-action-btn"
-                              onClick={async () => {
-                                const ok = await nativeShareHtml(m.content);
-                                if (ok) return;
-                                setOpenShareFor((prev) => (prev === m.id ? null : m.id));
-                              }}
-                              aria-label="Share"
-                              title="Share"
-                            >
-                              🔗 Share
-                            </button>
+                                <button
+                                  type="button"
+                                  className="msg-action-btn"
+                                  onClick={async () => {
+                                    const ok = await nativeShareHtml(m.content);
+                                    if (ok) return;
+                                    setOpenShareFor((prev) => (prev === m.id ? null : m.id));
+                                  }}
+                                  aria-label="Share"
+                                  title="Share"
+                                >
+                                  🔗 Share
+                                </button>
+
+                                {/* ✅ Professional + Consultant */}
+                                {canExportPdf && (
+                                  <button
+                                    type="button"
+                                    className="msg-action-btn"
+                                    onClick={async () => {
+                                      try {
+                                        await exportPdf(m.content);
+                                      } catch (e) {
+                                        console.error(e);
+                                        alert("PDF export failed. Please try again.");
+                                      }
+                                    }}
+                                    title="Export PDF"
+                                  >
+                                    📄 PDF
+                                  </button>
+                                )}
+
+                                {/* ✅ Consultant only */}
+                                {canExportWordPpt && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="msg-action-btn"
+                                      onClick={async () => {
+                                        try {
+                                          await exportWordDocx(m.content);
+                                        } catch (e) {
+                                          console.error(e);
+                                          alert("Word export failed. Please try again.");
+                                        }
+                                      }}
+                                      title="Export Word"
+                                    >
+                                      📝 Word
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      className="msg-action-btn"
+                                      onClick={async () => {
+                                        try {
+                                          await exportPptx(m.content);
+                                        } catch (e) {
+                                          console.error(e);
+                                          alert("PowerPoint export failed. Please try again.");
+                                        }
+                                      }}
+                                      title="Export PowerPoint"
+                                    >
+                                      📊 PPT
+                                    </button>
+                                  </>
+                                )}
+                              </>
+                            )}
 
                             {openShareFor === m.id && (
                               <div
@@ -899,14 +1072,6 @@ export default function Page() {
                                   onClick={() => printHtml(m.content)}
                                 >
                                   Print
-                                </button>
-
-                                <button
-                                  type="button"
-                                  className="msg-action-btn"
-                                  onClick={() => pdfHtml(m.content)}
-                                >
-                                  PDF
                                 </button>
 
                                 <button
@@ -945,7 +1110,10 @@ export default function Page() {
                   <div key={a.id} className="attachment-pill">
                     {a.type === "image" ? "🖼️" : "📄"}{" "}
                     <span className="attachment-name">{a.name}</span>
-                    <button className="attachment-remove" onClick={() => removeAttachment(a.id)}>
+                    <button
+                      className="attachment-remove"
+                      onClick={() => removeAttachment(a.id)}
+                    >
                       ✕
                     </button>
                   </div>
@@ -1042,7 +1210,9 @@ export default function Page() {
           <div className="gate-overlay" role="dialog" aria-modal="true">
             <div className="gate-modal">
               <div className="gate-title">
-                {gateMode === "register" ? "Register / Login required" : "Upgrade required"}
+                {gateMode === "register"
+                  ? "Register / Login required"
+                  : "Upgrade required"}
               </div>
 
               {limitNotice && <div className="gate-note">{limitNotice}</div>}
@@ -1057,7 +1227,11 @@ export default function Page() {
                     <a className="gate-btn gate-btn-primary" href="/register">
                       Register
                     </a>
-                    <button className="gate-btn" type="button" onClick={() => setShowGate(false)}>
+                    <button
+                      className="gate-btn"
+                      type="button"
+                      onClick={() => setShowGate(false)}
+                    >
                       Close
                     </button>
                   </div>
@@ -1069,7 +1243,11 @@ export default function Page() {
                     <a className="gate-btn gate-btn-primary" href="/subscription">
                       Upgrade
                     </a>
-                    <button className="gate-btn" type="button" onClick={() => setShowGate(false)}>
+                    <button
+                      className="gate-btn"
+                      type="button"
+                      onClick={() => setShowGate(false)}
+                    >
                       Close
                     </button>
                   </div>
