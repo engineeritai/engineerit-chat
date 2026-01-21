@@ -953,7 +953,7 @@ export default function Page() {
                       <div className="msg-actions">
                         {planId === "assistant" && isGuest ? (
                           <span style={{ fontSize: 12, color: "#6b7280" }}>
-                            Register to copy/share and attach files
+                            Register to copy, share and attach files
                           </span>
                         ) : planId === "assistant" && !isGuest ? (
                           <span style={{ fontSize: 12, color: "#6b7280" }}>

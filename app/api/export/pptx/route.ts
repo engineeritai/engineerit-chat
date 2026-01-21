@@ -4,13 +4,12 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// IMPORTANT: avoid default import issues in Next/TS
 const PptxGenJS = require("pptxgenjs");
 
 type ReqBody = {
   title?: string;
   content?: string;
-  text?: string; // allow {text} as well
+  text?: string;
   filename?: string;
 };
 
@@ -28,41 +27,6 @@ function safeFilename(name: string) {
   );
 }
 
-function chunkForSlides(text: string, maxCharsPerSlide = 1400) {
-  const normalized = text.replace(/\r\n/g, "\n").trim();
-  if (!normalized) return [""];
-
-  const paras = normalized
-    .split("\n")
-    .map((p) => p.trim())
-    .filter(Boolean);
-
-  const slides: string[] = [];
-  let buf = "";
-
-  for (const p of paras) {
-    const candidate = buf ? `${buf}\n\n${p}` : p;
-    if (candidate.length <= maxCharsPerSlide) {
-      buf = candidate;
-    } else {
-      if (buf) slides.push(buf);
-      if (p.length > maxCharsPerSlide) {
-        let i = 0;
-        while (i < p.length) {
-          slides.push(p.slice(i, i + maxCharsPerSlide));
-          i += maxCharsPerSlide;
-        }
-        buf = "";
-      } else {
-        buf = p;
-      }
-    }
-  }
-  if (buf) slides.push(buf);
-
-  return slides.length ? slides : [normalized];
-}
-
 function nowStamp() {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -71,10 +35,93 @@ function nowStamp() {
   return `${yyyy}${mm}${dd}`;
 }
 
+type Section = { heading: string; lines: string[] };
+
+function splitIntoSections(text: string): Section[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+
+  const sections: Section[] = [];
+  let current: Section = { heading: "Overview", lines: [] };
+
+  const push = () => {
+    const clean = current.lines.map((l) => l.trimEnd());
+    const hasBody = clean.join("\n").trim().length > 0;
+    if (hasBody) sections.push({ heading: current.heading, lines: clean });
+    current = { heading: "Overview", lines: [] };
+  };
+
+  for (const raw of lines) {
+    const ln = raw.replace(/\t/g, "    ");
+
+    const h = ln.match(/^\s{0,3}(#{1,6})\s+(.+)\s*$/);
+    if (h) {
+      // new section
+      push();
+      current.heading = h[2].trim();
+      current.lines = [];
+      continue;
+    }
+
+    current.lines.push(ln);
+  }
+
+  // final push
+  const tail = current.lines.join("\n").trim();
+  if (tail) sections.push({ heading: current.heading, lines: current.lines });
+
+  if (sections.length === 0) return [{ heading: "Overview", lines: text.split("\n") }];
+  return sections;
+}
+
+function toBullets(sectionLines: string[]) {
+  // Convert to bullet-like text:
+  // - bullets remain bullets
+  // - numbered lines become bullets
+  // - other lines kept but short
+  const out: string[] = [];
+  for (const raw of sectionLines) {
+    const ln = raw.trim();
+    if (!ln) continue;
+
+    if (/^[-*•]\s+/.test(ln)) out.push("• " + ln.replace(/^[-*•]\s+/, "").trim());
+    else if (/^\d+[\).\]]\s+/.test(ln))
+      out.push("• " + ln.replace(/^\d+[\).\]]\s+/, "").trim());
+    else if (/^>/.test(ln)) out.push("• " + ln.replace(/^>\s*/, "").trim());
+    else out.push(ln);
+  }
+  return out;
+}
+
+function chunkLines(lines: string[], maxChars = 900) {
+  const chunks: string[] = [];
+  let buf = "";
+
+  for (const ln of lines) {
+    const candidate = buf ? buf + "\n" + ln : ln;
+    if (candidate.length <= maxChars) {
+      buf = candidate;
+    } else {
+      if (buf) chunks.push(buf);
+      if (ln.length > maxChars) {
+        // hard split very long line
+        let i = 0;
+        while (i < ln.length) {
+          chunks.push(ln.slice(i, i + maxChars));
+          i += maxChars;
+        }
+        buf = "";
+      } else {
+        buf = ln;
+      }
+    }
+  }
+  if (buf) chunks.push(buf);
+  return chunks.length ? chunks : [""];
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Partial<ReqBody>;
-
     const content = (body.content ?? body.text ?? "").toString();
 
     if (!content.trim()) {
@@ -113,11 +160,11 @@ export async function POST(req: Request) {
 
       slide.addText(title, {
         x: 0.9,
-        y: 2.3,
+        y: 2.2,
         w: W - 1.8,
         h: 1.0,
         fontFace: "Calibri",
-        fontSize: 38,
+        fontSize: 40,
         bold: true,
         color: "111827",
         align: isRTL ? "right" : "left",
@@ -126,7 +173,7 @@ export async function POST(req: Request) {
 
       slide.addText(`Exported on ${new Date().toLocaleString()}`, {
         x: 0.9,
-        y: 3.5,
+        y: 3.45,
         w: W - 1.8,
         h: 0.6,
         fontFace: "Calibri",
@@ -156,70 +203,82 @@ export async function POST(req: Request) {
       });
     }
 
-    // Content slides
-    const chunks = chunkForSlides(content, 1400);
+    const sections = splitIntoSections(content);
 
-    chunks.forEach((chunk, idx) => {
-      const slide = pptx.addSlide();
-      slide.background = { color: "FFFFFF" };
+    for (const sec of sections) {
+      const bullets = toBullets(sec.lines);
 
-      slide.addShape(pptx.ShapeType.rect, {
-        x: 0,
-        y: 0,
-        w: W,
-        h: 0.55,
-        fill: { color: "F3F4F6" },
-        line: { color: "F3F4F6" },
+      // if no bullets, still include raw
+      const lines = bullets.length ? bullets : sec.lines;
+
+      // chunk per slide (keeps slide per section; if long section => extra slides with same heading + "(cont.)")
+      const chunks = chunkLines(lines, 950);
+
+      chunks.forEach((chunk, idx) => {
+        const slide = pptx.addSlide();
+        slide.background = { color: "FFFFFF" };
+
+        // header bar
+        slide.addShape(pptx.ShapeType.rect, {
+          x: 0,
+          y: 0,
+          w: W,
+          h: 0.62,
+          fill: { color: "F3F4F6" },
+          line: { color: "F3F4F6" },
+        });
+
+        const heading = idx === 0 ? sec.heading : `${sec.heading} (cont.)`;
+
+        slide.addText(heading, {
+          x: 0.7,
+          y: 0.14,
+          w: W - 1.4,
+          h: 0.4,
+          fontFace: "Calibri",
+          fontSize: 16,
+          bold: true,
+          color: "111827",
+          align: isRTL ? "right" : "left",
+        });
+
+        // content box
+        slide.addShape(pptx.ShapeType.roundRect, {
+          x: 0.7,
+          y: 0.95,
+          w: W - 1.4,
+          h: H - 1.75,
+          fill: { color: "FFFFFF" },
+          line: { color: "E5E7EB" },
+          radius: 10,
+        });
+
+        slide.addText(chunk, {
+          x: 1.0,
+          y: 1.15,
+          w: W - 2.0,
+          h: H - 2.2,
+          fontFace: "Calibri",
+          fontSize: 18,
+          color: "111827",
+          align: isRTL ? "right" : "left",
+          valign: "top",
+          lineSpacingMultiple: 1.12,
+        });
+
+        slide.addText("engineerit.ai", {
+          x: 0.7,
+          y: H - 0.55,
+          w: W - 1.4,
+          h: 0.3,
+          fontFace: "Calibri",
+          fontSize: 11,
+          color: "6B7280",
+          align: "right",
+        });
       });
+    }
 
-      slide.addText(title, {
-        x: 0.7,
-        y: 0.12,
-        w: W - 1.4,
-        h: 0.35,
-        fontFace: "Calibri",
-        fontSize: 14,
-        bold: true,
-        color: "111827",
-        align: isRTL ? "right" : "left",
-      });
-
-      slide.addShape(pptx.ShapeType.roundRect, {
-        x: 0.7,
-        y: 0.9,
-        w: W - 1.4,
-        h: H - 1.7,
-        fill: { color: "FFFFFF" },
-        line: { color: "E5E7EB" },
-        radius: 10,
-      });
-
-      slide.addText(chunk, {
-        x: 1.0,
-        y: 1.1,
-        w: W - 2.0,
-        h: H - 2.1,
-        fontFace: "Calibri",
-        fontSize: 18,
-        color: "111827",
-        align: isRTL ? "right" : "left",
-        valign: "top",
-        lineSpacingMultiple: 1.1,
-      });
-
-      slide.addText(`${idx + 1}/${chunks.length}`, {
-        x: 0.7,
-        y: H - 0.55,
-        w: W - 1.4,
-        h: 0.3,
-        fontFace: "Calibri",
-        fontSize: 11,
-        color: "6B7280",
-        align: "right",
-      });
-    });
-
-    // Use nodebuffer (most reliable in Next)
     const buf: Buffer = await pptx.write("nodebuffer");
 
     const requested = body.filename
@@ -230,10 +289,7 @@ export async function POST(req: Request) {
       ? requested
       : `${requested}.pptx`;
 
-    // ✅ Vercel/NextResponse type-safe (DON'T return Buffer directly)
-    const bytes = new Uint8Array(buf);
-
-    return new NextResponse(bytes, {
+    return new NextResponse(buf, {
       status: 200,
       headers: {
         "Content-Type":
