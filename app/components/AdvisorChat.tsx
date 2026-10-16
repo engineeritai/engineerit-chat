@@ -56,7 +56,7 @@ function uuid() {
 
 export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
   const advisor = getAdvisor(advisorId);
-  const { locale, m, dir } = useMessages();
+  const { locale, m, dir, shell: s } = useMessages();
   const { ready, isGuest, userId, tier } = useSubscriptionTier();
   const copy = m.advisors.items[advisorId];
   const live = advisorsAreLive();
@@ -99,9 +99,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     const max = isGuest ? 1 : tier === "assistant" ? 3 : Number.POSITIVE_INFINITY;
     if (Number.isFinite(max) && cur >= max) {
       openGate(
-        isGuest
-          ? "Daily limit reached. Please register or log in."
-          : "Daily limit reached. Please upgrade."
+        isGuest ? s.chat.dailyGuest : s.chat.dailyPaid
       );
       return { ok: false as const, key, cur };
     }
@@ -113,7 +111,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_UPLOAD_BYTES) {
-      setUploadNotice(fileTooLargeMessage());
+      setUploadNotice(fileTooLargeMessage(locale));
       e.target.value = "";
       return;
     }
@@ -134,7 +132,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_UPLOAD_BYTES) {
-      setUploadNotice(fileTooLargeMessage());
+      setUploadNotice(fileTooLargeMessage(locale));
       e.target.value = "";
       return;
     }
@@ -164,7 +162,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     try {
       res = await postImage({
         file: imageFile,
-        question: question || "Analyze this project image.",
+        question: question || (locale === "ar" ? "حلّل صورة المشروع هذه." : "Analyze this project image."),
         headers: await authHeaders(),
         advisorId,
         locale,
@@ -181,7 +179,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     if (!res.ok) {
       const failure = await readApiError(res);
       throw new UploadError(
-        failure.message || "Image analysis failed. Please try again or use a smaller image.",
+        failure.message || s.chat.imageFailed,
         res.status,
         failure.code
       );
@@ -195,7 +193,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     try {
       res = await postDocument({
         file: docFile,
-        question: question || "Review this project file.",
+        question: question || (locale === "ar" ? "راجع ملف المشروع هذا." : "Review this project file."),
         headers: await authHeaders(),
         advisorId,
         locale,
@@ -213,7 +211,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
       const failure = await readApiError(res);
       throw new UploadError(
         failure.message ||
-          "Document processing failed. Please try again, or convert the file to a standard PDF/Text and upload again.",
+          s.chat.documentFailed,
         res.status,
         failure.code
       );
@@ -316,7 +314,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
       const content =
         err instanceof UploadError
           ? err.message
-          : "Sorry, something failed. Please try again.";
+          : s.chat.sorry;
       setMessages((prev) => [...prev, { id: uuid(), role: "assistant", content }]);
     } finally {
       sendingRef.current = false;
@@ -521,7 +519,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                               await exportPdf(message.content, filename);
                             } catch (err) {
                               console.error(err);
-                              alert("PDF export failed. Please try again.");
+                              alert(s.chat.pdfFailed);
                             }
                           }}
                         >
@@ -538,7 +536,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                                 await exportWordDocx(message.content, filename);
                               } catch (err) {
                                 console.error(err);
-                                alert("Word export failed. Please try again.");
+                                alert(s.chat.wordFailed);
                               }
                             }}
                           >
@@ -552,7 +550,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                                 await exportPptx(message.content, filename);
                               } catch (err) {
                                 console.error(err);
-                                alert("PowerPoint export failed. Please try again.");
+                                alert(s.chat.pptFailed);
                               }
                             }}
                           >

@@ -82,23 +82,29 @@ export async function createIncomingUpload(filename: string): Promise<{
   return { bucket: UPLOAD_BUCKET, path, token: signed.data.token };
 }
 
-export async function readIncomingFile(path: string): Promise<Buffer> {
+export async function readIncomingFile(path: string, locale?: unknown): Promise<Buffer> {
+  const ar = locale === "ar";
   if (!isIncomingPath(path)) {
     throw new IncomingFileError(
-      "This upload could not be found. Please attach the file again.",
+      ar
+        ? "تعذر العثور على هذا الرفع. أرفق الملف مرة أخرى."
+        : "This upload could not be found. Please attach the file again.",
       400
     );
   }
   const { data, error } = await supabaseAdmin.storage.from(UPLOAD_BUCKET).download(path);
   if (error || !data) {
-    throw new IncomingFileError(directUploadFailedMessage(error?.message), 400);
+    throw new IncomingFileError(directUploadFailedMessage(error?.message, locale), 400);
   }
   const buffer = Buffer.from(await data.arrayBuffer());
   if (buffer.length > MAX_UPLOAD_BYTES) {
-    throw new IncomingFileError(fileTooLargeMessage(), 413);
+    throw new IncomingFileError(fileTooLargeMessage(locale), 413);
   }
   if (buffer.length === 0) {
-    throw new IncomingFileError("The uploaded file was empty. Please attach it again.", 400);
+    throw new IncomingFileError(
+      ar ? "الملف المرفوع فارغ. أرفقه مرة أخرى." : "The uploaded file was empty. Please attach it again.",
+      400
+    );
   }
   return buffer;
 }

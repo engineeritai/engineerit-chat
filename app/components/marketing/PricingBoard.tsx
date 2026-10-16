@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useLocale } from "@/app/components/LocaleProvider";
 import { PLANS, type PlanId } from "@/lib/plans";
-import { getMarketingContent, type Locale } from "@/lib/marketing";
+import { getMarketingContent } from "@/lib/marketing";
+import { formatMoney, formatUsd, localizedPlan } from "@/lib/labels";
 import {
   ANNUAL_MONTHS_BILLED,
   ENTERPRISE_PLAN,
@@ -11,8 +13,6 @@ import {
   type BillingPeriod,
   annualSar,
   assertIndividualPlanPrices,
-  formatSar,
-  formatUsdApprox,
   monthlySarFromPlan,
 } from "@/lib/pricingDisplay";
 import { pilotMailto } from "@/lib/trust";
@@ -27,7 +27,8 @@ function fill(template: string, values: Record<string, string>) {
   );
 }
 
-export default function PricingBoard({ locale = "en" }: { locale?: Locale }) {
+export default function PricingBoard() {
+  const { locale } = useLocale();
   const content = getMarketingContent(locale);
   const [period, setPeriod] = useState<BillingPeriod>("monthly");
   const annual = period === "annual";
@@ -38,7 +39,7 @@ export default function PricingBoard({ locale = "en" }: { locale?: Locale }) {
         <div
           className="mkt-toggle"
           role="group"
-          aria-label={`${content.pricing.monthly} / ${content.pricing.annual}`}
+          aria-label={`${content.pricing.monthly}. ${content.pricing.annual}`}
         >
           <button
             type="button"
@@ -66,11 +67,12 @@ export default function PricingBoard({ locale = "en" }: { locale?: Locale }) {
       <h2>{content.pricing.individualTitle}</h2>
       <p className="mkt-intro">{content.pricing.individualIntro}</p>
       <div className="mkt-plan-grid">
-        {PLANS.map((plan) => {
-          const monthly = monthlySarFromPlan(plan);
+        {PLANS.map((source) => {
+          const plan = localizedPlan(locale, source);
+          const monthly = monthlySarFromPlan(source);
           const amount = annual ? annualSar(monthly) : monthly;
           const isFree = plan.id === "assistant";
-          const cta = individualCta(plan.id, period, plan.name, content);
+          const cta = individualCta(plan.id, period, plan.name, content, locale);
 
           return (
             <article key={plan.id} className="mkt-card mkt-plan">
@@ -78,23 +80,24 @@ export default function PricingBoard({ locale = "en" }: { locale?: Locale }) {
               <p className="mkt-muted">{plan.tagline}</p>
               <div className="mkt-price">
                 {isFree ? (
-                  <div className="mkt-price-main">{plan.priceMonthly}</div>
+                  <div className="mkt-price-main">{content.pricing.free}</div>
                 ) : annual ? (
                   <div className="mkt-price-main">
-                    {formatSar(amount)}{" "}
-                    <span>{content.pricing.perYear}</span>
+                    {formatMoney(amount, locale)} <span>{content.pricing.perYear}</span>
                   </div>
                 ) : (
-                  <div className="mkt-price-main">{plan.priceMonthly}</div>
+                  <div className="mkt-price-main">
+                    {formatMoney(monthly, locale)} <span>{content.pricing.perMonth}</span>
+                  </div>
                 )}
                 {amount > 0 && (
                   <div className="mkt-price-usd">
-                    {content.pricing.approx} {formatUsdApprox(amount)}
+                    {content.pricing.approx} {formatUsd(amount, locale)}
                   </div>
                 )}
                 {annual && !isFree && (
                   <div className="mkt-muted">
-                    {ANNUAL_MONTHS_BILLED}× {plan.priceMonthly}
+                    {ANNUAL_MONTHS_BILLED}× {formatMoney(monthly, locale)} {content.pricing.perMonth}
                   </div>
                 )}
               </div>
@@ -121,18 +124,16 @@ export default function PricingBoard({ locale = "en" }: { locale?: Locale }) {
       <p className="mkt-intro">{content.pricing.firmIntro}</p>
       <div className="mkt-plan-grid mkt-plan-grid-firm">
         <article className="mkt-card mkt-plan mkt-plan-team">
-          <h3>{TEAM_PLAN.name}</h3>
+          <h3>{locale === "ar" ? "فريق" : TEAM_PLAN.name}</h3>
           <p className="mkt-muted">{content.pricing.notInApp}</p>
           <div className="mkt-price">
             <div className="mkt-price-main">
-              {formatSar(annual ? annualSar(TEAM_PLAN.monthlySar) : TEAM_PLAN.monthlySar)}{" "}
+              {formatMoney(annual ? annualSar(TEAM_PLAN.monthlySar) : TEAM_PLAN.monthlySar, locale)}{" "}
               <span>{annual ? content.pricing.perYear : content.pricing.perMonth}</span>
             </div>
             <div className="mkt-price-usd">
               {content.pricing.approx}{" "}
-              {formatUsdApprox(
-                annual ? annualSar(TEAM_PLAN.monthlySar) : TEAM_PLAN.monthlySar
-              )}
+              {formatUsd(annual ? annualSar(TEAM_PLAN.monthlySar) : TEAM_PLAN.monthlySar, locale)}
             </div>
             <div className="mkt-muted">
               {fill(content.pricing.forSeats, {
@@ -147,14 +148,12 @@ export default function PricingBoard({ locale = "en" }: { locale?: Locale }) {
               })}
             </li>
             <li>
-              {`${content.pricing.extraSeat} ${formatSar(
-                annual
-                  ? annualSar(TEAM_PLAN.extraSeatMonthlySar)
-                  : TEAM_PLAN.extraSeatMonthlySar
-              )} ${annual ? content.pricing.perYear : content.pricing.perMonth} (${content.pricing.approx} ${formatUsdApprox(
-                annual
-                  ? annualSar(TEAM_PLAN.extraSeatMonthlySar)
-                  : TEAM_PLAN.extraSeatMonthlySar
+              {`${content.pricing.extraSeat} ${formatMoney(
+                annual ? annualSar(TEAM_PLAN.extraSeatMonthlySar) : TEAM_PLAN.extraSeatMonthlySar,
+                locale
+              )} ${annual ? content.pricing.perYear : content.pricing.perMonth} (${content.pricing.approx} ${formatUsd(
+                annual ? annualSar(TEAM_PLAN.extraSeatMonthlySar) : TEAM_PLAN.extraSeatMonthlySar,
+                locale
               )})`}
             </li>
             <li>{content.pricing.sharedProjects}</li>
@@ -162,31 +161,29 @@ export default function PricingBoard({ locale = "en" }: { locale?: Locale }) {
           </ul>
           <a
             className="mkt-btn mkt-btn-primary"
-            href={pilotMailto("Team pilot request — engineerit.ai")}
+            href={pilotMailto(locale === "ar" ? "طلب تجربة فريق — engineerit.ai" : "Team pilot request — engineerit.ai")}
           >
             {content.pricing.requestPilot}
           </a>
         </article>
 
         <article className="mkt-card mkt-plan">
-          <h3>{ENTERPRISE_PLAN.name}</h3>
+          <h3>{locale === "ar" ? "مؤسسة" : ENTERPRISE_PLAN.name}</h3>
           <p className="mkt-muted">{content.pricing.notInApp}</p>
           <div className="mkt-price">
             <div className="mkt-price-main">
               {content.pricing.from}{" "}
-              {formatSar(
-                annual
-                  ? annualSar(ENTERPRISE_PLAN.monthlySarFrom)
-                  : ENTERPRISE_PLAN.monthlySarFrom
+              {formatMoney(
+                annual ? annualSar(ENTERPRISE_PLAN.monthlySarFrom) : ENTERPRISE_PLAN.monthlySarFrom,
+                locale
               )}{" "}
               <span>{annual ? content.pricing.perYear : content.pricing.perMonth}</span>
             </div>
             <div className="mkt-price-usd">
               {content.pricing.approx}{" "}
-              {formatUsdApprox(
-                annual
-                  ? annualSar(ENTERPRISE_PLAN.monthlySarFrom)
-                  : ENTERPRISE_PLAN.monthlySarFrom
+              {formatUsd(
+                annual ? annualSar(ENTERPRISE_PLAN.monthlySarFrom) : ENTERPRISE_PLAN.monthlySarFrom,
+                locale
               )}
             </div>
           </div>
@@ -198,7 +195,7 @@ export default function PricingBoard({ locale = "en" }: { locale?: Locale }) {
           </ul>
           <a
             className="mkt-btn mkt-btn-secondary"
-            href={pilotMailto("Enterprise enquiry — engineerit.ai")}
+            href={pilotMailto(locale === "ar" ? "استفسار المؤسسات — engineerit.ai" : "Enterprise enquiry — engineerit.ai")}
           >
             {content.pricing.contactUs}
           </a>
@@ -206,7 +203,7 @@ export default function PricingBoard({ locale = "en" }: { locale?: Locale }) {
       </div>
 
       <div className="mkt-pricing-form">
-        <PilotRequestForm locale={locale} />
+        <PilotRequestForm />
       </div>
     </div>
   );
@@ -216,14 +213,17 @@ function individualCta(
   planId: PlanId,
   period: BillingPeriod,
   planName: string,
-  content: ReturnType<typeof getMarketingContent>
+  content: ReturnType<typeof getMarketingContent>,
+  locale: "en" | "ar"
 ) {
   if (planId === "assistant") {
     return { href: "/register", label: content.pricing.startFree, external: false };
   }
   if (period === "annual") {
+    const subject =
+      locale === "ar" ? `طلب فوترة سنوية — ${planName}` : `Annual billing request — ${planName}`;
     return {
-      href: pilotMailto(`Annual billing request — ${planName}`),
+      href: pilotMailto(subject),
       label: content.pricing.requestAnnual,
       external: true,
     };

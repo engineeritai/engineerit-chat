@@ -1,6 +1,10 @@
-// app/components/Footer.tsx
+"use client";
+
+import Link from "next/link";
+import { useMessages } from "@/lib/useMessages";
 
 export default function Footer() {
+  const { shell: s } = useMessages();
   return (
     <footer
       style={{
@@ -11,14 +15,13 @@ export default function Footer() {
         marginTop: "283px",
       }}
     >
-      <p>AI Engineering Assistant</p>
-
+      <p>{s.footer.blurb}</p>
       <p style={{ marginTop: "6px" }}>
-        © {new Date().getFullYear()} engineerit. All rights reserved.
+        © {new Date().getFullYear()} engineerit. {s.footer.rights}
       </p>
-
       <p style={{ marginTop: "6px" }}>
-        Use of engineerit as per User Policy & Agreement
+        {s.footer.policyLead}{" "}
+        <Link href="/legal/terms">{s.footer.policyLink}</Link>
       </p>
     </footer>
   );

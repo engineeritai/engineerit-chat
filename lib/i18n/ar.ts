@@ -253,8 +253,8 @@ const ar: Messages = {
     teamEnterpriseNote:
       "باقتا الفريق والمؤسسات تشملان المستشارين الأربعة. الأسعار أدناه شاملة الضريبة.",
     teamPrice:
-      "الفريق: SAR {monthly} شهرياً لـ {seats} مقاعد (+SAR {extra} لكل مقعد إضافي)، شاملة الضريبة.",
-    enterprisePrice: "المؤسسات: من SAR {from} شهرياً، شاملة الضريبة.",
+      "الفريق: {monthly} ر.س شهرياً لـ {seats} مقاعد (+{extra} ر.س لكل مقعد إضافي)، شاملة الضريبة.",
+    enterprisePrice: "المؤسسات: من {from} ر.س شهرياً، شاملة الضريبة.",
     featureListTitle: "المشمول في هذه الباقة",
   },
   plans: {

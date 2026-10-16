@@ -23,7 +23,10 @@ function withJson(headers?: HeadersInit): Headers {
   return next;
 }
 
-export async function readApiError(res: Response): Promise<{ message: string; code?: string }> {
+export async function readApiError(
+  res: Response,
+  locale?: unknown
+): Promise<{ message: string; code?: string }> {
   const text = await res.text();
   if (text) {
     try {
@@ -37,7 +40,7 @@ export async function readApiError(res: Response): Promise<{ message: string; co
       if (plain && plain.length <= 300 && !plain.startsWith("<")) return { message: plain };
     }
   }
-  if (res.status === 413) return { message: bodyTooLargeMessage() };
+  if (res.status === 413) return { message: bodyTooLargeMessage(locale) };
   return { message: "" };
 }
 
@@ -55,26 +58,30 @@ async function uploadLargeFile(args: AttachmentFields): Promise<string> {
     }),
   });
   if (!res.ok) {
-    const failure = await readApiError(res);
-    throw new UploadError(failure.message || directUploadFailedMessage(), res.status, failure.code);
+    const failure = await readApiError(res, args.locale);
+    throw new UploadError(
+      failure.message || directUploadFailedMessage(undefined, args.locale),
+      res.status,
+      failure.code
+    );
   }
   const data = (await res.json()) as { bucket?: string; path?: string; token?: string };
   if (!data.bucket || !data.path || !data.token) {
-    throw new UploadError(directUploadFailedMessage());
+    throw new UploadError(directUploadFailedMessage(undefined, args.locale));
   }
   const uploaded = await supabase.storage.from(data.bucket).uploadToSignedUrl(data.path, data.token, args.file, {
     contentType: args.file.type || "application/octet-stream",
     upsert: false,
   });
   if (uploaded.error) {
-    throw new UploadError(directUploadFailedMessage(uploaded.error.message));
+    throw new UploadError(directUploadFailedMessage(uploaded.error.message, args.locale));
   }
   return data.path;
 }
 
 async function postFile(endpoint: "/api/document" | "/api/image", args: AttachmentFields): Promise<Response> {
   if (args.file.size > MAX_UPLOAD_BYTES) {
-    throw new UploadError(fileTooLargeMessage());
+    throw new UploadError(fileTooLargeMessage(args.locale));
   }
 
   if (args.file.size > DIRECT_UPLOAD_THRESHOLD_BYTES) {

@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { PLANS } from "@/lib/plans";
+import { localizedPlan, toolLabel } from "@/lib/labels";
+import { useMessages } from "@/lib/useMessages";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
@@ -46,6 +48,7 @@ const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
 };
 
 export default function RegisterPage() {
+  const { locale, shell: s } = useMessages();
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
   const [fullName, setFullName] = useState("");
@@ -71,19 +74,19 @@ export default function RegisterPage() {
     const e2 = confirmEmail.trim().toLowerCase();
 
     if (!e1 || !e2) {
-      setErrorMessage("Please enter and confirm your email.");
+      setErrorMessage(s.auth.emailRequired);
       return;
     }
     if (e1 !== e2) {
-      setErrorMessage("Email and confirmation email do not match.");
+      setErrorMessage(s.auth.emailMismatch);
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMessage("Password and confirmation password do not match.");
+      setErrorMessage(s.auth.passwordMismatch);
       return;
     }
     if (password.length < 8) {
-      setErrorMessage("Password must be at least 8 characters.");
+      setErrorMessage(s.auth.passwordMin);
       return;
     }
 
@@ -115,18 +118,16 @@ export default function RegisterPage() {
 
       // If email confirmation is ON -> session is null
       if (!data.session) {
-        setSuccessMessage(
-          "Account created. We sent you a confirmation email. Please check your Inbox, and also Junk/Spam, then confirm your email and sign in from the top bar."
-        );
+        setSuccessMessage(s.auth.createdConfirm);
         return;
       }
 
       // If confirmation is OFF -> user is logged in
-      setSuccessMessage("Account created. Redirecting to your profile...");
+      setSuccessMessage(s.auth.createdRedirect);
       setTimeout(() => router.push("/profile"), 900);
     } catch (err) {
       console.error(err);
-      setErrorMessage("Something went wrong. Please try again.");
+      setErrorMessage(s.auth.genericError);
     } finally {
       setLoading(false);
     }
@@ -143,16 +144,13 @@ export default function RegisterPage() {
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
         <div className="page-wrap">
-          <h1 className="page-title">Register to engineerit.ai</h1>
-          <p className="page-subtitle">
-            Create your account, start with the free Assistant plan, and upgrade
-            later to Engineer, Professional, or Consultant.
-          </p>
+          <h1 className="page-title">{s.auth.registerTitle}</h1>
+          <p className="page-subtitle">{s.auth.registerLead}</p>
 
           {/* Registration card */}
           <div className="card" style={{ marginBottom: 24 }}>
             <h2 className="card-title" style={{ marginBottom: 12 }}>
-              Create your account
+              {s.auth.createAccount}
             </h2>
 
             <form
@@ -165,11 +163,11 @@ export default function RegisterPage() {
             >
               <div className="form-row">
                 <label>
-                  Full name
+                  {s.auth.fullName}
                   <input
                     type="text"
                     className="input"
-                    placeholder="Your full name"
+                    placeholder={s.auth.fullNamePlaceholder}
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                   />
@@ -178,7 +176,7 @@ export default function RegisterPage() {
 
               <div className="form-row">
                 <label>
-                  Email address
+                  {s.auth.email}
                   <input
                     type="email"
                     className="input"
@@ -192,12 +190,12 @@ export default function RegisterPage() {
 
               <div className="form-row">
                 <label>
-                  Confirm email
+                  {s.auth.confirmEmail}
                   <input
                     type="email"
                     className="input"
                     required
-                    placeholder="repeat your email"
+                    placeholder={s.auth.confirmEmailPlaceholder}
                     value={confirmEmail}
                     onChange={(e) => setConfirmEmail(e.target.value)}
                   />
@@ -206,7 +204,7 @@ export default function RegisterPage() {
 
               <div className="form-row">
                 <label>
-                  Password
+                  {s.auth.password}
                   <input
                     type="password"
                     className="input"
@@ -220,12 +218,12 @@ export default function RegisterPage() {
 
               <div className="form-row">
                 <label>
-                  Confirm password
+                  {s.auth.confirmPassword}
                   <input
                     type="password"
                     className="input"
                     required
-                    placeholder="repeat your password"
+                    placeholder={s.auth.confirmPasswordPlaceholder}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                   />
@@ -241,13 +239,11 @@ export default function RegisterPage() {
                     required
                   />
                   <span>
-                    I have read and agree to the{" "}
+                    {s.auth.agreePrefix}{" "}
                     <Link href="/legal/terms" className="link">
-                      User Policy &amp; Agreement
+                      {s.auth.policyName}
                     </Link>
-                    , including cancellation and refund policies, and I
-                    understand that engineerit.ai is not responsible or liable
-                    for any decisions or mistakes based on the outputs.
+                    {s.auth.agreeSuffix}
                   </span>
                 </label>
               </div>
@@ -300,11 +296,11 @@ export default function RegisterPage() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 800, marginBottom: 2 }}>
-                      Email confirmation required
+                      {s.auth.emailConfirmTitle}
                     </div>
                     <div style={{ marginBottom: 6 }}>{successMessage}</div>
                     <div style={{ fontSize: 12, color: "#7C2D12" }}>
-                      After confirmation, come back and sign in from the top bar.
+                      {s.auth.emailConfirmHint}
                     </div>
                   </div>
                 </div>
@@ -316,7 +312,7 @@ export default function RegisterPage() {
                 disabled={loading || !accepted}
                 style={{ marginTop: 4 }}
               >
-                {loading ? "Creating account..." : "Create account"}
+                {loading ? s.auth.creating : s.auth.create}
               </button>
             </form>
           </div>
@@ -333,10 +329,7 @@ export default function RegisterPage() {
             }}
           >
             <p style={{ fontSize: 14, color: "#374151", margin: 0 }}>
-              After registration, your account will start on the free Assistant
-              plan. When you are ready to upgrade, go to the subscription page
-              to select Engineer, Professional, or Consultant with secure
-              payment.
+              {s.auth.afterRegister}
             </p>
             <button
               type="button"
@@ -344,14 +337,14 @@ export default function RegisterPage() {
               onClick={() => router.push("/subscription")}
               style={{ alignSelf: "flex-start", marginTop: 4 }}
             >
-              View plans &amp; subscribe
+              {s.auth.viewPlans}
             </button>
           </div>
 
           {/* Plans overview */}
           <div className="card" style={{ marginTop: 8 }}>
             <h2 className="card-title" style={{ marginBottom: 16 }}>
-              Plans overview &amp; engineer tools
+              {s.auth.plansOverview}
             </h2>
 
             <div
@@ -361,10 +354,11 @@ export default function RegisterPage() {
                 gap: 16,
               }}
             >
-              {PLANS.map((plan) => {
+              {PLANS.map((rawPlan) => {
+                const plan = localizedPlan(locale, rawPlan);
                 const badge =
                   PLAN_BADGES[plan.id as PlanId] || PLAN_BADGES.assistant;
-                const letter = (plan.shortName || plan.name || "E")
+                const letter = (rawPlan.shortName || plan.name || "E")
                   .charAt(0)
                   .toUpperCase();
 
@@ -488,7 +482,7 @@ export default function RegisterPage() {
                           marginBottom: 6,
                         }}
                       >
-                        Engineer tools in this plan
+                        {s.auth.toolsInPlan}
                       </div>
 
                       <div
@@ -520,7 +514,7 @@ export default function RegisterPage() {
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {enabled ? "✅" : "🔒"} {tool.label}
+                              {enabled ? "✅" : "🔒"} {toolLabel(locale, tool.id)}
                             </span>
                           );
                         })}
@@ -532,8 +526,7 @@ export default function RegisterPage() {
             </div>
 
             <p style={{ fontSize: 12, color: "#6b7280", marginTop: 16 }}>
-              You can upgrade or change your plan any time from your profile or
-              the subscription page.
+              {s.auth.upgradeAnytime}
             </p>
           </div>
         </div>

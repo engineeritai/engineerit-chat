@@ -5,6 +5,9 @@ import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import { supabase } from "../../lib/supabaseClient";
 import Link from "next/link";
+import { planById } from "@/lib/labels";
+import { useMessages } from "@/lib/useMessages";
+import type { Locale } from "@/lib/i18n";
 
 type ProfileRow = {
   full_name: string | null;
@@ -23,11 +26,11 @@ type SubscriptionRow = {
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
-function formatDate(value: string | null | undefined) {
+function formatDate(value: string | null | undefined, locale: Locale) {
   if (!value) return "-";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-GB", {
+  return d.toLocaleDateString(locale === "ar" ? "ar-SA" : "en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -35,6 +38,7 @@ function formatDate(value: string | null | undefined) {
 }
 
 export default function ProfilePage() {
+  const { locale, shell: s } = useMessages();
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
   const [profile, setProfile] = useState<ProfileRow | null>(null);
@@ -66,7 +70,7 @@ export default function ProfilePage() {
         } = await supabase.auth.getUser();
 
         if (userErr || !user) {
-          setErrorMsg("You are not logged in.");
+          setErrorMsg(s.profile.notLoggedIn);
           setLoading(false);
           return;
         }
@@ -101,11 +105,11 @@ export default function ProfilePage() {
               if (!res.ok) {
                 console.error("SUBSCRIPTION SELECT ROUTE ERROR:", json);
                 setErrorMsg(
-                  "Could not save subscription after payment. Please contact support."
+                  s.profile.paymentFailed
                 );
               } else {
                 subscriptionTierOverride = planParam;
-                setInfoMsg("Payment successful and subscription updated.");
+                setInfoMsg(s.profile.paymentSaved);
               }
 
               // تنظيف الرابط من باراميترات الدفع
@@ -116,7 +120,7 @@ export default function ProfilePage() {
             } catch (err) {
               console.error("SUBSCRIPTION SELECT ROUTE ERROR:", err);
               setErrorMsg(
-                "Could not save subscription after payment. Please contact support."
+                s.profile.paymentFailed
               );
             }
           }
@@ -234,7 +238,7 @@ export default function ProfilePage() {
         } catch {}
       } catch (err) {
         console.error("PROFILE LOAD ERROR:", err);
-        setErrorMsg("Could not load profile.");
+        setErrorMsg(s.profile.loadFailed);
       } finally {
         setLoading(false);
       }
@@ -255,7 +259,7 @@ export default function ProfilePage() {
       } = await supabase.auth.getUser();
 
       if (userErr || !user) {
-        setErrorMsg("You are not logged in.");
+        setErrorMsg(s.profile.notLoggedIn);
         return;
       }
 
@@ -266,7 +270,7 @@ export default function ProfilePage() {
 
       if (error) {
         console.error("PROFILE SAVE ERROR:", error);
-        setErrorMsg("Could not save profile.");
+        setErrorMsg(s.profile.saveFailed);
         return;
       }
 
@@ -276,10 +280,10 @@ export default function ProfilePage() {
           : { full_name: fullName, avatar_url: null, subscription_tier: "assistant" }
       );
 
-      setInfoMsg("Profile updated successfully.");
+      setInfoMsg(s.profile.saved);
     } catch (err) {
       console.error("PROFILE SAVE ERROR:", err);
-      setErrorMsg("Could not save profile.");
+      setErrorMsg(s.profile.saveFailed);
     } finally {
       setSavingName(false);
     }
@@ -300,7 +304,7 @@ export default function ProfilePage() {
       } = await supabase.auth.getUser();
 
       if (userErr || !user) {
-        setErrorMsg("You are not logged in.");
+        setErrorMsg(s.profile.notLoggedIn);
         return;
       }
 
@@ -313,7 +317,7 @@ export default function ProfilePage() {
 
       if (uploadError) {
         console.error("AVATAR UPLOAD ERROR:", uploadError);
-        setErrorMsg("Could not upload profile photo.");
+        setErrorMsg(s.profile.photoFailed);
         return;
       }
 
@@ -330,17 +334,17 @@ export default function ProfilePage() {
 
       if (updateError) {
         console.error("AVATAR UPDATE ERROR:", updateError);
-        setErrorMsg("Could not save profile photo.");
+        setErrorMsg(s.profile.photoFailed);
         return;
       }
 
       await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
 
       setProfile((prev) => (prev ? { ...prev, avatar_url: publicUrl } : prev));
-      setInfoMsg("Profile photo updated.");
+      setInfoMsg(s.profile.photoSaved);
     } catch (err) {
       console.error("AVATAR UPLOAD ERROR:", err);
-      setErrorMsg("Could not upload profile photo.");
+      setErrorMsg(s.profile.photoFailed);
     } finally {
       setSavingAvatar(false);
       e.target.value = "";
@@ -348,10 +352,14 @@ export default function ProfilePage() {
   }
 
   const currentPlan = profile?.subscription_tier || "assistant";
-  const currentPlanLabel =
+  const knownPlan =
+    currentPlan === "engineer" ||
+    currentPlan === "professional" ||
+    currentPlan === "consultant" ||
     currentPlan === "assistant"
-      ? "Assistant (Free)"
-      : currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1);
+      ? currentPlan
+      : "assistant";
+  const currentPlanLabel = planById(locale, knownPlan).name;
 
   return (
     <div className="app-shell">
@@ -364,7 +372,7 @@ export default function ProfilePage() {
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
         <div className="page-wrap">
-          <h1 className="page-title">Profile &amp; Subscription</h1>
+          <h1 className="page-title">{s.profile.title}</h1>
 
           {errorMsg && (
             <div
@@ -402,7 +410,7 @@ export default function ProfilePage() {
 
           {/* Profile card */}
           {loading ? (
-            <p>Loading profile…</p>
+            <p>{s.profile.loading}</p>
           ) : (
             <div className="card">
               <div
@@ -432,7 +440,7 @@ export default function ProfilePage() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={profile.avatar_url}
-                      alt="Profile"
+                      alt={s.header.profileAlt}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   ) : (
@@ -453,7 +461,7 @@ export default function ProfilePage() {
                         fontSize: 14,
                       }}
                     >
-                      Choose File
+                      {s.profile.chooseFile}
                       <input
                         type="file"
                         accept="image/*"
@@ -464,20 +472,20 @@ export default function ProfilePage() {
                     </label>
                   </div>
                   <div style={{ fontSize: 12, color: "#6b7280" }}>
-                    JPG, PNG, or GIF. Max 5 MB.
+                    {s.profile.avatarHint}
                   </div>
                 </div>
               </div>
 
               <div className="form-row">
                 <label>
-                  Full name
+                  {s.profile.fullName}
                   <input
                     className="input"
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Your full name"
+                    placeholder={s.profile.fullNamePlaceholder}
                   />
                 </label>
               </div>
@@ -485,7 +493,7 @@ export default function ProfilePage() {
               {email && (
                 <div className="form-row">
                   <label>
-                    Email
+                    {s.profile.email}
                     <input className="input" type="email" value={email} readOnly />
                   </label>
                 </div>
@@ -497,23 +505,22 @@ export default function ProfilePage() {
                 onClick={handleSaveName}
                 disabled={savingName}
               >
-                {savingName ? "Saving…" : "Save changes"}
+                {savingName ? s.profile.saving : s.profile.save}
               </button>
             </div>
           )}
 
           {/* Subscription card */}
           <div className="card" style={{ marginTop: 24 }}>
-            <h2 className="card-title">Subscription</h2>
+            <h2 className="card-title">{s.profile.subscription}</h2>
 
             <p style={{ marginBottom: 12, fontSize: 15 }}>
-              Current plan: <strong>{currentPlanLabel}</strong>
+              {s.profile.currentPlan}: <strong>{currentPlanLabel}</strong>
             </p>
 
             {currentPlan === "assistant" ? (
               <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
-                You are on the <strong>free Assistant</strong> plan. No charges will be
-                applied until you upgrade to a paid plan.
+                {s.profile.freeBody}
               </p>
             ) : activeSub ? (
               <div
@@ -528,47 +535,48 @@ export default function ProfilePage() {
               >
                 <div>
                   <div>
-                    Status: <strong>{activeSub.status ?? "unknown"}</strong>
+                    {s.profile.status}: <strong>{activeSub.status ?? s.profile.unknown}</strong>
                   </div>
                   {activeSub.price !== null && activeSub.currency && (
                     <div>
-                      Price:{" "}
+                      {s.profile.price}:{" "}
                       <strong>
-                        {activeSub.price} {activeSub.currency}
+                        {locale === "ar" && activeSub.currency === "SAR"
+                          ? `${activeSub.price} ر.س`
+                          : `${activeSub.price} ${activeSub.currency}`}
                       </strong>
                     </div>
                   )}
                 </div>
                 <div>
                   <div>
-                    Start date: <strong>{formatDate(activeSub.start_date)}</strong>
+                    {s.profile.startDate}: <strong>{formatDate(activeSub.start_date, locale)}</strong>
                   </div>
                   <div>
-                    End date: <strong>{formatDate(activeSub.end_date)}</strong>
+                    {s.profile.endDate}: <strong>{formatDate(activeSub.end_date, locale)}</strong>
                   </div>
                 </div>
               </div>
             ) : (
               <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 10 }}>
-                No billing data found yet for this plan.
+                {s.profile.noBilling}
               </p>
             )}
 
             <p style={{ fontSize: 14, color: "#6b7280" }}>
-              Plan changes are controlled by engineerit.ai billing only. You can manage
-              or upgrade your plan from the subscription page.
+              {s.profile.billingNote}
             </p>
 
             <Link href="/subscription">
               <button className="btn" type="button" style={{ marginTop: 16 }}>
-                Manage / Upgrade subscription
+                {s.profile.manage}
               </button>
             </Link>
           </div>
 
           {/* Activity card */}
           <div className="card" style={{ marginTop: 24 }}>
-            <h2 className="card-title">Activity</h2>
+            <h2 className="card-title">{s.profile.activity}</h2>
             <ul
               style={{
                 paddingLeft: 20,
@@ -579,25 +587,25 @@ export default function ProfilePage() {
               }}
             >
               <li>
-                Total chats: <strong>{chatCount !== null ? chatCount : "soon"}</strong>
+                {s.profile.chats}: <strong>{chatCount !== null ? chatCount : s.profile.soon}</strong>
               </li>
               <li>
-                Total uploaded documents:{" "}
-                <strong>{docCount !== null ? docCount : "soon"}</strong>
+                {s.profile.documents}:{" "}
+                <strong>{docCount !== null ? docCount : s.profile.soon}</strong>
               </li>
               <li>
-                Saved projects: <strong>soon</strong>
+                {s.profile.projects}: <strong>{s.profile.soon}</strong>
               </li>
             </ul>
           </div>
 
           {/* Billing history */}
           <div className="card" style={{ marginTop: 24 }}>
-            <h2 className="card-title">Billing history</h2>
+            <h2 className="card-title">{s.profile.history}</h2>
 
             {subHistory.length === 0 ? (
               <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>
-                No payments recorded yet. Your future subscriptions will appear here.
+                {s.profile.noPayments}
               </p>
             ) : (
               <div style={{ marginTop: 8, fontSize: 13, color: "#374151" }}>
@@ -613,13 +621,13 @@ export default function ProfilePage() {
                     marginBottom: 6,
                   }}
                 >
-                  <span>Plan</span>
-                  <span>Amount</span>
-                  <span>Status</span>
-                  <span>Date</span>
+                  <span>{s.profile.plan}</span>
+                  <span>{s.profile.amount}</span>
+                  <span>{s.profile.status}</span>
+                  <span>{s.profile.date}</span>
                 </div>
 
-                {subHistory.map((s, idx) => (
+                {subHistory.map((row, idx) => (
                   <div
                     key={idx}
                     style={{
@@ -633,20 +641,30 @@ export default function ProfilePage() {
                     }}
                   >
                     <span>
-                      {(s.plan || "assistant").charAt(0).toUpperCase() +
-                        (s.plan || "assistant").slice(1)}
+                      {planById(
+                        locale,
+                        row.plan === "engineer" ||
+                          row.plan === "professional" ||
+                          row.plan === "consultant" ||
+                          row.plan === "assistant"
+                          ? row.plan
+                          : "assistant"
+                      ).name}
                     </span>
                     <span>
-                      {s.price !== null && s.currency ? `${s.price} ${s.currency}` : "-"}
+                      {row.price !== null && row.currency
+                        ? locale === "ar" && row.currency === "SAR"
+                          ? `${row.price} ر.س`
+                          : `${row.price} ${row.currency}`
+                        : "-"}
                     </span>
-                    <span>{s.status || "-"}</span>
-                    <span>{formatDate(s.start_date)}</span>
+                    <span>{row.status || "-"}</span>
+                    <span>{formatDate(row.start_date, locale)}</span>
                   </div>
                 ))}
 
                 <p style={{ marginTop: 8, fontSize: 12, color: "#9ca3af" }}>
-                  Detailed invoices are also emailed to you by the payment provider
-                  (Moyasar). Keep those emails as official receipts.
+                  {s.profile.invoiceNote}
                 </p>
               </div>
             )}

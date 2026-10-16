@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { gateAdvisor } from "@/lib/advisorGate";
+import { replyLanguageRule, uiLocale } from "@/lib/replyLanguage";
 
 export const runtime = "nodejs";
 
@@ -100,7 +101,7 @@ async function enforceDailyLimit(args: {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { discipline, messages, attachments, planId, userId, advisorId, locale, playbookId } = body as {
+  const { discipline, messages, attachments, planId, userId, advisorId, locale: rawLocale, playbookId } = body as {
     discipline: string;
     messages: { role: "user" | "assistant"; content: string }[];
     attachments?: { type: "image" | "file"; url: string }[];
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
     playbookId?: string;
   };
 
+  const locale = uiLocale(rawLocale);
   const advisorGate = await gateAdvisor({ request: req, advisorId, locale, playbookId });
   if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
 
@@ -126,9 +128,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          limit.plan === "guest"
-            ? "Daily limit reached (1 reply/day). Please register or log in."
-            : "Daily limit reached for Assistant plan (3 replies/day). Please upgrade.",
+          locale === "ar"
+            ? limit.plan === "guest"
+              ? "بلغت الحد اليومي (رد واحد في اليوم). سجّل أو ادخل."
+              : "بلغت الحد اليومي لباقة المساعد (3 ردود في اليوم). يرجى الترقية."
+            : limit.plan === "guest"
+              ? "Daily limit reached (1 reply/day). Please register or log in."
+              : "Daily limit reached for the Assistant plan (3 replies/day). Please upgrade.",
         plan: limit.plan,
       },
       { status: 429 }
@@ -141,7 +147,7 @@ export async function POST(req: NextRequest) {
   const baseSystemPrompt = `
 You are "engineer it", an AI engineering assistant.
 You are well trained as of today with latest update of current calendar year ${currentDate} for all ongoing technologies, latest versions of standards and best practices and guideline.
-- Reply in the user's language. If the user writes in Arabic, answer in Arabic. If the user writes in English, answer in English. When a message mixes languages, use the language of the user's latest message.
+- ${replyLanguageRule(locale)}
 - Answer as an expert subject matter in the selected discipline: ${discipline} with professional mechanism and relevant engineering standards such as ASME, IEEE, ISO, API, NEBOSH, NFPA, ASTM, IEC, ACI, AISC, International Building Code (IBC), OSHA, and others recognized international standard related to discipline or topic.
 - Use clear Markdown with headings, bullet lists, and professional designed tables when helpful.
 - Be concise with latest updates, revisions, answers and solutions; but technically strong and correct.
@@ -185,7 +191,7 @@ You are well trained as of today with latest update of current calendar year ${c
 
   const reply =
     completion.choices[0]?.message?.content ||
-    "I couldn't generate a response this time.";
+    (locale === "ar" ? "تعذر إنشاء رد هذه المرة." : "I couldn't generate a response this time.");
 
   return NextResponse.json({ reply });
 }

@@ -7,7 +7,8 @@ import {
   readIncomingFile,
   removeIncomingFile,
 } from "@/lib/incomingStorage";
-import { MAX_UPLOAD_BYTES, fileTooLargeMessage } from "@/lib/uploadLimits";
+import { MAX_UPLOAD_BYTES, fileTooLargeMessage, messageLocale } from "@/lib/uploadLimits";
+import { replyLanguageRule, type UiLocale } from "@/lib/replyLanguage";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -26,11 +27,19 @@ function imageMime(filename: string, contentType?: string): string {
   return "image/png";
 }
 
+function imageQuestion(locale: UiLocale, given?: string): string {
+  if (given && given.trim()) return given;
+  return locale === "ar"
+    ? "صف هذه الصورة الهندسية بالتفصيل واستخرج المعلومات الفنية المفيدة."
+    : "Describe this engineering image in detail and extract useful technical information.";
+}
+
 async function analyzeImageBuffer(
   buffer: Buffer,
   mime: string,
   question: string,
-  advisorSystem?: string
+  advisorSystem: string | undefined,
+  locale: UiLocale
 ): Promise<string> {
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
@@ -42,8 +51,8 @@ async function analyzeImageBuffer(
           {
             type: "text",
             text: advisorSystem
-              ? `${question}\n\nFollow the output template in the system message. Use only what is visible in the image.`
-              : question,
+              ? `${question}\n\nFollow the output template in the system message. Use only what is visible in the image. ${replyLanguageRule(locale)}`
+              : `${question}\n\n${replyLanguageRule(locale)}`,
           },
           {
             type: "image_url",
@@ -93,10 +102,11 @@ async function handleStoredImage(req: NextRequest) {
   } | null;
 
   const storagePath = typeof body?.storagePath === "string" ? body.storagePath : "";
-  const question =
-    typeof body?.question === "string" && body.question.trim()
-      ? body.question
-      : "Describe this engineering image in detail and extract useful technical information.";
+  const locale = messageLocale(body?.locale ?? req.cookies.get("engineerit_locale")?.value);
+  const question = imageQuestion(
+    locale,
+    typeof body?.question === "string" ? body.question : undefined
+  );
 
   const opened = await openAdvisor(req, body?.advisorId, body?.locale, body?.playbookId);
   if ("response" in opened) {
@@ -106,7 +116,7 @@ async function handleStoredImage(req: NextRequest) {
 
   let buffer: Buffer;
   try {
-    buffer = await readIncomingFile(storagePath);
+    buffer = await readIncomingFile(storagePath, locale);
   } catch (err) {
     await removeIncomingFile(storagePath);
     if (err instanceof IncomingFileError) {
@@ -121,7 +131,7 @@ async function handleStoredImage(req: NextRequest) {
       filename,
       typeof body?.contentType === "string" ? body.contentType : undefined
     );
-    const reply = await analyzeImageBuffer(buffer, mime, question, opened.advisorSystem);
+    const reply = await analyzeImageBuffer(buffer, mime, question, opened.advisorSystem, locale);
     return Response.json({ reply });
   } finally {
     await removeIncomingFile(storagePath);
@@ -131,21 +141,23 @@ async function handleStoredImage(req: NextRequest) {
 async function handleFormImage(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file");
-  const question =
-    (formData.get("question") as string) ||
-    "Describe this engineering image in detail and extract useful technical information.";
   const advisorField = formData.get("advisorId");
   const localeField = formData.get("locale");
   const playbookField = formData.get("playbookId");
+  const locale = messageLocale(
+    typeof localeField === "string" ? localeField : req.cookies.get("engineerit_locale")?.value
+  );
+  const questionField = formData.get("question");
+  const question = imageQuestion(locale, typeof questionField === "string" ? questionField : undefined);
 
   const opened = await openAdvisor(req, advisorField, localeField, playbookField);
   if ("response" in opened) return opened.response;
 
   if (!(file instanceof File)) {
-    return new Response("No image uploaded", { status: 400 });
+    return new Response(locale === "ar" ? "لم تُرفع صورة" : "No image uploaded", { status: 400 });
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    return NextResponse.json({ error: fileTooLargeMessage() }, { status: 413 });
+    return NextResponse.json({ error: fileTooLargeMessage(locale) }, { status: 413 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -153,7 +165,8 @@ async function handleFormImage(req: NextRequest) {
     buffer,
     imageMime(file.name, file.type),
     question,
-    opened.advisorSystem
+    opened.advisorSystem,
+    locale
   );
   return Response.json({ reply });
 }

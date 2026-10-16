@@ -1,10 +1,12 @@
+import { metaFor } from "@/lib/pageMeta";
+import { requestLocale } from "@/lib/requestLocale";
 import { pageMetadata } from "@/lib/seo";
 
-export const metadata = pageMetadata({
-  title: "Feedback",
-  description: "Send feedback or a complaint about engineerit.ai.",
-  path: "/feedback",
-});
+export async function generateMetadata() {
+  const locale = await requestLocale();
+  const meta = metaFor(locale, "/feedback");
+  return pageMetadata({ ...meta, path: "/feedback", locale });
+}
 
 export default function FeedbackLayout({ children }: { children: React.ReactNode }) {
   return children;

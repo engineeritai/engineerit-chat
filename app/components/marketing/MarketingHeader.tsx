@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { getMarketingContent, type Locale } from "@/lib/marketing";
+import LanguageToggle from "@/app/components/LanguageToggle";
+import { useLocale } from "@/app/components/LocaleProvider";
+import { getMarketingContent } from "@/lib/marketing";
 
-export default function MarketingHeader({ locale = "en" }: { locale?: Locale }) {
+export default function MarketingHeader() {
+  const { locale } = useLocale();
   const content = getMarketingContent(locale);
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -48,6 +51,7 @@ export default function MarketingHeader({ locale = "en" }: { locale?: Locale }) 
         </nav>
 
         <div className="mkt-actions">
+          <LanguageToggle />
           <Link className="mkt-btn mkt-btn-secondary mkt-login" href="/login">
             {content.nav.login}
           </Link>
@@ -70,6 +74,7 @@ export default function MarketingHeader({ locale = "en" }: { locale?: Locale }) 
 
       {open && (
         <nav className="mkt-nav-mobile" aria-label={content.nav.primary}>
+          <LanguageToggle className="lang-toggle-block" />
           {links.map((link) => (
             <Link key={link.label} href={link.href} onClick={() => setOpen(false)}>
               {link.label}

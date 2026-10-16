@@ -1,7 +1,11 @@
-import { SAUDI_BUSINESS_AUTH_NO, SAUDI_BUSINESS_VERIFY_URL } from "@/lib/trust";
-import { getMarketingContent, type Locale } from "@/lib/marketing";
+"use client";
 
-export default function SaudiBusinessBadge({ locale = "en" }: { locale?: Locale }) {
+import { useLocale } from "@/app/components/LocaleProvider";
+import { SAUDI_BUSINESS_AUTH_NO, SAUDI_BUSINESS_VERIFY_URL } from "@/lib/trust";
+import { getMarketingContent } from "@/lib/marketing";
+
+export default function SaudiBusinessBadge() {
+  const { locale } = useLocale();
   const content = getMarketingContent(locale);
 
   return (

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { useMessages } from "@/lib/useMessages";
+import LanguageToggle from "@/app/components/LanguageToggle";
 
 function parseHashParams(hash: string) {
   const h = hash.startsWith("#") ? hash.slice(1) : hash;
@@ -15,6 +17,7 @@ function parseHashParams(hash: string) {
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const { shell: s } = useMessages();
 
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -28,7 +31,7 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const run = async () => {
       try {
-        setStatus("Preparing your reset session…");
+        setStatus(s.header.sending);
 
         // A) PKCE flow: ?code=...
         const code =
@@ -72,11 +75,11 @@ export default function ResetPasswordPage() {
           return;
         }
 
-        setStatus("Invalid or expired reset link. Please request a new one.");
+        setStatus(s.header.genericError);
         setReady(true);
       } catch (e) {
         console.error(e);
-        setStatus("Something went wrong. Please request a new reset link.");
+        setStatus(s.header.genericError);
         setReady(true);
       }
     };
@@ -88,11 +91,11 @@ export default function ResetPasswordPage() {
     setMsg(null);
 
     if (!p1 || p1.length < 6) {
-      setMsg("Password must be at least 6 characters.");
+      setMsg(s.header.passwordShort);
       return;
     }
     if (p1 !== p2) {
-      setMsg("Passwords do not match.");
+      setMsg(s.header.passwordMismatch);
       return;
     }
 
@@ -105,11 +108,11 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      setMsg("Password updated successfully. Redirecting…");
+      setMsg(s.header.passwordUpdated);
       setTimeout(() => router.push("/"), 800);
     } catch (e) {
       console.error(e);
-      setMsg("Something went wrong. Please try again.");
+      setMsg(s.header.genericError);
     } finally {
       setSaving(false);
     }
@@ -118,16 +121,17 @@ export default function ResetPasswordPage() {
   return (
     <div className="page-wrap" style={{ maxWidth: 520 }}>
       <div className="card" style={{ padding: 18 }}>
+        <LanguageToggle />
         <div className="page-title" style={{ fontSize: 22, marginBottom: 6 }}>
-          Reset password
+          {s.header.resetPassword}
         </div>
         <div className="page-subtitle" style={{ marginBottom: 14 }}>
-          Set a new password for your engineerit.ai account.
+          {s.header.resetTitle}
         </div>
 
         {!ready ? (
           <div style={{ color: "#6b7280", fontSize: 14 }}>
-            {status || "Loading…"}
+            {status || s.profile.loading}
           </div>
         ) : status ? (
           <div style={{ color: "#b91c1c", fontSize: 14 }}>{status}</div>
@@ -135,27 +139,27 @@ export default function ResetPasswordPage() {
           <>
             <div className="form-row">
               <label style={{ fontSize: 13, fontWeight: 600 }}>
-                New password
+                {s.header.newPassword}
               </label>
               <input
                 className="input"
                 type="password"
                 value={p1}
                 onChange={(e) => setP1(e.target.value)}
-                placeholder="At least 6 characters"
+                placeholder={s.header.passwordShort}
               />
             </div>
 
             <div className="form-row">
               <label style={{ fontSize: 13, fontWeight: 600 }}>
-                Confirm password
+                {s.header.confirmPassword}
               </label>
               <input
                 className="input"
                 type="password"
                 value={p2}
                 onChange={(e) => setP2(e.target.value)}
-                placeholder="Repeat the new password"
+                placeholder={s.header.confirmPassword}
               />
             </div>
 
@@ -164,7 +168,7 @@ export default function ResetPasswordPage() {
                 style={{
                   marginTop: 8,
                   fontSize: 13,
-                  color: msg.includes("successfully") ? "#15803d" : "#b91c1c",
+                  color: msg === s.header.passwordUpdated ? "#15803d" : "#b91c1c",
                 }}
               >
                 {msg}
@@ -178,7 +182,7 @@ export default function ResetPasswordPage() {
               disabled={saving}
               style={{ marginTop: 12 }}
             >
-              {saving ? "Saving…" : "Update password"}
+              {saving ? s.header.updating : s.header.updatePassword}
             </button>
           </>
         )}

@@ -1,10 +1,12 @@
-import type { Metadata } from "next";
+import { metaFor } from "@/lib/pageMeta";
+import { requestLocale } from "@/lib/requestLocale";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "AI Advisors | engineerit.ai",
-  description:
-    "PMO (including Procurement and Supply Chain), Program Assurance, Operations Readiness, and Decision Support advisors. One-click playbooks turn uploaded files into export-ready reports.",
-};
+export async function generateMetadata() {
+  const locale = await requestLocale();
+  const meta = metaFor(locale, "/advisors");
+  return pageMetadata({ ...meta, path: "/advisors", locale });
+}
 
 export default function AdvisorsLayout({ children }: { children: React.ReactNode }) {
   return children;

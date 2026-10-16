@@ -3,6 +3,8 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import { LocaleProvider } from "@/app/components/LocaleProvider";
+import { requestLocale } from "@/lib/requestLocale";
 import { SITE_NAME, SITE_URL, defaultDescription, defaultTitle } from "@/lib/seo";
 
 const poppins = Poppins({
@@ -46,13 +48,14 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await requestLocale();
   return (
-    <html lang="en">
+    <html lang={locale === "ar" ? "ar" : "en"} dir={locale === "ar" ? "rtl" : "ltr"}>
       <head>
         {/* HubSpot tracking. Public site id, already used in production. */}
         <script
@@ -65,7 +68,7 @@ export default function RootLayout({
       </head>
 
       <body className={`${poppins.className} bg-gray-50 text-gray-900`}>
-        {children}
+        <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
       </body>
     </html>
   );

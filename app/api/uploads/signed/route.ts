@@ -15,6 +15,7 @@ export const runtime = "nodejs";
  * /api/image to read the object and delete it.
  */
 export async function POST(req: NextRequest) {
+  let locale: unknown;
   try {
     const body = (await req.json().catch(() => null)) as {
       filename?: unknown;
@@ -27,10 +28,17 @@ export async function POST(req: NextRequest) {
     const filename = typeof body?.filename === "string" ? body.filename.trim() : "";
     const size = typeof body?.size === "number" ? body.size : Number.NaN;
     if (!filename || !Number.isFinite(size) || size <= 0) {
-      return NextResponse.json({ error: "Choose a file to upload." }, { status: 400 });
+      return NextResponse.json(
+        {
+          error:
+            body?.locale === "ar" ? "اختر ملفاً للرفع." : "Choose a file to upload.",
+        },
+        { status: 400 }
+      );
     }
+    locale = body?.locale;
     if (size > MAX_UPLOAD_BYTES) {
-      return NextResponse.json({ error: fileTooLargeMessage() }, { status: 413 });
+      return NextResponse.json({ error: fileTooLargeMessage(locale) }, { status: 413 });
     }
 
     const advisorGate = await gateAdvisor({
@@ -48,6 +56,6 @@ export async function POST(req: NextRequest) {
     if (err instanceof IncomingFileError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    return NextResponse.json({ error: directUploadFailedMessage() }, { status: 500 });
+    return NextResponse.json({ error: directUploadFailedMessage(undefined, locale) }, { status: 500 });
   }
 }

@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { getMarketingContent, type Locale } from "@/lib/marketing";
+import { useLocale } from "@/app/components/LocaleProvider";
+import { getMarketingContent } from "@/lib/marketing";
 import { CONTACT_EMAIL } from "@/lib/trust";
 
-export default function MarketingFooter({ locale = "en" }: { locale?: Locale }) {
+export default function MarketingFooter() {
+  const { locale } = useLocale();
   const content = getMarketingContent(locale);
   const year = new Date().getFullYear();
 

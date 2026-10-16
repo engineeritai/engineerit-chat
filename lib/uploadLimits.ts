@@ -19,19 +19,33 @@ export class UploadError extends Error {
   }
 }
 
-export function fileTooLargeMessage(): string {
-  return "This file is larger than 20 MB. Upload a smaller file, or split it into parts. هذا الملف أكبر من 20 ميجابايت. ارفع ملفاً أصغر أو قسّمه.";
+export type MessageLocale = "en" | "ar";
+
+export function messageLocale(value: unknown): MessageLocale {
+  return value === "ar" ? "ar" : "en";
 }
 
-export function directUploadFailedMessage(detail?: string): string {
+export function fileTooLargeMessage(locale?: unknown): string {
+  if (messageLocale(locale) === "ar") {
+    return "هذا الملف أكبر من 20 ميجابايت. ارفع ملفاً أصغر أو قسّمه.";
+  }
+  return "This file is larger than 20 MB. Upload a smaller file, or split it into parts.";
+}
+
+export function directUploadFailedMessage(detail?: string, locale?: unknown): string {
   const base =
-    "This file is above the 4.5 MB server limit, so it has to upload directly to storage. That upload failed. Please try again, or use a file under 4 MB. هذا الملف يتجاوز حد الخادم 4.5 ميجابايت ويجب رفعه مباشرة إلى التخزين. فشلت عملية الرفع. حاول مرة أخرى أو استخدم ملفاً أصغر من 4 ميجابايت.";
+    messageLocale(locale) === "ar"
+      ? "هذا الملف يتجاوز حد الخادم 4.5 ميجابايت ويجب رفعه مباشرة إلى التخزين. فشلت عملية الرفع. حاول مرة أخرى أو استخدم ملفاً أصغر من 4 ميجابايت."
+      : "This file is above the 4.5 MB server limit, so it has to upload directly to storage. That upload failed. Please try again, or use a file under 4 MB.";
   const extra = safeDetail(detail);
   return extra ? `${base} (${extra})` : base;
 }
 
-export function bodyTooLargeMessage(): string {
-  return "The server rejected this upload because it is above the about 4.5 MB request limit. Please try again, or use a smaller file. رفض الخادم هذا الرفع لأنه يتجاوز حد 4.5 ميجابايت تقريباً. حاول مرة أخرى أو استخدم ملفاً أصغر.";
+export function bodyTooLargeMessage(locale?: unknown): string {
+  if (messageLocale(locale) === "ar") {
+    return "رفض الخادم هذا الرفع لأنه يتجاوز حد 4.5 ميجابايت تقريباً. حاول مرة أخرى أو استخدم ملفاً أصغر.";
+  }
+  return "The server rejected this upload because it is above the about 4.5 MB request limit. Please try again, or use a smaller file.";
 }
 
 function safeDetail(detail?: string): string | undefined {

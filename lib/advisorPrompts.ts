@@ -88,8 +88,8 @@ export function buildAdvisorSystemPrompt(
   const template = playbook ? playbookTemplate(playbook, locale) : advisorTemplate(advisor, locale);
   const language =
     locale === "ar"
-      ? "Answer in Arabic and keep the template headings in Arabic."
-      : "Answer in English. If the user writes Arabic, answer in Arabic and use the Arabic template headings.";
+      ? "The interface language is Arabic. Answer entirely in Arabic and keep the template headings in Arabic. If the user's latest message is written in English, answer entirely in English. Do not mix English and Arabic in one reply."
+      : "The interface language is English. Answer entirely in English. If the user's latest message is written in Arabic, answer entirely in Arabic and use the Arabic template headings. Do not mix English and Arabic in one reply.";
 
   return [
     "You are engineerit AI, operating in the AI Advisors layer.",
