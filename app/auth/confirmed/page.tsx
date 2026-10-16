@@ -11,7 +11,7 @@ export default function EmailConfirmedPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.push("/auth/login");
+      router.push("/login");
     }, 4000);
     return () => clearTimeout(timer);
   }, [router]);

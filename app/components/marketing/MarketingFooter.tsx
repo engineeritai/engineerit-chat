@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { getMarketingContent } from "@/lib/marketing";
-import { CONTACT_EMAIL } from "@/lib/trust";
+import PlanPriceList from "@/app/components/PlanPriceList";
 
 export default function MarketingFooter() {
   const { locale } = useLocale();
@@ -18,6 +18,7 @@ export default function MarketingFooter() {
           </span>
         </div>
         <p>{content.footer.blurb}</p>
+        <PlanPriceList />
         <p>
           © {year} engineerit.ai. {content.footer.rights}
         </p>
@@ -41,10 +42,6 @@ export default function MarketingFooter() {
           <Link href="/legal/privacy">{content.footer.privacy}</Link>
           {" · "}
           <Link href="/legal/refund">{content.footer.refunds}</Link>
-          {" · "}
-          <a href={`mailto:${CONTACT_EMAIL}`}>
-            {content.footer.contact} {CONTACT_EMAIL}
-          </a>
         </p>
       </div>
     </footer>

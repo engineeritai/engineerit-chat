@@ -4,14 +4,39 @@ import React, { useEffect, useState, ChangeEvent } from "react";
 import MarketingShell from "../components/marketing/MarketingShell";
 import { supabase } from "../../lib/supabaseClient";
 import Link from "next/link";
-import { planById } from "@/lib/labels";
+import { localizedPlan, planById, formatMoney } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
+import { PLANS, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
+import PlanCatalog from "@/app/components/PlanCatalog";
+import { displayFeatures, formatSar, formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
+import { resolveEffectivePlan } from "@/lib/effectivePlan";
+import { downloadInvoicePdf } from "@/lib/invoiceDownload";
 
 type ProfileRow = {
   full_name: string | null;
   avatar_url: string | null;
   subscription_tier: string | null;
+};
+
+type BillingView = {
+  plan: PlanId;
+  billing_interval: "month" | "year";
+  amount_sar: number;
+  status: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  seat_limit: number | null;
+};
+
+type InvoiceRow = {
+  id: string;
+  plan: string;
+  billing_interval: string;
+  amount_sar: number;
+  paid_at: string | null;
+  period_end: string | null;
 };
 
 type SubscriptionRow = {
@@ -23,13 +48,11 @@ type SubscriptionRow = {
   end_date: string | null;
 };
 
-type PlanId = "assistant" | "engineer" | "professional" | "consultant";
-
 function formatDate(value: string | null | undefined, locale: Locale) {
   if (!value) return "-";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString(locale === "ar" ? "ar-SA" : "en-GB", {
+  return d.toLocaleDateString(locale === "ar" ? "ar-SA-u-nu-latn" : "en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -50,8 +73,13 @@ export default function ProfilePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
+  const [effectivePlan, setEffectivePlan] = useState<PlanId>("assistant");
+  const [consultantLegacy, setConsultantLegacy] = useState(false);
   const [activeSub, setActiveSub] = useState<SubscriptionRow | null>(null);
   const [subHistory, setSubHistory] = useState<SubscriptionRow[]>([]);
+  const [billing, setBilling] = useState<BillingView | null>(null);
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const [busyAction, setBusyAction] = useState("");
   const [chatCount, setChatCount] = useState<number | null>(null);
   const [docCount, setDocCount] = useState<number | null>(null);
 
@@ -81,46 +109,31 @@ export default function ProfilePage() {
         if (typeof window !== "undefined") {
           const params = new URLSearchParams(window.location.search);
           const status = params.get("status");
-          const planParam = params.get("plan") as PlanId | null;
+          const checkoutId = params.get("checkout");
 
-          const allowedPlans: PlanId[] = [
-            "assistant",
-            "engineer",
-            "professional",
-            "consultant",
-          ];
-
-          if (status === "paid" && planParam && allowedPlans.includes(planParam)) {
+          if (status === "paid" && checkoutId) {
             try {
-              const res = await fetch("/api/subscription/select", {
+              const res = await fetch("/api/payments/moyasar/complete", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ plan: planParam, user_id: user.id }),
+                body: JSON.stringify({ checkoutId }),
               });
-
               const json = await res.json().catch(() => null);
-
               if (!res.ok) {
-                console.error("SUBSCRIPTION SELECT ROUTE ERROR:", json);
-                setErrorMsg(
-                  s.profile.paymentFailed
-                );
-              } else {
-                subscriptionTierOverride = planParam;
-                setInfoMsg(s.profile.paymentSaved);
+                setErrorMsg(s.profile.paymentPending);
+              } else if (json?.plan && isPlanId(json.plan)) {
+                subscriptionTierOverride = json.plan;
+                setInfoMsg(s.profile.paymentConfirmed);
+                try {
+                  window.history.replaceState({}, "", window.location.pathname);
+                } catch {}
               }
-
-              // تنظيف الرابط من باراميترات الدفع
-              try {
-                const cleanUrl = window.location.pathname;
-                window.history.replaceState({}, "", cleanUrl);
-              } catch {}
             } catch (err) {
-              console.error("SUBSCRIPTION SELECT ROUTE ERROR:", err);
-              setErrorMsg(
-                s.profile.paymentFailed
-              );
+              console.error("MOYASAR COMPLETE ERROR:", err);
+              setErrorMsg(s.profile.paymentFailed);
             }
+          } else if (status === "paid") {
+            setErrorMsg(s.profile.paymentMissing);
           }
         }
 
@@ -177,6 +190,15 @@ export default function ProfilePage() {
           subscription_tier: subscriptionTier,
         });
         setFullName(initialFullName);
+        const { data: legacyRow, error: legacyError } = await supabase
+          .from("profiles")
+          .select("consultant_legacy_price_until")
+          .eq("id", user.id)
+          .maybeSingle();
+        setConsultantLegacy(
+          !legacyError && consultantLegacyActive(legacyRow?.consultant_legacy_price_until)
+        );
+        setEffectivePlan(await resolveEffectivePlan(supabase, user.id));
 
         // 3) Current subscription billing row
         if (subscriptionTier && subscriptionTier !== "assistant") {
@@ -216,6 +238,27 @@ export default function ProfilePage() {
           console.warn("SUBSCRIPTIONS HISTORY WARN:", e);
         }
 
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (token) {
+          const billingRes = await fetch("/api/billing", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const billingJson = await billingRes.json().catch(() => ({}));
+          if (billingRes.ok && billingJson.subscription && isPlanId(billingJson.subscription.plan)) {
+            setBilling(billingJson.subscription as BillingView);
+          } else {
+            setBilling(null);
+          }
+          const invoiceRes = await fetch("/api/invoices", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const invoiceJson = await invoiceRes.json().catch(() => ({}));
+          if (invoiceRes.ok && Array.isArray(invoiceJson.invoices)) {
+            setInvoices(invoiceJson.invoices as InvoiceRow[]);
+          }
+        }
+
         // 5) counts (optional)
         try {
           const { count: cCount, error: cErr } = await supabase
@@ -244,6 +287,62 @@ export default function ProfilePage() {
 
     void loadProfileAndPayment();
   }, []);
+
+  async function bearer() {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token || "";
+  }
+
+  async function renewNow() {
+    setBusyAction("renew");
+    setErrorMsg(null);
+    try {
+      const token = await bearer();
+      const res = await fetch("/api/checkout/moyasar", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ purpose: "renew_now", locale }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.url) {
+        setErrorMsg(json.error || s.profile.paymentFailed);
+        return;
+      }
+      window.location.href = json.url as string;
+    } finally {
+      setBusyAction("");
+    }
+  }
+
+  async function toggleAutoRenew() {
+    if (!billing) return;
+    setBusyAction("toggle");
+    setErrorMsg(null);
+    try {
+      const token = await bearer();
+      const turningOn = billing.cancel_at_period_end;
+      const res = await fetch(turningOn ? "/api/billing/resume" : "/api/billing/cancel", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.status === 409 && json.needsCard) {
+        setErrorMsg(s.profile.cardRequired);
+        window.location.href = "/account/billing/card";
+        return;
+      }
+      if (!res.ok) {
+        setErrorMsg(json.error || s.profile.saveFailed);
+        return;
+      }
+      setBilling({ ...billing, cancel_at_period_end: !turningOn });
+    } finally {
+      setBusyAction("");
+    }
+  }
 
   async function handleSaveName() {
     try {
@@ -349,15 +448,18 @@ export default function ProfilePage() {
     }
   }
 
-  const currentPlan = profile?.subscription_tier || "assistant";
-  const knownPlan =
-    currentPlan === "engineer" ||
-    currentPlan === "professional" ||
-    currentPlan === "consultant" ||
-    currentPlan === "assistant"
-      ? currentPlan
-      : "assistant";
-  const currentPlanLabel = planById(locale, knownPlan).name;
+  const storedPlan = profile?.subscription_tier || "assistant";
+  const currentPlan = effectivePlan || "assistant";
+  const currentPlanId: PlanId = isPlanId(currentPlan) ? currentPlan : "assistant";
+  const currentPlanLabel = planById(locale, currentPlanId).name;
+  const catalogSource = PLANS.find((plan) => plan.id === currentPlanId) ?? PLANS[0];
+  const catalogPlan = localizedPlan(locale, catalogSource);
+  const legacyPrice = consultantLegacy && currentPlanId === "consultant";
+  const catalogMonth = planPriceLabel(currentPlanId, "month", 0, locale, legacyPrice);
+  const catalogYear = planPriceLabel(currentPlanId, "year", 0, locale, legacyPrice);
+  const approx = locale === "ar" ? "تقريباً" : "approx.";
+  const teamLapsed =
+    (storedPlan === "team" || storedPlan === "enterprise") && currentPlan === "assistant";
 
   return (
     <MarketingShell>
@@ -510,10 +612,37 @@ export default function ProfilePage() {
               {s.profile.currentPlan}: <strong>{currentPlanLabel}</strong>
             </p>
 
-            {currentPlan === "assistant" ? (
+            {teamLapsed ? (
+              <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
+                {s.profile.teamLapsed}
+              </p>
+            ) : currentPlan === "assistant" ? (
               <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
                 {s.profile.freeBody}
               </p>
+            ) : billing ? (
+              <div style={{ fontSize: 14, color: "#374151", marginBottom: 10, lineHeight: 1.7 }}>
+                <div>
+                  {s.profile.status}: <strong>{billing.status}</strong>
+                </div>
+                <div>
+                  {s.profile.price}: <strong>{formatMoney(Number(billing.amount_sar), locale)}</strong>
+                </div>
+                <div>
+                  {s.profile.cycle}:{" "}
+                  <strong>{billing.billing_interval === "year" ? s.profile.annual : s.profile.monthly}</strong>
+                </div>
+                <div>
+                  {s.profile.startDate}: <strong>{formatDate(billing.current_period_start, locale)}</strong>
+                </div>
+                <div>
+                  {s.profile.nextRenewal}: <strong>{formatDate(billing.current_period_end, locale)}</strong>
+                </div>
+                <div>
+                  {s.profile.autoRenew}:{" "}
+                  <strong>{billing.cancel_at_period_end ? s.profile.autoRenewOff : s.profile.autoRenewOn}</strong>
+                </div>
+              </div>
             ) : activeSub ? (
               <div
                 style={{
@@ -533,8 +662,10 @@ export default function ProfilePage() {
                     <div>
                       {s.profile.price}:{" "}
                       <strong>
-                        {locale === "ar" && activeSub.currency === "SAR"
-                          ? `${activeSub.price} ر.س`
+                        {activeSub.currency === "SAR"
+                          ? locale === "ar"
+                            ? formatMoney(activeSub.price, "ar")
+                            : `${formatSar(activeSub.price)} (approx. ${formatUsdApprox(activeSub.price)})`
                           : `${activeSub.price} ${activeSub.currency}`}
                       </strong>
                     </div>
@@ -555,15 +686,69 @@ export default function ProfilePage() {
               </p>
             )}
 
+            <p style={{ fontSize: 14, color: "#374151", marginBottom: 8 }}>
+              {catalogMonth.primary}
+              {catalogMonth.usd ? ` (${approx} ${catalogMonth.usd})` : ""}
+              {catalogYear.amountSar > 0
+                ? ` · ${catalogYear.primary} (${approx} ${catalogYear.usd})`
+                : ""}
+            </p>
+            <ul style={{ margin: "0 0 12px", paddingLeft: 18, fontSize: 14, color: "#374151" }}>
+              {(locale === "ar" ? catalogPlan.features : displayFeatures(catalogSource, "month")).map((feature) => (
+                <li key={feature}>{feature}</li>
+              ))}
+            </ul>
             <p style={{ fontSize: 14, color: "#6b7280" }}>
               {s.profile.billingNote}
             </p>
+            <div style={{ marginTop: 16 }}>
+              <PlanCatalog heading={s.subscription.title} />
+            </div>
 
-            <Link href="/subscription">
-              <button className="btn" type="button" style={{ marginTop: 16 }}>
-                {s.profile.manage}
-              </button>
-            </Link>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {billing && isSelfServePlan(billing.plan) && (
+                <button
+                  className="btn"
+                  type="button"
+                  style={{ marginTop: 16 }}
+                  onClick={() => void renewNow()}
+                  disabled={busyAction !== ""}
+                >
+                  {busyAction === "renew" ? s.profile.renewing : s.profile.renewNow}
+                </button>
+              )}
+              {billing && (
+                <button
+                  className="btn"
+                  type="button"
+                  style={{ marginTop: 16 }}
+                  onClick={() => void toggleAutoRenew()}
+                  disabled={busyAction !== ""}
+                >
+                  {s.profile.autoRenew}: {billing.cancel_at_period_end ? s.profile.autoRenewOn : s.profile.autoRenewOff}
+                </button>
+              )}
+              <Link href="/pricing">
+                <button className="btn" type="button" style={{ marginTop: 16 }}>
+                  {s.profile.changePlan}
+                </button>
+              </Link>
+              <Link href="/account/billing">
+                <button className="btn" type="button" style={{ marginTop: 16 }}>
+                  {s.profile.billingLink}
+                </button>
+              </Link>
+              {(currentPlan === "team" ||
+                currentPlan === "enterprise" ||
+                storedPlan === "team" ||
+                storedPlan === "enterprise") && (
+                <Link href="/account/team">
+                  <button className="btn" type="button" style={{ marginTop: 16 }}>
+                    {s.profile.manageTeam}
+                  </button>
+                </Link>
+              )}
+            </div>
           </div>
 
           {/* Activity card */}
@@ -593,9 +778,48 @@ export default function ProfilePage() {
 
           {/* Billing history */}
           <div className="card" style={{ marginTop: 24 }}>
-            <h2 className="card-title">{s.profile.history}</h2>
+            <h2 className="card-title">{s.profile.invoices}</h2>
 
-            {subHistory.length === 0 ? (
+            {invoices.length > 0 ? (
+              <div style={{ marginTop: 8, fontSize: 13, color: "#374151" }}>
+                {invoices.map((row) => (
+                  <div
+                    key={row.id}
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 12,
+                      alignItems: "center",
+                      padding: "8px 0",
+                      borderBottom: "1px solid #f3f4f6",
+                    }}
+                  >
+                    <span>{planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}</span>
+                    <span>{formatMoney(Number(row.amount_sar), locale)}</span>
+                    <span>{row.billing_interval === "year" ? s.profile.annual : s.profile.monthly}</span>
+                    <span>{formatDate(row.paid_at, locale)}</span>
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => {
+                        void (async () => {
+                          const token = await bearer();
+                          if (!token) return;
+                          try {
+                            await downloadInvoicePdf(row.id, token);
+                          } catch (err) {
+                            setErrorMsg(err instanceof Error ? err.message : s.profile.paymentFailed);
+                          }
+                        })();
+                      }}
+                    >
+                      {s.profile.downloadInvoice}
+                    </button>
+                  </div>
+                ))}
+                <p style={{ marginTop: 8, fontSize: 12, color: "#9ca3af" }}>{s.profile.invoiceNote}</p>
+              </div>
+            ) : subHistory.length === 0 ? (
               <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>
                 {s.profile.noPayments}
               </p>
@@ -632,21 +856,13 @@ export default function ProfilePage() {
                         idx === subHistory.length - 1 ? "none" : "1px solid #f3f4f6",
                     }}
                   >
-                    <span>
-                      {planById(
-                        locale,
-                        row.plan === "engineer" ||
-                          row.plan === "professional" ||
-                          row.plan === "consultant" ||
-                          row.plan === "assistant"
-                          ? row.plan
-                          : "assistant"
-                      ).name}
-                    </span>
+                    <span>{planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}</span>
                     <span>
                       {row.price !== null && row.currency
-                        ? locale === "ar" && row.currency === "SAR"
-                          ? `${row.price} ر.س`
+                        ? row.currency === "SAR"
+                          ? locale === "ar"
+                            ? formatMoney(row.price, "ar")
+                            : `${formatSar(row.price)} (approx. ${formatUsdApprox(row.price)})`
                           : `${row.price} ${row.currency}`
                         : "-"}
                     </span>

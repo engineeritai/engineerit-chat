@@ -6,45 +6,9 @@ import MarketingShell from "../components/marketing/MarketingShell";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { PLANS } from "@/lib/plans";
-import { localizedPlan, toolLabel } from "@/lib/labels";
+import PlanCatalog from "../components/PlanCatalog";
+import { safeNextPath } from "@/lib/safeNext";
 import { useMessages } from "@/lib/useMessages";
-
-type PlanId = "assistant" | "engineer" | "professional" | "consultant";
-
-const PLAN_BADGES: Record<PlanId, { fg: string; bg: string }> = {
-  assistant: { fg: "#1d4ed8", bg: "#eff6ff" },
-  engineer: { fg: "#ea580c", bg: "#fff7ed" },
-  professional: { fg: "#059669", bg: "#ecfdf3" },
-  consultant: { fg: "#7c3aed", bg: "#f5f3ff" },
-};
-
-const ENGINEER_TOOLS = [
-  { id: "drawing", label: "Drawing & Diagrams" },
-  { id: "design", label: "Design & Code Check" },
-  { id: "itp", label: "ITP & QA/QC" },
-  { id: "boq", label: "BOQ & Quantities" },
-  { id: "schedule", label: "Schedule & Resources" },
-  { id: "value", label: "Value Engineering" },
-  { id: "dashboard", label: "Project Dashboards" },
-] as const;
-
-type ToolId = (typeof ENGINEER_TOOLS)[number]["id"];
-
-const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
-  assistant: [],
-  engineer: ["drawing", "design"],
-  professional: ["drawing", "design", "itp", "boq"],
-  consultant: [
-    "drawing",
-    "design",
-    "itp",
-    "boq",
-    "schedule",
-    "value",
-    "dashboard",
-  ],
-};
 
 export default function RegisterPage() {
   const { locale, shell: s } = useMessages();
@@ -114,15 +78,29 @@ export default function RegisterPage() {
       setPassword("");
       setConfirmPassword("");
 
+      const nextPath = safeNextPath(
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("next")
+          : null,
+        "/profile"
+      );
+
       // If email confirmation is ON -> session is null
       if (!data.session) {
+        try {
+          if (nextPath !== "/profile") {
+            window.localStorage.setItem("engineerit_post_auth_next", nextPath);
+          }
+        } catch {
+          /* ignore */
+        }
         setSuccessMessage(s.auth.createdConfirm);
         return;
       }
 
       // If confirmation is OFF -> user is logged in
       setSuccessMessage(s.auth.createdRedirect);
-      setTimeout(() => router.push("/profile"), 900);
+      setTimeout(() => router.push(nextPath), 900);
     } catch (err) {
       console.error(err);
       setErrorMessage(s.auth.genericError);
@@ -324,196 +302,16 @@ export default function RegisterPage() {
             <button
               type="button"
               className="btn"
-              onClick={() => router.push("/subscription")}
+              onClick={() => router.push("/pricing")}
               style={{ alignSelf: "flex-start", marginTop: 4 }}
             >
               {s.auth.viewPlans}
             </button>
           </div>
 
-          {/* Plans overview */}
           <div className="card" style={{ marginTop: 8 }}>
-            <h2 className="card-title" style={{ marginBottom: 16 }}>
-              {s.auth.plansOverview}
-            </h2>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: 16,
-              }}
-            >
-              {PLANS.map((rawPlan) => {
-                const plan = localizedPlan(locale, rawPlan);
-                const badge =
-                  PLAN_BADGES[plan.id as PlanId] || PLAN_BADGES.assistant;
-                const letter = plan.shortName || plan.name.charAt(0);
-
-                const planId = plan.id as PlanId;
-                const enabledTools = TOOL_ACCESS[planId] || [];
-
-                return (
-                  <div
-                    key={plan.id}
-                    className="plan-card"
-                    style={{
-                      borderRadius: 20,
-                      border: "1px solid #e5e7eb",
-                      padding: 14,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 6,
-                      backgroundColor: "white",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        marginBottom: 10,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: "999px",
-                          backgroundColor: badge.bg,
-                          color: badge.fg,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 20,
-                          fontWeight: 700,
-                          marginRight: 14,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {letter}
-                      </div>
-
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 18,
-                            fontWeight: 700,
-                            color: "#111827",
-                            marginBottom: 2,
-                          }}
-                        >
-                          {plan.name}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#6b7280",
-                            lineHeight: 1.35,
-                          }}
-                        >
-                          {plan.tagline}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ marginBottom: 8 }}>
-                      <div
-                        style={{
-                          fontSize: 16,
-                          fontWeight: 700,
-                          color: badge.fg,
-                        }}
-                      >
-                        {plan.priceMonthly}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: "#6b7280",
-                          marginTop: 2,
-                        }}
-                      >
-                        {plan.priceYearly}
-                      </div>
-                    </div>
-
-                    <ul
-                      style={{
-                        listStyle: "disc",
-                        paddingLeft: 20,
-                        margin: 0,
-                        marginTop: 4,
-                        fontSize: 13,
-                        color: "#374151",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {plan.features.map((f) => (
-                        <li key={f} style={{ marginBottom: 4 }}>
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-
-                    <div
-                      style={{
-                        marginTop: 10,
-                        paddingTop: 8,
-                        borderTop: "1px dashed #e5e7eb",
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: "#4b5563",
-                          marginBottom: 6,
-                        }}
-                      >
-                        {s.auth.toolsInPlan}
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: 6,
-                        }}
-                      >
-                        {ENGINEER_TOOLS.map((tool) => {
-                          const enabled = enabledTools.includes(tool.id);
-                          return (
-                            <span
-                              key={tool.id}
-                              style={{
-                                fontSize: 11,
-                                padding: "3px 8px",
-                                borderRadius: 999,
-                                border: enabled
-                                  ? "1px solid rgba(37,99,235,0.45)"
-                                  : "1px solid #e5e7eb",
-                                backgroundColor: enabled
-                                  ? "rgba(37,99,235,0.06)"
-                                  : "#f9fafb",
-                                color: enabled ? "#1d4ed8" : "#9ca3af",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 4,
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {enabled ? "✅" : "🔒"} {toolLabel(locale, tool.id)}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <p style={{ fontSize: 12, color: "#6b7280", marginTop: 16 }}>
+            <PlanCatalog heading={s.auth.plansOverview} />
+            <p style={{ fontSize: 12, color: "#6b7280", marginTop: 16, marginBottom: 0 }}>
               {s.auth.upgradeAnytime}
             </p>
           </div>

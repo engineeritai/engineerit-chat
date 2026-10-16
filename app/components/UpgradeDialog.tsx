@@ -1,16 +1,19 @@
 "use client";
 
+import BuyPlanButton from "@/app/components/BuyPlanButton";
 import type { Messages } from "@/lib/i18n";
+import type { PlanId } from "@/lib/plans";
 
 type Props = {
   open: boolean;
   isGuest: boolean;
   m: Messages;
   notice?: string | null;
+  planId?: PlanId;
   onClose: () => void;
 };
 
-export default function UpgradeDialog({ open, isGuest, m, notice, onClose }: Props) {
+export default function UpgradeDialog({ open, isGuest, m, notice, planId, onClose }: Props) {
   if (!open) return null;
 
   return (
@@ -24,20 +27,19 @@ export default function UpgradeDialog({ open, isGuest, m, notice, onClose }: Pro
             {notice || (isGuest ? m.gating.lockedBody : m.gating.sendLocked)}
           </div>
           <div className="gate-actions">
+            {planId ? (
+              <BuyPlanButton
+                planId={planId}
+                interval="month"
+                verb="upgrade"
+                className="gate-btn gate-btn-primary"
+              />
+            ) : null}
             {isGuest ? (
-              <>
-                <a className="gate-btn" href="/login">
-                  {m.gating.loginCta}
-                </a>
-                <a className="gate-btn gate-btn-primary" href="/register">
-                  {m.gating.registerCta}
-                </a>
-              </>
-            ) : (
-              <a className="gate-btn gate-btn-primary" href="/subscription">
-                {m.gating.upgradeCta}
+              <a className="gate-btn" href="/login">
+                {m.gating.loginCta}
               </a>
-            )}
+            ) : null}
             <a className="gate-btn" href="/pricing">
               {m.gating.compareCta}
             </a>

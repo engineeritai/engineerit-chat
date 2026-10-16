@@ -20,6 +20,8 @@ import { useMessages } from "@/lib/useMessages";
 import { disciplineLabel, toolLabel } from "@/lib/labels";
 import { postDocument, postImage, readApiError } from "@/lib/postAttachment";
 import { MAX_UPLOAD_BYTES, UploadError, fileTooLargeMessage } from "@/lib/uploadLimits";
+import { featureTier, type FeatureTier, type PlanId } from "@/lib/plans";
+import { resolveEffectivePlan } from "@/lib/effectivePlan";
 
 type Role = "user" | "assistant";
 
@@ -45,8 +47,6 @@ type Thread = {
   messages: Message[];
 };
 
-type PlanId = "assistant" | "engineer" | "professional" | "consultant";
-
 function uuid() {
   return Math.random().toString(36).slice(2);
 }
@@ -67,7 +67,7 @@ const ENGINEER_TOOLS = [
 
 type ToolId = (typeof ENGINEER_TOOLS)[number]["id"];
 
-const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
+const TOOL_ACCESS: Record<FeatureTier, ToolId[]> = {
   assistant: [],
   engineer: ["drawing", "design"],
   professional: ["drawing", "design", "itp", "boq"],
@@ -83,7 +83,7 @@ const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
 };
 
 function hasAccess(planId: PlanId, toolId: ToolId) {
-  return TOOL_ACCESS[planId]?.includes(toolId);
+  return TOOL_ACCESS[featureTier(planId)]?.includes(toolId);
 }
 
 /* ============================
@@ -370,15 +370,14 @@ export default function Page() {
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
-  const isPaidPlan =
-    planId === "engineer" || planId === "professional" || planId === "consultant";
+  const tier = featureTier(planId);
+  const isPaidPlan = tier !== "assistant";
 
   const attachmentsAllowed = isPaidPlan && !isGuest;
 
-  const canExportPdf = planId === "professional" || planId === "consultant";
-  const canExportWordPpt = planId === "consultant";
-  const canShareBenefits =
-    planId === "engineer" || planId === "professional" || planId === "consultant";
+  const canExportPdf = tier === "professional" || tier === "consultant";
+  const canExportWordPpt = tier === "consultant";
+  const canShareBenefits = tier !== "assistant";
 
   useEffect(() => {
     const loadPlan = async () => {
@@ -397,31 +396,9 @@ export default function Page() {
 
         setIsGuest(false);
         setUserId(user.id);
-
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("subscription_tier")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (!error && profile?.subscription_tier) {
-          const rawTier = String(profile.subscription_tier);
-          setAdvisorPlan(rawTier);
-          const p = rawTier as PlanId;
-          if (
-            p === "assistant" ||
-            p === "engineer" ||
-            p === "professional" ||
-            p === "consultant"
-          ) {
-            setPlanId(p);
-          } else {
-            setPlanId("assistant");
-          }
-        } else {
-          setPlanId("assistant");
-          setAdvisorPlan("assistant");
-        }
+        const effective = await resolveEffectivePlan(supabase, user.id);
+        setPlanId(effective);
+        setAdvisorPlan(effective);
       } catch (err) {
         console.error(err);
         setPlanId("assistant");
@@ -1291,7 +1268,7 @@ export default function Page() {
                 <div className="gate-body">
                   <div className="gate-text">{s.chat.upgradeBody}</div>
                   <div className="gate-actions">
-                    <a className="gate-btn gate-btn-primary" href="/subscription">
+                    <a className="gate-btn gate-btn-primary" href="/pricing">
                       {s.chat.upgrade}
                     </a>
                     <button

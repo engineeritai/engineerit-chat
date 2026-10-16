@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { resolveAdvisorPrompt } from "@/lib/advisorPrompts";
-import { hasAdvisorAccess, isAdvisorId, normalizeAdvisorPlan, type AdvisorId, type AdvisorPlanId } from "@/lib/advisors";
+import {
+  hasAdvisorAccess,
+  isAdvisorId,
+  resolveAdvisorAccessPlan,
+  unlockPlanForAdvisor,
+  type AdvisorId,
+  type AdvisorPlanId,
+} from "@/lib/advisors";
+import { resolveEffectivePlan } from "@/lib/effectivePlan";
 import { advisorsAreLive } from "@/lib/advisorLaunch";
 import { isLocale, translate, type Locale } from "@/lib/i18n";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -55,11 +63,22 @@ export async function gateAdvisor(args: {
 
   const { planId, isGuest } = await resolveAdvisorPlan(request);
   if (!hasAdvisorAccess(planId, advisorId, isGuest)) {
+    const upgradePlan = unlockPlanForAdvisor(advisorId);
+    const planName = copy.plans[upgradePlan];
+    const advisorName = copy.advisors.items[advisorId].name;
     return {
       active: true,
       ok: false,
       response: NextResponse.json(
-        { error: copy.gating.sendLocked, code: "locked", upgrade: true },
+        {
+          error:
+            resolvedLocale === "ar"
+              ? `${advisorName} مشمول في باقة ${planName}. الشراء عبر Moyasar.`
+              : `${advisorName} is included on ${planName}. Buy that plan through Moyasar.`,
+          code: "locked",
+          upgrade: true,
+          plan: upgradePlan,
+        },
         { status: 403 }
       ),
     };
@@ -92,7 +111,8 @@ export async function gateAdvisor(args: {
 /**
  * Verify the caller's Supabase access token, then read subscription_tier.
  * Missing or invalid token → guest. Unreadable profile → assistant (no advisors).
- * "pilot" and "trial" normalize to consultant inside normalizeAdvisorPlan.
+ * Pilot and trial use profiles.advisor_trial_plan. Otherwise the effective plan
+ * (an active team or enterprise seat included) decides each advisor.
  */
 async function resolveAdvisorPlan(request: Request): Promise<{
   planId: AdvisorPlanId;
@@ -107,17 +127,31 @@ async function resolveAdvisorPlan(request: Request): Promise<{
     const { data, error } = await supabaseAdmin.auth.getUser(token);
     if (error || !data.user) return { planId: "guest", isGuest: true };
 
-    const { data: profile, error: profileError } = await supabaseAdmin
+    const selected = await supabaseAdmin
       .from("profiles")
-      .select("subscription_tier")
+      .select("subscription_tier, advisor_trial_plan")
       .eq("id", data.user.id)
       .maybeSingle();
 
-    if (profileError) return { planId: "assistant", isGuest: false };
+    let profile = selected.data;
+    if (selected.error) {
+      const fallback = await supabaseAdmin
+        .from("profiles")
+        .select("subscription_tier")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      if (fallback.error) return { planId: "assistant", isGuest: false };
+      profile = fallback.data ? { ...fallback.data, advisor_trial_plan: null } : null;
+    }
 
-    const raw = profile?.subscription_tier;
+    const effective = await resolveEffectivePlan(supabaseAdmin, data.user.id).catch(() => "assistant" as const);
     return {
-      planId: normalizeAdvisorPlan(raw == null ? "" : String(raw), false),
+      planId: resolveAdvisorAccessPlan({
+        tier: profile?.subscription_tier == null ? "" : String(profile.subscription_tier),
+        trialPlan: profile?.advisor_trial_plan == null ? null : String(profile.advisor_trial_plan),
+        effectivePlan: effective,
+        isGuest: false,
+      }),
       isGuest: false,
     };
   } catch {

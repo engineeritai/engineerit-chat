@@ -4,13 +4,17 @@ import { ENGINEER_TOOLS } from "@/lib/engineerTools";
 import type { Locale } from "@/lib/i18n";
 import { disciplineLabel, localizedPlan, toolLabel } from "@/lib/labels";
 import { metaFor } from "@/lib/pageMeta";
-import { PLANS } from "@/lib/plans";
 import {
-  ENTERPRISE_PLAN,
-  TEAM_PLAN,
-  assertIndividualPlanPrices,
-  monthlySarFromPlan,
-} from "@/lib/pricingDisplay";
+  ENTERPRISE_EXTRA_SEAT_SAR,
+  ENTERPRISE_INCLUDED_SEATS,
+  EXTRA_SEAT_SAR,
+  PLAN_AMOUNTS_SAR,
+  PLANS,
+  TEAM_INCLUDED_SEATS,
+  type Plan,
+  type SelfServePlanId,
+} from "@/lib/plans";
+import { assertIndividualPlanPrices } from "@/lib/pricingDisplay";
 
 export const SITE_URL = "https://engineerit.ai";
 export const SITE_NAME = "engineerit.ai";
@@ -20,6 +24,23 @@ export const defaultTitle =
 
 export const defaultDescription =
   "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Paid plans add exports.";
+
+export function languageAlternates(path: string) {
+  const canonical = path === "/" ? `${SITE_URL}/` : new URL(path, SITE_URL).toString();
+  const withLang = (lang: Locale) => {
+    const url = new URL(path === "/" ? "/" : path, SITE_URL);
+    url.searchParams.set("lang", lang);
+    return url.toString();
+  };
+  return {
+    canonical,
+    languages: {
+      en: withLang("en"),
+      ar: withLang("ar"),
+      "x-default": canonical,
+    },
+  };
+}
 
 export function pageMetadata({
   title,
@@ -64,47 +85,55 @@ export function pageMetadata({
   };
 }
 
-export function languageAlternates(path: string) {
-  const canonical = path === "/" ? `${SITE_URL}/` : new URL(path, SITE_URL).toString();
-  const withLang = (lang: Locale) => {
-    const url = new URL(path === "/" ? "/" : path, SITE_URL);
-    url.searchParams.set("lang", lang);
-    return url.toString();
-  };
+function grouped(amount: number) {
+  return amount.toLocaleString("en-US");
+}
+
+function offerFor(plan: Plan, locale: "en" | "ar") {
+  const name = localizedPlan(locale, plan).name;
+  const price = plan.id === "assistant" ? 0 : PLAN_AMOUNTS_SAR[plan.id as SelfServePlanId].month;
   return {
-    canonical,
-    languages: {
-      en: withLang("en"),
-      ar: withLang("ar"),
-      "x-default": canonical,
-    },
+    "@type": "Offer",
+    name,
+    price: String(price),
+    priceCurrency: "SAR",
+    description: offerDescription(plan, locale),
+    url: `${SITE_URL}/pricing`,
+    availability: "https://schema.org/InStock",
   };
+}
+
+function offerDescription(plan: Plan, locale: "en" | "ar") {
+  if (plan.id === "assistant") {
+    return locale === "ar" ? "المهندس المساعد مجاني." : "Assistant Engineer is free.";
+  }
+  const amounts = PLAN_AMOUNTS_SAR[plan.id];
+  const month = grouped(amounts.month);
+  const year = grouped(amounts.year);
+  if (plan.id === "team") {
+    return locale === "ar"
+      ? `الفريق ${month} ر.س شهرياً أو ${year} ر.س سنوياً لـ ${TEAM_INCLUDED_SEATS} مقاعد. المقعد الإضافي ${grouped(EXTRA_SEAT_SAR.month)} ر.س شهرياً أو ${grouped(EXTRA_SEAT_SAR.year)} ر.س سنوياً. الشراء عبر Moyasar. الفريق يشمل مستشار إدارة المشاريع ومستشار ضمان البرنامج.`
+      : `Team is SAR ${month} per month or SAR ${year} per year for ${TEAM_INCLUDED_SEATS} seats. Extra seat SAR ${grouped(EXTRA_SEAT_SAR.month)} per month or SAR ${grouped(EXTRA_SEAT_SAR.year)} per year. Bought through Moyasar. Team includes the PMO Advisor and Program Assurance.`;
+  }
+  if (plan.id === "enterprise") {
+    return locale === "ar"
+      ? `المؤسسات ${month} ر.س شهرياً أو ${year} ر.س سنوياً لـ ${ENTERPRISE_INCLUDED_SEATS} مقاعد. المقعد الإضافي ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.month)} ر.س شهرياً أو ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.year)} ر.س سنوياً. الشراء عبر Moyasar. المؤسسات تشمل مستشار إدارة المشاريع وضمان البرنامج وجاهزية التشغيل ودعم القرار.`
+      : `Enterprise is SAR ${month} per month or SAR ${year} per year for ${ENTERPRISE_INCLUDED_SEATS} seats. Extra seat SAR ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.month)} per month or SAR ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.year)} per year. Bought through Moyasar. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.`;
+  }
+  const advisors =
+    plan.id === "consultant"
+      ? locale === "ar"
+        ? " المهندس الاستشاري يشمل مستشار إدارة المشاريع."
+        : " Consultant Engineer includes the PMO Advisor."
+      : "";
+  return locale === "ar"
+    ? `${localizedPlan("ar", plan).name} ${month} ر.س شهرياً أو ${year} ر.س سنوياً. الشراء عبر Moyasar.${advisors}`
+    : `${plan.name} is SAR ${month} per month or SAR ${year} per year. Bought through Moyasar.${advisors}`;
 }
 
 export function softwareApplicationJsonLd(locale: Locale = "en") {
   assertIndividualPlanPrices();
   const arabic = locale === "ar";
-
-  const individualOffers = PLANS.map((plan) => {
-    const copy = arabic ? localizedPlan("ar", plan) : plan;
-    return {
-      "@type": "Offer",
-      name: copy.name,
-      price: String(monthlySarFromPlan(plan)),
-      priceCurrency: "SAR",
-      description: copy.tagline,
-      url: `${SITE_URL}/pricing`,
-      availability: "https://schema.org/InStock",
-    };
-  });
-
-  const teamDescription = arabic
-    ? `باقة الفريق لـ ${TEAM_PLAN.includedSeats} مقاعد. المقعد الإضافي ${TEAM_PLAN.extraSeatMonthlySar} ر.س شهرياً. مشاريع مشتركة ومدير للفريق. الأسعار شاملة الضريبة. تُرتَّب معنا.`
-    : `Team plan for ${TEAM_PLAN.includedSeats} seats. Extra seat SAR ${TEAM_PLAN.extraSeatMonthlySar} per month. Shared projects and an admin. Prices include VAT. Arranged with us.`;
-
-  const enterpriseDescription = arabic
-    ? `من ${ENTERPRISE_PLAN.monthlySarFrom.toLocaleString("ar-SA")} ر.س شهرياً. دخول الشركة ودعم أولوي ومعايير مخصصة. تواصل معنا.`
-    : `From SAR ${ENTERPRISE_PLAN.monthlySarFrom.toLocaleString("en-US")} per month. Company sign-in, priority support, and custom standards. Contact us.`;
 
   return {
     "@context": "https://schema.org",
@@ -118,25 +147,7 @@ export function softwareApplicationJsonLd(locale: Locale = "en") {
     description: metaFor(locale, "/").description,
     inLanguage: arabic ? "ar" : "en",
     areaServed: ["SA", "AE", "KW", "QA", "BH", "OM"],
-    offers: [
-      ...individualOffers,
-      {
-        "@type": "Offer",
-        name: arabic ? "فريق" : TEAM_PLAN.name,
-        price: String(TEAM_PLAN.monthlySar),
-        priceCurrency: "SAR",
-        description: teamDescription,
-        url: `${SITE_URL}/pricing`,
-      },
-      {
-        "@type": "Offer",
-        name: arabic ? "مؤسسة" : ENTERPRISE_PLAN.name,
-        price: String(ENTERPRISE_PLAN.monthlySarFrom),
-        priceCurrency: "SAR",
-        description: enterpriseDescription,
-        url: `${SITE_URL}/pricing#enterprise`,
-      },
-    ],
+    offers: PLANS.map((plan) => offerFor(plan, locale)),
     featureList: arabic
       ? [
           ...DISCIPLINES.map((name) => disciplineLabel("ar", name)),

@@ -62,7 +62,12 @@ export default function TermsPage() {
             <h2 className="section-heading">3. Accounts &amp; Subscriptions</h2>
             <p>
               Users may register and select a subscription level: Assistant
-              Engineer, Engineer, Professional Engineer, or Consultant Engineer.
+              Engineer, Engineer, Professional Engineer, Consultant Engineer,
+              Team, or Enterprise. Paid plans are bought through Moyasar. The
+              card is saved with consent and charged again on the renewal date
+              until you cancel in billing. Access continues until the end of the
+              period you already paid. Enterprise includes 10 seats at the
+              published price, with extra seats charged automatically.
               Access to features and usage limits depends on the selected plan.
               We may change plan features or pricing from time to time; any such
               changes will be reflected on our pricing page.

@@ -1906,7 +1906,8 @@ body {
   color: #1e66ff;
 }
 
-.mkt a.mkt-btn-ghost {
+.mkt a.mkt-btn-ghost,
+.mkt button.mkt-btn-ghost {
   background: transparent;
   color: #1e66ff;
   padding-left: 8px;
@@ -2609,6 +2610,23 @@ body {
   font-size: 13px;
   font-weight: 600;
   color: #1d4ed8;
+}
+
+button.advisor-card-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.advisor-included-on {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f766e;
 }
 
 .advisor-capabilities {

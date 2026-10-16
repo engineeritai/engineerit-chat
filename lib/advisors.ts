@@ -7,9 +7,11 @@ import type { Locale } from "@/lib/i18n";
  * Change `ADVISOR_ACCESS` to move advisors between tiers. Do not encode
  * the rule as "consultant and above" in the UI.
  *
- * Included: Consultant, Team, Enterprise, and pilot or trial accounts
- * (those tiers alias to Consultant).
- * Locked preview: guest, Assistant Engineer, Engineer, Professional.
+ * Consultant Engineer: PMO only.
+ * Team: PMO and Program Assurance.
+ * Enterprise: all four.
+ * Engineer and Professional Engineer: none.
+ * A pilot or trial uses advisor_trial_plan, the plan being trialled.
  */
 /** Display order everywhere: PMO, Program Assurance, Operations Readiness, Decision Support. */
 export const ADVISOR_IDS = ["pmo", "assurance", "operations", "decision"] as const;
@@ -30,10 +32,22 @@ export const ADVISOR_ACCESS: Record<AdvisorPlanId, readonly AdvisorId[]> = {
   assistant: [],
   engineer: [],
   professional: [],
-  consultant: ADVISOR_IDS,
-  team: ADVISOR_IDS,
+  consultant: ["pmo"],
+  team: ["pmo", "assurance"],
   enterprise: ADVISOR_IDS,
 };
+
+/** Lowest plan whose checkout unlocks this advisor. */
+export const ADVISOR_UNLOCK_PLAN = {
+  pmo: "consultant",
+  assurance: "team",
+  operations: "enterprise",
+  decision: "enterprise",
+} as const satisfies Record<AdvisorId, "consultant" | "team" | "enterprise">;
+
+export function unlockPlanForAdvisor(advisorId: AdvisorId) {
+  return ADVISOR_UNLOCK_PLAN[advisorId];
+}
 
 /** Plans shown on /pricing. Order is the commercial ladder, not the allow-list. */
 export const PRICING_PLAN_IDS: readonly AdvisorPlanId[] = [
@@ -66,10 +80,6 @@ const PLAN_ALIASES: Record<string, AdvisorPlanId> = {
   professional_engineer: "professional",
   consultant: "consultant",
   consultant_engineer: "consultant",
-  /** Signed pilot and trial accounts receive Consultant advisor access. */
-  pilot: "consultant",
-  trial: "consultant",
-  free_trial: "consultant",
   team: "team",
   enterprise: "enterprise",
   guest: "guest",
@@ -429,6 +439,28 @@ export function isAdvisorId(value: unknown): value is AdvisorId {
 
 export function getAdvisor(id: string): Advisor | undefined {
   return ADVISORS.find((advisor) => advisor.id === id);
+}
+
+const TRIAL_TIERS = new Set(["pilot", "trial", "free_trial"]);
+
+/**
+ * Pilot and trial tiers take the plan named in advisor_trial_plan.
+ * Everyone else uses the effective plan (team membership included).
+ */
+export function resolveAdvisorAccessPlan(args: {
+  tier: string | null | undefined;
+  trialPlan?: string | null;
+  effectivePlan?: string | null;
+  isGuest?: boolean;
+}): AdvisorPlanId {
+  if (args.isGuest) return "guest";
+  const key = (args.tier || "").trim().toLowerCase();
+  if (TRIAL_TIERS.has(key)) {
+    const trial = normalizeAdvisorPlan(args.trialPlan, false);
+    if (trial === "consultant" || trial === "team" || trial === "enterprise") return trial;
+    return "assistant";
+  }
+  return normalizeAdvisorPlan(args.effectivePlan ?? args.tier, false);
 }
 
 export function normalizeAdvisorPlan(

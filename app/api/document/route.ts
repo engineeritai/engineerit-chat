@@ -13,7 +13,7 @@ import {
   removeIncomingFile,
 } from "@/lib/incomingStorage";
 import { MAX_UPLOAD_BYTES, fileTooLargeMessage, messageLocale } from "@/lib/uploadLimits";
-import { replyLanguageRule, type UiLocale } from "@/lib/replyLanguage";
+import { replyLanguage, replyLanguageRule, type UiLocale } from "@/lib/replyLanguage";
 
 export const runtime = "nodejs";
 
@@ -90,23 +90,12 @@ async function summarizeFromText(
   const maxChars = 20000;
   const truncated = text.slice(0, maxChars);
 
+  const language = replyLanguage(locale, question);
   const prompt = advisorSystem
-    ? `User request:\n${question}\n\nBelow is the extracted content of a document:\n---\n${truncated}\n---\n\nFollow the output template in the system message. Use only evidence from this document and the request.`
-    : `
-You are an engineering document summarizer for engineerit.ai.
-
-User request:
-${question}
-
-Below is the extracted content of a document:
----
-${truncated}
----
-
-${replyLanguageRule(locale)}
-
-${summaryOutline(locale)}
-`;
+    ? `User request:\n${question}\n\nBelow is the extracted content of a document:\n---\n${truncated}\n---\n\nFollow the output template in the system message. Use only evidence from this document and the request.\n\n${replyLanguageRule(language)}`
+    : language === "ar"
+      ? `أنت ملخص وثائق هندسية لمنصة engineerit.ai.\n\nطلب المستخدم:\n${question}\n\nمحتوى الوثيقة:\n---\n${truncated}\n---\n\nأجب بالعربية فقط في صيغة Markdown:\n${summaryOutline("ar")}`
+      : `You are an engineering document summarizer for engineerit.ai.\n\nUser request:\n${question}\n\nDocument content:\n---\n${truncated}\n---\n\nAnswer in English only, in Markdown:\n${summaryOutline("en")}`;
 
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
@@ -115,7 +104,9 @@ ${summaryOutline(locale)}
         role: "system",
         content:
           advisorSystem ||
-          `You are a precise engineering document summarizer for technical reports, drawings, specifications, codes, and project documents. ${replyLanguageRule(locale)}`,
+          (language === "ar"
+            ? "أنت ملخص وثائق هندسية للتقارير والمخططات والمواصفات والأكواد ووثائق المشاريع. أجب بالعربية فقط. لا تخلط العربية بالإنجليزية."
+            : "You are a precise engineering document summarizer for technical reports, drawings, specifications, codes, and project documents. Answer in English only. Do not mix English and Arabic."),
       },
       { role: "user", content: prompt },
     ],
@@ -150,8 +141,10 @@ async function summarizeViaUpload(
           {
             type: "input_text",
             text: advisorSystem
-              ? `${advisorSystem}\n\nUser request:\n${question}\n\nFollow the output template. Use only evidence from this file and the request.`
-              : `${question}\n\n${replyLanguageRule(locale)}\n\n${summaryOutline(locale)}`,
+              ? `${advisorSystem}\n\nUser request:\n${question}\n\nFollow the output template. Use only evidence from this file and the request.\n\n${replyLanguageRule(replyLanguage(locale, question))}`
+              : replyLanguage(locale, question) === "ar"
+                ? `${question}\n\nأجب بالعربية فقط في Markdown:\n${summaryOutline("ar")}`
+                : `${question}\n\nAnswer in English only, in Markdown:\n${summaryOutline("en")}`,
           },
           {
             type: "input_file",

@@ -11,7 +11,7 @@ export async function generateMetadata() {
   return pageMetadata({ ...meta, path: "/pricing", locale });
 }
 
-export default function PricingPage() {
+export default async function PricingPage() {
   return (
     <>
       <SoftwareJsonLd />

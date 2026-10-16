@@ -12,6 +12,7 @@ export type ShellCopy = {
     profile: string;
     feedback: string;
     terms: string;
+    team: string;
     advisors: string;
     faq: string;
   };
@@ -174,6 +175,9 @@ export type ShellCopy = {
     noBilling: string;
     billingNote: string;
     manage: string;
+    billingLink: string;
+    manageTeam: string;
+    teamLapsed: string;
     activity: string;
     chats: string;
     documents: string;
@@ -185,6 +189,9 @@ export type ShellCopy = {
     amount: string;
     date: string;
     invoiceNote: string;
+    paymentConfirmed: string;
+    paymentPending: string;
+    paymentMissing: string;
     unknown: string;
     notLoggedIn: string;
     paymentFailed: string;
@@ -194,6 +201,33 @@ export type ShellCopy = {
     saved: string;
     photoFailed: string;
     photoSaved: string;
+    cycle: string;
+    monthly: string;
+    annual: string;
+    nextRenewal: string;
+    autoRenew: string;
+    autoRenewOn: string;
+    autoRenewOff: string;
+    renewNow: string;
+    renewing: string;
+    changePlan: string;
+    downloadInvoice: string;
+    invoices: string;
+    noInvoices: string;
+    continueChat: string;
+    invoiceHeading: string;
+    paymentFailedBanner: string;
+    confirmingPayment: string;
+    paymentConfirmedGo: string;
+    cardRequired: string;
+  };
+  checkout: {
+    title: string;
+    savedCard: string;
+    consent: string;
+    openFailed: string;
+    missingKey: string;
+    seats: string;
   };
   subscription: {
     title: string;
@@ -261,6 +295,7 @@ const en: ShellCopy = {
     profile: "My profile",
     feedback: "Feedback and complaints",
     terms: "User policy and agreement",
+    team: "Team",
     advisors: "AI Advisors",
     faq: "Questions",
   },
@@ -297,7 +332,7 @@ const en: ShellCopy = {
     planSuffix: "plan",
     myProfile: "My profile",
     plansRegistration: "Plans and registration",
-    subscribe: "Subscribe or upgrade",
+    subscribe: "Subscribe",
     logout: "Log out",
     resetPassword: "Reset password",
     newPassword: "New password",
@@ -390,7 +425,7 @@ const en: ShellCopy = {
     loggedIn: "Logged in. Redirecting to your profile...",
     registerTitle: "Register on engineerit.ai",
     registerLead:
-      "Create your account, start on the free Assistant plan, and upgrade later to Engineer, Professional, or Consultant.",
+      "Create your account, start on the free Assistant Engineer plan, and buy Engineer, Professional Engineer, Consultant Engineer, Team, or Enterprise through Moyasar.",
     createAccount: "Create your account",
     fullName: "Full name",
     fullNamePlaceholder: "Your full name",
@@ -406,7 +441,7 @@ const en: ShellCopy = {
     emailConfirmTitle: "Email confirmation required",
     emailConfirmHint: "After confirmation, come back and sign in from the top bar.",
     afterRegister:
-      "After registration, your account starts on the free Assistant plan. When you are ready, open the subscription page to choose Engineer, Professional, or Consultant.",
+      "After registration, your account starts on the free Assistant Engineer plan. Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise are bought through Moyasar, monthly or annual. Annual price is 10 times the monthly price. Paid plans renew automatically until you cancel.",
     viewPlans: "View plans and subscribe",
     plansOverview: "Plans and engineer tools",
     toolsInPlan: "Engineer tools in this plan",
@@ -418,7 +453,7 @@ const en: ShellCopy = {
     createdConfirm:
       "Account created. We sent a confirmation email. Check your inbox and junk folder, confirm the address, then sign in from the top bar.",
     createdRedirect: "Account created. Redirecting to your profile...",
-    upgradeAnytime: "You can change your plan at any time from your profile or the subscription page.",
+    upgradeAnytime: "You can change your plan at any time from your profile or the pricing page.",
     policyName: "User policy and agreement",
   },
   profile: {
@@ -433,14 +468,18 @@ const en: ShellCopy = {
     save: "Save changes",
     subscription: "Subscription",
     currentPlan: "Current plan",
-    freeBody: "You are on the free Assistant plan. No charges apply until you upgrade.",
+    freeBody: "You are on the free Assistant Engineer plan. No charges apply until you upgrade.",
     status: "Status",
     price: "Price",
     startDate: "Start date",
     endDate: "End date",
     noBilling: "No billing data found yet for this plan.",
-    billingNote: "Plan changes are handled by engineerit.ai billing. Manage or upgrade from the subscription page.",
+    billingNote: "Plan changes are handled by engineerit.ai billing. Change plan from the pricing page.",
     manage: "Manage or upgrade subscription",
+    billingLink: "Billing, card, and cancellation",
+    manageTeam: "Manage team seats",
+    teamLapsed:
+      "The team subscription has ended, so Consultant-tier access for this team is paused for every seat.",
     activity: "Activity",
     chats: "Total chats",
     documents: "Total uploaded documents",
@@ -451,7 +490,10 @@ const en: ShellCopy = {
     plan: "Plan",
     amount: "Amount",
     date: "Date",
-    invoiceNote: "The payment provider also emails invoices. Keep those emails as receipts.",
+    invoiceNote: "A receipt with the amount, plan, and period is emailed after each successful payment.",
+    paymentConfirmed: "Payment confirmed. A receipt is emailed to you.",
+    paymentPending: "The payment is not confirmed yet.",
+    paymentMissing: "This return is missing the payment reference.",
     unknown: "unknown",
     notLoggedIn: "You are not logged in.",
     paymentFailed: "Could not save the subscription after payment. Please contact support.",
@@ -461,13 +503,41 @@ const en: ShellCopy = {
     saved: "Profile updated.",
     photoFailed: "Could not upload the profile photo.",
     photoSaved: "Profile photo updated.",
+    cycle: "Billing cycle",
+    monthly: "Monthly",
+    annual: "Annual",
+    nextRenewal: "Next renewal",
+    autoRenew: "Auto-renew",
+    autoRenewOn: "On",
+    autoRenewOff: "Off",
+    renewNow: "Renew now",
+    renewing: "Starting payment…",
+    changePlan: "Change plan",
+    downloadInvoice: "Download invoice (PDF)",
+    invoices: "Invoices",
+    noInvoices: "No invoices yet.",
+    continueChat: "Continue to chat",
+    invoiceHeading: "Invoice",
+    paymentFailedBanner: "The payment was not completed. Choose a plan and try again.",
+    confirmingPayment: "Confirming the payment…",
+    paymentConfirmedGo: "Payment confirmed. Your invoice is ready.",
+    cardRequired: "Save a card with Moyasar before auto-renew can be turned on.",
+  },
+  checkout: {
+    title: "Checkout",
+    savedCard: "The card is saved for automatic renewal until you cancel.",
+    consent:
+      "I agree to save this card with Moyasar and to be charged automatically on each renewal until I cancel in billing.",
+    openFailed: "Could not open checkout.",
+    missingKey: "The card form is not configured yet.",
+    seats: "seats",
   },
   subscription: {
     title: "Plans and subscription",
-    lead: "Choose Assistant, Engineer, Professional Engineer, or Consultant Engineer.",
+    lead: "Choose Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, or Enterprise.",
     freePlan: "This is your free plan",
     processing: "Processing...",
-    subscribe: "Subscribe or upgrade",
+    subscribe: "Subscribe",
     toolsInPlan: "Engineer tools in this plan",
     back: "Back to profile",
     loginRequired: "Please log in or register before selecting a plan.",
@@ -529,6 +599,7 @@ const ar: ShellCopy = {
     profile: "ملفي",
     feedback: "الملاحظات والشكاوى",
     terms: "سياسة الاستخدام والاتفاق",
+    team: "الفريق",
     advisors: "مستشارو الذكاء الاصطناعي",
     faq: "الأسئلة الشائعة",
   },
@@ -565,7 +636,7 @@ const ar: ShellCopy = {
     planSuffix: "باقة",
     myProfile: "ملفي",
     plansRegistration: "الباقات والتسجيل",
-    subscribe: "اشترك أو رقِّ",
+    subscribe: "اشترك الآن",
     logout: "خروج",
     resetPassword: "إعادة تعيين كلمة المرور",
     newPassword: "كلمة المرور الجديدة",
@@ -656,7 +727,8 @@ const ar: ShellCopy = {
     genericError: "حدث خطأ. حاول مرة أخرى.",
     loggedIn: "تم الدخول. جارٍ التحويل إلى ملفك...",
     registerTitle: "التسجيل في engineerit.ai",
-    registerLead: "أنشئ حسابك، وابدأ بباقة المساعد المجانية، ثم رقِّ لاحقاً إلى مهندس أو محترف أو استشاري.",
+    registerLead:
+      "أنشئ حسابك، وابدأ بباقة المهندس المساعد المجانية، واشترِ المهندس أو المهندس المحترف أو المهندس الاستشاري أو الفريق أو المؤسسات عبر Moyasar.",
     createAccount: "إنشاء الحساب",
     fullName: "الاسم الكامل",
     fullNamePlaceholder: "اسمك الكامل",
@@ -671,7 +743,7 @@ const ar: ShellCopy = {
     emailConfirmTitle: "يلزم تأكيد البريد",
     emailConfirmHint: "بعد التأكيد، عد وسجّل الدخول من الشريط العلوي.",
     afterRegister:
-      "بعد التسجيل تبدأ على باقة المساعد المجانية. عندما تكون جاهزاً، افتح صفحة الاشتراك لاختيار مهندس أو محترف أو استشاري.",
+      "بعد التسجيل تبدأ على باقة المهندس المساعد المجانية. تُشترى باقات المهندس والمهندس المحترف والمهندس الاستشاري والفريق والمؤسسات عبر Moyasar، شهرياً أو سنوياً. السعر السنوي عشرة أضعاف الشهري. تتجدد الباقات المدفوعة تلقائياً حتى الإلغاء.",
     viewPlans: "عرض الباقات والاشتراك",
     plansOverview: "الباقات وأدوات المهندس",
     toolsInPlan: "أدوات المهندس في هذه الباقة",
@@ -683,7 +755,7 @@ const ar: ShellCopy = {
     createdConfirm:
       "تم إنشاء الحساب. أرسلنا رسالة تأكيد. راجع الوارد والبريد غير الهام، ثم أكّد العنوان وادخل من الشريط العلوي.",
     createdRedirect: "تم إنشاء الحساب. جارٍ التحويل إلى ملفك...",
-    upgradeAnytime: "يمكنك تغيير الباقة في أي وقت من ملفك أو صفحة الاشتراك.",
+    upgradeAnytime: "يمكنك تغيير الباقة في أي وقت من ملفك أو صفحة الأسعار.",
     policyName: "سياسة الاستخدام والاتفاق",
   },
   profile: {
@@ -698,14 +770,17 @@ const ar: ShellCopy = {
     save: "حفظ التغييرات",
     subscription: "الاشتراك",
     currentPlan: "الباقة الحالية",
-    freeBody: "أنت على باقة المساعد المجانية. لا تُفرض رسوم حتى الترقية.",
+    freeBody: "أنت على باقة المهندس المساعد المجانية. لا تُفرض رسوم حتى الترقية.",
     status: "الحالة",
     price: "السعر",
     startDate: "تاريخ البدء",
     endDate: "تاريخ الانتهاء",
     noBilling: "لا توجد بيانات فوترة لهذه الباقة بعد.",
-    billingNote: "تغيير الباقة يتم عبر فوترة engineerit.ai. أدر الباقة أو رقّها من صفحة الاشتراك.",
+    billingNote: "تغيير الباقة يتم عبر فوترة engineerit.ai. غيّر الباقة من صفحة الأسعار.",
     manage: "إدارة الاشتراك أو ترقيته",
+    billingLink: "الفوترة والبطاقة والإلغاء",
+    manageTeam: "إدارة مقاعد الفريق",
+    teamLapsed: "انتهى اشتراك الفريق، وتوقف وصول المستوى الاستشاري لكل المقاعد.",
     activity: "النشاط",
     chats: "إجمالي المحادثات",
     documents: "إجمالي المستندات المرفوعة",
@@ -716,7 +791,10 @@ const ar: ShellCopy = {
     plan: "الباقة",
     amount: "المبلغ",
     date: "التاريخ",
-    invoiceNote: "يرسل مزود الدفع الفواتير بالبريد أيضاً. احتفظ بها كإيصالات.",
+    invoiceNote: "يُرسل إيصال بالمبلغ والباقة والمدة بعد كل دفعة ناجحة.",
+    paymentConfirmed: "تم تأكيد الدفع. سيصلك إيصال بالبريد.",
+    paymentPending: "لم يُؤكد الدفع بعد.",
+    paymentMissing: "هذه العودة تفتقد مرجع الدفع.",
     unknown: "غير معروف",
     notLoggedIn: "لم تسجّل الدخول.",
     paymentFailed: "تعذر حفظ الاشتراك بعد الدفع. تواصل مع الدعم.",
@@ -726,13 +804,41 @@ const ar: ShellCopy = {
     saved: "تم تحديث الملف.",
     photoFailed: "تعذر رفع صورة الملف.",
     photoSaved: "تم تحديث صورة الملف.",
+    cycle: "دورة الفوترة",
+    monthly: "شهري",
+    annual: "سنوي",
+    nextRenewal: "التجديد التالي",
+    autoRenew: "التجديد التلقائي",
+    autoRenewOn: "مفعّل",
+    autoRenewOff: "متوقف",
+    renewNow: "جدّد الآن",
+    renewing: "جارٍ بدء الدفع…",
+    changePlan: "تغيير الباقة",
+    downloadInvoice: "تنزيل الفاتورة (PDF)",
+    invoices: "الفواتير",
+    noInvoices: "لا توجد فواتير بعد.",
+    continueChat: "المتابعة إلى المحادثة",
+    invoiceHeading: "الفاتورة",
+    paymentFailedBanner: "لم يكتمل الدفع. اختر باقة وحاول مرة أخرى.",
+    confirmingPayment: "جارٍ تأكيد الدفع…",
+    paymentConfirmedGo: "تم تأكيد الدفع. الفاتورة جاهزة.",
+    cardRequired: "احفظ بطاقة عبر Moyasar قبل تفعيل التجديد التلقائي.",
+  },
+  checkout: {
+    title: "الدفع",
+    savedCard: "تُحفظ البطاقة للتجديد التلقائي حتى الإلغاء.",
+    consent:
+      "أوافق على حفظ هذه البطاقة لدى Moyasar وعلى الخصم التلقائي في كل تجديد حتى أُلغي ذلك من الفوترة.",
+    openFailed: "تعذر فتح صفحة الدفع.",
+    missingKey: "نموذج البطاقة غير مُعد بعد.",
+    seats: "مقاعد",
   },
   subscription: {
     title: "الباقات والاشتراك",
-    lead: "اختر المساعد أو المهندس أو المهندس المحترف أو المهندس الاستشاري.",
+    lead: "اختر المهندس المساعد أو المهندس أو المهندس المحترف أو المهندس الاستشاري أو الفريق أو المؤسسات.",
     freePlan: "هذه باقتك المجانية",
     processing: "جارٍ المعالجة...",
-    subscribe: "اشترك أو رقِّ",
+    subscribe: "اشترك الآن",
     toolsInPlan: "أدوات المهندس في هذه الباقة",
     back: "العودة إلى الملف",
     loginRequired: "ادخل أو سجّل قبل اختيار الباقة.",

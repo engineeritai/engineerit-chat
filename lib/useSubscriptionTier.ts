@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { normalizeAdvisorPlan, type AdvisorPlanId } from "@/lib/advisors";
+import { resolveAdvisorAccessPlan, type AdvisorPlanId } from "@/lib/advisors";
+import { resolveEffectivePlan } from "@/lib/effectivePlan";
 import { supabase } from "@/lib/supabaseClient";
 
 export type SubscriptionTierState = {
@@ -38,17 +39,24 @@ export function useSubscriptionTier(): SubscriptionTierState {
 
         const { data: profile, error } = await supabase
           .from("profiles")
-          .select("subscription_tier")
+          .select("subscription_tier, advisor_trial_plan")
           .eq("id", user.id)
           .maybeSingle();
 
         const raw = !error ? (profile?.subscription_tier as string | undefined) : undefined;
+        const trialPlan = !error ? (profile?.advisor_trial_plan as string | undefined) : undefined;
+        const effective = await resolveEffectivePlan(supabase, user.id).catch(() => "assistant" as const);
         if (!cancelled) {
           setState({
             ready: true,
             isGuest: false,
             userId: user.id,
-            tier: normalizeAdvisorPlan(raw, false),
+            tier: resolveAdvisorAccessPlan({
+              tier: raw,
+              trialPlan,
+              effectivePlan: effective,
+              isGuest: false,
+            }),
           });
         }
       } catch (err) {

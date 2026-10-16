@@ -22,9 +22,15 @@ const en: Messages = {
       "Four AI advisors that engineer your project documents with a structured approach. Attach your files, run a one-click playbook, and get an export-ready report with tables, a RAG rating and an executive summary.",
     open: "Open advisor",
     preview: "View locked preview",
-    comingSoonBadge: "Coming soon",
+    comingSoonBadge: "Included by plan",
     comingSoonBody:
-      "Playbooks open when AI Advisors go live. Preview every playbook and report template below.",
+      "Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
+    includedOn: {
+      pmo: "Included on Consultant Engineer",
+      assurance: "Included on Team",
+      operations: "Included on Enterprise",
+      decision: "Included on Enterprise",
+    },
     comingSoonCta: "Preview playbooks",
     nowLiveBadge: "Now live",
     responsibility:
@@ -258,48 +264,49 @@ const en: Messages = {
     },
   },
   gating: {
-    lockedTitle:
-      "Included from Consultant (SAR 79/mo incl. VAT), Team and Enterprise",
-    lockedBody: "Preview every playbook and report template below.",
-    upgradeCta: "Upgrade",
+    lockedTitle: "Buy the plan that includes this advisor",
+    lockedBody:
+      "A short preview is on this page. Checkout for the plan named on the advisor opens in Moyasar.",
+    upgradeCta: "Subscribe",
     compareCta: "Compare plans",
     registerCta: "Register",
     loginCta: "Login",
     close: "Close",
     upgradeRequired: "Upgrade required",
     registerRequired: "Register / Login required",
-    sendLocked: "Playbooks run on Consultant, Team, and Enterprise.",
+    sendLocked: "Buy the plan named on this advisor through Moyasar to run its playbooks.",
     pilotNote:
-      "Leading a team? The free 2-week pilot (5 seats, no card) includes all four advisors.",
+      "Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support. Each plan is bought through Moyasar.",
   },
   pricing: {
     title: "Plans and AI Advisors",
     subtitle:
-      "PMO, Program Assurance, Operations Readiness, and Decision Support are included on Consultant, Team, and Enterprise.",
+      "Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
     advisorsIncluded:
-      "AI Advisors: PMO, Program Assurance, Operations Readiness, and Decision Support",
+      "PMO Advisor on Consultant Engineer. PMO and Program Assurance on Team. All four advisors on Enterprise.",
     advisorsLocked:
-      "AI Advisors — PMO, Program Assurance, Operations Readiness, and Decision Support — included on Consultant, Team, and Enterprise",
+      "A locked advisor shows a short preview. Buy the plan that includes it through Moyasar.",
     availabilityTitle: "AI Advisors by plan",
     availabilityNote:
-      "Consultant, Team, and Enterprise include every advisor and playbook. Assistant Engineer, Engineer, and Professional keep a locked preview. Prices include VAT.",
+      "Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
     planColumn: "Plan",
     accessColumn: "AI Advisors",
     included: "Included",
     locked: "Locked preview",
     manageCta: "Manage subscription",
     teamEnterpriseNote:
-      "Team and Enterprise include all four advisors. Prices below include VAT.",
+      "Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
     teamPrice:
-      "Team is SAR {monthly} / month for {seats} seats (+SAR {extra} per extra seat), incl. VAT.",
-    enterprisePrice: "Enterprise is from SAR {from} / month, incl. VAT.",
+      "Team is SAR {monthly} per month for {seats} seats, plus SAR {extra} per extra seat.",
+    enterprisePrice:
+      "Enterprise is SAR {monthly} per month for {seats} seats, plus SAR {extra} per extra seat.",
     featureListTitle: "Included in this plan",
   },
   plans: {
-    assistant: "Assistant Engineer (free)",
+    assistant: "Assistant Engineer",
     engineer: "Engineer",
-    professional: "Professional",
-    consultant: "Consultant",
+    professional: "Professional Engineer",
+    consultant: "Consultant Engineer",
     team: "Team",
     enterprise: "Enterprise",
   },

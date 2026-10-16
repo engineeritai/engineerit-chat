@@ -12,7 +12,7 @@ export async function generateMetadata() {
   return pageMetadata({ ...meta, path: "/", locale });
 }
 
-export default function HomePage() {
+export default async function HomePage() {
   return (
     <>
       <SoftwareJsonLd />

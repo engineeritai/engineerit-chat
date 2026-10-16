@@ -2,54 +2,46 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { planById } from "@/lib/labels";
 import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
-
-type PlanId = "assistant" | "engineer" | "professional" | "consultant";
-
-const PLAN_COLORS: Record<PlanId, string> = {
-  assistant: "#2563eb",
-  engineer: "#f97316",
-  professional: "#0f766e",
-  consultant: "#7c3aed",
-};
+import { PLAN_COLORS, type PlanId } from "@/lib/plans";
+import { resolveEffectivePlan } from "@/lib/effectivePlan";
 
 export default function AccountMenu({ compact = false }: { compact?: boolean }) {
   const { locale, shell: s, m } = useMessages();
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [planId, setPlanId] = useState<PlanId>("assistant");
 
   useEffect(() => {
     let active = true;
-    void (async () => {
+    const load = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!active) return;
       if (!user) {
         setEmail(null);
+        setPlanId("assistant");
         return;
       }
       setEmail(user.email || user.id);
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("subscription_tier")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (!active) return;
-      const tier = profile?.subscription_tier;
-      if (tier === "assistant" || tier === "engineer" || tier === "professional" || tier === "consultant") {
-        setPlanId(tier);
-      }
-    })();
+      setPlanId(await resolveEffectivePlan(supabase, user.id));
+    };
+    void load();
+    const refresh = () => {
+      void load();
+    };
+    window.addEventListener("focus", refresh);
     return () => {
       active = false;
+      window.removeEventListener("focus", refresh);
     };
-  }, []);
+  }, [pathname]);
 
   if (!email) {
     return (
@@ -87,7 +79,7 @@ export default function AccountMenu({ compact = false }: { compact?: boolean }) 
           <button type="button" onClick={() => go("/register")}>
             {s.header.plansRegistration}
           </button>
-          <button type="button" onClick={() => go("/subscription")}>
+          <button type="button" onClick={() => go("/pricing")}>
             {s.header.subscribe}
           </button>
           <button

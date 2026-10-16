@@ -38,7 +38,7 @@ export default function Sidebar({
 }: Props) {
   const pathname = usePathname();
   const { locale, shell: s } = useMessages();
-  const contactLabel = locale === "ar" ? "تواصل معنا" : "Contact us";
+  const contactLabel = locale === "ar" ? "ملاحظات" : "Feedback";
   const payLabel = locale === "ar" ? "الدفع عبر ميسر" : "Payment processed by Moyasar";
 
   const content = (

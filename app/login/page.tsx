@@ -7,6 +7,7 @@ import NavSidebar from "../components/NavSidebar";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
+import { safeNextPath } from "@/lib/safeNext";
 
 export default function LoginPage() {
   const { shell: s } = useMessages();
@@ -45,8 +46,20 @@ export default function LoginPage() {
       }
 
       setSuccessMessage(s.auth.loggedIn);
+      const fromQuery =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("next")
+          : null;
+      let stored: string | null = null;
+      try {
+        stored = window.localStorage.getItem("engineerit_post_auth_next");
+        window.localStorage.removeItem("engineerit_post_auth_next");
+      } catch {
+        /* ignore */
+      }
+      const nextPath = safeNextPath(fromQuery || stored, "/profile");
       setTimeout(() => {
-        router.push("/profile");
+        router.push(nextPath);
       }, 1000);
     } catch (err) {
       console.error(err);

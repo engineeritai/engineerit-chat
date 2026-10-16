@@ -1,7 +1,15 @@
 import type { Locale } from "@/lib/i18n";
 import { DISCIPLINES, type Discipline } from "@/lib/disciplines";
 import { ENGINEER_TOOLS, type EngineerToolId } from "@/lib/engineerTools";
-import { PLANS, type Plan, type PlanId } from "@/lib/plans";
+import {
+  ENTERPRISE_EXTRA_SEAT_SAR,
+  EXTRA_SEAT_SAR,
+  PLANS,
+  type BillingInterval,
+  type Plan,
+  type PlanId,
+} from "@/lib/plans";
+import { displayFeatures } from "@/lib/pricingDisplay";
 
 const AR_DISCIPLINES: Record<Discipline, string> = {
   General: "عام",
@@ -36,6 +44,8 @@ const AR_PLAN_MARK: Record<PlanId, string> = {
   engineer: "ه",
   professional: "ح",
   consultant: "س",
+  team: "ف",
+  enterprise: "ن",
 };
 
 const AR_PLANS: Record<
@@ -43,7 +53,7 @@ const AR_PLANS: Record<
   { name: string; shortName: string; tagline: string; priceMonthly: string; features: string[] }
 > = {
   assistant: {
-    name: "مهندس مساعد",
+    name: "المهندس المساعد",
     shortName: AR_PLAN_MARK.assistant,
     tagline: "للطلاب والمهندسين المبتدئين.",
     priceMonthly: "مجاناً",
@@ -54,7 +64,7 @@ const AR_PLANS: Record<
     ],
   },
   engineer: {
-    name: "مهندس",
+    name: "المهندس",
     shortName: AR_PLAN_MARK.engineer,
     tagline: "للمهندسين الممارسين الذين يحتاجون توثيقاً أسرع.",
     priceMonthly: "19 ر.س شهرياً",
@@ -67,7 +77,7 @@ const AR_PLANS: Record<
     ],
   },
   professional: {
-    name: "مهندس محترف",
+    name: "المهندس المحترف",
     shortName: AR_PLAN_MARK.professional,
     tagline: "لكبار المهندسين وقادة التصميم.",
     priceMonthly: "41 ر.س شهرياً",
@@ -81,10 +91,10 @@ const AR_PLANS: Record<
     ],
   },
   consultant: {
-    name: "مهندس استشاري",
+    name: "المهندس الاستشاري",
     shortName: AR_PLAN_MARK.consultant,
     tagline: "للاستشاريين والمكاتب التي تدير مشاريع كاملة.",
-    priceMonthly: "79 ر.س شهرياً",
+    priceMonthly: "99 ر.س شهرياً",
     features: [
       "كل ما في باقة المهندس المحترف",
       "تحليل قوائم المعدات وجداول الكميات",
@@ -92,9 +102,50 @@ const AR_PLANS: Record<
       "تقدير الموارد والتكلفة ومراجعة الجدول",
       "لوحات المشروع ونظرة على المحفظة",
       "تصدير إلى بي دي إف وورد وباوربوينت",
+      "مستشار إدارة المشاريع مشمول",
+    ],
+  },
+  team: {
+    name: "الفريق",
+    shortName: AR_PLAN_MARK.team,
+    tagline: "وصول بمستوى المهندس الاستشاري لمكتب، على اشتراك واحد.",
+    priceMonthly: "499 ر.س شهرياً",
+    features: [
+      "كل ما في باقة المهندس الاستشاري",
+      "5 مقاعد مشمولة",
+      "مقعد إضافي 89 ر.س شهرياً",
+      "يتجدد تلقائياً حتى الإلغاء",
+      "دعوة الزملاء بالبريد",
+      "ينتهي الوصول لكل الفريق إذا توقف الاشتراك",
+      "إدارة المشاريع وضمان البرنامج مشمولان",
+    ],
+  },
+  enterprise: {
+    name: "المؤسسات",
+    shortName: AR_PLAN_MARK.enterprise,
+    tagline: "وصول بمستوى المهندس الاستشاري لمكتب أكبر، على اشتراك واحد.",
+    priceMonthly: "3,900 ر.س شهرياً",
+    features: [
+      "كل ما في باقة المهندس الاستشاري",
+      "10 مقاعد مشمولة",
+      "مقعد إضافي 299 ر.س شهرياً",
+      "يتجدد تلقائياً حتى الإلغاء",
+      "إدارة المشاريع وضمان البرنامج وجاهزية التشغيل ودعم القرار مشمولة",
     ],
   },
 };
+
+export function featuresForLocale(locale: Locale, plan: Plan, interval: BillingInterval): string[] {
+  if (locale !== "ar") return displayFeatures(plan, interval);
+  return AR_PLANS[plan.id].features.map((feature) => {
+    if ((plan.id === "team" || plan.id === "enterprise") && feature.startsWith("مقعد إضافي")) {
+      const amount = (plan.id === "enterprise" ? ENTERPRISE_EXTRA_SEAT_SAR : EXTRA_SEAT_SAR)[interval];
+      const period = interval === "year" ? "سنوياً" : "شهرياً";
+      return `مقعد إضافي ${amount.toLocaleString("en-US")} ر.س ${period}`;
+    }
+    return feature;
+  });
+}
 
 export function disciplineLabel(locale: Locale, name: string): string {
   if (locale === "ar" && name in AR_DISCIPLINES) return AR_DISCIPLINES[name as Discipline];
@@ -107,13 +158,13 @@ export function toolLabel(locale: Locale, id: EngineerToolId): string {
 }
 
 export function formatMoney(amount: number, locale: Locale): string {
-  if (locale === "ar") return `${amount.toLocaleString("ar-SA")} ر.س`;
+  if (locale === "ar") return `${amount.toLocaleString("en-US")} ر.س`;
   return `SAR ${amount.toLocaleString("en-US")}`;
 }
 
 export function formatUsd(amountSar: number, locale: Locale): string {
   const usd = amountSar / 3.75;
-  const formatted = new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+  const formatted = new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(usd);
