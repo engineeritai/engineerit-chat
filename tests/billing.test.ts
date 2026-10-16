@@ -572,6 +572,10 @@ describe("admin and redirects", () => {
     const fromEnv = await readApplePayDomainAssociation({ APPLE_PAY_DOMAIN_ASSOCIATION: "APPLE-FILE" });
     assert.equal(fromEnv, "APPLE-FILE");
     const placeholder = await readApplePayDomainAssociation({});
-    assert.match(placeholder, /engineerit\.ai/);
+    assert.equal(
+      placeholder,
+      "7b2276657273696f6e223a312c227073704964223a2243423939394539333137363744463341383644424145363131413331323544303133353543373842303636343033393832323336324134413238303246334136222c22637265617465644f6e223a313738373134353634373931307d"
+    );
+    assert.equal(placeholder.endsWith("\n"), false);
   });
 });

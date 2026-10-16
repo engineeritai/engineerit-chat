@@ -2,6 +2,16 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  if (pathname === "/.well-known" || pathname.startsWith("/.well-known/")) {
+    return NextResponse.next();
+  }
+  if (pathname.length > 1 && pathname.endsWith("/")) {
+    const target = new URL(request.url);
+    target.pathname = pathname.replace(/\/+$/, "") || "/";
+    return NextResponse.redirect(target.toString(), 308);
+  }
+
   const lang = request.nextUrl.searchParams.get("lang");
   if (lang !== "en" && lang !== "ar") return NextResponse.next();
 
@@ -17,5 +27,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
+  matcher: [
+    "/.well-known/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)",
+  ],
 };

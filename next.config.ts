@@ -1,12 +1,21 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  skipTrailingSlashRedirect: true,
   outputFileTracingIncludes: {
     "/api/history/[id]/export": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
     "/api/invoices/[id]/pdf": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
     "/api/payments/moyasar/complete": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
     "/api/payments/moyasar/callback": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
     "/api/cron/renewals": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
+  },
+  async headers() {
+    return [
+      {
+        source: "/.well-known/:path*",
+        headers: [{ key: "Content-Type", value: "text/plain" }],
+      },
+    ];
   },
   async redirects() {
     return [
@@ -22,6 +31,14 @@ const nextConfig: NextConfig = {
         {
           source: "/.well-known/apple-developer-merchantid-domain-association",
           destination: "/api/apple-pay/domain-association",
+        },
+        {
+          source: "/.well-known/apple-developer-merchantid-domain-association/",
+          destination: "/api/apple-pay/domain-association",
+        },
+        {
+          source: "/.well-known/:path*/",
+          destination: "/.well-known/:path*",
         },
       ],
     };
