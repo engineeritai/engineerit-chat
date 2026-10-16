@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   skipTrailingSlashRedirect: true,
   outputFileTracingIncludes: {
     "/api/history/[id]/export": ["./assets/fonts/NotoSansArabic-Regular.ttf"],

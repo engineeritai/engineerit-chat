@@ -10,9 +10,9 @@ import { useMessages } from "@/lib/useMessages";
 import { getMarketingContent } from "@/lib/marketing";
 import { disciplineLabel, toolLabel } from "@/lib/labels";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
+import ChatShowcase from "@/app/components/marketing/ChatShowcase";
 import HomePlanCards from "@/app/components/marketing/HomePlanCards";
 import PricingBoard from "@/app/components/marketing/PricingBoard";
-import SaudiBusinessBadge from "@/app/components/marketing/SaudiBusinessBadge";
 import AdvisorEcosystem from "@/app/components/AdvisorEcosystem";
 import StartChatLink from "@/app/components/marketing/StartChatLink";
 
@@ -34,7 +34,10 @@ export default function LandingView() {
       <section className="mkt-hero">
         <div>
           <p className="mkt-kicker">{content.hero.kicker}</p>
-          <h1>{content.hero.h1}</h1>
+          <h1 id="hero-title" className="brand-headline">
+            <span className="brand-accent">{content.hero.showcase.accent}</span>
+            {content.hero.showcase.after}
+          </h1>
           <p className="mkt-lead">{content.hero.lead}</p>
           <form
             className="hero-composer"
@@ -69,25 +72,14 @@ export default function LandingView() {
             ))}
           </div>
           <div className="mkt-cta-row">
-            <StartChatLink className="mkt-btn mkt-btn-primary mkt-cta-pulse" />
+            <StartChatLink className="mkt-btn mkt-btn-primary mkt-cta-pulse" label={content.hero.showcase.cta} />
             <Link className="mkt-btn mkt-btn-secondary" href="/pricing">
               {content.hero.secondaryCta}
             </Link>
             <BuyPlanButton planId="team" interval="month" className="mkt-btn mkt-btn-ghost" />
           </div>
         </div>
-
-        <div className="mkt-hero-panel">
-          <h2>{content.hero.panelTitle}</h2>
-          <p>{content.hero.panelBody}</p>
-          <ul className="mkt-check">
-            {ENGINEER_TOOLS.map((tool) => (
-              <li key={tool.id}>{toolLabel(locale, tool.id)}</li>
-            ))}
-          </ul>
-          <StartChatLink className="mkt-btn mkt-btn-primary" />
-          <SaudiBusinessBadge />
-        </div>
+        <ChatShowcase />
       </section>
 
       <section className="mkt-section" id="advisors">
@@ -184,7 +176,7 @@ export default function LandingView() {
         <h2>{content.closing.title}</h2>
         <p>{content.closing.body}</p>
         <div className="mkt-cta-row">
-          <StartChatLink className="mkt-btn mkt-btn-primary" />
+          <StartChatLink className="mkt-btn mkt-btn-primary" label={content.hero.showcase.cta} />
           <BuyPlanButton planId="team" interval="month" className="mkt-btn mkt-btn-secondary" />
         </div>
       </section>

@@ -42,7 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s | engineerit.ai",
     },
     description: meta.description,
-    applicationName: SITE_NAME,
+    applicationName: "engineer it",
     alternates: languageAlternates("/"),
     openGraph: {
       title: meta.title,
@@ -61,16 +61,23 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     icons: {
       icon: [
-        { url: "/eit.svg", type: "image/svg+xml" },
-        { url: "/favicon.png", type: "image/png" },
+        { url: "/favicon.png", type: "image/png", media: "(prefers-color-scheme: light)" },
+        { url: "/icon-192.png", sizes: "192x192", type: "image/png", media: "(prefers-color-scheme: light)" },
+        { url: "/icon-512.png", sizes: "512x512", type: "image/png", media: "(prefers-color-scheme: light)" },
+        { url: "/favicon-dark.png", type: "image/png", media: "(prefers-color-scheme: dark)" },
+        { url: "/icon-192-dark.png", sizes: "192x192", type: "image/png", media: "(prefers-color-scheme: dark)" },
+        { url: "/icon-512-dark.png", sizes: "512x512", type: "image/png", media: "(prefers-color-scheme: dark)" },
         { url: "/favicon.ico" },
       ],
       shortcut: "/favicon.png",
-      apple: "/apple-touch-icon.png",
+      apple: [
+        { url: "/apple-touch-icon.png", media: "(prefers-color-scheme: light)" },
+        { url: "/apple-touch-icon-dark.png", media: "(prefers-color-scheme: dark)" },
+      ],
     },
     appleWebApp: {
       capable: true,
-      title: "engineerit",
+      title: "engineer it",
       statusBarStyle: "default",
       startupImage: [
         { url: "/splash-se.png", media: "(device-width: 375px) and (device-height: 667px)" },
@@ -93,7 +100,11 @@ export default async function RootLayout({
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="engineer it" />
+        <link rel="icon" href="/favicon.png" type="image/png" media="(prefers-color-scheme: light)" />
+        <link rel="icon" href="/favicon-dark.png" type="image/png" media="(prefers-color-scheme: dark)" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon-dark.png" media="(prefers-color-scheme: dark)" />
         <script
           type="text/javascript"
           id="hs-script-loader"

@@ -397,6 +397,7 @@ export default function Page() {
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const openedThread = useRef(false);
   const homeQuerySent = useRef(false);
+  const toolApplied = useRef(false);
 
   useEffect(() => {
     const openDrawer = () => setIsSidebarOpenMobile(true);
@@ -594,6 +595,36 @@ export default function Page() {
     setInput((prev) => (prev ? `${prev}\n\n${template}` : template));
   }
 
+  function toggleDictation() {
+    const speech = window as Window & {
+      SpeechRecognition?: new () => SpeechRec;
+      webkitSpeechRecognition?: new () => SpeechRec;
+    };
+    const Ctor = speech.SpeechRecognition || speech.webkitSpeechRecognition;
+    if (!Ctor) return;
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const rec = new Ctor();
+    rec.lang = locale === "ar" ? "ar-SA" : "en-US";
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.onresult = (event) => {
+      const text = Array.from(event.results)
+        .map((row) => row[0]?.transcript || "")
+        .join(" ")
+        .trim();
+      if (text) setInput(text);
+    };
+    rec.onerror = () => setListening(false);
+    rec.onend = () => setListening(false);
+    recognitionRef.current = rec;
+    setListening(true);
+    rec.start();
+  }
+
   const handleEngineerToolClick = (toolId: ToolId) => {
     switch (toolId) {
       case "drawing":
@@ -774,6 +805,26 @@ export default function Page() {
     // Send the landing question once the plan and an empty thread are ready.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planReady, history.loading, thread?.id, thread?.owned, thread?.messages.length, sending]);
+
+  useEffect(() => {
+    if (toolApplied.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const tool = params.get("tool")?.trim();
+    if (!tool) return;
+    const prompt =
+      tool === "advisors"
+        ? s.chat.advisorPrompt
+        : ENGINEER_TOOLS.some((item) => item.id === tool)
+          ? s.chat.prompts[tool as ToolId]
+          : "";
+    if (!prompt) return;
+    toolApplied.current = true;
+    setInput((prev) => (prev ? `${prev}\n\n${prompt}` : prompt));
+    params.delete("tool");
+    const rest = params.toString();
+    window.history.replaceState(null, "", rest ? `${window.location.pathname}?${rest}` : window.location.pathname);
+    requestAnimationFrame(() => composerRef.current?.focus());
+  }, [s.chat.advisorPrompt, s.chat.prompts]);
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -1207,49 +1258,53 @@ export default function Page() {
                   className={"mic-btn" + (listening ? " is-live" : "")}
                   aria-label={listening ? s.chat.listening : s.chat.dictate}
                   aria-pressed={listening}
-                  onClick={() => {
-                    const speech = window as Window & {
-                      SpeechRecognition?: new () => SpeechRec;
-                      webkitSpeechRecognition?: new () => SpeechRec;
-                    };
-                    const Ctor = speech.SpeechRecognition || speech.webkitSpeechRecognition;
-                    if (!Ctor) return;
-                    if (listening) {
-                      recognitionRef.current?.stop();
-                      setListening(false);
-                      return;
-                    }
-                    const rec = new Ctor();
-                    rec.lang = locale === "ar" ? "ar-SA" : "en-US";
-                    rec.continuous = false;
-                    rec.interimResults = true;
-                    rec.onresult = (event) => {
-                      const text = Array.from(event.results)
-                        .map((row) => row[0]?.transcript || "")
-                        .join(" ")
-                        .trim();
-                      if (text) setInput(text);
-                    };
-                    rec.onerror = () => setListening(false);
-                    rec.onend = () => setListening(false);
-                    recognitionRef.current = rec;
-                    setListening(true);
-                    rec.start();
-                  }}
+                  onClick={toggleDictation}
                 >
-                  {listening ? "●" : "🎤"}
+                  {listening ? (
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <rect x="7" y="7" width="10" height="10" rx="2" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M12 19v3" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <rect x="9" y="2" width="6" height="13" rx="3" />
+                    </svg>
+                  )}
                 </button>
               )}
 
-              <button
-                type="button"
-                className="chat-input-send-btn"
-                disabled={Boolean(thread && !thread.owned) || sending || (!input.trim() && attachments.length === 0)}
-                onClick={() => void send()}
-                aria-label={s.chat.send}
-              >
-                ➤
-              </button>
+              {input.trim() || attachments.length > 0 || !micReady ? (
+                <button
+                  type="button"
+                  className="chat-input-send-btn"
+                  disabled={Boolean(thread && !thread.owned) || sending || (!input.trim() && attachments.length === 0)}
+                  onClick={() => void send()}
+                  aria-label={s.chat.send}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 19V5" />
+                    <path d="m5 12 7-7 7 7" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="chat-voice-btn"
+                  aria-label={listening ? s.chat.listening : s.chat.dictate}
+                  aria-pressed={listening}
+                  onClick={toggleDictation}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+                    <path d="M2 10v4" />
+                    <path d="M6 7v10" />
+                    <path d="M10 4v16" />
+                    <path d="M14 7v10" />
+                    <path d="M18 5v14" />
+                    <path d="M22 10v4" />
+                  </svg>
+                </button>
+              )}
             </div>
 
             <input

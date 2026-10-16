@@ -39,6 +39,20 @@ export type MarketingContent = {
     tertiaryCta: string;
     panelTitle: string;
     panelBody: string;
+    showcase: {
+      accent: string;
+      after: string;
+      subline: string;
+      cta: string;
+      plans: string;
+      advisorTitle: string;
+      advisorBenefit: string;
+      benefits: Record<EngineerToolId, string>;
+      previewLabel: string;
+      previewUser: string;
+      previewHead: readonly [string, string];
+      previewRows: readonly { item: string; note: string }[];
+    };
   };
   trust: {
     kicker: string;
