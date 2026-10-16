@@ -1406,14 +1406,19 @@ svg {
 
 .eit-chat {
   display: none;
-  flex: 0 0 48px;
-  width: 48px;
-  height: 48px;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
   line-height: 0;
   background: var(--brand);
+}
+
+.eit-chat .eit-mark {
+  height: 16px;
+  width: auto;
 }
 
 .eit-plate {
