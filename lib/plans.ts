@@ -1,18 +1,148 @@
 // lib/plans.ts
 
-export type PlanId = "assistant" | "engineer" | "professional" | "consultant";
+export type PlanId =
+  | "assistant"
+  | "engineer"
+  | "professional"
+  | "consultant"
+  | "team"
+  | "enterprise";
+
+export type FeatureTier = "assistant" | "engineer" | "professional" | "consultant";
+
+export type BillingInterval = "month" | "year";
+
+export type SelfServePlanId = "engineer" | "professional" | "consultant" | "team";
 
 export type Plan = {
   id: PlanId;
   name: string;
   shortName: string;
   tagline: string;
-  priceMonthly: string; // formatted for display
-  priceYearly: string;  // formatted for display (keep field for UI compatibility)
+  priceMonthly: string;
+  priceYearly: string;
   features: string[];
 };
 
-const SAR_SYMBOL = "﷼"; // Saudi Riyal symbol
+export const TEAM_INCLUDED_SEATS = 5;
+
+/** List prices in SAR. Annual is 10× monthly. Team and Enterprise amounts include VAT. */
+export const PLAN_AMOUNTS_SAR: Record<
+  SelfServePlanId,
+  { month: number; year: number }
+> = {
+  engineer: { month: 19, year: 190 },
+  professional: { month: 41, year: 410 },
+  consultant: { month: 79, year: 790 },
+  team: { month: 349, year: 3490 },
+};
+
+export const EXTRA_SEAT_SAR: { month: number; year: number } = {
+  month: 69,
+  year: 690,
+};
+
+export const ENTERPRISE_FROM_SAR: { month: number; year: number } = {
+  month: 2500,
+  year: 25000,
+};
+
+export const PLAN_LABELS: Record<PlanId, string> = {
+  assistant: "Assistant",
+  engineer: "Engineer",
+  professional: "Professional",
+  consultant: "Consultant",
+  team: "Team",
+  enterprise: "Enterprise",
+};
+
+export const PLAN_COLORS: Record<PlanId, string> = {
+  assistant: "#2563eb",
+  engineer: "#f97316",
+  professional: "#0f766e",
+  consultant: "#7c3aed",
+  team: "#0e7490",
+  enterprise: "#111827",
+};
+
+export function isPlanId(value: string | null | undefined): value is PlanId {
+  return (
+    value === "assistant" ||
+    value === "engineer" ||
+    value === "professional" ||
+    value === "consultant" ||
+    value === "team" ||
+    value === "enterprise"
+  );
+}
+
+/** Team and Enterprise use Consultant-tier product features. */
+export function featureTier(planId: PlanId | string | null | undefined): FeatureTier {
+  if (planId === "engineer" || planId === "professional" || planId === "consultant") {
+    return planId;
+  }
+  if (planId === "team" || planId === "enterprise") return "consultant";
+  return "assistant";
+}
+
+export function isSelfServePlan(planId: string | null | undefined): planId is SelfServePlanId {
+  return (
+    planId === "engineer" ||
+    planId === "professional" ||
+    planId === "consultant" ||
+    planId === "team"
+  );
+}
+
+export function periodDays(interval: BillingInterval) {
+  return interval === "year" ? 365 : 30;
+}
+
+export function formatSar(amount: number, interval?: BillingInterval) {
+  const formatted = amount.toLocaleString("en-US");
+  if (!interval) return `SAR ${formatted}`;
+  return `SAR ${formatted} / ${interval === "year" ? "year" : "month"}`;
+}
+
+export type PriceQuote = {
+  planId: SelfServePlanId;
+  interval: BillingInterval;
+  extraSeats: number;
+  seatLimit: number;
+  amountSar: number;
+  amountHalalas: number;
+  currency: "SAR";
+};
+
+export function quoteSelfServe(
+  planId: SelfServePlanId,
+  interval: BillingInterval,
+  extraSeats = 0
+): PriceQuote {
+  const seats = planId === "team" ? normalizeExtraSeats(extraSeats) : 0;
+  const base = PLAN_AMOUNTS_SAR[planId][interval];
+  const extra = planId === "team" ? seats * EXTRA_SEAT_SAR[interval] : 0;
+  const amountSar = base + extra;
+  return {
+    planId,
+    interval,
+    extraSeats: seats,
+    seatLimit: planId === "team" ? TEAM_INCLUDED_SEATS + seats : 1,
+    amountSar,
+    amountHalalas: amountSar * 100,
+    currency: "SAR",
+  };
+}
+
+export function normalizeExtraSeats(value: unknown) {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(200, Math.floor(n)));
+}
+
+export function parseInterval(value: unknown): BillingInterval {
+  return value === "year" ? "year" : "month";
+}
 
 export const PLANS: Plan[] = [
   {
@@ -21,7 +151,7 @@ export const PLANS: Plan[] = [
     shortName: "A",
     tagline: "Ideal for students and junior engineers.",
     priceMonthly: "Free",
-    priceYearly: "",
+    priceYearly: "Free",
     features: [
       "AI chat in all disciplines",
       "Understand simple PFD / P&ID / block diagrams",
@@ -33,8 +163,8 @@ export const PLANS: Plan[] = [
     name: "Engineer",
     shortName: "E",
     tagline: "For practicing engineers who need faster documentation.",
-    priceMonthly: `SAR 19 / month`,
-    priceYearly: "",
+    priceMonthly: formatSar(PLAN_AMOUNTS_SAR.engineer.month, "month"),
+    priceYearly: formatSar(PLAN_AMOUNTS_SAR.engineer.year, "year"),
     features: [
       "Everything in Assistant Engineer",
       "Analyze Word, Excel, PowerPoint Documents",
@@ -48,8 +178,8 @@ export const PLANS: Plan[] = [
     name: "Professional Engineer",
     shortName: "P",
     tagline: "For senior engineers and lead designers.",
-    priceMonthly: `SAR 41 / month`,
-    priceYearly: "",
+    priceMonthly: formatSar(PLAN_AMOUNTS_SAR.professional.month, "month"),
+    priceYearly: formatSar(PLAN_AMOUNTS_SAR.professional.year, "year"),
     features: [
       "Everything in Engineer",
       "Advanced designs, equations, formulas, design checks",
@@ -64,15 +194,46 @@ export const PLANS: Plan[] = [
     name: "Consultant Engineer",
     shortName: "C",
     tagline: "For consultants and firms managing full projects.",
-    priceMonthly: `SAR 79 / month`,
-    priceYearly: "",
+    priceMonthly: formatSar(PLAN_AMOUNTS_SAR.consultant.month, "month"),
+    priceYearly: formatSar(PLAN_AMOUNTS_SAR.consultant.year, "year"),
     features: [
       "Everything in Professional Engineer",
       "Equipment list & BOQ analysis",
       "Value Engineering outlines",
       "Resource & cost estimation & schedule check",
       "Project dashboards and portfolio overview",
-      "Export to pdf, word and Powerpoint"
+      "Export to pdf, word and Powerpoint",
+    ],
+  },
+  {
+    id: "team",
+    name: "Team",
+    shortName: "T",
+    tagline: "Consultant-tier access for a firm, billed on one subscription.",
+    priceMonthly: formatSar(PLAN_AMOUNTS_SAR.team.month, "month"),
+    priceYearly: formatSar(PLAN_AMOUNTS_SAR.team.year, "year"),
+    features: [
+      "Everything in Consultant Engineer",
+      "5 seats included",
+      `Extra seat ${formatSar(EXTRA_SEAT_SAR.month, "month")}`,
+      "Invite colleagues by email",
+      "VAT included",
+      "Access ends for the whole team if the subscription lapses",
+    ],
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    shortName: "N",
+    tagline: "Custom rollout for larger organizations. Invoice or bank transfer.",
+    priceMonthly: `From ${formatSar(ENTERPRISE_FROM_SAR.month, "month")}`,
+    priceYearly: `From ${formatSar(ENTERPRISE_FROM_SAR.year, "year")}`,
+    features: [
+      "Everything in Consultant Engineer",
+      "Custom seat count",
+      "Invoice or bank transfer",
+      "Activated by engineerit.ai after payment",
+      "VAT included",
     ],
   },
 ];

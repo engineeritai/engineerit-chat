@@ -12,6 +12,7 @@ export type ShellCopy = {
     profile: string;
     feedback: string;
     terms: string;
+    team: string;
   };
   footer: {
     blurb: string;
@@ -172,6 +173,8 @@ export type ShellCopy = {
     noBilling: string;
     billingNote: string;
     manage: string;
+    manageTeam: string;
+    teamLapsed: string;
     activity: string;
     chats: string;
     documents: string;
@@ -259,6 +262,7 @@ const en: ShellCopy = {
     profile: "My profile",
     feedback: "Feedback and complaints",
     terms: "User policy and agreement",
+    team: "Team",
   },
   footer: {
     blurb: "AI engineering assistant",
@@ -437,6 +441,9 @@ const en: ShellCopy = {
     noBilling: "No billing data found yet for this plan.",
     billingNote: "Plan changes are handled by engineerit.ai billing. Manage or upgrade from the subscription page.",
     manage: "Manage or upgrade subscription",
+    manageTeam: "Manage team seats",
+    teamLapsed:
+      "The team subscription has ended, so Consultant-tier access for this team is paused for every seat.",
     activity: "Activity",
     chats: "Total chats",
     documents: "Total uploaded documents",
@@ -525,6 +532,7 @@ const ar: ShellCopy = {
     profile: "ملفي",
     feedback: "الملاحظات والشكاوى",
     terms: "سياسة الاستخدام والاتفاق",
+    team: "الفريق",
   },
   footer: {
     blurb: "مساعد هندسي بالذكاء الاصطناعي",
@@ -700,6 +708,8 @@ const ar: ShellCopy = {
     noBilling: "لا توجد بيانات فوترة لهذه الباقة بعد.",
     billingNote: "تغيير الباقة يتم عبر فوترة engineerit.ai. أدر الباقة أو رقّها من صفحة الاشتراك.",
     manage: "إدارة الاشتراك أو ترقيته",
+    manageTeam: "إدارة مقاعد الفريق",
+    teamLapsed: "انتهى اشتراك الفريق، وتوقف وصول المستوى الاستشاري لكل المقاعد.",
     activity: "النشاط",
     chats: "إجمالي المحادثات",
     documents: "إجمالي المستندات المرفوعة",

@@ -29,4 +29,18 @@ export const plans = [
     price: 79,         // 79 SAR / month
     active: true,
   },
+  {
+    id: "team",
+    name: "Team",
+    description: "5 seats with Consultant-tier access. Extra seat SAR 69 / month.",
+    price: 349,
+    active: true,
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    description: "From SAR 2,500 / month. Contact sales.",
+    price: 2500,
+    active: true,
+  },
 ];

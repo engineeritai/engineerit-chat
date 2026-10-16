@@ -26,6 +26,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (planId !== "assistant" && planId !== "engineer" && planId !== "professional" && planId !== "consultant") {
+      return NextResponse.json(
+        { error: "Use checkout for this plan." },
+        { status: 400 }
+      );
+    }
+
     const now = new Date();
     const start = now.toISOString();
     const end =

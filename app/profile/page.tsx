@@ -8,6 +8,8 @@ import Link from "next/link";
 import { planById } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
+import { isPlanId, type PlanId } from "@/lib/plans";
+import { resolveEffectivePlan } from "@/lib/effectivePlan";
 
 type ProfileRow = {
   full_name: string | null;
@@ -23,8 +25,6 @@ type SubscriptionRow = {
   start_date: string | null;
   end_date: string | null;
 };
-
-type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 function formatDate(value: string | null | undefined, locale: Locale) {
   if (!value) return "-";
@@ -52,6 +52,7 @@ export default function ProfilePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
+  const [effectivePlan, setEffectivePlan] = useState<PlanId>("assistant");
   const [activeSub, setActiveSub] = useState<SubscriptionRow | null>(null);
   const [subHistory, setSubHistory] = useState<SubscriptionRow[]>([]);
   const [chatCount, setChatCount] = useState<number | null>(null);
@@ -83,40 +84,49 @@ export default function ProfilePage() {
         if (typeof window !== "undefined") {
           const params = new URLSearchParams(window.location.search);
           const status = params.get("status");
-          const planParam = params.get("plan") as PlanId | null;
+          const planParam = params.get("plan");
+          const intervalParam = params.get("interval") === "year" ? "year" : "month";
+          const extraSeatsParam = Number(params.get("extraSeats") || "0");
 
           const allowedPlans: PlanId[] = [
             "assistant",
             "engineer",
             "professional",
             "consultant",
+            "team",
           ];
 
-          if (status === "paid" && planParam && allowedPlans.includes(planParam)) {
+          if (
+            status === "paid" &&
+            planParam &&
+            isPlanId(planParam) &&
+            allowedPlans.includes(planParam)
+          ) {
             try {
               const res = await fetch("/api/subscription/select", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ plan: planParam, user_id: user.id }),
+                body: JSON.stringify({
+                  plan: planParam,
+                  user_id: user.id,
+                  interval: intervalParam,
+                  extraSeats: extraSeatsParam,
+                }),
               });
 
               const json = await res.json().catch(() => null);
 
               if (!res.ok) {
                 console.error("SUBSCRIPTION SELECT ROUTE ERROR:", json);
-                setErrorMsg(
-                  s.profile.paymentFailed
-                );
+                setErrorMsg(s.profile.paymentFailed);
               } else {
                 subscriptionTierOverride = planParam;
                 setInfoMsg(s.profile.paymentSaved);
+                try {
+                  const cleanUrl = window.location.pathname;
+                  window.history.replaceState({}, "", cleanUrl);
+                } catch {}
               }
-
-              // تنظيف الرابط من باراميترات الدفع
-              try {
-                const cleanUrl = window.location.pathname;
-                window.history.replaceState({}, "", cleanUrl);
-              } catch {}
             } catch (err) {
               console.error("SUBSCRIPTION SELECT ROUTE ERROR:", err);
               setErrorMsg(
@@ -179,6 +189,7 @@ export default function ProfilePage() {
           subscription_tier: subscriptionTier,
         });
         setFullName(initialFullName);
+        setEffectivePlan(await resolveEffectivePlan(supabase, user.id));
 
         // 3) Current subscription billing row
         if (subscriptionTier && subscriptionTier !== "assistant") {
@@ -351,15 +362,11 @@ export default function ProfilePage() {
     }
   }
 
-  const currentPlan = profile?.subscription_tier || "assistant";
-  const knownPlan =
-    currentPlan === "engineer" ||
-    currentPlan === "professional" ||
-    currentPlan === "consultant" ||
-    currentPlan === "assistant"
-      ? currentPlan
-      : "assistant";
-  const currentPlanLabel = planById(locale, knownPlan).name;
+  const storedPlan = profile?.subscription_tier || "assistant";
+  const currentPlan = effectivePlan || "assistant";
+  const currentPlanLabel = planById(locale, isPlanId(currentPlan) ? currentPlan : "assistant").name;
+  const teamLapsed =
+    (storedPlan === "team" || storedPlan === "enterprise") && currentPlan === "assistant";
 
   return (
     <div className="app-shell">
@@ -518,7 +525,11 @@ export default function ProfilePage() {
               {s.profile.currentPlan}: <strong>{currentPlanLabel}</strong>
             </p>
 
-            {currentPlan === "assistant" ? (
+            {teamLapsed ? (
+              <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
+                {s.profile.teamLapsed}
+              </p>
+            ) : currentPlan === "assistant" ? (
               <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
                 {s.profile.freeBody}
               </p>
@@ -567,11 +578,23 @@ export default function ProfilePage() {
               {s.profile.billingNote}
             </p>
 
-            <Link href="/subscription">
-              <button className="btn" type="button" style={{ marginTop: 16 }}>
-                {s.profile.manage}
-              </button>
-            </Link>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <Link href="/subscription">
+                <button className="btn" type="button" style={{ marginTop: 16 }}>
+                  {s.profile.manage}
+                </button>
+              </Link>
+              {(currentPlan === "team" ||
+                currentPlan === "enterprise" ||
+                storedPlan === "team" ||
+                storedPlan === "enterprise") && (
+                <Link href="/account/team">
+                  <button className="btn" type="button" style={{ marginTop: 16 }}>
+                    {s.profile.manageTeam}
+                  </button>
+                </Link>
+              )}
+            </div>
           </div>
 
           {/* Activity card */}
@@ -641,15 +664,7 @@ export default function ProfilePage() {
                     }}
                   >
                     <span>
-                      {planById(
-                        locale,
-                        row.plan === "engineer" ||
-                          row.plan === "professional" ||
-                          row.plan === "consultant" ||
-                          row.plan === "assistant"
-                          ? row.plan
-                          : "assistant"
-                      ).name}
+                      {planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}
                     </span>
                     <span>
                       {row.price !== null && row.currency

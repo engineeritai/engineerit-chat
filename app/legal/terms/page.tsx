@@ -62,7 +62,8 @@ export default function TermsPage() {
             <h2 className="section-heading">3. Accounts &amp; Subscriptions</h2>
             <p>
               Users may register and select a subscription level: Assistant
-              Engineer, Engineer, Professional Engineer, or Consultant Engineer.
+              Engineer, Engineer, Professional Engineer, Consultant Engineer, or
+              Team. Enterprise subscriptions are arranged with sales.
               Access to features and usage limits depends on the selected plan.
               We may change plan features or pricing from time to time; any such
               changes will be reflected on our pricing page.

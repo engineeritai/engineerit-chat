@@ -7,18 +7,11 @@ import LanguageToggle from "./LanguageToggle";
 import { planById } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import { supabase } from "@/lib/supabaseClient";
+import { PLAN_COLORS, PLAN_LABELS, type PlanId } from "@/lib/plans";
+import { resolveEffectivePlan } from "@/lib/effectivePlan";
 
 type HeaderProps = {
   onToggleSidebar: () => void;
-};
-
-type PlanId = "assistant" | "engineer" | "professional" | "consultant";
-
-const PLAN_COLORS: Record<PlanId, string> = {
-  assistant: "#2563eb",
-  engineer: "#f97316",
-  professional: "#0f766e",
-  consultant: "#7c3aed",
 };
 
 type AuthPanelMode = "login" | "forgot";
@@ -124,24 +117,27 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         (user.user_metadata?.picture as string | undefined) ??
         null;
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (token) {
+        await fetch("/api/team/claim", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null);
+      }
+
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("full_name, avatar_url, subscription_tier")
+        .select("full_name, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
 
       if (!error && profile) {
         if (profile.full_name) name = profile.full_name;
         if (profile.avatar_url) avatar = profile.avatar_url;
-        if (
-          profile.subscription_tier &&
-          ["assistant", "engineer", "professional", "consultant"].includes(
-            profile.subscription_tier
-          )
-        ) {
-          currentPlan = profile.subscription_tier as PlanId;
-        }
       }
+
+      currentPlan = await resolveEffectivePlan(supabase, user.id);
 
       setFullName(name || null);
       setAvatarUrl(avatar);
@@ -205,24 +201,25 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         (data.user.user_metadata?.picture as string | undefined) ??
         null;
 
+      if (data.session?.access_token) {
+        await fetch("/api/team/claim", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        }).catch(() => null);
+      }
+
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("full_name, avatar_url, subscription_tier")
+        .select("full_name, avatar_url")
         .eq("id", data.user.id)
         .maybeSingle();
 
       if (!profileError && profile) {
         if (profile.full_name) name = profile.full_name;
         if (profile.avatar_url) avatar = profile.avatar_url;
-        if (
-          profile.subscription_tier &&
-          ["assistant", "engineer", "professional", "consultant"].includes(
-            profile.subscription_tier
-          )
-        ) {
-          currentPlan = profile.subscription_tier as PlanId;
-        }
       }
+
+      currentPlan = await resolveEffectivePlan(supabase, data.user.id);
 
       setFullName(name || null);
       setAvatarUrl(avatar);
@@ -234,7 +231,17 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
       setLoginPassword("");
       setForgotMsg(null);
 
-      router.push("/profile");
+      let nextPath = "/profile";
+      try {
+        const stored = window.localStorage.getItem("engineerit_post_auth_next");
+        if (stored) {
+          window.localStorage.removeItem("engineerit_post_auth_next");
+          nextPath = stored.startsWith("/") && !stored.startsWith("//") ? stored : "/profile";
+        }
+      } catch {
+        /* ignore */
+      }
+      router.push(nextPath);
     } catch (err) {
       console.error(err);
       setLoginError(s.header.genericError);
@@ -733,6 +740,14 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
                 <button type="button" onClick={() => goTo("/register")} style={menuItemStyle}>
                   {s.header.plansRegistration}
+                </button>
+
+                <button type="button" onClick={() => goTo("/pricing")} style={menuItemStyle}>
+                  Pricing
+                </button>
+
+                <button type="button" onClick={() => goTo("/account/team")} style={menuItemStyle}>
+                  Team
                 </button>
 
                 <button type="button" onClick={() => goTo("/subscription")} style={menuItemStyle}>

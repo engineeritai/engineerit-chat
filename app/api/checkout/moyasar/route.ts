@@ -1,49 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  PLAN_LABELS,
+  isSelfServePlan,
+  normalizeExtraSeats,
+  parseInterval,
+  quoteSelfServe,
+  type SelfServePlanId,
+} from "@/lib/plans";
 
 export const runtime = "nodejs";
 
-type PlanId = "engineer" | "professional" | "consultant";
-
-const PLAN_CONFIG: Record<
-  PlanId,
-  {
-    amount: number;
-    label: string;
-    description: string;
-  }
-> = {
-  engineer: {
-    amount: 19 * 100,
-    label: "Engineer",
-    description:
-      "engineerit.ai Engineer plan (SAR 19 monthly)",
-  },
-  professional: {
-    amount: 41 * 100,
-    label: "Professional",
-    description:
-      "engineerit.ai Professional plan (SAR 41 monthly)",
-  },
-  consultant: {
-    amount: 79 * 100,
-    label: "Consultant",
-    description:
-      "engineerit.ai Consultant plan (SAR 79 monthly)",
-  },
-};
-
 function getAppBaseUrl(req: NextRequest) {
-  // للإنتاج: استخدم متغير بيئة (Vercel)
   const fromEnv = process.env.NEXT_PUBLIC_APP_URL;
   if (fromEnv) return fromEnv.replace(/\/$/, "");
-
-  // للتجارب على localhost
   const url = req.nextUrl;
   return `${url.protocol}//${url.host}`.replace(/\/$/, "");
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const body = (await req.json().catch(() => null)) as
+      | { planId?: string; interval?: string; extraSeats?: number }
+      | null;
+
+    const planId = body?.planId;
+    if (!planId || !isSelfServePlan(planId)) {
+      return NextResponse.json(
+        { error: "Invalid or missing planId." },
+        { status: 400 }
+      );
+    }
+
     const secretKey = process.env.MOYASAR_SECRET_KEY;
 
     if (!secretKey) {
@@ -53,31 +40,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = (await req.json().catch(() => null)) as
-      | { planId?: PlanId }
-      | null;
-
-    const planId = body?.planId;
-
-    if (!planId || !PLAN_CONFIG[planId]) {
-      return NextResponse.json(
-        { error: "Invalid or missing planId." },
-        { status: 400 }
-      );
-    }
-
-    const { amount, label, description } = PLAN_CONFIG[planId];
+    const interval = parseInterval(body?.interval);
+    const quote = quoteSelfServe(planId as SelfServePlanId, interval, normalizeExtraSeats(body?.extraSeats));
+    const label = PLAN_LABELS[quote.planId];
+    const periodLabel = interval === "year" ? "yearly" : "monthly";
+    const seatNote =
+      quote.planId === "team"
+        ? `, ${quote.seatLimit} seats`
+        : "";
+    const description = `engineerit.ai ${label} plan (SAR ${quote.amountSar} ${periodLabel}${seatNote})`;
 
     const baseUrl = getAppBaseUrl(req);
+    const successUrl =
+      `${baseUrl}/profile?status=paid&plan=${quote.planId}` +
+      `&interval=${quote.interval}&extraSeats=${quote.extraSeats}`;
+    const backUrl = `${baseUrl}/pricing`;
 
-    // ⬇⬇⬇ التعديل المهم هنا ⬇⬇⬇
-    const successUrl = `${baseUrl}/profile?status=paid&plan=${planId}`;
-    // ⬆⬆⬆ بدلاً من /payment/success ⬆⬆⬆
-
-    const backUrl = `${baseUrl}/subscription`;
-
-    const authHeader =
-      "Basic " + Buffer.from(`${secretKey}:`).toString("base64");
+    const authHeader = "Basic " + Buffer.from(`${secretKey}:`).toString("base64");
 
     const response = await fetch("https://api.moyasar.com/v1/invoices", {
       method: "POST",
@@ -87,14 +66,18 @@ export async function POST(req: NextRequest) {
         Accept: "application/json",
       },
       body: JSON.stringify({
-        amount,
+        amount: quote.amountHalalas,
         currency: "SAR",
         description,
         success_url: successUrl,
         back_url: backUrl,
         metadata: {
-          plan_id: planId,
+          plan_id: quote.planId,
           plan_label: label,
+          billing_interval: quote.interval,
+          extra_seats: String(quote.extraSeats),
+          seat_limit: String(quote.seatLimit),
+          amount_sar: String(quote.amountSar),
           source: "engineerit.ai",
         },
       }),
