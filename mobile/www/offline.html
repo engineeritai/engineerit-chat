@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Offline · engineerit AI</title>
+    <link rel="stylesheet" href="css/shell.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <img class="logo" src="img/logo.png" alt="engineerit.ai" />
+      <h1>You’re offline</h1>
+      <p>engineerit AI needs a connection to open your account and engineering chats.</p>
+      <p class="ar" lang="ar">لا يوجد اتصال بالإنترنت. يحتاج التطبيق إلى شبكة لفتح حسابك والمحادثات الهندسية.</p>
+      <button type="button" id="retry">Try again</button>
+    </main>
+    <script>
+      document.getElementById("retry").addEventListener("click", function () {
+        window.location.replace("https://engineerit.ai/");
+      });
+    </script>
+  </body>
+</html>

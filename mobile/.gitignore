@@ -1,0 +1,35 @@
+node_modules/
+dist/
+.DS_Store
+
+# Signing material and machine-local SDK files. Never commit these.
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+GoogleService-Info.plist
+*.mobileprovision
+*.p12
+*.p8
+*.cer
+secrets/
+
+# Android build output
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/captures/
+android/.idea/
+android/*.iml
+android/app/*.iml
+
+# iOS build output
+ios/App/Pods/
+ios/App/build/
+ios/App/DerivedData/
+ios/DerivedData/
+ios/App/App/public/
+*.xcuserstate
+xcuserdata/
+*.xcarchive
