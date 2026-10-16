@@ -10,12 +10,12 @@ export default function LanguageToggle({
   compact?: boolean;
 }) {
   const { locale, setLocale } = useLocale();
-  const english = compact ? "EN" : locale === "ar" ? "الإنجليزية" : "English";
-  const arabic = compact ? "AR" : locale === "ar" ? "العربية" : "Arabic";
+  const english = "EN";
+  const arabic = "AR";
 
   return (
     <div
-      className={`lang-toggle ${className}`.trim()}
+      className={`lang-toggle${compact ? " is-compact" : ""} ${className}`.trim()}
       dir="ltr"
       role="group"
       aria-label={locale === "ar" ? "اللغة" : "Language"}

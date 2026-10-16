@@ -3,22 +3,17 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import AccountMenu from "@/app/components/marketing/AccountMenu";
-import LanguageToggle from "@/app/components/LanguageToggle";
+import { PlanSummary } from "@/app/components/marketing/AccountMenu";
+import { useAccount } from "@/app/components/marketing/AccountState";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { getMarketingContent } from "@/lib/marketing";
 import { useMessages } from "@/lib/useMessages";
-
-const ANCHORS = [
-  ["disciplines", "disciplines"],
-  ["tools", "tools"],
-  ["teams", "teams"],
-] as const;
 
 export default function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname() || "/";
   const { locale } = useLocale();
   const { shell } = useMessages();
+  const account = useAccount();
   const content = getMarketingContent(locale);
   const startX = useRef<number | null>(null);
 
@@ -36,34 +31,25 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
     };
   }, [open, onClose]);
 
-  const links = [
+  const links: { href: string; label: string; active: boolean; hash?: string }[] = [
+    { href: "/", label: shell.nav.home, active: pathname === "/" },
     { href: "/chat", label: shell.nav.chat, active: pathname === "/chat" },
-    ...ANCHORS.filter(([, key]) => key !== "teams").map(([id, key]) => ({
-      href: `/#${id}`,
-      hash: id,
-      label: content.nav[key],
-      active: false,
-    })),
-    { href: "/how-it-works", label: content.nav.how, active: pathname === "/how-it-works" },
-    { href: "/guide", label: content.nav.guide, active: pathname === "/guide" },
-    ...ANCHORS.filter(([, key]) => key === "teams").map(([id, key]) => ({
-      href: `/#${id}`,
-      hash: id,
-      label: content.nav[key],
-      active: false,
-    })),
     {
       href: "/advisors",
       label: content.nav.advisors,
       active: pathname === "/advisors" || pathname.startsWith("/advisors/"),
     },
+    { href: "/how-it-works", label: content.nav.how, active: pathname === "/how-it-works" },
+    { href: "/guide", label: content.nav.guide, active: pathname === "/guide" },
+    { href: "/#tools", label: content.nav.tools, hash: "tools", active: false },
+    { href: "/#disciplines", label: content.nav.disciplines, hash: "disciplines", active: false },
     { href: "/pricing", label: content.nav.pricing, active: pathname === "/pricing" },
     { href: "/faq", label: content.nav.faq, active: pathname === "/faq" },
-    { href: "/register", label: shell.nav.register, active: pathname === "/register" },
     { href: "/profile", label: shell.nav.profile, active: pathname === "/profile" },
-    { href: "/account/team", label: shell.nav.team, active: pathname.startsWith("/account/team") },
     { href: "/feedback", label: shell.nav.feedback, active: pathname === "/feedback" },
-    { href: "/legal/terms", label: shell.nav.terms, active: pathname.startsWith("/legal/") },
+    { href: "/legal/terms", label: shell.nav.terms, active: pathname === "/legal/terms" },
+    { href: "/legal/privacy", label: content.footer.privacy, active: pathname === "/legal/privacy" },
+    { href: "/legal/refund", label: content.footer.refunds, active: pathname === "/legal/refund" },
   ];
 
   function onNavClick(event: React.MouseEvent<HTMLAnchorElement>, hash?: string) {
@@ -110,15 +96,24 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
               href={link.href}
               className={link.active ? "app-side-link is-active" : "app-side-link"}
               aria-current={link.active ? "page" : undefined}
-              onClick={(event) => onNavClick(event, "hash" in link ? link.hash : undefined)}
+              onClick={(event) => onNavClick(event, link.hash)}
             >
               {link.label}
             </Link>
           ))}
         </nav>
         <div className="app-side-foot">
-          <LanguageToggle compact />
-          <AccountMenu presentation="row" />
+          <PlanSummary onNavigate={onClose} />
+          {account.ready && !account.signedIn ? (
+            <div className="acct-guest acct-guest-side">
+              <Link className="mkt-header-link" href="/login" onClick={onClose}>
+                {shell.header.signIn}
+              </Link>
+              <Link className="mkt-header-link is-accent" href="/register" onClick={onClose}>
+                {shell.header.register}
+              </Link>
+            </div>
+          ) : null}
         </div>
       </aside>
     </>

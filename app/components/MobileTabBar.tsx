@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import EitMark from "@/app/components/marketing/EitMark";
 import { useLocale } from "@/app/components/LocaleProvider";
 
 const TABS = [
@@ -25,9 +26,17 @@ export default function MobileTabBar() {
             : tab.id === "advisors"
               ? pathname === "/advisors" || pathname.startsWith("/advisors/")
               : pathname === tab.href;
+        const label = ar ? tab.ar : tab.en;
         return (
-          <Link key={tab.id} href={tab.href} className={active ? "is-active" : undefined} aria-current={active ? "page" : undefined}>
-            <span>{ar ? tab.ar : tab.en}</span>
+          <Link
+            key={tab.id}
+            href={tab.href}
+            className={active ? "is-active" : undefined}
+            aria-current={active ? "page" : undefined}
+            aria-label={label}
+          >
+            {tab.id === "chat" ? <EitMark size={28} /> : null}
+            <span>{label}</span>
           </Link>
         );
       })}

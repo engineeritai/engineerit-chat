@@ -105,6 +105,13 @@ export default function ProfilePage() {
   const [country, setCountry] = useState("");
   const [discipline, setDiscipline] = useState("General");
   const [tab, setTab] = useState<"overview" | "billing" | "topics">("overview");
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    if (requested === "billing" || requested === "topics" || requested === "overview") {
+      setTab(requested);
+    }
+  }, []);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [topics, setTopics] = useState<TopicRow[]>([]);
   const [files, setFiles] = useState<FileRow[]>([]);

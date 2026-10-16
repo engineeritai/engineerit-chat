@@ -61,6 +61,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     icons: {
       icon: [
+        { url: "/eit.svg", type: "image/svg+xml" },
         { url: "/favicon.png", type: "image/png" },
         { url: "/favicon.ico" },
       ],

@@ -62,7 +62,7 @@ for (const lang of ["en", "ar"] as const) {
       await expect(page.locator("a[href='/#tools']").first()).toBeVisible();
       await expect(page.locator("a[href='/how-it-works']").first()).toBeVisible();
       await expect(page.locator("a[href='/guide']").first()).toBeVisible();
-      await expect(page.locator(".mkt-nav a[href='/how-it-works']")).toBeVisible();
+      await expect(page.locator(".app-side a[href='/how-it-works']")).toBeVisible();
       await expect(page.locator("a[href='/#teams']").first()).toBeVisible();
       await expect(page.locator("a[href='/faq']").first()).toBeVisible();
       await expect(page.locator(".app-side-brand")).toBeVisible();

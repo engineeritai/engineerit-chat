@@ -47,6 +47,12 @@ export type ShellCopy = {
     plansRegistration: string;
     subscribe: string;
     logout: string;
+    daysLeft: string;
+    dayLeft: string;
+    upgrade: string;
+    renew: string;
+    invoicesLink: string;
+    topicsLink: string;
     resetPassword: string;
     newPassword: string;
     confirmPassword: string;
@@ -412,6 +418,12 @@ const en: ShellCopy = {
     plansRegistration: "Plans and registration",
     subscribe: "Subscribe",
     logout: "Log out",
+    daysLeft: "{days} days left",
+    dayLeft: "1 day left",
+    upgrade: "Upgrade",
+    renew: "Renew",
+    invoicesLink: "Subscription and invoices",
+    topicsLink: "Topics and files",
     resetPassword: "Reset password",
     newPassword: "New password",
     confirmPassword: "Confirm password",
@@ -795,6 +807,12 @@ const ar: ShellCopy = {
     plansRegistration: "الباقات والتسجيل",
     subscribe: "اشترك الآن",
     logout: "خروج",
+    daysLeft: "{days} يوماً متبقية",
+    dayLeft: "يوم واحد متبقٍ",
+    upgrade: "ترقية",
+    renew: "تجديد",
+    invoicesLink: "الاشتراك والفواتير",
+    topicsLink: "المواضيع والملفات",
     resetPassword: "إعادة تعيين كلمة المرور",
     newPassword: "كلمة المرور الجديدة",
     confirmPassword: "تأكيد كلمة المرور",
