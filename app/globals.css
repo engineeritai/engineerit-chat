@@ -319,7 +319,7 @@ body {
 }
 
 .checkout-layout {
-  max-width: 480px;
+  max-width: 560px;
 }
 
 .checkout-summary {
@@ -481,16 +481,25 @@ body {
 }
 
 .checkout-phone {
-  border: 1px solid #dbe4ee;
+  border: 1px solid #e5e7eb;
   background: #f8fafc;
-  border-radius: 20px;
-  padding: 18px 16px 16px;
-  margin-top: 8px;
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin-top: 18px;
   display: grid;
   justify-items: center;
   gap: 12px;
   text-align: center;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+.checkout-phone summary {
+  width: 100%;
+  cursor: pointer;
+  list-style: none;
+}
+
+.checkout-phone summary::-webkit-details-marker {
+  display: none;
 }
 
 .checkout-phone-title {
@@ -524,8 +533,8 @@ body {
 }
 
 .checkout-phone img {
-  width: 240px;
-  height: 240px;
+  width: 180px;
+  height: 180px;
   background: #ffffff;
   border-radius: 16px;
   padding: 8px;
@@ -536,17 +545,120 @@ body {
   max-width: 100%;
 }
 
-@media (min-width: 900px) {
-  .checkout-layout {
-    max-width: 1080px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 360px;
-    gap: 28px;
-    align-items: start;
+.pay-success {
+  max-width: 560px;
+}
+
+.pay-success-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.pay-success-banner h1,
+.checkout-error h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.pay-success-banner h1 {
+  color: #166534;
+}
+
+.pay-success-banner p,
+.checkout-error p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.pay-success-banner p {
+  color: #3f6212;
+}
+
+.pay-success-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.pay-success-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px;
+  background: #ffffff;
+  display: grid;
+  gap: 10px;
+}
+
+.pay-success-card h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.pay-success-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.pay-success-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.pay-success-card dt {
+  color: #6b7280;
+}
+
+.pay-success-card dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: end;
+}
+
+.pay-success-download {
+  width: 100%;
+  min-height: 44px;
+}
+
+.pay-success-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.pay-success .btn,
+.pay-success-actions .btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+}
+
+@media (max-width: 640px) {
+  .pay-success-actions {
+    flex-direction: column;
   }
 
-  .checkout-phone {
-    margin-top: 0;
+  .pay-success-actions .btn {
+    width: 100%;
   }
 }
 

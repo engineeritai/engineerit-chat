@@ -22,8 +22,28 @@ export function readSamsungPayServiceId(env: Record<string, string | undefined> 
 export const MOYASAR_CARD_NETWORKS = ["mada", "visa", "mastercard", "amex", "unionpay"] as const;
 
 /**
+ * Apple's JS SDK draws the native Apple Pay button in Safari and the scan-with-iPhone
+ * QR in Chrome and Edge. Do not skip it when window.ApplePaySession is missing.
+ */
+export const APPLE_PAY_SDK_URL = "https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js";
+
+/** Samsung's web SDK. Loaded only when the merchant service id is set. */
+export const SAMSUNG_PAY_SDK_URL = "https://img.mpay.samsung.com/gsmpi/sdk/samsungpay_web_sdk.js";
+
+/** The phone QR is a closed extra for STC Pay and mada. It does not replace the wallet buttons. */
+export function phonePayStartsOpen() {
+  return false;
+}
+
+/** Saving a card for auto-renew is optional and off until the customer checks it. */
+export function saveCardStartsChecked() {
+  return false;
+}
+
+/**
  * Wallets are listed before the card so supported devices show them first.
- * Samsung Pay is omitted when the service id is empty.
+ * Apple Pay is always included. Samsung Pay is omitted when the service id is empty.
+ * There is no Safari / ApplePaySession gate.
  */
 export function checkoutPaymentMethods(samsungServiceId: string, wallets = true) {
   if (!wallets) return ["creditcard"];
