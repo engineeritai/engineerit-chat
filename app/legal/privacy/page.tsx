@@ -1,4 +1,11 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Privacy Policy",
+  description: "Privacy Policy for the engineerit.ai platform.",
+  path: "/legal/privacy",
+});
 
 export default function PrivacyPage() {
   return (
