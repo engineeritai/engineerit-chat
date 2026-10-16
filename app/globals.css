@@ -366,6 +366,14 @@ body {
   font-weight: 800;
 }
 
+.checkout-vat-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #9ca3af;
+}
+
 .checkout-networks {
   display: flex;
   flex-wrap: wrap;

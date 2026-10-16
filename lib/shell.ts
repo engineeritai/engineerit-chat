@@ -267,6 +267,7 @@ export type ShellCopy = {
     copyLink: string;
     copied: string;
     networks: string;
+    vatNote: string;
   };
   subscription: {
     title: string;
@@ -611,6 +612,7 @@ const en: ShellCopy = {
     copyLink: "Copy phone link",
     copied: "Link copied",
     networks: "Cards",
+    vatNote: "VAT as applicable",
   },
   subscription: {
     title: "Plans and subscription",
@@ -952,6 +954,7 @@ const ar: ShellCopy = {
     copyLink: "نسخ رابط الجوال",
     copied: "تم نسخ الرابط",
     networks: "البطاقات",
+    vatNote: "ضريبة القيمة المضافة حسب الأنظمة",
   },
   subscription: {
     title: "الباقات والاشتراك",

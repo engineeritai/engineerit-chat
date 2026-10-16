@@ -191,6 +191,7 @@ export default function CheckoutPage() {
                         <dd className="checkout-amount">{amount}</dd>
                       </div>
                     </dl>
+                    <p className="checkout-vat-note">{s.checkout.vatNote}</p>
                   </section>
                   <p className="page-subtitle">{s.checkout.walletReminder}</p>
                   <ul className="checkout-networks" aria-label={s.checkout.networks}>
