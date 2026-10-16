@@ -6,7 +6,7 @@ import { PLANS, type BillingInterval } from "@/lib/plans";
 import { getMarketingContent, type Locale } from "@/lib/marketing";
 import { featuresForLocale, localizedPlan } from "@/lib/labels";
 import { assertIndividualPlanPrices, planPriceLabel } from "@/lib/pricingDisplay";
-import BuyPlanButton, { ResumeCheckout } from "@/app/components/BuyPlanButton";
+import BuyPlanButton from "@/app/components/BuyPlanButton";
 
 assertIndividualPlanPrices();
 
@@ -23,7 +23,6 @@ export default function PricingBoard() {
 
   return (
     <div className="mkt-pricing">
-      <ResumeCheckout onError={setErrorMsg} />
       <div className="mkt-pricing-top">
         <div
           className="mkt-toggle"
@@ -53,7 +52,11 @@ export default function PricingBoard() {
         <p className="mkt-muted">{content.pricing.usdNote}</p>
       </div>
 
-      {errorMsg && <p className="mkt-note">{errorMsg}</p>}
+      {errorMsg && (
+        <p className="mkt-note" role="alert" style={{ color: "#b91c1c" }}>
+          {errorMsg}
+        </p>
+      )}
 
       <h2>{content.pricing.individualTitle}</h2>
       <p className="mkt-intro">{content.pricing.individualIntro}</p>

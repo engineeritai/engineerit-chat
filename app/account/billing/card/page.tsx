@@ -73,6 +73,10 @@ function CardForm() {
               callbackUrl={`${origin}/account/billing/card`}
               publishableKey={key}
               metadata={{ purpose: "card_update", user_id: userId }}
+              saveCard
+              onSaveCardRejected={() =>
+                setMessage("Saving the card is unavailable until Moyasar tokenization is enabled.")
+              }
             />
           )}
         </div>

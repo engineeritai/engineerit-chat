@@ -24,6 +24,7 @@ export default function CheckoutPage() {
   const { locale, shell: s } = useMessages();
   const [sidebar, setSidebar] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [saveRejected, setSaveRejected] = useState(false);
   const [checkout, setCheckout] = useState<Checkout | null>(null);
   const [publishableKey, setPublishableKey] = useState("");
   const [callbackUrl, setCallbackUrl] = useState("");
@@ -84,23 +85,35 @@ export default function CheckoutPage() {
                 {checkout.seat_limit && checkout.seat_limit > 1
                   ? ` · ${checkout.seat_limit} ${s.checkout.seats}`
                   : ""}
-                . {s.checkout.savedCard}
+                .
               </p>
               <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 16 }}>
-                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={consent && !saveRejected}
+                  onChange={(e) => {
+                    setSaveRejected(false);
+                    setConsent(e.target.checked);
+                  }}
+                />
                 <span>{s.checkout.consent}</span>
               </label>
-              {consent && publishableKey && callbackUrl ? (
+              <p className="page-subtitle">
+                {saveRejected ? s.checkout.saveRejected : consent ? s.checkout.savedCard : s.checkout.payOnce}
+              </p>
+              {publishableKey && callbackUrl ? (
                 <MoyasarCardForm
                   amountHalalas={Number(checkout.amount_halalas)}
                   description={`engineerit.ai ${label}`}
                   callbackUrl={callbackUrl}
                   publishableKey={publishableKey}
                   metadata={metadata}
+                  saveCard={consent && !saveRejected}
+                  onSaveCardRejected={() => setSaveRejected(true)}
                 />
-              ) : consent ? (
+              ) : (
                 <p>{s.checkout.missingKey}</p>
-              ) : null}
+              )}
             </>
           )}
         </div>

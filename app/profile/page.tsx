@@ -8,7 +8,6 @@ import { localizedPlan, planById, formatMoney } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
 import { PLANS, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
-import PlanCatalog from "@/app/components/PlanCatalog";
 import { displayFeatures, formatSar, formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
 import { downloadInvoicePdf } from "@/lib/invoiceDownload";
@@ -701,10 +700,6 @@ export default function ProfilePage() {
             <p style={{ fontSize: 14, color: "#6b7280" }}>
               {s.profile.billingNote}
             </p>
-            <div style={{ marginTop: 16 }}>
-              <PlanCatalog heading={s.subscription.title} />
-            </div>
-
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {billing && isSelfServePlan(billing.plan) && (
                 <button

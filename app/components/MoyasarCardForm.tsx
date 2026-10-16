@@ -1,7 +1,8 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { isSaveCardRejection } from "@/lib/moyasarEnv";
 
 type Props = {
   amountHalalas: number;
@@ -9,6 +10,8 @@ type Props = {
   callbackUrl: string;
   publishableKey: string;
   metadata: Record<string, string>;
+  saveCard: boolean;
+  onSaveCardRejected?: () => void;
 };
 
 export default function MoyasarCardForm({
@@ -17,8 +20,12 @@ export default function MoyasarCardForm({
   callbackUrl,
   publishableKey,
   metadata,
+  saveCard,
+  onSaveCardRejected,
 }: Props) {
   const [ready, setReady] = useState(false);
+  const onRejected = useRef(onSaveCardRejected);
+  onRejected.current = onSaveCardRejected;
 
   useEffect(() => {
     if (!ready || !publishableKey) return;
@@ -26,6 +33,7 @@ export default function MoyasarCardForm({
     if (!moyasar) return;
     const node = document.querySelector(".mysr-form");
     if (node) node.innerHTML = "";
+    let reported = false;
     moyasar.init({
       element: ".mysr-form",
       amount: amountHalalas,
@@ -36,9 +44,14 @@ export default function MoyasarCardForm({
       supported_networks: ["mada", "visa", "mastercard", "amex"],
       methods: ["creditcard"],
       metadata,
-      credit_card: { save_card: true },
+      ...(saveCard ? { credit_card: { save_card: true } } : {}),
+      on_failure: (error: unknown) => {
+        if (!saveCard || reported || !isSaveCardRejection(error)) return;
+        reported = true;
+        onRejected.current?.();
+      },
     });
-  }, [ready, amountHalalas, description, callbackUrl, publishableKey, metadata]);
+  }, [ready, amountHalalas, description, callbackUrl, publishableKey, metadata, saveCard]);
 
   return (
     <>

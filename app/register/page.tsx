@@ -6,12 +6,11 @@ import MarketingShell from "../components/marketing/MarketingShell";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import PlanCatalog from "../components/PlanCatalog";
 import { safeNextPath } from "@/lib/safeNext";
 import { useMessages } from "@/lib/useMessages";
 
 export default function RegisterPage() {
-  const { locale, shell: s } = useMessages();
+  const { shell: s } = useMessages();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -299,21 +298,10 @@ export default function RegisterPage() {
             <p style={{ fontSize: 14, color: "#374151", margin: 0 }}>
               {s.auth.afterRegister}
             </p>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => router.push("/pricing")}
-              style={{ alignSelf: "flex-start", marginTop: 4 }}
-            >
+            <Link href="/pricing" className="btn" style={{ alignSelf: "flex-start", marginTop: 4 }}>
               {s.auth.viewPlans}
-            </button>
-          </div>
-
-          <div className="card" style={{ marginTop: 8 }}>
-            <PlanCatalog heading={s.auth.plansOverview} />
-            <p style={{ fontSize: 12, color: "#6b7280", marginTop: 16, marginBottom: 0 }}>
-              {s.auth.upgradeAnytime}
-            </p>
+            </Link>
+            <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>{s.auth.upgradeAnytime}</p>
           </div>
         </div>
     </MarketingShell>

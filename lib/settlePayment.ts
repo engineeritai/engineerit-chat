@@ -74,11 +74,19 @@ export async function settleCheckout(
             .eq("user_id", row.user_id)
             .in("status", ["active", "past_due"])
             .maybeSingle();
-          await saveCardFromPayment(admin, {
+          const savedCardId = await saveCardFromPayment(admin, {
             userId: row.user_id,
             payment,
             billingSubscriptionId: (billing?.id as string | undefined) || null,
           });
+          if (!savedCardId) {
+            const nowIso = new Date().toISOString();
+            await admin
+              .from("billing_subscriptions")
+              .update({ cancel_at_period_end: true, canceled_at: nowIso, updated_at: nowIso })
+              .eq("user_id", row.user_id)
+              .in("status", ["active", "past_due"]);
+          }
         }
         if (row.lead_id) {
           const { error: leadErr } = await admin

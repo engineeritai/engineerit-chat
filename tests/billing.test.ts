@@ -35,6 +35,7 @@ import {
   formatUsdApprox,
   planPriceLabel,
 } from "../lib/pricingDisplay";
+import { isSaveCardRejection, moyasarKeysError, readMoyasarKeys } from "../lib/moyasarEnv";
 import { safeNextPath } from "../lib/safeNext";
 import {
   assessPaidInvoice,
@@ -495,5 +496,24 @@ describe("admin and redirects", () => {
     assert.equal(safeNextPath("/team/join?token=abc"), "/team/join?token=abc");
     assert.equal(safeNextPath("https://evil.example"), "/profile");
     assert.equal(safeNextPath("//evil.example"), "/profile");
+    assert.equal(safeNextPath("/checkout/continue"), "/checkout/continue");
+  });
+
+  it("names the Moyasar keys the checkout route reads at runtime", () => {
+    const missing = readMoyasarKeys({});
+    assert.deepEqual(missing.missing, ["MOYASAR_SECRET_KEY", "NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY"]);
+    assert.match(moyasarKeysError(missing.missing), /MOYASAR_SECRET_KEY and NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY/);
+    const ready = readMoyasarKeys({
+      MOYASAR_SECRET_KEY: " sk_live_x ",
+      NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY: "pk_live_y",
+    });
+    assert.deepEqual(ready.missing, []);
+    assert.equal(ready.secret, "sk_live_x");
+  });
+
+  it("treats a tokenization rejection as a reason to pay without saving the card", () => {
+    assert.equal(isSaveCardRejection("Tokenization is not enabled"), true);
+    assert.equal(isSaveCardRejection({ message: "Invalid source.save_card" }), true);
+    assert.equal(isSaveCardRejection("Insufficient funds"), false);
   });
 });
