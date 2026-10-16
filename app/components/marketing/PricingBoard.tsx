@@ -167,7 +167,7 @@ export default function PricingBoard() {
           </a>
         </article>
 
-        <article className="mkt-card mkt-plan">
+        <article className="mkt-card mkt-plan" id="enterprise">
           <h3>{locale === "ar" ? "مؤسسة" : ENTERPRISE_PLAN.name}</h3>
           <p className="mkt-muted">{content.pricing.notInApp}</p>
           <div className="mkt-price">

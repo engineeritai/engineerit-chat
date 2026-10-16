@@ -11,7 +11,9 @@ export const en: MarketingContent = {
     tools: "Tools",
     how: "How it works",
     teams: "For teams",
+    advisors: "AI Advisors",
     pricing: "Pricing",
+    faq: "Questions",
     login: "Login",
     openChat: "Open chat",
   },
@@ -30,14 +32,14 @@ export const en: MarketingContent = {
   trust: {
     kicker: "Verified store",
     title: "Listed with the Saudi Business Center",
-    body: "engineerit.ai publishes the same verification details already shown in the product.",
+    body: "engineerit.ai is registered with the Saudi Business Center. Confirm the number below on the official site.",
     authLabel: "Auth No.",
     verify: "Verify via Saudi Business Center",
   },
   disciplines: {
     title: "Disciplines your consultancy already staffs",
     intro:
-      "The chat assistant uses the same discipline list as the product. Choose one before you ask so the answer stays inside that field.",
+      "Choose the discipline your question belongs to so the answer stays in that field.",
     summaries: {
       General:
         "Cross-discipline questions when the work does not sit in a single department.",
@@ -72,7 +74,7 @@ export const en: MarketingContent = {
   tools: {
     title: "Seven engineer tools",
     intro:
-      "Each tool inserts a starting brief in the chat. Which tools you can run depends on the individual plan, the same way it does in the app.",
+      "Each tool starts a brief in the chat. Your plan decides which tools you can run.",
     summaries: {
       drawing:
         "Explain and analyze an engineering drawing, PFD, P&ID, or block diagram.",
@@ -132,7 +134,7 @@ export const en: MarketingContent = {
   teams: {
     title: "For teams and consultancies",
     intro:
-      "Individual plans are for one person. A team pilot is for a firm that wants shared projects, an admin, and seats for the people doing the work. Nothing here is charged in the app.",
+      "Individual plans are for one person. A team pilot is for a firm that wants shared projects, an admin, and seats for the people doing the work.",
     consultantTier: "Consultant-tier features for {seats} seats",
     teamBullet:
       "Team is {teamMonthly} per month for {seats} seats. An extra seat is {extraMonthly} per month, with shared projects and an admin.",
@@ -177,7 +179,7 @@ export const en: MarketingContent = {
       {
         question: "How do Team, Enterprise, and annual billing get paid?",
         answer:
-          "Individual monthly plans stay on the prices shown at registration and are paid in the app. Team, Enterprise, and annual billing are arranged by email for now. Use Request a team pilot or contact us. They are not sent to the card checkout.",
+          "Monthly individual plans are paid when you subscribe. Team, Enterprise, and annual billing are arranged by email. Use Request a team pilot or contact us.",
       },
       {
         question: "How do I change the interface language?",
@@ -187,7 +189,7 @@ export const en: MarketingContent = {
       {
         question: "Where is the company verification?",
         answer:
-          "The Saudi Business Center auth number on this page is the same one shown inside the product. Use the verification link to check it on the official inquiry site.",
+          "Our Saudi Business Center registration number is on this page. Use the verification link to confirm it on the official site.",
       },
     ],
   },
@@ -210,18 +212,18 @@ export const en: MarketingContent = {
   pricing: {
     title: "Plans and pricing",
     intro:
-      "Individual plans use the same names and monthly prices as registration. Team, Enterprise, and annual billing are quoted here and arranged with us.",
+      "Assistant Engineer, Engineer, Professional Engineer, and Consultant Engineer are monthly plans. Team, Enterprise, and annual billing are arranged with us.",
     monthly: "Monthly",
     annual: "Annual",
     twoMonthsFree: "2 months free",
     annualExplainer:
-      "Annual price is 10 times the monthly price. Team, Enterprise, and annual plans are not charged in the app — the button opens an email.",
+      "Annual price is ten times the monthly price, which is two months free. Team, Enterprise, and annual plans are arranged by email.",
     usdNote: "US dollar amounts are approximate, at SAR 3.75 per USD 1.",
     vatNote: "Prices include VAT.",
     individualTitle: "Individual plans",
-    individualIntro: "Same plans and monthly prices as registration.",
+    individualIntro: "Assistant Engineer, Engineer, Professional Engineer, and Consultant Engineer.",
     firmTitle: "Team and Enterprise",
-    firmIntro: "For consultancies. Contact us to start. No checkout in the app.",
+    firmIntro: "For consultancies. Contact us to get started.",
     perMonth: "/ month",
     perYear: "/ year",
     from: "From",
@@ -242,7 +244,7 @@ export const en: MarketingContent = {
     customStandards: "Custom standards",
     contactScope: "Scope agreed when you contact us",
     featuresTitle: "Included",
-    notInApp: "Not charged in the app.",
+    notInApp: "Arranged with our team.",
     seeChat: "Open chat",
   },
 };

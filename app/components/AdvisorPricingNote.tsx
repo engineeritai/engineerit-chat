@@ -9,7 +9,7 @@ function fill(template: string, values: Record<string, string | number>) {
 }
 
 export default function AdvisorPricingNote() {
-  const { m } = useMessages();
+  const { locale, m } = useMessages();
 
   const priceNote = (planId: AdvisorPlanId) => {
     if (planId === "team") {
@@ -20,7 +20,9 @@ export default function AdvisorPricingNote() {
       });
     }
     if (planId === "enterprise") {
-      return fill(m.pricing.enterprisePrice, { from: ENTERPRISE_PLAN.monthlySarFrom.toLocaleString("en-US") });
+      return fill(m.pricing.enterprisePrice, {
+        from: ENTERPRISE_PLAN.monthlySarFrom.toLocaleString(locale === "ar" ? "ar-SA" : "en-US"),
+      });
     }
     return null;
   };

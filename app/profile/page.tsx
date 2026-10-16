@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, ChangeEvent } from "react";
-import Header from "../components/Header";
-import NavSidebar from "../components/NavSidebar";
+import MarketingShell from "../components/marketing/MarketingShell";
 import { supabase } from "../../lib/supabaseClient";
 import Link from "next/link";
 import { planById } from "@/lib/labels";
@@ -39,7 +38,6 @@ function formatDate(value: string | null | undefined, locale: Locale) {
 
 export default function ProfilePage() {
   const { locale, shell: s } = useMessages();
-  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [fullName, setFullName] = useState("");
@@ -362,15 +360,7 @@ export default function ProfilePage() {
   const currentPlanLabel = planById(locale, knownPlan).name;
 
   return (
-    <div className="app-shell">
-      <NavSidebar
-        isMobileOpen={isSidebarOpenMobile}
-        onCloseMobile={() => setIsSidebarOpenMobile(false)}
-      />
-
-      <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
-
+    <MarketingShell>
         <div className="page-wrap">
           <h1 className="page-title">{s.profile.title}</h1>
 
@@ -444,7 +434,9 @@ export default function ProfilePage() {
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
                   ) : (
-                    (fullName?.trim()[0] || "E").toUpperCase()
+                    (fullName?.trim()[0] || (locale === "ar" ? "م" : "E")).toLocaleUpperCase(
+                      locale === "ar" ? "ar" : "en"
+                    )
                   )}
                 </div>
 
@@ -670,7 +662,6 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </MarketingShell>
   );
 }

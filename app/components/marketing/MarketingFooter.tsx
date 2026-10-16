@@ -26,7 +26,13 @@ export default function MarketingFooter() {
           <Link href="/legal/terms">{content.footer.policyLink}</Link>.
         </p>
         <p>
+          <Link href="/advisors">{content.nav.advisors}</Link>
+          {" · "}
           <Link href="/pricing">{content.nav.pricing}</Link>
+          {" · "}
+          <Link href="/pricing#enterprise">{content.pricing.firmTitle}</Link>
+          {" · "}
+          <Link href="/faq">{content.nav.faq}</Link>
           {" · "}
           <Link href="/chat">{content.nav.openChat}</Link>
           {" · "}

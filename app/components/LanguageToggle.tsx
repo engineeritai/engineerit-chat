@@ -13,13 +13,13 @@ export default function LanguageToggle({ className = "" }: { className?: string 
       aria-label={locale === "ar" ? "اللغة" : "Language"}
     >
       <button type="button" aria-pressed={locale === "en"} onClick={() => setLocale("en")}>
-        EN
+        {locale === "ar" ? "الإنجليزية" : "English"}
       </button>
       <span className="lang-sep" aria-hidden="true">
         |
       </span>
       <button type="button" aria-pressed={locale === "ar"} onClick={() => setLocale("ar")}>
-        العربية
+        {locale === "ar" ? "العربية" : "Arabic"}
       </button>
     </div>
   );

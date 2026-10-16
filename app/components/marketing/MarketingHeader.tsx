@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import AccountMenu from "@/app/components/marketing/AccountMenu";
 import LanguageToggle from "@/app/components/LanguageToggle";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { getMarketingContent } from "@/lib/marketing";
@@ -10,7 +11,7 @@ import { getMarketingContent } from "@/lib/marketing";
 export default function MarketingHeader() {
   const { locale } = useLocale();
   const content = getMarketingContent(locale);
-  const pathname = usePathname();
+  const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
   const onHome = pathname === "/";
 
@@ -18,20 +19,28 @@ export default function MarketingHeader() {
     {
       href: onHome ? "#disciplines" : "/#disciplines",
       label: content.nav.disciplines,
+      active: false,
     },
-    { href: onHome ? "#tools" : "/#tools", label: content.nav.tools },
+    { href: onHome ? "#tools" : "/#tools", label: content.nav.tools, active: false },
     {
       href: onHome ? "#how-it-works" : "/#how-it-works",
       label: content.nav.how,
+      active: false,
     },
-    { href: onHome ? "#teams" : "/#teams", label: content.nav.teams },
-    { href: "/pricing", label: content.nav.pricing },
+    {
+      href: "/advisors",
+      label: content.nav.advisors,
+      active: pathname === "/advisors" || pathname.startsWith("/advisors/"),
+    },
+    { href: onHome ? "#teams" : "/#teams", label: content.nav.teams, active: false },
+    { href: "/pricing", label: content.nav.pricing, active: pathname === "/pricing" },
+    { href: "/faq", label: content.nav.faq, active: pathname === "/faq" },
   ];
 
   return (
     <header className="mkt-header">
       <div className="mkt-header-inner">
-        <Link href="/" className="brand" aria-label="engineerit.ai home">
+        <Link href="/" className="brand" aria-label="engineerit.ai">
           <span className="word">
             <span className="engineer">engineer</span>
             <span className="it">it</span>
@@ -40,11 +49,7 @@ export default function MarketingHeader() {
 
         <nav className="mkt-nav" aria-label={content.nav.primary}>
           {links.map((link) => (
-            <Link
-              key={link.label}
-              href={link.href}
-              className={pathname === "/pricing" && link.href === "/pricing" ? "mkt-nav-active" : undefined}
-            >
+            <Link key={link.href + link.label} href={link.href} className={link.active ? "mkt-nav-active" : undefined}>
               {link.label}
             </Link>
           ))}
@@ -52,9 +57,7 @@ export default function MarketingHeader() {
 
         <div className="mkt-actions">
           <LanguageToggle />
-          <Link className="mkt-btn mkt-btn-secondary mkt-login" href="/login">
-            {content.nav.login}
-          </Link>
+          <AccountMenu />
           <Link className="mkt-btn mkt-btn-primary" href="/chat">
             {content.nav.openChat}
           </Link>
@@ -76,13 +79,11 @@ export default function MarketingHeader() {
         <nav className="mkt-nav-mobile" aria-label={content.nav.primary}>
           <LanguageToggle className="lang-toggle-block" />
           {links.map((link) => (
-            <Link key={link.label} href={link.href} onClick={() => setOpen(false)}>
+            <Link key={link.href + link.label} href={link.href} onClick={() => setOpen(false)}>
               {link.label}
             </Link>
           ))}
-          <Link href="/login" onClick={() => setOpen(false)}>
-            {content.nav.login}
-          </Link>
+          <AccountMenu compact />
           <Link href="/chat" onClick={() => setOpen(false)}>
             {content.nav.openChat}
           </Link>
