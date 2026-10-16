@@ -38,7 +38,7 @@ export async function renderInvoicePdf(doc: InvoiceDocument) {
   page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 8, width: PAGE_WIDTH, height: 8, color: brand });
 
   const rtl = doc.locale === "ar";
-  let y = PAGE_HEIGHT - 36;
+  let y = PAGE_HEIGHT - 28;
   y = await drawHeader(pdf, page, fonts, doc, rtl, y);
   y = drawBillTo(page, fonts, doc, rtl, y);
   y = drawRows(page, fonts, doc, rtl, y);
@@ -57,24 +57,24 @@ async function drawHeader(
   rtl: boolean,
   y: number
 ) {
+  const logoHeight = 40;
   let logoW = 0;
   try {
     const bytes = readFileSync(join(process.cwd(), "assets/invoice-logo.png"));
     const logo = await pdf.embedPng(bytes);
-    const height = 34;
-    logoW = Math.min(150, logo.width * (height / logo.height));
+    logoW = logo.width * (logoHeight / logo.height);
     const x = rtl ? PAGE_WIDTH - MARGIN - logoW : MARGIN;
-    page.drawImage(logo, { x, y: y - height + 8, width: logoW, height });
+    page.drawImage(logo, { x, y: y - logoHeight, width: logoW, height: logoHeight });
   } catch {
     logoW = 0;
   }
 
-  const brandX = rtl ? MARGIN : MARGIN + (logoW ? logoW + 12 : 0);
-  const brandW = rtl ? CONTENT_WIDTH - logoW - 12 : CONTENT_WIDTH - logoW - 12;
-  drawLine(page, fonts, "engineerit.ai", y - 4, brandX, Math.max(80, brandW), rtl ? "right" : "left", 13, ink, true);
-  drawLine(page, fonts, "info@engineerit.ai", y - 22, brandX, Math.max(80, brandW), rtl ? "right" : "left", 10, muted, false);
+  const brandX = rtl ? MARGIN : MARGIN + (logoW ? logoW + 14 : 0);
+  const brandW = Math.max(120, CONTENT_WIDTH - logoW - 14);
+  drawLine(page, fonts, "engineerit.ai", y - 14, brandX, brandW, rtl ? "right" : "left", 13, ink, true);
+  drawLine(page, fonts, "info@engineerit.ai", y - 30, brandX, brandW, rtl ? "right" : "left", 10, muted, false);
 
-  y -= 58;
+  y -= logoHeight + 22;
   drawLine(page, fonts, doc.title, y, MARGIN, CONTENT_WIDTH, rtl ? "right" : "left", 22, ink, true);
   y -= 26;
   const meta = `${doc.invoiceNumber}  |  ${doc.issuedOn}`;
@@ -170,7 +170,7 @@ function drawLine(
 ) {
   const safe = sanitize(text, fonts);
   if (!safe) return;
-  const direction = baseDirection(safe);
+  const direction = lineDirection(safe);
   const parts = runs(safe);
   const widthOf = (part: Run) => fontFor(fonts, part, strong).widthOfTextAtSize(part.text, size);
   const total = parts.reduce((sum, part) => sum + widthOf(part), 0);
@@ -211,39 +211,48 @@ function fontFor(fonts: Fonts, part: Run, strong: boolean) {
   return strong ? fonts.strong : fonts.text;
 }
 
+/** Left-to-right text as it is drawn. Amounts that start with a digit stay "41.00 ر.س". */
+export function invoiceLineVisual(text: string) {
+  const parts = runs(text);
+  const ordered = lineDirection(text) === "rtl" ? [...parts].reverse() : parts;
+  return ordered.map((part) => part.text).join("");
+}
+
 function runs(text: string): Run[] {
   const parts: Run[] = [];
   let buf = "";
-  let arabic = false;
+  let kind: "ar" | "lat" | "sp" | null = null;
   const flush = () => {
-    if (!buf) return;
-    parts.push({ text: buf, arabic });
+    if (!buf || !kind) return;
+    parts.push({ text: buf, arabic: kind === "ar" });
     buf = "";
   };
   for (const ch of text) {
-    const next = isArabicScript(ch);
-    if (!buf) {
-      buf = ch;
-      arabic = next;
-      continue;
-    }
-    if (next === arabic) {
+    const next = isSpace(ch) ? "sp" : isArabicScript(ch) ? "ar" : "lat";
+    if (kind === null || next === kind) {
       buf += ch;
+      kind = next;
       continue;
     }
     flush();
     buf = ch;
-    arabic = next;
+    kind = next;
   }
   flush();
   return parts;
 }
 
-function baseDirection(text: string) {
+function lineDirection(text: string) {
   for (const ch of text) {
+    if (isSpace(ch)) continue;
     if (isArabicScript(ch)) return "rtl" as const;
+    return "ltr" as const;
   }
   return "ltr" as const;
+}
+
+function isSpace(ch: string) {
+  return ch === " " || ch === "\u00a0";
 }
 
 function isArabicScript(ch: string) {

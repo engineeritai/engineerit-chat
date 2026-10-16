@@ -59,7 +59,7 @@ const METHOD_EN: Record<string, string> = {
 };
 
 const METHOD_AR: Record<string, string> = {
-  creditcard: "بطاقة (مدى، فيزا، ماستركارد، أمريكان إكسبريس)",
+  creditcard: "بطاقة — مدى، فيزا، ماستركارد، أمريكان إكسبريس",
   applepay: "Apple Pay",
   samsungpay: "Samsung Pay",
   stcpay: "STC Pay",
@@ -102,7 +102,7 @@ export function buildInvoiceDocument(input: InvoiceDraft): InvoiceDocument {
   const ar = locale === "ar";
   const plan = planLabel(input.plan, locale);
   const cycle = input.interval === "year" ? (ar ? "سنوي" : "Annual") : ar ? "شهري" : "Monthly";
-  const amount = ar ? `${formatAmount(input.amountSar)} ر.س` : formatSar(input.amountSar);
+  const amount = ar ? formatArabicAmount(input.amountSar) : formatSar(input.amountSar);
   const mode = receiptVatMode(input.vatNumber, input.zatcaFlag);
   const vat = mode.kind === "vat" ? vatFromInclusive(input.amountSar) : null;
   const seats =
@@ -126,8 +126,8 @@ export function buildInvoiceDocument(input: InvoiceDraft): InvoiceDocument {
   if (mode.kind === "vat" && vat) {
     if (ar) {
       notes.push("المبلغ شامل ضريبة القيمة المضافة.");
-      notes.push(`الصافي: ${formatAmount(vat.net)} ر.س`);
-      notes.push(`ضريبة القيمة المضافة ${(vat.rate * 100).toFixed(0)}٪: ${formatAmount(vat.vat)} ر.س`);
+      notes.push(`الصافي: ${formatArabicAmount(vat.net)}`);
+      notes.push(`ضريبة القيمة المضافة ${(vat.rate * 100).toFixed(0)}٪: ${formatArabicAmount(vat.vat)}`);
       notes.push(`الرقم الضريبي: ${mode.vatNumber}`);
     } else {
       notes.push("This amount is VAT inclusive.");
@@ -157,6 +157,11 @@ export function buildInvoiceDocument(input: InvoiceDraft): InvoiceDocument {
 
 function formatAmount(amount: number) {
   return amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** Number, then a space, then the riyal sign. The PDF draws this left to right. */
+export function formatArabicAmount(amount: number) {
+  return `${formatAmount(amount)} ر.س`;
 }
 
 function formatWhen(value: string | null | undefined) {
