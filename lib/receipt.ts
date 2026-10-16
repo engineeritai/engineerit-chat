@@ -1,4 +1,5 @@
 import { PLAN_LABELS, formatSar, type BillingInterval, type PlanId } from "@/lib/plans";
+import { vatFromInclusive, zatcaInvoicesEnabled } from "@/lib/billingCycle";
 import { escapeHtml, getMailer } from "@/lib/mail";
 
 export type ReceiptInput = {
@@ -22,11 +23,19 @@ export function buildReceipt(input: ReceiptInput) {
       })
     : null;
 
+  const vat = vatFromInclusive(input.amountSar);
+  const zatca = zatcaInvoicesEnabled(process.env.ZATCA_INVOICES_ENABLED);
+  const zatcaLine = zatca
+    ? "ZATCA tax invoice: VAT fields are ready. The e-invoice number is issued when the ZATCA connection is turned on."
+    : "ZATCA tax invoice: not issued yet.";
   const lines = [
     `Plan: ${planLabel}`,
     `Period: ${period}`,
     `Amount: ${amount}`,
     "This amount is VAT inclusive.",
+    `Net: ${formatSar(vat.net)}`,
+    `VAT ${(vat.rate * 100).toFixed(0)}%: ${formatSar(vat.vat)}`,
+    zatcaLine,
   ];
   if (input.seats && input.seats > 0 && (input.plan === "team" || input.plan === "enterprise")) {
     lines.push(`Seats: ${input.seats}`);
@@ -44,6 +53,9 @@ export function buildReceipt(input: ReceiptInput) {
     <p><strong>Period:</strong> ${escapeHtml(period)}</p>
     <p><strong>Amount:</strong> ${escapeHtml(amount)}</p>
     <p><strong>This amount is VAT inclusive.</strong></p>
+    <p><strong>Net:</strong> ${escapeHtml(formatSar(vat.net))}</p>
+    <p><strong>VAT ${(vat.rate * 100).toFixed(0)}%:</strong> ${escapeHtml(formatSar(vat.vat))}</p>
+    <p>${escapeHtml(zatcaLine)}</p>
     ${
       input.seats && (input.plan === "team" || input.plan === "enterprise")
         ? `<p><strong>Seats:</strong> ${input.seats}</p>`

@@ -12,7 +12,7 @@ export type FeatureTier = "assistant" | "engineer" | "professional" | "consultan
 
 export type BillingInterval = "month" | "year";
 
-export type SelfServePlanId = "engineer" | "professional" | "consultant" | "team";
+export type SelfServePlanId = "engineer" | "professional" | "consultant" | "team" | "enterprise";
 
 export type Plan = {
   id: PlanId;
@@ -25,6 +25,7 @@ export type Plan = {
 };
 
 export const TEAM_INCLUDED_SEATS = 5;
+export const ENTERPRISE_INCLUDED_SEATS = 10;
 
 /** List prices in SAR. Annual is 10× monthly. Team and Enterprise amounts include VAT. */
 export const PLAN_AMOUNTS_SAR: Record<
@@ -35,11 +36,18 @@ export const PLAN_AMOUNTS_SAR: Record<
   professional: { month: 41, year: 410 },
   consultant: { month: 79, year: 790 },
   team: { month: 349, year: 3490 },
+  enterprise: { month: 2500, year: 25000 },
 };
 
 export const EXTRA_SEAT_SAR: { month: number; year: number } = {
   month: 69,
   year: 690,
+};
+
+/** Published Enterprise add-on. Annual is 10× monthly, same as every other price. */
+export const ENTERPRISE_EXTRA_SEAT_SAR: { month: number; year: number } = {
+  month: 199,
+  year: 1990,
 };
 
 export const ENTERPRISE_FROM_SAR: { month: number; year: number } = {
@@ -92,8 +100,19 @@ export function isSelfServePlan(planId: string | null | undefined): planId is Se
     planId === "engineer" ||
     planId === "professional" ||
     planId === "consultant" ||
-    planId === "team"
+    planId === "team" ||
+    planId === "enterprise"
   );
+}
+
+export function includedSeats(planId: SelfServePlanId) {
+  if (planId === "team") return TEAM_INCLUDED_SEATS;
+  if (planId === "enterprise") return ENTERPRISE_INCLUDED_SEATS;
+  return 1;
+}
+
+export function extraSeatPrice(planId: SelfServePlanId) {
+  return planId === "enterprise" ? ENTERPRISE_EXTRA_SEAT_SAR : EXTRA_SEAT_SAR;
 }
 
 export function periodDays(interval: BillingInterval) {
@@ -121,15 +140,16 @@ export function quoteSelfServe(
   interval: BillingInterval,
   extraSeats = 0
 ): PriceQuote {
-  const seats = planId === "team" ? normalizeExtraSeats(extraSeats) : 0;
+  const seated = planId === "team" || planId === "enterprise";
+  const seats = seated ? normalizeExtraSeats(extraSeats) : 0;
   const base = PLAN_AMOUNTS_SAR[planId][interval];
-  const extra = planId === "team" ? seats * EXTRA_SEAT_SAR[interval] : 0;
+  const extra = seated ? seats * extraSeatPrice(planId)[interval] : 0;
   const amountSar = base + extra;
   return {
     planId,
     interval,
     extraSeats: seats,
-    seatLimit: planId === "team" ? TEAM_INCLUDED_SEATS + seats : 1,
+    seatLimit: seated ? includedSeats(planId) + seats : 1,
     amountSar,
     amountHalalas: amountSar * 100,
     currency: "SAR",
@@ -217,8 +237,9 @@ export const PLANS: Plan[] = [
     priceYearly: formatSar(PLAN_AMOUNTS_SAR.team.year, "year"),
     features: [
       "Everything in Consultant Engineer",
-      "5 seats included",
+      `${TEAM_INCLUDED_SEATS} seats included`,
       `Extra seat ${formatSar(EXTRA_SEAT_SAR.month, "month")}`,
+      "Renews automatically until you cancel",
       "Invite colleagues by email",
       "VAT included",
       "Access ends for the whole team if the subscription lapses",
@@ -229,14 +250,14 @@ export const PLANS: Plan[] = [
     id: "enterprise",
     name: "Enterprise",
     shortName: "N",
-    tagline: "Custom rollout. Pay the quoted amount with Moyasar.",
-    priceMonthly: `From ${formatSar(ENTERPRISE_FROM_SAR.month, "month")}`,
-    priceYearly: `From ${formatSar(ENTERPRISE_FROM_SAR.year, "year")}`,
+    tagline: "Consultant-tier access for a larger firm, billed on one subscription.",
+    priceMonthly: formatSar(ENTERPRISE_FROM_SAR.month, "month"),
+    priceYearly: formatSar(ENTERPRISE_FROM_SAR.year, "year"),
     features: [
       "Everything in Consultant Engineer",
-      "Custom seat count",
-      "Moyasar payment link for the quoted amount",
-      "Access starts after Moyasar confirms payment",
+      `${ENTERPRISE_INCLUDED_SEATS} seats included`,
+      `Extra seat ${formatSar(ENTERPRISE_EXTRA_SEAT_SAR.month, "month")}`,
+      "Renews automatically until you cancel",
       "VAT included",
       AI_ADVISORS_FEATURE,
     ],

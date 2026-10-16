@@ -22,7 +22,7 @@ type Props = {
 
 export function buyLabel(planId: PlanId, verb: "buy" | "upgrade" = "buy") {
   if (planId === "assistant") return "Start free";
-  if (planId === "enterprise") return "Enterprise";
+  if (planId === "enterprise") return verb === "upgrade" ? "Upgrade to Enterprise" : "Buy Enterprise";
   if (planId === "team") return verb === "upgrade" ? "Upgrade to Team" : "Buy Team";
   return verb === "upgrade" ? "Upgrade" : "Buy";
 }
@@ -63,14 +63,6 @@ export default function BuyPlanButton({
   if (planId === "assistant") {
     return (
       <Link href="/register" className={className} style={style}>
-        {label}
-      </Link>
-    );
-  }
-
-  if (planId === "enterprise") {
-    return (
-      <Link href="/enterprise" className={className} style={style}>
         {label}
       </Link>
     );

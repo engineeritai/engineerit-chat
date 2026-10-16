@@ -1,13 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  ENTERPRISE_FROM_SAR,
-  periodDays,
-  quoteSelfServe,
-  type BillingInterval,
-  type SelfServePlanId,
-} from "@/lib/plans";
+import { syncBillingSubscription } from "@/lib/billingAccount";
+import { periodDays, quoteSelfServe, type BillingInterval, type SelfServePlanId } from "@/lib/plans";
 
-export type RecordedPlan = SelfServePlanId | "enterprise";
+export type RecordedPlan = SelfServePlanId;
 
 type RecordArgs = {
   userId: string;
@@ -31,23 +26,16 @@ export async function recordPlanPurchase(admin: SupabaseClient, args: RecordArgs
   const nowIso = now.toISOString();
   const interval = args.interval;
 
-  const quoted =
-    args.plan === "enterprise"
-      ? null
-      : quoteSelfServe(args.plan, interval, args.extraSeats ?? 0);
+  const quoted = quoteSelfServe(args.plan, interval, args.extraSeats ?? 0);
 
-  const extraSeats = quoted?.extraSeats ?? 0;
+  const extraSeats = quoted.extraSeats;
   const seatLimit =
-    args.seatLimit && args.seatLimit > 0
-      ? Math.floor(args.seatLimit)
-      : quoted?.seatLimit ?? 1;
+    args.seatLimit && args.seatLimit > 0 ? Math.floor(args.seatLimit) : quoted.seatLimit;
 
   const amountSar =
     typeof args.amountSar === "number" && Number.isFinite(args.amountSar)
       ? args.amountSar
-      : quoted
-        ? quoted.amountSar
-        : ENTERPRISE_FROM_SAR[interval];
+      : quoted.amountSar;
 
   const endDate = args.periodEnd
     ? new Date(args.periodEnd)
@@ -73,27 +61,44 @@ export async function recordPlanPurchase(admin: SupabaseClient, args: RecordArgs
     const recent = recentRows?.[0];
 
     if (recent?.id) {
+      const healedEnd = (recent.end_date as string | null) || endIso;
+      let healedTeam: string | null = null;
       if (args.plan === "team" || args.plan === "enterprise") {
-        await ensureTeam(admin, {
+        healedTeam = await ensureTeam(admin, {
           userId: args.userId,
           email: args.email,
           plan: args.plan,
           interval,
           extraSeats,
           seatLimit,
-          periodEnd: (recent.end_date as string | null) || endIso,
+          periodEnd: healedEnd,
           company: args.company,
           nowIso,
         });
       }
-      return { ok: true as const, idempotent: true, endDate: recent.end_date as string };
+      await syncBillingSubscription(admin, {
+        userId: args.userId,
+        email: args.email?.trim().toLowerCase() || null,
+        plan: args.plan,
+        interval,
+        extraSeats,
+        seatLimit,
+        amountSar,
+        amountHalalas: Math.round(amountSar * 100),
+        periodStart: nowIso,
+        periodEnd: healedEnd,
+        teamId: healedTeam,
+      });
+      return { ok: true as const, idempotent: true, endDate: healedEnd };
     }
   }
 
+  const email = args.email?.trim().toLowerCase() || null;
+  let teamId: string | null = null;
   if (args.plan === "team" || args.plan === "enterprise") {
-    await ensureTeam(admin, {
+    teamId = await ensureTeam(admin, {
       userId: args.userId,
-      email: args.email,
+      email,
       plan: args.plan,
       interval,
       extraSeats,
@@ -143,6 +148,20 @@ export async function recordPlanPurchase(admin: SupabaseClient, args: RecordArgs
     throw new Error(insertErr.message || "Failed to write billing record.");
   }
 
+  await syncBillingSubscription(admin, {
+    userId: args.userId,
+    email,
+    plan: args.plan,
+    interval,
+    extraSeats,
+    seatLimit,
+    amountSar,
+    amountHalalas: Math.round(amountSar * 100),
+    periodStart: nowIso,
+    periodEnd: endIso,
+    teamId,
+  });
+
   return { ok: true as const, idempotent: false, endDate: endIso, amountSar, seatLimit };
 }
 
@@ -185,7 +204,7 @@ async function ensureTeam(
     name,
     plan: args.plan,
     seat_limit: args.seatLimit,
-    extra_seats: args.plan === "team" ? args.extraSeats : 0,
+    extra_seats: args.extraSeats,
     billing_interval: args.interval,
     status: "active",
     current_period_end: args.periodEnd,

@@ -132,7 +132,7 @@ export const en: MarketingContent = {
   teams: {
     title: "Plans and pricing",
     intro:
-      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing is 10 times the monthly price. Buy Team through Moyasar. Enterprise continues to a Moyasar invoice for the quoted amount. Consultant Engineer, Team, and Enterprise include AI Advisors (coming soon).",
+      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing is 10 times the monthly price. Team and Enterprise are bought through Moyasar and renew automatically. Consultant Engineer, Team, and Enterprise include AI Advisors (coming soon).",
   },
   faq: {
     title: "Questions consultancies ask",
@@ -156,7 +156,7 @@ export const en: MarketingContent = {
       {
         question: "How do Team, Enterprise, and annual billing get paid?",
         answer:
-          "Engineer, Professional Engineer, Consultant Engineer, and Team are paid through Moyasar, monthly or annual. Annual price is 10 times the monthly price. Enterprise is paid with a Moyasar invoice for the quoted amount, starting from the Enterprise price below. Consultant Engineer, Team, and Enterprise include AI Advisors (coming soon).",
+          "Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise are paid through Moyasar, monthly or annual, and renew automatically until you cancel in billing. Annual price is 10 times the monthly price. Enterprise is SAR 2,500 per month for 10 seats, with an extra seat at SAR 199 per month. Consultant Engineer, Team, and Enterprise include AI Advisors (coming soon).",
       },
       {
         question: "How do I change the interface language?",
@@ -172,7 +172,7 @@ export const en: MarketingContent = {
   },
   closing: {
     title: "Start with a question, or buy a plan",
-    body: "Engineers can open the chat now. Team and the individual paid plans are bought through Moyasar. Enterprise continues to a Moyasar invoice.",
+    body: "Engineers can open the chat now. Paid plans, Team, and Enterprise are bought through Moyasar and renew automatically.",
     primaryCta: "Open chat",
     secondaryCta: "Buy Team",
   },
@@ -194,7 +194,7 @@ export const en: MarketingContent = {
     annual: "Annual",
     twoMonthsFree: "2 months free",
     annualExplainer:
-      "Annual price is 10 times the monthly price (2 months free). Paid plans open Moyasar checkout. Enterprise opens a Moyasar invoice for the quoted amount.",
+      "Annual price is 10 times the monthly price (2 months free). Paid plans open Moyasar checkout and renew automatically until you cancel.",
     usdNote: "US dollar amounts are approximate, at SAR 3.75 per USD 1.",
     vatNote: "Prices include VAT.",
     individualTitle: "Individual plans",
@@ -202,7 +202,7 @@ export const en: MarketingContent = {
       "Assistant Engineer, Engineer, Professional Engineer, and Consultant Engineer. Same names, prices, and features as registration.",
     firmTitle: "Team and Enterprise",
     firmIntro:
-      "Team is bought through Moyasar and includes AI Advisors (coming soon). Enterprise continues to a Moyasar invoice and includes AI Advisors (coming soon).",
+      "Team includes 5 seats. Enterprise includes 10 seats at SAR 2,500 per month. Extra seats are charged on the saved card. Both renew automatically and include AI Advisors (coming soon).",
     approx: "approx.",
   },
 };

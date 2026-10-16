@@ -12,7 +12,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/pricing": {
       title: "Pricing | engineerit.ai",
       description:
-        "Prices include VAT. Assistant Engineer is free. Engineer is SAR 19 per month, Professional Engineer SAR 41 per month, Consultant Engineer SAR 79 per month. Team is SAR 349 per month for 5 seats. Enterprise starts from SAR 2,500 per month.",
+        "Assistant Engineer is free. Engineer is SAR 19 per month, Professional Engineer SAR 41 per month, Consultant Engineer SAR 79 per month. Team is SAR 349 per month for 5 seats. Enterprise is SAR 2,500 per month for 10 seats.",
     },
     "/chat": {
       title: "Chat | engineerit.ai",
@@ -86,7 +86,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/pricing": {
       title: "الأسعار | engineerit.ai",
       description:
-        "الأسعار شاملة الضريبة. المهندس المساعد مجاني. المهندس 19 ر.س شهرياً، والمهندس المحترف 41 ر.س، والمهندس الاستشاري 79 ر.س. الفريق 349 ر.س شهرياً لخمسة مقاعد. المؤسسات من 2500 ر.س شهرياً.",
+        "المهندس المساعد مجاني. المهندس 19 ر.س شهرياً، والمهندس المحترف 41 ر.س، والمهندس الاستشاري 79 ر.س. الفريق 349 ر.س شهرياً لخمسة مقاعد. المؤسسات 2500 ر.س شهرياً لعشرة مقاعد.",
     },
     "/chat": {
       title: "المحادثة | engineerit.ai",

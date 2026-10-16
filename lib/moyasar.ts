@@ -124,6 +124,103 @@ export async function createMoyasarInvoice(
   return { id: invoice.id, url, invoice };
 }
 
+export type RemotePayment = {
+  id?: string;
+  status?: string;
+  amount?: number;
+  currency?: string;
+  description?: string;
+  metadata?: Record<string, string>;
+  message?: string;
+  source?: {
+    type?: string;
+    company?: string;
+    name?: string;
+    number?: string;
+    token?: string;
+    message?: string;
+    transaction_url?: string;
+  };
+};
+
+export function lastFour(masked: string | null | undefined) {
+  if (!masked) return null;
+  const digits = masked.replace(/\D/g, "");
+  return digits.slice(-4) || null;
+}
+
+export function extractPaymentId(body: unknown): string | null {
+  if (!body || typeof body !== "object") return null;
+  const record = body as {
+    type?: unknown;
+    data?: { id?: unknown; invoice_id?: unknown };
+  };
+  if (
+    typeof record.type === "string" &&
+    record.type.startsWith("payment") &&
+    record.data &&
+    typeof record.data.id === "string" &&
+    typeof record.data.invoice_id !== "string"
+  ) {
+    return record.data.id;
+  }
+  return null;
+}
+
+export async function fetchMoyasarPayment(secretKey: string, paymentId: string) {
+  const response = await fetch(
+    `https://api.moyasar.com/v1/payments/${encodeURIComponent(paymentId)}`,
+    {
+      headers: {
+        Authorization: authHeader(secretKey),
+        Accept: "application/json",
+      },
+    }
+  );
+  const payment = (await response.json().catch(() => null)) as RemotePayment | null;
+  if (!response.ok || !payment) {
+    throw new Error("Could not verify the Moyasar payment.");
+  }
+  return payment;
+}
+
+export async function createMoyasarTokenPayment(
+  secretKey: string,
+  payload: {
+    amount: number;
+    currency: string;
+    description: string;
+    callback_url: string;
+    token: string;
+    metadata: Record<string, string>;
+    idempotencyKey: string;
+  }
+) {
+  const response = await fetch("https://api.moyasar.com/v1/payments", {
+    method: "POST",
+    headers: {
+      Authorization: authHeader(secretKey),
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "Idempotency-Key": payload.idempotencyKey,
+    },
+    body: JSON.stringify({
+      amount: payload.amount,
+      currency: payload.currency,
+      description: payload.description,
+      callback_url: payload.callback_url,
+      metadata: payload.metadata,
+      source: { type: "token", token: payload.token },
+    }),
+  });
+
+  const payment = (await response.json().catch(() => null)) as RemotePayment | null;
+  if (!response.ok || !payment) {
+    throw new Error(payment?.message || payment?.source?.message || "Moyasar could not charge the saved card.");
+  }
+  return payment;
+}
+
 export async function fetchMoyasarInvoice(secretKey: string, invoiceId: string) {
   const response = await fetch(
     `https://api.moyasar.com/v1/invoices/${encodeURIComponent(invoiceId)}`,

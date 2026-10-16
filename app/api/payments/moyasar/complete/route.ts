@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/serverSupabase";
-import { confirmStoredInvoice, loadCheckoutById } from "@/lib/settlePayment";
+import { confirmCheckout, loadCheckoutById } from "@/lib/settlePayment";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json().catch(() => null)) as { checkoutId?: string } | null;
+    const body = (await req.json().catch(() => null)) as { checkoutId?: string; paymentId?: string } | null;
     const checkoutId = (body?.checkoutId || "").trim();
+    const paymentId = (body?.paymentId || "").trim();
     if (!/^[0-9a-f-]{36}$/i.test(checkoutId)) {
       return NextResponse.json({ error: "Missing checkout." }, { status: 400 });
     }
@@ -18,7 +19,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Checkout not found." }, { status: 404 });
     }
 
-    const result = await confirmStoredInvoice(admin, row);
+    if (paymentId) {
+      await admin.from("moyasar_invoices").update({ payment_id: paymentId }).eq("id", row.id);
+    }
+    const result = await confirmCheckout(admin, { ...row, payment_id: paymentId || row.payment_id }, paymentId || row.payment_id);
     if (!result.ok) {
       return NextResponse.json(
         { error: "Moyasar has not confirmed this payment yet.", reason: result.reason },

@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import {
-  EXTRA_SEAT_SAR,
   PLANS,
   PLAN_COLORS,
-  TEAM_INCLUDED_SEATS,
+  extraSeatPrice,
   featureTier,
   formatSar,
+  includedSeats,
   quoteSelfServe,
   type BillingInterval,
 } from "@/lib/plans";
@@ -40,10 +40,8 @@ type Props = {
 
 export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) {
   const [interval, setInterval] = useState<BillingInterval>("month");
-  const [extraSeats, setExtraSeats] = useState(0);
+  const [extraSeats, setExtraSeats] = useState({ team: 0, enterprise: 0 });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const teamQuote = quoteSelfServe("team", interval, extraSeats);
 
   return (
     <div>
@@ -116,7 +114,10 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
           const color = PLAN_COLORS[plan.id];
           const tier = featureTier(plan.id);
           const tools = TOOL_ACCESS[tier];
-          const price = planPriceLabel(plan.id, interval, plan.id === "team" ? extraSeats : 0);
+          const firmId = plan.id === "team" || plan.id === "enterprise" ? plan.id : null;
+          const planExtra = firmId ? extraSeats[firmId] : 0;
+          const price = planPriceLabel(plan.id, interval, planExtra);
+          const seatQuote = firmId ? quoteSelfServe(firmId, interval, planExtra) : null;
           const features = displayFeatures(plan, interval);
 
           return (
@@ -170,21 +171,26 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
                 ))}
               </ul>
 
-              {plan.id === "team" && (
+              {firmId && seatQuote && (
                 <div style={{ marginTop: 12 }}>
                   <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
-                    Extra seats ({formatSar(EXTRA_SEAT_SAR[interval], interval)} each)
+                    Extra seats ({formatSar(extraSeatPrice(firmId)[interval], interval)} each)
                     <input
                       className="input"
                       type="number"
                       min={0}
                       max={200}
-                      value={extraSeats}
-                      onChange={(e) => setExtraSeats(Math.max(0, Math.min(200, Number(e.target.value) || 0)))}
+                      value={planExtra}
+                      onChange={(e) =>
+                        setExtraSeats((current) => ({
+                          ...current,
+                          [firmId]: Math.max(0, Math.min(200, Number(e.target.value) || 0)),
+                        }))
+                      }
                     />
                   </label>
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
-                    {TEAM_INCLUDED_SEATS} included + {teamQuote.extraSeats} extra = {teamQuote.seatLimit} seats.
+                    {includedSeats(firmId)} included + {seatQuote.extraSeats} extra = {seatQuote.seatLimit} seats.
                   </div>
                 </div>
               )}
@@ -219,7 +225,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
                 <BuyPlanButton
                   planId={plan.id}
                   interval={interval}
-                  extraSeats={plan.id === "team" ? extraSeats : 0}
+                  extraSeats={planExtra}
                   verb={verb}
                   onError={setErrorMsg}
                   style={{

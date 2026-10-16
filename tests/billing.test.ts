@@ -3,8 +3,19 @@ import { describe, it } from "node:test";
 import { isAdminEmail } from "../lib/admin";
 import { pickEffectivePlan, teamGrantsAccess } from "../lib/effectivePlan";
 import {
+  afterChargeFailure,
+  decideRenewal,
+  prorateSeatChange,
+  renewalChargeHalalas,
+  seatChangeIdempotencyKey,
+  vatFromInclusive,
+  zatcaInvoicesEnabled,
+} from "../lib/billingCycle";
+import {
   AI_ADVISORS_FEATURE,
+  ENTERPRISE_EXTRA_SEAT_SAR,
   ENTERPRISE_FROM_SAR,
+  ENTERPRISE_INCLUDED_SEATS,
   EXTRA_SEAT_SAR,
   PLANS,
   PLAN_AMOUNTS_SAR,
@@ -63,7 +74,8 @@ describe("self-serve prices", () => {
     assert.equal(planPriceLabel("consultant", "year").amountSar, 790);
     assert.equal(planPriceLabel("consultant", "year").primary, "SAR 790 / year");
     assert.equal(planPriceLabel("team", "year", 1).amountSar, 3490 + 690);
-    assert.equal(planPriceLabel("enterprise", "year").primary, "From SAR 25,000 / year");
+    assert.equal(planPriceLabel("enterprise", "year").primary, "SAR 25,000 / year");
+    assert.equal(planPriceLabel("enterprise", "month", 2).amountSar, 2500 + 2 * 199);
 
     for (const id of ["consultant", "team", "enterprise"] as const) {
       const plan = PLANS.find((item) => item.id === id);
@@ -159,6 +171,168 @@ describe("Moyasar confirmation and receipts", () => {
     assert.match(receipt.text, /Period: Annual/);
     assert.match(receipt.text, /Seats: 12/);
     assert.match(receipt.html, /VAT inclusive/);
+    assert.match(receipt.text, /Net: SAR/);
+    assert.match(receipt.text, /VAT 15%/);
+    assert.match(receipt.text, /ZATCA tax invoice: not issued yet/);
+  });
+});
+
+describe("renewals, cancellation, and seat changes", () => {
+  const periodEnd = new Date("2026-11-16T00:00:00.000Z");
+  const base = {
+    subscriptionId: "sub_1",
+    periodEnd,
+    status: "active" as const,
+    cancelAtPeriodEnd: false,
+    failureCount: 0,
+  };
+
+  it("prices Enterprise at SAR 2,500 for 10 seats, plus SAR 199 per extra seat", () => {
+    const month = quoteSelfServe("enterprise", "month", 0);
+    const year = quoteSelfServe("enterprise", "year", 2);
+    assert.equal(ENTERPRISE_INCLUDED_SEATS, 10);
+    assert.equal(month.amountSar, 2500);
+    assert.equal(month.seatLimit, 10);
+    assert.equal(year.amountSar, 25000 + 2 * ENTERPRISE_EXTRA_SEAT_SAR.year);
+    assert.equal(year.seatLimit, 12);
+    assert.equal(ENTERPRISE_EXTRA_SEAT_SAR.year, ENTERPRISE_EXTRA_SEAT_SAR.month * 10);
+  });
+
+  it("charges on the renewal date and retries on day 1, 3, and 7", () => {
+    assert.equal(
+      decideRenewal({ ...base, now: new Date("2026-11-15T00:00:00.000Z") }).action,
+      "skip"
+    );
+    const first = decideRenewal({ ...base, now: periodEnd });
+    assert.equal(first.action, "charge");
+    if (first.action === "charge") {
+      assert.equal(first.attempt, 0);
+      assert.equal(first.idempotencyKey, "renewal:sub_1:2026-11-16T00:00:00.000Z:0");
+    }
+
+    assert.equal(
+      decideRenewal({
+        ...base,
+        now: new Date("2026-11-16T12:00:00.000Z"),
+        failureCount: 1,
+        status: "past_due",
+      }).action,
+      "wait"
+    );
+
+    const day1 = decideRenewal({
+      ...base,
+      now: new Date("2026-11-17T00:00:00.000Z"),
+      failureCount: 1,
+      status: "past_due",
+    });
+    const day3 = decideRenewal({
+      ...base,
+      now: new Date("2026-11-19T00:00:00.000Z"),
+      failureCount: 2,
+      status: "past_due",
+    });
+    const day7 = decideRenewal({
+      ...base,
+      now: new Date("2026-11-23T00:00:00.000Z"),
+      failureCount: 3,
+      status: "past_due",
+    });
+    assert.equal(day1.action, "charge");
+    assert.equal(day3.action, "charge");
+    assert.equal(day7.action, "charge");
+    if (day1.action === "charge") assert.equal(day1.attempt, 1);
+    if (day3.action === "charge") assert.equal(day3.attempt, 2);
+    if (day7.action === "charge") assert.equal(day7.attempt, 3);
+  });
+
+  it("downgrades after the day-7 failure and expires a cancellation without charging", () => {
+    assert.equal(
+      decideRenewal({
+        ...base,
+        now: new Date("2026-11-24T00:00:00.000Z"),
+        failureCount: 4,
+        status: "past_due",
+      }).action,
+      "downgrade"
+    );
+    assert.deepEqual(afterChargeFailure(3), { status: "downgrade", failureCount: 4 });
+    const firstRetry = afterChargeFailure(0);
+    const secondRetry = afterChargeFailure(1);
+    const thirdRetry = afterChargeFailure(2);
+    assert.equal(firstRetry.status, "past_due");
+    assert.equal(secondRetry.status, "past_due");
+    assert.equal(thirdRetry.status, "past_due");
+    if (firstRetry.status === "past_due") assert.equal(firstRetry.retryDay, 1);
+    if (secondRetry.status === "past_due") assert.equal(secondRetry.retryDay, 3);
+    if (thirdRetry.status === "past_due") assert.equal(thirdRetry.retryDay, 7);
+
+    assert.equal(
+      decideRenewal({
+        ...base,
+        now: new Date("2026-11-15T00:00:00.000Z"),
+        cancelAtPeriodEnd: true,
+      }).action,
+      "skip"
+    );
+    assert.equal(
+      decideRenewal({ ...base, now: periodEnd, cancelAtPeriodEnd: true }).action,
+      "expire"
+    );
+  });
+
+  it("prorates seat changes, credits removals, and keeps a stable idempotency key", () => {
+    const start = new Date("2026-10-01T00:00:00.000Z");
+    const end = new Date("2026-10-31T00:00:00.000Z");
+    const halfway = new Date(start.getTime() + (end.getTime() - start.getTime()) / 2);
+    const added = prorateSeatChange({
+      now: halfway,
+      periodStart: start,
+      periodEnd: end,
+      pricePerSeatSar: 69,
+      fromExtra: 0,
+      toExtra: 1,
+    });
+    assert.equal(added.amountHalalas, 3450);
+    assert.equal(added.creditHalalas, 0);
+
+    const tiny = prorateSeatChange({
+      now: new Date(end.getTime() - 60 * 60 * 1000),
+      periodStart: start,
+      periodEnd: end,
+      pricePerSeatSar: 69,
+      fromExtra: 0,
+      toExtra: 1,
+    });
+    assert.ok(tiny.amountHalalas === 100);
+
+    const removed = prorateSeatChange({
+      now: halfway,
+      periodStart: start,
+      periodEnd: end,
+      pricePerSeatSar: 69,
+      fromExtra: 1,
+      toExtra: 0,
+    });
+    assert.equal(removed.amountHalalas, -3450);
+    assert.equal(removed.creditHalalas, 3450);
+    assert.deepEqual(renewalChargeHalalas(34900, 3450), {
+      chargeHalalas: 31450,
+      creditUsed: 3450,
+      creditRemaining: 0,
+    });
+    assert.equal(
+      seatChangeIdempotencyKey("sub", "2026-11-16T00:00:00.000Z", 0, 2),
+      "seats:sub:2026-11-16T00:00:00.000Z:0->2"
+    );
+  });
+
+  it("splits an inclusive amount into net and 15% VAT", () => {
+    const vat = vatFromInclusive(2500);
+    assert.equal(vat.gross, 2500);
+    assert.equal(Math.round((vat.net + vat.vat) * 100), 250000);
+    assert.equal(zatcaInvoicesEnabled(undefined), false);
+    assert.equal(zatcaInvoicesEnabled("1"), true);
   });
 });
 

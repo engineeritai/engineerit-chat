@@ -8,7 +8,6 @@ import {
   quoteSelfServe,
   type SelfServePlanId,
 } from "@/lib/plans";
-import { createMoyasarInvoice } from "@/lib/moyasar";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
 
 export const runtime = "nodejs";
@@ -18,6 +17,32 @@ function getAppBaseUrl(req: NextRequest) {
   if (fromEnv) return fromEnv.replace(/\/$/, "");
   const url = req.nextUrl;
   return `${url.protocol}//${url.host}`.replace(/\/$/, "");
+}
+
+export async function GET(req: NextRequest) {
+  const id = req.nextUrl.searchParams.get("id") || "";
+  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+    return NextResponse.json({ error: "Missing checkout." }, { status: 400 });
+  }
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("moyasar_invoices")
+    .select("id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, user_id, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data || data.user_id !== user.id) {
+    return NextResponse.json({ error: "Checkout not found." }, { status: 404 });
+  }
+  const base = getAppBaseUrl(req);
+  return NextResponse.json({
+    checkout: data,
+    publishableKey: process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY || "",
+    callbackUrl: `${base}/checkout/return?checkout=${id}`,
+    description: `engineerit.ai ${data.plan} plan`,
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -34,50 +59,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const secretKey = process.env.MOYASAR_SECRET_KEY;
-    if (!secretKey) {
+    if (!process.env.MOYASAR_SECRET_KEY || !process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY) {
       return NextResponse.json(
-        { error: "MOYASAR_SECRET_KEY is not set in environment." },
+        { error: "MOYASAR_SECRET_KEY and NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY must be set." },
         { status: 500 }
       );
     }
 
     const user = await getUserFromRequest(req);
+    if (!user) {
+      return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+    }
     const interval = parseInterval(body?.interval);
     const quote = quoteSelfServe(planId as SelfServePlanId, interval, normalizeExtraSeats(body?.extraSeats));
     const label = PLAN_LABELS[quote.planId];
     const periodLabel = interval === "year" ? "yearly" : "monthly";
-    const seatNote = quote.planId === "team" ? `, ${quote.seatLimit} seats` : "";
+    const seated = quote.planId === "team" || quote.planId === "enterprise";
+    const seatNote = seated ? `, ${quote.seatLimit} seats` : "";
     const description = `engineerit.ai ${label} plan (SAR ${quote.amountSar} ${periodLabel}${seatNote}, VAT included)`;
     const checkoutId = crypto.randomUUID();
     const baseUrl = getAppBaseUrl(req);
-
-    const invoice = await createMoyasarInvoice(secretKey, {
-      amount: quote.amountHalalas,
-      currency: "SAR",
-      description,
-      success_url:
-        `${baseUrl}/profile?status=paid&plan=${quote.planId}` +
-        `&interval=${quote.interval}&extraSeats=${quote.extraSeats}&checkout=${checkoutId}`,
-      back_url: `${baseUrl}/pricing`,
-      callback_url: `${baseUrl}/api/payments/moyasar/callback`,
-      metadata: {
-        plan_id: quote.planId,
-        plan_label: label,
-        billing_interval: quote.interval,
-        extra_seats: String(quote.extraSeats),
-        seat_limit: String(quote.seatLimit),
-        amount_sar: String(quote.amountSar),
-        checkout_id: checkoutId,
-        customer_email: user?.email || "",
-        source: "engineerit.ai",
-      },
-    });
+    const pageUrl = `${baseUrl}/checkout/${checkoutId}`;
 
     const admin = getSupabaseAdmin();
     const { error: insertErr } = await admin.from("moyasar_invoices").insert({
       id: checkoutId,
-      invoice_id: invoice.id,
+      invoice_id: null,
       plan: quote.planId,
       billing_interval: quote.interval,
       amount_sar: quote.amountSar,
@@ -85,9 +92,10 @@ export async function POST(req: NextRequest) {
       currency: "SAR",
       seat_limit: quote.seatLimit,
       extra_seats: quote.extraSeats,
-      customer_email: user?.email?.toLowerCase() || null,
-      user_id: user?.id || null,
-      payment_url: invoice.url,
+      customer_email: user.email?.toLowerCase() || null,
+      user_id: user.id,
+      payment_url: pageUrl,
+      purpose: "checkout",
       status: "pending",
     });
 
@@ -99,7 +107,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ url: invoice.url, checkoutId });
+    return NextResponse.json({
+      url: pageUrl,
+      checkoutId,
+      amountHalalas: quote.amountHalalas,
+      description,
+      callbackUrl: `${baseUrl}/checkout/return?checkout=${checkoutId}`,
+    });
   } catch (err) {
     console.error("Unexpected error in Moyasar checkout route:", err);
     const message = err instanceof Error ? err.message : "Unexpected error while creating payment.";

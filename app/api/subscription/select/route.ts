@@ -46,8 +46,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
     }
 
-    // Same contract as the existing individual plans: the signed-in profile page
-    // sends its user id after Moyasar redirects back. Enterprise is not self-serve.
+    // Legacy writer. Current checkout activation is the verified Moyasar callback.
     if (!userId) {
       return NextResponse.json({ error: "Missing user_id." }, { status: 400 });
     }

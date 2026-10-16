@@ -104,7 +104,7 @@ export function softwareApplicationJsonLd() {
         price: String(ENTERPRISE_PLAN.monthlySarFrom),
         priceCurrency: "SAR",
         description:
-          "From SAR 2,500 per month, SAR 25,000 per year. Paid with a Moyasar invoice. Includes AI Advisors (coming soon). Prices include VAT.",
+          "SAR 2,500 per month for 10 seats, SAR 25,000 per year. Extra seat SAR 199 per month. Bought and renewed through Moyasar. Includes AI Advisors (coming soon). Prices include VAT.",
         url: `${SITE_URL}/pricing`,
       },
     ],

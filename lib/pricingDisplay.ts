@@ -1,4 +1,5 @@
 import {
+  ENTERPRISE_EXTRA_SEAT_SAR,
   ENTERPRISE_FROM_SAR,
   EXTRA_SEAT_SAR,
   PLAN_AMOUNTS_SAR,
@@ -30,7 +31,7 @@ const EXPECTED_PRICE_LABELS: Record<PlanId, string> = {
   professional: "SAR 41 / month",
   consultant: "SAR 79 / month",
   team: "SAR 349 / month",
-  enterprise: "From SAR 2,500 / month",
+  enterprise: "SAR 2,500 / month",
 };
 
 const EXPECTED_YEARLY_LABELS: Record<PlanId, string> = {
@@ -39,7 +40,7 @@ const EXPECTED_YEARLY_LABELS: Record<PlanId, string> = {
   professional: "SAR 410 / year",
   consultant: "SAR 790 / year",
   team: "SAR 3,490 / year",
-  enterprise: "From SAR 25,000 / year",
+  enterprise: "SAR 25,000 / year",
 };
 
 export function assertIndividualPlanPrices() {
@@ -91,14 +92,6 @@ export function planPriceLabel(
   if (planId === "assistant") {
     return { primary: "Free", usd: null, amountSar: 0 };
   }
-  if (planId === "enterprise") {
-    const amountSar = ENTERPRISE_FROM_SAR[interval];
-    return {
-      primary: `From ${formatPlanSar(amountSar, interval)}`,
-      usd: formatUsdApprox(amountSar),
-      amountSar,
-    };
-  }
   const quote = quoteSelfServe(planId, interval, extraSeats);
   return {
     primary: formatPlanSar(quote.amountSar, interval),
@@ -110,8 +103,8 @@ export function planPriceLabel(
 /** Same feature lines on every page. Extra-seat price follows the billing period. */
 export function displayFeatures(plan: Plan, interval: BillingInterval): string[] {
   return plan.features.map((feature) => {
-    if (plan.id === "team" && feature.startsWith("Extra seat")) {
-      const amount = EXTRA_SEAT_SAR[interval];
+    if ((plan.id === "team" || plan.id === "enterprise") && feature.startsWith("Extra seat")) {
+      const amount = plan.id === "enterprise" ? ENTERPRISE_EXTRA_SEAT_SAR[interval] : EXTRA_SEAT_SAR[interval];
       return `Extra seat ${formatPlanSar(amount, interval)} (approx. ${formatUsdApprox(amount)})`;
     }
     return feature;

@@ -1,6 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { periodDays, type BillingInterval } from "@/lib/plans";
-import { assessPaidInvoice, fetchMoyasarInvoice, type RemoteInvoice } from "@/lib/moyasar";
+import { saveCardFromPayment } from "@/lib/billingAccount";
+import {
+  assessPaidInvoice,
+  fetchMoyasarInvoice,
+  fetchMoyasarPayment,
+  type RemoteInvoice,
+  type RemotePayment,
+} from "@/lib/moyasar";
 import { recordPlanPurchase } from "@/lib/recordPlan";
 import { sendReceipt } from "@/lib/receipt";
 
@@ -21,13 +28,19 @@ export type CheckoutRow = {
   activated_at: string | null;
   receipt_sent_at: string | null;
   period_end: string | null;
+  payment_id?: string | null;
 };
 
 function addDays(from: Date, days: number) {
   return new Date(from.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
 }
 
-export async function settleCheckout(admin: SupabaseClient, row: CheckoutRow, remote: RemoteInvoice) {
+export async function settleCheckout(
+  admin: SupabaseClient,
+  row: CheckoutRow,
+  remote: RemoteInvoice,
+  payment?: RemotePayment | null
+) {
   const assessment = assessPaidInvoice(Number(row.amount_halalas), remote);
   if (!assessment.ok) {
     return { ok: false as const, reason: assessment.reason };
@@ -51,6 +64,19 @@ export async function settleCheckout(admin: SupabaseClient, row: CheckoutRow, re
       try {
         periodEnd = await activateCheckout(admin, row, interval);
         await admin.from("moyasar_invoices").update({ period_end: periodEnd }).eq("id", row.id);
+        if (payment && row.user_id) {
+          const { data: billing } = await admin
+            .from("billing_subscriptions")
+            .select("id")
+            .eq("user_id", row.user_id)
+            .in("status", ["active", "past_due"])
+            .maybeSingle();
+          await saveCardFromPayment(admin, {
+            userId: row.user_id,
+            payment,
+            billingSubscriptionId: (billing?.id as string | undefined) || null,
+          });
+        }
         if (row.lead_id) {
           const { error: leadErr } = await admin
             .from("enterprise_leads")
@@ -153,7 +179,7 @@ export async function loadCheckoutByInvoice(admin: SupabaseClient, invoiceId: st
   const { data, error } = await admin
     .from("moyasar_invoices")
     .select(
-      "id, invoice_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end"
+      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end"
     )
     .eq("invoice_id", invoiceId)
     .maybeSingle();
@@ -165,7 +191,7 @@ export async function loadCheckoutById(admin: SupabaseClient, id: string) {
   const { data, error } = await admin
     .from("moyasar_invoices")
     .select(
-      "id, invoice_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end"
+      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end"
     )
     .eq("id", id)
     .maybeSingle();
@@ -173,10 +199,34 @@ export async function loadCheckoutById(admin: SupabaseClient, id: string) {
   return (data as CheckoutRow | null) ?? null;
 }
 
-export async function confirmStoredInvoice(admin: SupabaseClient, row: CheckoutRow) {
+export async function confirmCheckout(
+  admin: SupabaseClient,
+  row: CheckoutRow,
+  paymentId?: string | null
+) {
   const secret = process.env.MOYASAR_SECRET_KEY;
   if (!secret) throw new Error("MOYASAR_SECRET_KEY is not set in environment.");
-  if (!row.invoice_id) throw new Error("This checkout has no Moyasar invoice yet.");
+  const id = paymentId || row.payment_id;
+  if (id) {
+    const payment = await fetchMoyasarPayment(secret, id);
+    if (payment.metadata?.checkout_id && payment.metadata.checkout_id !== row.id) {
+      return { ok: false as const, reason: "checkout_mismatch" as const };
+    }
+    if (payment.metadata?.checkout_id !== row.id) {
+      return { ok: false as const, reason: "checkout_mismatch" as const };
+    }
+    return settleCheckout(
+      admin,
+      row,
+      { id: payment.id, status: payment.status, amount: payment.amount, currency: payment.currency },
+      payment
+    );
+  }
+  if (!row.invoice_id) throw new Error("This checkout has no Moyasar payment yet.");
   const remote = await fetchMoyasarInvoice(secret, row.invoice_id);
   return settleCheckout(admin, row, remote);
+}
+
+export async function confirmStoredInvoice(admin: SupabaseClient, row: CheckoutRow) {
+  return confirmCheckout(admin, row, row.payment_id);
 }

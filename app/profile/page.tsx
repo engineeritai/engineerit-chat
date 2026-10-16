@@ -85,18 +85,7 @@ export default function ProfilePage() {
         if (typeof window !== "undefined") {
           const params = new URLSearchParams(window.location.search);
           const status = params.get("status");
-          const planParam = params.get("plan");
-          const intervalParam = params.get("interval") === "year" ? "year" : "month";
-          const extraSeatsParam = Number(params.get("extraSeats") || "0");
           const checkoutId = params.get("checkout");
-
-          const allowedPlans: PlanId[] = [
-            "assistant",
-            "engineer",
-            "professional",
-            "consultant",
-            "team",
-          ];
 
           if (status === "paid" && checkoutId) {
             try {
@@ -107,55 +96,20 @@ export default function ProfilePage() {
               });
               const json = await res.json().catch(() => null);
               if (!res.ok) {
-                setErrorMsg(json?.error || "Moyasar has not confirmed this payment yet.");
+                setErrorMsg(s.profile.paymentPending);
               } else if (json?.plan && isPlanId(json.plan)) {
                 subscriptionTierOverride = json.plan;
-                setInfoMsg("Payment confirmed by Moyasar. A receipt is emailed to you.");
+                setInfoMsg(s.profile.paymentConfirmed);
                 try {
                   window.history.replaceState({}, "", window.location.pathname);
                 } catch {}
               }
             } catch (err) {
               console.error("MOYASAR COMPLETE ERROR:", err);
-              setErrorMsg("Could not confirm the payment. Please contact support.");
+              setErrorMsg(s.profile.paymentFailed);
             }
-          } else if (
-            status === "paid" &&
-            planParam &&
-            isPlanId(planParam) &&
-            allowedPlans.includes(planParam)
-          ) {
-            try {
-              const res = await fetch("/api/subscription/select", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  plan: planParam,
-                  user_id: user.id,
-                  interval: intervalParam,
-                  extraSeats: extraSeatsParam,
-                }),
-              });
-
-              const json = await res.json().catch(() => null);
-
-              if (!res.ok) {
-                console.error("SUBSCRIPTION SELECT ROUTE ERROR:", json);
-                setErrorMsg(s.profile.paymentFailed);
-              } else {
-                subscriptionTierOverride = planParam;
-                setInfoMsg(s.profile.paymentSaved);
-                try {
-                  const cleanUrl = window.location.pathname;
-                  window.history.replaceState({}, "", cleanUrl);
-                } catch {}
-              }
-            } catch (err) {
-              console.error("SUBSCRIPTION SELECT ROUTE ERROR:", err);
-              setErrorMsg(
-                s.profile.paymentFailed
-              );
-            }
+          } else if (status === "paid") {
+            setErrorMsg(s.profile.paymentMissing);
           }
         }
 
@@ -621,6 +575,11 @@ export default function ProfilePage() {
             </p>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <Link href="/account/billing">
+                <button className="btn" type="button" style={{ marginTop: 16 }}>
+                  Billing, card, and cancellation
+                </button>
+              </Link>
               <Link href="/subscription">
                 <button className="btn" type="button" style={{ marginTop: 16 }}>
                   {s.profile.manage}

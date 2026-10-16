@@ -35,7 +35,7 @@ export default function EnterprisePaidPage() {
         return;
       }
       setMessage(
-        "Moyasar confirmed the payment. Enterprise access is active for the email on the quote, and a VAT-inclusive receipt has been sent."
+        "Moyasar confirmed the payment. Enterprise access is active, and a VAT-inclusive receipt has been sent."
       );
     }
 

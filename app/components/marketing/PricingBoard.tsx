@@ -17,7 +17,7 @@ export default function PricingBoard() {
   const { locale } = useLocale();
   const content = getMarketingContent(locale);
   const [interval, setInterval] = useState<BillingInterval>("month");
-  const [extraSeats, setExtraSeats] = useState(0);
+  const [extraSeats, setExtraSeats] = useState({ team: 0, enterprise: 0 });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const annual = interval === "year";
 
@@ -78,10 +78,14 @@ export default function PricingBoard() {
             key={plan.id}
             planId={plan.id}
             interval={interval}
-            extraSeats={plan.id === "team" ? extraSeats : 0}
+            extraSeats={plan.id === "team" || plan.id === "enterprise" ? extraSeats[plan.id] : 0}
             locale={locale}
             onError={setErrorMsg}
-            onExtraSeats={plan.id === "team" ? setExtraSeats : undefined}
+            onExtraSeats={
+              plan.id === "team" || plan.id === "enterprise"
+                ? (value) => setExtraSeats((current) => ({ ...current, [plan.id]: value }))
+                : undefined
+            }
           />
         ))}
       </div>

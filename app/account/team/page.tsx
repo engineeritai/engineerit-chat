@@ -5,7 +5,16 @@ import Link from "next/link";
 import Header from "../../components/Header";
 import NavSidebar from "../../components/NavSidebar";
 import { supabase } from "@/lib/supabaseClient";
-import { AI_ADVISORS_FEATURE, EXTRA_SEAT_SAR, PLAN_LABELS, formatSar, type PlanId } from "@/lib/plans";
+import {
+  AI_ADVISORS_FEATURE,
+  EXTRA_SEAT_SAR,
+  PLAN_LABELS,
+  extraSeatPrice,
+  formatSar,
+  includedSeats,
+  type PlanId,
+  type SelfServePlanId,
+} from "@/lib/plans";
 import { formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
 
 type Member = {
@@ -53,6 +62,7 @@ export default function TeamPage() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
+  const [seatDraft, setSeatDraft] = useState("0");
 
   async function load() {
     setError("");
@@ -71,7 +81,9 @@ export default function TeamPage() {
       setLoading(false);
       return;
     }
-    setPayload(json as TeamPayload);
+    const next = json as TeamPayload;
+    setPayload(next);
+    if (next.team) setSeatDraft(String(next.team.extra_seats ?? 0));
     setLoading(false);
   }
 
@@ -106,6 +118,53 @@ export default function TeamPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function transfer(memberId: string) {
+    setError("");
+    setInfo("");
+    const headers = await authHeaders();
+    if (!headers) return;
+    const res = await fetch("/api/team/transfer", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ memberId }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json.error || "Could not transfer ownership.");
+      return;
+    }
+    setInfo("Ownership transferred.");
+    await load();
+  }
+
+  async function updateSeats(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    setInfo("");
+    const headers = await authHeaders();
+    if (!headers) return;
+    const res = await fetch("/api/team/seats", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ extraSeats: Number(seatDraft) }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json.error || "Could not update seats.");
+      return;
+    }
+    const charged = Number(json.chargedHalalas || 0) / 100;
+    const credit = Number(json.creditHalalas || 0) / 100;
+    setInfo(
+      charged > 0
+        ? `Seats updated. Moyasar charged SAR ${charged} for the rest of this period.`
+        : credit > 0
+          ? `Seats updated. SAR ${credit} is credited to the next renewal.`
+          : "Seats updated."
+    );
+    await load();
   }
 
   async function removeMember(memberId: string) {
@@ -219,6 +278,39 @@ export default function TeamPage() {
                 </form>
               )}
 
+              {payload?.isOwner && team && (team.plan === "team" || team.plan === "enterprise") && (
+                <form className="card" onSubmit={updateSeats} style={{ marginBottom: 16 }}>
+                  <h2 className="section-heading" style={{ marginTop: 0 }}>
+                    Extra seats
+                  </h2>
+                  <p style={{ fontSize: 14, color: "#374151" }}>
+                    {includedSeats(team.plan as SelfServePlanId)} seats are included. Each extra seat is{" "}
+                    {formatSar(extraSeatPrice(team.plan as SelfServePlanId).month, "month")} (approx.{" "}
+                    {formatUsdApprox(extraSeatPrice(team.plan as SelfServePlanId).month)}), or{" "}
+                    {formatSar(extraSeatPrice(team.plan as SelfServePlanId).year, "year")} on an annual plan.
+                    Adding seats charges the saved card for the rest of this period. Removing seats credits
+                    the next renewal.
+                  </p>
+                  <div className="form-row">
+                    <label>
+                      Extra seats
+                      <input
+                        className="input"
+                        type="number"
+                        min={0}
+                        max={200}
+                        required
+                        value={seatDraft}
+                        onChange={(e) => setSeatDraft(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <button className="btn" type="submit" disabled={!payload.access}>
+                    Update seats
+                  </button>
+                </form>
+              )}
+
               <div className="card">
                 <h2 className="section-heading" style={{ marginTop: 0 }}>
                   Seats
@@ -246,9 +338,16 @@ export default function TeamPage() {
                           </span>
                         </span>
                         {payload.isOwner && member.role !== "owner" && member.status !== "removed" && (
-                          <button type="button" className="btn" onClick={() => removeMember(member.id)}>
-                            Remove
-                          </button>
+                          <span style={{ display: "flex", gap: 8 }}>
+                            {member.status === "active" && (
+                              <button type="button" className="btn" onClick={() => transfer(member.id)}>
+                                Make owner
+                              </button>
+                            )}
+                            <button type="button" className="btn" onClick={() => removeMember(member.id)}>
+                              Remove
+                            </button>
+                          </span>
                         )}
                       </li>
                     ))}

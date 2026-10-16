@@ -186,6 +186,9 @@ export type ShellCopy = {
     amount: string;
     date: string;
     invoiceNote: string;
+    paymentConfirmed: string;
+    paymentPending: string;
+    paymentMissing: string;
     unknown: string;
     notLoggedIn: string;
     paymentFailed: string;
@@ -390,7 +393,7 @@ const en: ShellCopy = {
     loggedIn: "Logged in. Redirecting to your profile...",
     registerTitle: "Register on engineerit.ai",
     registerLead:
-      "Create your account, start on the free Assistant plan, and upgrade later to Engineer, Professional, or Consultant.",
+      "Create your account, start on the free Assistant Engineer plan, and buy Engineer, Professional Engineer, Consultant Engineer, Team, or Enterprise through Moyasar.",
     createAccount: "Create your account",
     fullName: "Full name",
     fullNamePlaceholder: "Your full name",
@@ -406,7 +409,7 @@ const en: ShellCopy = {
     emailConfirmTitle: "Email confirmation required",
     emailConfirmHint: "After confirmation, come back and sign in from the top bar.",
     afterRegister:
-      "After registration, your account starts on the free Assistant plan. When you are ready, open the subscription page to choose Engineer, Professional, or Consultant.",
+      "After registration, your account starts on the free Assistant Engineer plan. Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise are bought through Moyasar, monthly or annual. Annual price is 10 times the monthly price. Paid plans renew automatically until you cancel.",
     viewPlans: "View plans and subscribe",
     plansOverview: "Plans and engineer tools",
     toolsInPlan: "Engineer tools in this plan",
@@ -433,7 +436,7 @@ const en: ShellCopy = {
     save: "Save changes",
     subscription: "Subscription",
     currentPlan: "Current plan",
-    freeBody: "You are on the free Assistant plan. No charges apply until you upgrade.",
+    freeBody: "You are on the free Assistant Engineer plan. No charges apply until you upgrade.",
     status: "Status",
     price: "Price",
     startDate: "Start date",
@@ -454,7 +457,10 @@ const en: ShellCopy = {
     plan: "Plan",
     amount: "Amount",
     date: "Date",
-    invoiceNote: "The payment provider also emails invoices. Keep those emails as receipts.",
+    invoiceNote: "A receipt with the amount, plan, and period is emailed after each successful payment.",
+    paymentConfirmed: "Payment confirmed. A receipt is emailed to you.",
+    paymentPending: "The payment is not confirmed yet.",
+    paymentMissing: "This return is missing the payment reference.",
     unknown: "unknown",
     notLoggedIn: "You are not logged in.",
     paymentFailed: "Could not save the subscription after payment. Please contact support.",
@@ -658,7 +664,8 @@ const ar: ShellCopy = {
     genericError: "حدث خطأ. حاول مرة أخرى.",
     loggedIn: "تم الدخول. جارٍ التحويل إلى ملفك...",
     registerTitle: "التسجيل في engineerit.ai",
-    registerLead: "أنشئ حسابك، وابدأ بباقة المساعد المجانية، ثم رقِّ لاحقاً إلى مهندس أو محترف أو استشاري.",
+    registerLead:
+      "أنشئ حسابك، وابدأ بباقة المهندس المساعد المجانية، واشترِ المهندس أو المهندس المحترف أو المهندس الاستشاري أو الفريق أو المؤسسات عبر Moyasar.",
     createAccount: "إنشاء الحساب",
     fullName: "الاسم الكامل",
     fullNamePlaceholder: "اسمك الكامل",
@@ -673,7 +680,7 @@ const ar: ShellCopy = {
     emailConfirmTitle: "يلزم تأكيد البريد",
     emailConfirmHint: "بعد التأكيد، عد وسجّل الدخول من الشريط العلوي.",
     afterRegister:
-      "بعد التسجيل تبدأ على باقة المساعد المجانية. عندما تكون جاهزاً، افتح صفحة الاشتراك لاختيار مهندس أو محترف أو استشاري.",
+      "بعد التسجيل تبدأ على باقة المهندس المساعد المجانية. تُشترى باقات المهندس والمهندس المحترف والمهندس الاستشاري والفريق والمؤسسات عبر Moyasar، شهرياً أو سنوياً. السعر السنوي عشرة أضعاف الشهري. تتجدد الباقات المدفوعة تلقائياً حتى الإلغاء.",
     viewPlans: "عرض الباقات والاشتراك",
     plansOverview: "الباقات وأدوات المهندس",
     toolsInPlan: "أدوات المهندس في هذه الباقة",
@@ -700,7 +707,7 @@ const ar: ShellCopy = {
     save: "حفظ التغييرات",
     subscription: "الاشتراك",
     currentPlan: "الباقة الحالية",
-    freeBody: "أنت على باقة المساعد المجانية. لا تُفرض رسوم حتى الترقية.",
+    freeBody: "أنت على باقة المهندس المساعد المجانية. لا تُفرض رسوم حتى الترقية.",
     status: "الحالة",
     price: "السعر",
     startDate: "تاريخ البدء",
@@ -720,7 +727,10 @@ const ar: ShellCopy = {
     plan: "الباقة",
     amount: "المبلغ",
     date: "التاريخ",
-    invoiceNote: "يرسل مزود الدفع الفواتير بالبريد أيضاً. احتفظ بها كإيصالات.",
+    invoiceNote: "يُرسل إيصال بالمبلغ والباقة والمدة بعد كل دفعة ناجحة.",
+    paymentConfirmed: "تم تأكيد الدفع. سيصلك إيصال بالبريد.",
+    paymentPending: "لم يُؤكد الدفع بعد.",
+    paymentMissing: "هذه العودة تفتقد مرجع الدفع.",
     unknown: "غير معروف",
     notLoggedIn: "لم تسجّل الدخول.",
     paymentFailed: "تعذر حفظ الاشتراك بعد الدفع. تواصل مع الدعم.",

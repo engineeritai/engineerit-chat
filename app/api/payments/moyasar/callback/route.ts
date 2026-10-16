@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   extractCheckoutId,
   extractInvoiceId,
+  extractPaymentId,
   verifyMoyasarSecretToken,
   verifyMoyasarSignature,
 } from "@/lib/moyasar";
@@ -26,17 +27,20 @@ export async function POST(req: Request) {
       ? String((body as { secret_token?: unknown }).secret_token || "")
       : "";
 
-  if (signature && !verifyMoyasarSignature(raw, signature, secret)) {
-    return NextResponse.json({ error: "Invalid signature." }, { status: 401 });
+  if (!secret) {
+    return NextResponse.json({ error: "MOYASAR_WEBHOOK_SECRET is not set." }, { status: 401 });
   }
-  if (token && !verifyMoyasarSecretToken(token, secret)) {
-    return NextResponse.json({ error: "Invalid webhook secret." }, { status: 401 });
+  const signatureOk = signature ? verifyMoyasarSignature(raw, signature, secret) : false;
+  const tokenOk = token ? verifyMoyasarSecretToken(token, secret) : false;
+  if (!signatureOk && !tokenOk) {
+    return NextResponse.json({ error: "Invalid webhook signature." }, { status: 401 });
   }
 
   try {
     const admin = getSupabaseAdmin();
     const invoiceId = extractInvoiceId(body);
     const checkoutId = extractCheckoutId(body);
+    const paymentId = extractPaymentId(body);
     const row = invoiceId
       ? await loadCheckoutByInvoice(admin, invoiceId)
       : checkoutId
@@ -47,7 +51,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ignored: true });
     }
 
-    const result = await confirmStoredInvoice(admin, row);
+    const result = await confirmStoredInvoice(admin, paymentId ? { ...row, payment_id: row.payment_id || paymentId } : row);
     if (!result.ok) {
       return NextResponse.json({ ok: true, pending: true, reason: result.reason });
     }
