@@ -27,6 +27,7 @@ import { canShareChatWithTeam } from "@/lib/historyRetention";
 import { useChatHistory, type ChatMessage } from "@/lib/useChatHistory";
 import type { HistoryCode } from "@/lib/chatHistoryClient";
 import { ENGINEER_TOOLS, type EngineerToolId } from "@/lib/engineerTools";
+import { trackProduct } from "@/lib/attribution";
 import { featureTier, HEADER_PLAN_ABBREV, PLAN_THEME, type PlanId, type SelfServePlanId } from "@/lib/plans";
 import { hasToolAccess, toolRequiredPlan } from "@/lib/toolAccess";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
@@ -666,6 +667,9 @@ export default function Page() {
       if (preset) setInput(preset);
       return false;
     }
+
+    const starting = !thread.messages.some((message) => message.role === "user");
+    if (starting) trackProduct("chat_started", { plan: isGuest ? "guest" : planId });
 
     const userAttachments = attachments;
     setInput("");

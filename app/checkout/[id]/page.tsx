@@ -13,6 +13,7 @@ import { SarText } from "@/app/components/RiyalAmount";
 import { paymentSuccessPath } from "@/lib/checkoutReturn";
 import { phonePayStartsOpen, saveCardStartsChecked } from "@/lib/moyasarEnv";
 import { useMessages } from "@/lib/useMessages";
+import { trackOnce } from "@/lib/attribution";
 
 type Checkout = {
   id: string;
@@ -101,6 +102,11 @@ export default function CheckoutPage() {
       cancelled = true;
     };
   }, [params.id, loadAttempt, s.checkout.openFailed, s.checkout.paymentFailed, s.checkout.phonePayExpired, s.checkout.phonePayInvalid]);
+
+  useEffect(() => {
+    if (!checkout || checkout.status === "paid") return;
+    trackOnce(`checkout_opened:${checkout.id}`, "checkout_opened", { plan: checkout.plan });
+  }, [checkout]);
 
   useEffect(() => {
     if (!checkout || checkout.status === "paid") return;

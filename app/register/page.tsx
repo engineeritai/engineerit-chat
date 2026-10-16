@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { safeNextPath } from "@/lib/safeNext";
+import { trackProduct } from "@/lib/attribution";
 import { useMessages } from "@/lib/useMessages";
 
 export default function RegisterPage() {
@@ -66,6 +67,8 @@ export default function RegisterPage() {
         setErrorMessage(error.message);
         return;
       }
+
+      trackProduct("register_completed");
 
       // ✅ IMPORTANT:
       // We DO NOT insert into profiles here anymore.
