@@ -109,6 +109,7 @@ export type MarketingContent = {
     register: string;
     privacy: string;
     refunds: string;
+    registered: string;
   };
   pricing: {
     title: string;

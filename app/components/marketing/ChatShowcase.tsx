@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { BrandPhrase } from "@/app/components/marketing/BrandArabic";
 import EitMark from "@/app/components/marketing/EitMark";
 import SaudiBusinessBadge from "@/app/components/marketing/SaudiBusinessBadge";
 import { useLocale } from "@/app/components/LocaleProvider";
@@ -121,7 +120,7 @@ export default function ChatShowcase() {
         <p className="chat-preview-label">{show.previewLabel}</p>
         <div className="chat-preview-user">{show.previewUser}</div>
         <div className="chat-preview-bot">
-          <EitMark size={72} plate="circle" title="eit" />
+          <EitMark size={28} title="eit" />
           <table>
             <thead>
               <tr>
@@ -143,7 +142,7 @@ export default function ChatShowcase() {
       <div className="chat-showcase-actions">
         <Link className="mkt-btn mkt-btn-primary chat-showcase-cta" href="/chat">
           <EitMark size={40} tone="inverse" title="eit" />
-          {show.cta.includes("هندسها") ? <BrandPhrase text={show.cta} /> : show.cta}
+          {show.cta}
         </Link>
         <Link className="mkt-btn mkt-btn-secondary" href="/pricing">
           {show.plans}

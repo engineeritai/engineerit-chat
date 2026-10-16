@@ -853,7 +853,7 @@ export default function Page() {
           )}
           {messages.length === 0 ? (
             <div className="chat-start">
-              <EitMark size={72} title="eit" />
+              <EitMark size={48} title="eit" />
               <h1>{s.chat.greeting}</h1>
             </div>
           ) : (

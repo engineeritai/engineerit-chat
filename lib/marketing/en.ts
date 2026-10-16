@@ -24,7 +24,7 @@ export const en: MarketingContent = {
     kicker: "Saudi Arabia and the GCC",
     h1: "engineer it with AI",
     lead:
-      "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Your subscription unlocks unlimited chats, engineering tools and AI Advisors.",
+      "Attach files, pick a tool, get structured answers. Your subscription unlocks unlimited chats, tools and AI Advisors.",
     primaryCta: "Start chatting",
     askPlaceholder: "Ask an engineering question…",
     askSend: "Send",
@@ -226,6 +226,7 @@ export const en: MarketingContent = {
     register: "Register",
     privacy: "Privacy",
     refunds: "Refunds",
+    registered: "Registered in Saudi Arabia 🇸🇦",
   },
   pricing: {
     title: "Plans and pricing",
