@@ -1,16 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { DISCIPLINES } from "@/lib/disciplines";
 import { ENGINEER_TOOLS } from "@/lib/engineerTools";
-import { getMarketingContent, type Locale } from "@/lib/marketing";
-import {
-  ENTERPRISE_PLAN,
-  TEAM_PLAN,
-  formatSar,
-} from "@/lib/pricingDisplay";
+import { useLocale } from "@/app/components/LocaleProvider";
+import { useMessages } from "@/lib/useMessages";
+import { getMarketingContent } from "@/lib/marketing";
+import { disciplineLabel, formatMoney, toolLabel } from "@/lib/labels";
+import { ENTERPRISE_PLAN, TEAM_PLAN } from "@/lib/pricingDisplay";
 import PilotRequestForm from "@/app/components/marketing/PilotRequestForm";
 import SaudiBusinessBadge from "@/app/components/marketing/SaudiBusinessBadge";
 import AdvisorEcosystem from "@/app/components/AdvisorEcosystem";
-import en from "@/lib/i18n/en";
 
 function fill(template: string, values: Record<string, string>) {
   return Object.entries(values).reduce(
@@ -19,16 +19,18 @@ function fill(template: string, values: Record<string, string>) {
   );
 }
 
-export default function LandingView({ locale = "en" }: { locale?: Locale }) {
+export default function LandingView() {
+  const { locale } = useLocale();
+  const { m } = useMessages();
   const content = getMarketingContent(locale);
 
   const teamBullet = fill(content.teams.teamBullet, {
-    teamMonthly: formatSar(TEAM_PLAN.monthlySar),
+    teamMonthly: formatMoney(TEAM_PLAN.monthlySar, locale),
     seats: String(TEAM_PLAN.includedSeats),
-    extraMonthly: formatSar(TEAM_PLAN.extraSeatMonthlySar),
+    extraMonthly: formatMoney(TEAM_PLAN.extraSeatMonthlySar, locale),
   });
   const enterpriseBullet = fill(content.teams.enterpriseBullet, {
-    enterpriseMonthly: formatSar(ENTERPRISE_PLAN.monthlySarFrom),
+    enterpriseMonthly: formatMoney(ENTERPRISE_PLAN.monthlySarFrom, locale),
   });
 
   return (
@@ -56,20 +58,20 @@ export default function LandingView({ locale = "en" }: { locale?: Locale }) {
           <p>{content.hero.panelBody}</p>
           <ul className="mkt-check">
             {ENGINEER_TOOLS.map((tool) => (
-              <li key={tool.id}>{tool.label}</li>
+              <li key={tool.id}>{toolLabel(locale, tool.id)}</li>
             ))}
           </ul>
           <Link className="mkt-btn mkt-btn-primary" href="/chat">
             {content.nav.openChat}
           </Link>
-          <SaudiBusinessBadge locale={locale} />
+          <SaudiBusinessBadge />
         </div>
       </section>
 
       <section className="mkt-section" id="advisors">
         <AdvisorEcosystem />
         <p className="mkt-intro">
-          <Link href="/advisors">{en.advisors.homeCta}</Link>
+          <Link href="/advisors">{m.advisors.homeCta}</Link>
         </p>
       </section>
 
@@ -79,7 +81,7 @@ export default function LandingView({ locale = "en" }: { locale?: Locale }) {
         <div className="mkt-grid-disciplines">
           {DISCIPLINES.map((name) => (
             <article key={name} className="mkt-card">
-              <h3>{name}</h3>
+              <h3>{disciplineLabel(locale, name)}</h3>
               <p>{content.disciplines.summaries[name]}</p>
             </article>
           ))}
@@ -92,7 +94,7 @@ export default function LandingView({ locale = "en" }: { locale?: Locale }) {
         <div className="mkt-grid-tools">
           {ENGINEER_TOOLS.map((tool) => (
             <article key={tool.id} className="mkt-card">
-              <h3>{tool.label}</h3>
+              <h3>{toolLabel(locale, tool.id)}</h3>
               <p>{content.tools.summaries[tool.id]}</p>
               <p className="mkt-chip">{content.tools.availability[tool.id]}</p>
             </article>
@@ -149,7 +151,7 @@ export default function LandingView({ locale = "en" }: { locale?: Locale }) {
               </Link>
             </div>
           </div>
-          <PilotRequestForm locale={locale} />
+          <PilotRequestForm />
         </div>
       </section>
 

@@ -3,6 +3,9 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import LanguageToggle from "./LanguageToggle";
+import { planById } from "@/lib/labels";
+import { useMessages } from "@/lib/useMessages";
 import { supabase } from "@/lib/supabaseClient";
 
 type HeaderProps = {
@@ -10,13 +13,6 @@ type HeaderProps = {
 };
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
-
-const PLAN_LABELS: Record<PlanId, string> = {
-  assistant: "Assistant",
-  engineer: "Engineer",
-  professional: "Professional",
-  consultant: "Consultant",
-};
 
 const PLAN_COLORS: Record<PlanId, string> = {
   assistant: "#2563eb",
@@ -59,6 +55,8 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const [resetMsg, setResetMsg] = useState<string | null>(null);
 
   const router = useRouter();
+  const { locale, shell: s } = useMessages();
+  const planName = (id: PlanId) => planById(locale, id).name;
 
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
@@ -188,7 +186,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
       }
 
       if (!data.user) {
-        setLoginError("Unable to sign in. Please try again.");
+        setLoginError(s.header.unableSignIn);
         setLoginLoading(false);
         return;
       }
@@ -239,7 +237,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
       router.push("/profile");
     } catch (err) {
       console.error(err);
-      setLoginError("Something went wrong. Please try again.");
+      setLoginError(s.header.genericError);
     } finally {
       setLoginLoading(false);
     }
@@ -252,7 +250,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     if (forgotCooldown > 0) return;
 
     if (!loginEmail || !loginEmail.includes("@")) {
-      setForgotMsg("Enter your email first.");
+      setForgotMsg(s.header.enterEmail);
       return;
     }
 
@@ -274,10 +272,10 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         return;
       }
 
-      setForgotMsg("Reset link sent to your email.");
+      setForgotMsg(s.header.resetSent);
     } catch (err) {
       console.error(err);
-      setForgotMsg("Something went wrong. Please try again.");
+      setForgotMsg(s.header.genericError);
       setForgotCooldown(60);
     } finally {
       setForgotLoading(false);
@@ -288,11 +286,11 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     setResetMsg(null);
 
     if (!resetPass1 || resetPass1.length < 6) {
-      setResetMsg("Password must be at least 6 characters.");
+      setResetMsg(s.header.passwordShort);
       return;
     }
     if (resetPass1 !== resetPass2) {
-      setResetMsg("Passwords do not match.");
+      setResetMsg(s.header.passwordMismatch);
       return;
     }
 
@@ -308,12 +306,12 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         return;
       }
 
-      setResetMsg("Password updated successfully.");
+      setResetMsg(s.header.passwordUpdated);
       setResetPass1("");
       setResetPass2("");
     } catch (err) {
       console.error(err);
-      setResetMsg("Something went wrong. Please try again.");
+      setResetMsg(s.header.genericError);
     } finally {
       setResetLoading(false);
     }
@@ -327,7 +325,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         <button
           className="mobile-menu-btn"
           onClick={onToggleSidebar}
-          aria-label="Open menu"
+          aria-label={s.header.openMenu}
           type="button"
         >
           <span />
@@ -354,6 +352,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           position: "relative",
         }}
       >
+        <LanguageToggle />
         {/* NOT LOGGED IN */}
         {!isLoggedIn && (
           <>
@@ -378,7 +377,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                 cursor: "pointer",
               }}
             >
-              Login
+              {s.header.login}
             </button>
 
             {isLoginOpen && (
@@ -406,14 +405,14 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                         color: "#111827",
                       }}
                     >
-                      Sign in to engineerit.ai
+                      {s.header.signInTitle}
                     </div>
 
                     <div style={{ marginBottom: 6 }}>
                       <input
                         type="email"
                         required
-                        placeholder="Email"
+                        placeholder={s.header.email}
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         style={{
@@ -430,7 +429,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       <input
                         type="password"
                         required
-                        placeholder="Password"
+                        placeholder={s.header.password}
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         style={{
@@ -470,7 +469,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                         cursor: "pointer",
                       }}
                     >
-                      {loginLoading ? "Signing in…" : "Sign in"}
+                      {loginLoading ? s.header.signingIn : s.header.signIn}
                     </button>
 
                     <div
@@ -499,7 +498,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                           fontWeight: 600,
                         }}
                       >
-                        Forgot password?
+                        {s.header.forgot}
                       </button>
                     </div>
 
@@ -511,7 +510,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                         textAlign: "center",
                       }}
                     >
-                      Don&apos;t have an account?{" "}
+                      {s.header.noAccount}{" "}
                       <button
                         type="button"
                         onClick={() => {
@@ -530,7 +529,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                           fontWeight: 600,
                         }}
                       >
-                        Register
+                        {s.header.register}
                       </button>
                     </div>
                   </form>
@@ -544,14 +543,14 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                         color: "#111827",
                       }}
                     >
-                      Reset your password
+                      {s.header.resetTitle}
                     </div>
 
                     <div style={{ marginBottom: 6 }}>
                       <input
                         type="email"
                         required
-                        placeholder="Your email"
+                        placeholder={s.header.yourEmail}
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         style={{
@@ -568,7 +567,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       <div
                         style={{
                           fontSize: 12,
-                          color: forgotMsg.includes("sent")
+                          color: forgotMsg === s.header.resetSent
                             ? "#15803d"
                             : "#b91c1c",
                           marginBottom: 6,
@@ -596,10 +595,10 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       }}
                     >
                       {forgotLoading
-                        ? "Sending…"
+                        ? s.header.sending
                         : forgotCooldown > 0
-                        ? `Try again in ${forgotCooldown}s`
-                        : "Send reset link"}
+                        ? s.header.tryAgain.replace("{seconds}", String(forgotCooldown))
+                        : s.header.sendReset}
                     </button>
 
                     <div style={{ marginTop: 8, textAlign: "center" }}>
@@ -621,7 +620,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                           fontWeight: 600,
                         }}
                       >
-                        Back to login
+                        {s.header.backToLogin}
                       </button>
                     </div>
                   </div>
@@ -644,7 +643,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                 fontWeight: 600,
               }}
             >
-              {PLAN_LABELS[planId]}
+              {planName(planId)}
             </span>
 
             <button
@@ -668,13 +667,13 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                 cursor: "pointer",
                 overflow: "hidden",
               }}
-              aria-label="Account menu"
+              aria-label={s.header.accountMenu}
             >
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={avatarUrl}
-                  alt="Profile"
+                  alt={s.header.profileAlt}
                   style={{
                     width: "100%",
                     height: "100%",
@@ -724,20 +723,20 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       marginTop: 2,
                     }}
                   >
-                    {PLAN_LABELS[planId]} plan
+                    {planName(planId)} {s.header.planSuffix}
                   </div>
                 </div>
 
                 <button type="button" onClick={() => goTo("/profile")} style={menuItemStyle}>
-                  My Profile
+                  {s.header.myProfile}
                 </button>
 
                 <button type="button" onClick={() => goTo("/register")} style={menuItemStyle}>
-                  Plans &amp; Registration
+                  {s.header.plansRegistration}
                 </button>
 
                 <button type="button" onClick={() => goTo("/subscription")} style={menuItemStyle}>
-                  Subscribe / Upgrade
+                  {s.header.subscribe}
                 </button>
 
                 <div
@@ -755,7 +754,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   }}
                   style={menuItemStyle}
                 >
-                  Reset password
+                  {s.header.resetPassword}
                 </button>
 
                 {resetOpen && (
@@ -770,7 +769,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                   >
                     <input
                       type="password"
-                      placeholder="New password"
+                      placeholder={s.header.newPassword}
                       value={resetPass1}
                       onChange={(e) => setResetPass1(e.target.value)}
                       style={{
@@ -784,7 +783,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                     />
                     <input
                       type="password"
-                      placeholder="Confirm password"
+                      placeholder={s.header.confirmPassword}
                       value={resetPass2}
                       onChange={(e) => setResetPass2(e.target.value)}
                       style={{
@@ -827,7 +826,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                         cursor: "pointer",
                       }}
                     >
-                      {resetLoading ? "Updating…" : "Update password"}
+                      {resetLoading ? s.header.updating : s.header.updatePassword}
                     </button>
 
                     <button
@@ -846,7 +845,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                         cursor: "pointer",
                       }}
                     >
-                      Close
+                      {s.chat.close}
                     </button>
                   </div>
                 )}
@@ -860,7 +859,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                     fontWeight: 600,
                   }}
                 >
-                  Sign out
+                  {s.header.logout}
                 </button>
               </div>
             )}

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
+import { useMessages } from "@/lib/useMessages";
 
 type BotMessage = {
   id: string;
@@ -15,6 +16,7 @@ function uuid() {
 }
 
 export default function FeedbackPage() {
+  const { locale, shell: s } = useMessages();
   const [type, setType] = useState("feedback");
   const [text, setText] = useState("");
   const [email, setEmail] = useState("");
@@ -28,12 +30,12 @@ export default function FeedbackPage() {
   const [botInput, setBotInput] = useState("");
   const [botSending, setBotSending] = useState(false);
   const [botMessages, setBotMessages] = useState<BotMessage[]>([
-    {
-      id: uuid(),
-      from: "bot",
-      text: "Hi 👋 I am the Smart Assistant for engineerit.ai. How can I help you with the platform, subscriptions, or any issue?",
-    },
+    { id: "hello", from: "bot", text: s.feedback.botHello },
   ]);
+
+  useEffect(() => {
+    setBotMessages([{ id: "hello", from: "bot", text: s.feedback.botHello }]);
+  }, [locale, s.feedback.botHello]);
 
   // 🔧 إرسال النموذج للـ API بالشكل الصحيح
   async function handleSubmit(e: React.FormEvent) {
@@ -73,7 +75,7 @@ export default function FeedbackPage() {
       const res = await fetch("/api/smart-assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, locale }),
       });
       if (!res.ok) throw new Error("Request failed");
       const data = (await res.json()) as { answer: string };
@@ -81,8 +83,7 @@ export default function FeedbackPage() {
         id: uuid(),
         from: "bot",
         text:
-          data.answer ||
-          "I could not understand well. Please try to explain in a different way.",
+          data.answer || s.feedback.botUnclear,
       };
       setBotMessages((prev) => [...prev, botMsg]);
     } catch (err) {
@@ -91,7 +92,7 @@ export default function FeedbackPage() {
         id: uuid(),
         from: "bot",
         text:
-          "There was an error connecting to the Smart Assistant. Please try again later.",
+          s.feedback.botError,
       };
       setBotMessages((prev) => [...prev, botMsg]);
     } finally {
@@ -110,17 +111,13 @@ export default function FeedbackPage() {
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
         <div className="page-wrap">
-          <h1 className="page-title">Feedback & Complaints</h1>
-          <p className="page-subtitle">
-            Help us improve engineerit.ai. Your feedback will be sent to{" "}
-            <strong>info@engineerit.ai</strong>. You can also ask the{" "}
-            <strong>Smart Assistant</strong> for instant help.
-          </p>
+          <h1 className="page-title">{s.feedback.title}</h1>
+          <p className="page-subtitle">{s.feedback.lead}</p>
 
           <form className="card" onSubmit={handleSubmit}>
             <div className="form-row">
               <label>
-                Category
+                {s.feedback.category}
                 <select
                   className="select"
                   value={type}
@@ -129,16 +126,16 @@ export default function FeedbackPage() {
                     setStatus("idle");
                   }}
                 >
-                  <option value="feedback">Feedback</option>
-                  <option value="complaint">Complaint</option>
-                  <option value="suggestion">Suggestion</option>
+                  <option value="feedback">{s.feedback.feedback}</option>
+                  <option value="complaint">{s.feedback.complaint}</option>
+                  <option value="suggestion">{s.feedback.suggestion}</option>
                 </select>
               </label>
             </div>
 
             <div className="form-row">
               <label>
-                Your email (optional)
+                {s.feedback.emailOptional}
                 <input
                   className="input"
                   type="email"
@@ -154,12 +151,12 @@ export default function FeedbackPage() {
 
             <div className="form-row">
               <label>
-                Message
+                {s.feedback.message}
                 <textarea
                   className="textarea"
                   rows={5}
                   required
-                  placeholder="Write your feedback, complaint, or suggestion in detail…"
+                  placeholder={s.feedback.messagePlaceholder}
                   value={text}
                   onChange={(e) => {
                     setText(e.target.value);
@@ -170,18 +167,17 @@ export default function FeedbackPage() {
             </div>
 
             <button className="btn" disabled={status === "sending"}>
-              {status === "sending" ? "Sending…" : "Submit"}
+              {status === "sending" ? s.feedback.sending : s.feedback.submit}
             </button>
 
             {status === "done" && (
               <p style={{ fontSize: 13, color: "#16a34a", marginTop: 8 }}>
-                Thank you. Your message has been submitted.
+                {s.feedback.thanks}
               </p>
             )}
             {status === "error" && (
               <p style={{ fontSize: 13, color: "#b91c1c", marginTop: 8 }}>
-                There was a problem sending your message. Please try again
-                later.
+                {s.feedback.sendError}
               </p>
             )}
           </form>
@@ -194,14 +190,14 @@ export default function FeedbackPage() {
               onClick={() => setBotOpen((v) => !v)}
             >
               🤖
-              <span>Smart Assistant</span>
+              <span>{s.feedback.assistant}</span>
             </button>
           </div>
 
           {botOpen && (
             <div className="helper-bot-panel">
               <div className="helper-bot-header">
-                <div className="helper-bot-title">Smart Assistant</div>
+                <div className="helper-bot-title">{s.feedback.assistant}</div>
                 <button
                   type="button"
                   onClick={() => setBotOpen(false)}
@@ -212,7 +208,7 @@ export default function FeedbackPage() {
                     lineHeight: 1,
                     cursor: "pointer",
                   }}
-                  aria-label="Close"
+                  aria-label={s.feedback.close}
                 >
                   ×
                 </button>
@@ -238,7 +234,7 @@ export default function FeedbackPage() {
               <div className="helper-bot-composer">
                 <input
                   className="helper-bot-input"
-                  placeholder="Ask the Smart Assistant…"
+                  placeholder={s.feedback.askPlaceholder}
                   value={botInput}
                   onChange={(e) => setBotInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -254,7 +250,7 @@ export default function FeedbackPage() {
                   disabled={botSending}
                   onClick={sendBotMessage}
                 >
-                  {botSending ? "..." : "Send"}
+                  {botSending ? "..." : s.feedback.send}
                 </button>
               </div>
             </div>

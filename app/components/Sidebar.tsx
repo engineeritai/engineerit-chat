@@ -4,7 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type React from "react";
 import AdvisorNav from "./AdvisorNav";
+import LanguageToggle from "./LanguageToggle";
 import { DISCIPLINES } from "@/lib/disciplines";
+import { disciplineLabel } from "@/lib/labels";
+import { useMessages } from "@/lib/useMessages";
 import { SAUDI_BUSINESS_AUTH_NO, SAUDI_BUSINESS_VERIFY_URL } from "@/lib/trust";
 
 type Props = {
@@ -34,6 +37,7 @@ export default function Sidebar({
   onCloseMobile,
 }: Props) {
   const pathname = usePathname();
+  const { locale, shell: s } = useMessages();
 
   const content = (
     <aside
@@ -53,12 +57,13 @@ export default function Sidebar({
           paddingRight: 6,
         }}
       >
+        <LanguageToggle className="lang-toggle-block" />
         <button className="btn w-full mb-3" onClick={onNewChat}>
-          + New chat
+          {s.chat.newChat}
         </button>
 
         <div>
-          <h3>Discipline</h3>
+          <h3>{s.chat.discipline}</h3>
           <select
             className="select"
             value={discipline}
@@ -66,46 +71,29 @@ export default function Sidebar({
           >
             {DISCIPLINES.map((d) => (
               <option key={d} value={d}>
-                {d}
+                {disciplineLabel(locale, d)}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <h3>Pages</h3>
+          <h3>{s.nav.pages}</h3>
           <nav className="sidebar-nav">
-            <SidebarLink href="/" label="Home" currentPath={pathname} />
-            <SidebarLink href="/chat" label="Chat" currentPath={pathname} />
-            <SidebarLink href="/pricing" label="Pricing" currentPath={pathname} />
-            <SidebarLink
-              href="/register"
-              label="Registration & Plans"
-              currentPath={pathname}
-            />
-            <SidebarLink href="/pricing" label="Pricing" currentPath={pathname} />
-            <SidebarLink
-              href="/profile"
-              label="My Profile"
-              currentPath={pathname}
-            />
-            <SidebarLink
-              href="/feedback"
-              label="Feedback & Complaints"
-              currentPath={pathname}
-            />
-            <SidebarLink
-              href="/legal/terms"
-              label="User Policy & Agreement"
-              currentPath={pathname}
-            />
+            <SidebarLink href="/" label={s.nav.home} currentPath={pathname} />
+            <SidebarLink href="/chat" label={s.nav.chat} currentPath={pathname} />
+            <SidebarLink href="/pricing" label={s.nav.pricing} currentPath={pathname} />
+            <SidebarLink href="/register" label={s.nav.register} currentPath={pathname} />
+            <SidebarLink href="/profile" label={s.nav.profile} currentPath={pathname} />
+            <SidebarLink href="/feedback" label={s.nav.feedback} currentPath={pathname} />
+            <SidebarLink href="/legal/terms" label={s.nav.terms} currentPath={pathname} />
           </nav>
         </div>
 
         <AdvisorNav currentPath={pathname} />
 
         <div>
-          <h3>History</h3>
+          <h3>{s.chat.history}</h3>
           <div
             style={{
               display: "flex",
@@ -118,7 +106,7 @@ export default function Sidebar({
           >
             {threads.length === 0 && (
               <div style={{ fontSize: 13, color: "#6b7280" }}>
-                No conversations yet
+                {s.chat.emptyHistory}
               </div>
             )}
 
@@ -158,19 +146,18 @@ export default function Sidebar({
         }}
       >
         <div style={{ fontWeight: 600, color: "#111827", marginBottom: 4 }}>
-          AI Engineering Assistant
+          {s.footer.blurb}
         </div>
 
         <div style={{ marginBottom: 2 }}>
           © {new Date().getFullYear()}{" "}
-          <span style={{ fontWeight: 500 }}>engineerit.ai</span>. All rights
-          reserved.
+          <span style={{ fontWeight: 500 }}>engineerit.ai</span>. {s.footer.rights}
         </div>
 
         <div>
-          Use of engineerit as per{" "}
+          {s.footer.policyLead}{" "}
           <Link href="/legal/terms" className="sidebar-legal-link">
-            User Policy &amp; Agreement
+            {s.footer.policyLink}
           </Link>
           .
         </div>
@@ -225,10 +212,10 @@ export default function Sidebar({
                 color: "#1D4ED8",
               }}
             >
-              Verified Store
+              {s.trust.title}
             </div>
             <div style={{ color: "#374151" }}>
-              Auth No.: <span style={{ fontWeight: 600 }}>{SAUDI_BUSINESS_AUTH_NO}</span>
+              {s.trust.auth} <span style={{ fontWeight: 600 }}>{SAUDI_BUSINESS_AUTH_NO}</span>
             </div>
 
             <Link
@@ -249,7 +236,7 @@ export default function Sidebar({
                 fontWeight: 500,
               }}
             >
-              <span>Verify via Saudi Business Center</span>
+              <span>{s.trust.verify}</span>
               <svg
                 width="10"
                 height="10"

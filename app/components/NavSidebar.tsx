@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import LanguageToggle from "./LanguageToggle";
 import AdvisorNav from "./AdvisorNav";
+import { useMessages } from "@/lib/useMessages";
 
 type Props = {
   isMobileOpen: boolean;
@@ -11,36 +13,22 @@ type Props = {
 
 export default function NavSidebar({ isMobileOpen, onCloseMobile }: Props) {
   const pathname = usePathname();
+  const { shell: s } = useMessages();
 
   const content = (
     <aside className="sidebar-inner">
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <LanguageToggle className="lang-toggle-block" />
         <div>
-          <h3>Navigation</h3>
+          <h3>{s.nav.navigation}</h3>
           <nav className="sidebar-nav">
-            <SidebarLink href="/" label="Home" currentPath={pathname} />
-            <SidebarLink href="/chat" label="Chat" currentPath={pathname} />
-            <SidebarLink href="/pricing" label="Pricing" currentPath={pathname} />
-            <SidebarLink
-              href="/register"
-              label="Registration & Plans"
-              currentPath={pathname}
-            />
-            <SidebarLink
-              href="/profile"
-              label="My Profile"
-              currentPath={pathname}
-            />
-            <SidebarLink
-              href="/feedback"
-              label="Feedback & Complaints"
-              currentPath={pathname}
-            />
-            <SidebarLink
-              href="/legal/terms"
-              label="User Policy & Agreement"
-              currentPath={pathname}
-            />
+            <SidebarLink href="/" label={s.nav.home} currentPath={pathname} />
+            <SidebarLink href="/chat" label={s.nav.chat} currentPath={pathname} />
+            <SidebarLink href="/pricing" label={s.nav.pricing} currentPath={pathname} />
+            <SidebarLink href="/register" label={s.nav.register} currentPath={pathname} />
+            <SidebarLink href="/profile" label={s.nav.profile} currentPath={pathname} />
+            <SidebarLink href="/feedback" label={s.nav.feedback} currentPath={pathname} />
+            <SidebarLink href="/legal/terms" label={s.nav.terms} currentPath={pathname} />
           </nav>
         </div>
 
@@ -58,17 +46,16 @@ export default function NavSidebar({ isMobileOpen, onCloseMobile }: Props) {
         }}
       >
         <div style={{ fontWeight: 600, color: "#111827", marginBottom: 4 }}>
-          AI Engineering Assistant
+          {s.footer.blurb}
         </div>
         <div style={{ marginBottom: 2 }}>
           © {new Date().getFullYear()}{" "}
-          <span style={{ fontWeight: 500 }}>engineerit.ai</span>. All rights
-          reserved.
+          <span style={{ fontWeight: 500 }}>engineerit.ai</span>. {s.footer.rights}
         </div>
         <div>
-          Use of engineerit as per{" "}
+          {s.footer.policyLead}{" "}
           <Link href="/legal/terms" className="sidebar-legal-link">
-            User Policy &amp; Agreement
+            {s.footer.policyLink}
           </Link>
           .
         </div>

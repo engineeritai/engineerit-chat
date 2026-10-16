@@ -1,17 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { getMarketingContent, type Locale } from "@/lib/marketing";
+import { useLocale } from "@/app/components/LocaleProvider";
+import { getMarketingContent } from "@/lib/marketing";
 import { CONTACT_EMAIL, pilotMailto } from "@/lib/trust";
 
-export default function PilotRequestForm({
-  locale = "en",
-  subject = "Team pilot request — engineerit.ai",
-}: {
-  locale?: Locale;
-  subject?: string;
-}) {
+export default function PilotRequestForm({ subject }: { subject?: string }) {
+  const { locale } = useLocale();
   const content = getMarketingContent(locale);
+  const mailSubject =
+    subject ?? (locale === "ar" ? "طلب تجربة فريق — engineerit.ai" : "Team pilot request — engineerit.ai");
   const [opened, setOpened] = useState(false);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -21,15 +19,12 @@ export default function PilotRequestForm({
     const email = String(data.get("email") || "").trim();
     const company = String(data.get("company") || "").trim();
     const message = String(data.get("message") || "").trim();
-    const body = [
-      `Name: ${name}`,
-      `Work email: ${email}`,
-      `Company: ${company}`,
-      "",
-      message || "We would like to request a team pilot.",
-    ].join("\n");
+    const body =
+      locale === "ar"
+        ? [`الاسم: ${name}`, `بريد العمل: ${email}`, `الشركة: ${company}`, "", message || "نود طلب تجربة للفريق."].join("\n")
+        : [`Name: ${name}`, `Work email: ${email}`, `Company: ${company}`, "", message || "We would like to request a team pilot."].join("\n");
 
-    window.location.href = pilotMailto(subject, body);
+    window.location.href = pilotMailto(mailSubject, body);
     setOpened(true);
   }
 
@@ -71,7 +66,7 @@ export default function PilotRequestForm({
       )}
 
       <p className="mkt-muted">
-        <a href={pilotMailto(subject)}>{content.teams.mailtoFallback}</a>
+        <a href={pilotMailto(mailSubject)}>{content.teams.mailtoFallback}</a>
       </p>
     </form>
   );

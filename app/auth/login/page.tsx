@@ -4,9 +4,12 @@ import { FormEvent, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import LanguageToggle from "@/app/components/LanguageToggle";
+import { useMessages } from "@/lib/useMessages";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { shell: s } = useMessages();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +30,7 @@ export default function LoginPage() {
 
       router.push("/"); // أو /chat حسب ما تحب
     } catch (err: any) {
-      setMessage(err.message ?? "Unexpected error");
+      setMessage(err.message ?? s.header.genericError);
     } finally {
       setLoading(false);
     }
@@ -115,12 +118,15 @@ export default function LoginPage() {
   return (
     <div style={pageStyle}>
       <div style={cardStyle}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+          <LanguageToggle />
+        </div>
         <h1 style={titleStyle}>engineerit.ai</h1>
-        <p style={subtitleStyle}>Login to your account</p>
+        <p style={subtitleStyle}>{s.auth.signInLead}</p>
 
         <form onSubmit={handleSubmit} style={{ display: "grid", gap: "12px" }}>
           <div>
-            <label style={labelStyle}>Email</label>
+            <label style={labelStyle}>{s.auth.email}</label>
             <input
               type="email"
               required
@@ -131,7 +137,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label style={labelStyle}>Password</label>
+            <label style={labelStyle}>{s.auth.password}</label>
             <input
               type="password"
               required
@@ -143,7 +149,7 @@ export default function LoginPage() {
           </div>
 
           <button type="submit" disabled={loading} style={buttonStyle}>
-            {loading ? "Please wait..." : "Login"}
+            {loading ? s.auth.signingIn : s.auth.signIn}
           </button>
         </form>
 
@@ -152,9 +158,9 @@ export default function LoginPage() {
         )}
 
         <p style={smallTextStyle}>
-          Don&apos;t have an account?{" "}
+          {s.header.noAccount}{" "}
           <Link href="/register" style={linkStyle}>
-            Register →
+            {s.header.register}
           </Link>
         </p>
       </div>

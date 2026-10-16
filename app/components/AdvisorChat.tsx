@@ -29,6 +29,8 @@ import {
 } from "@/lib/chatActions";
 import { useMessages } from "@/lib/useMessages";
 import { useSubscriptionTier } from "@/lib/useSubscriptionTier";
+import { postDocument, postImage, readApiError } from "@/lib/postAttachment";
+import { MAX_UPLOAD_BYTES, UploadError, fileTooLargeMessage } from "@/lib/uploadLimits";
 import UpgradeDialog from "./UpgradeDialog";
 
 type Role = "user" | "assistant";
@@ -54,7 +56,7 @@ function uuid() {
 
 export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
   const advisor = getAdvisor(advisorId);
-  const { locale, m, dir } = useMessages();
+  const { locale, m, dir, shell: s } = useMessages();
   const { ready, isGuest, userId, tier } = useSubscriptionTier();
   const copy = m.advisors.items[advisorId];
   const live = advisorsAreLive();
@@ -76,6 +78,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
   const [showGate, setShowGate] = useState(false);
   const [gateNotice, setGateNotice] = useState<string | null>(null);
   const [activePlaybook, setActivePlaybook] = useState(playbooks[0]?.id ?? "");
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   if (!advisor) return null;
 
@@ -96,9 +99,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     const max = isGuest ? 1 : tier === "assistant" ? 3 : Number.POSITIVE_INFINITY;
     if (Number.isFinite(max) && cur >= max) {
       openGate(
-        isGuest
-          ? "Daily limit reached. Please register or log in."
-          : "Daily limit reached. Please upgrade."
+        isGuest ? s.chat.dailyGuest : s.chat.dailyPaid
       );
       return { ok: false as const, key, cur };
     }
@@ -109,6 +110,12 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     if (!unlocked) return;
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadNotice(fileTooLargeMessage(locale));
+      e.target.value = "";
+      return;
+    }
+    setUploadNotice(null);
     const reader = new FileReader();
     reader.onloadend = () => {
       setAttachments((prev) => [
@@ -124,6 +131,12 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     if (!unlocked) return;
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadNotice(fileTooLargeMessage(locale));
+      e.target.value = "";
+      return;
+    }
+    setUploadNotice(null);
     const url = URL.createObjectURL(file);
     setAttachments((prev) => [
       ...prev,
@@ -139,42 +152,70 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     return headers;
   }
 
+  function openLocked(code?: string): never {
+    openGate(code === "coming_soon" ? m.advisors.comingSoonBody : undefined);
+    throw new Error("locked");
+  }
+
   async function analyzeImage(question: string, imageFile: File, playbookId: string): Promise<string> {
-    const formData = new FormData();
-    formData.append("file", imageFile, imageFile.name);
-    formData.append("question", question || "Analyze this project image.");
-    formData.append("advisorId", advisorId);
-    formData.append("locale", locale);
-    if (playbookId) formData.append("playbookId", playbookId);
-    const res = await fetch("/api/image", { method: "POST", body: formData, headers: await authHeaders() });
-    if (res.status === 403) {
-      const data = await res.json().catch(() => null);
-      openGate(data?.code === "coming_soon" ? m.advisors.comingSoonBody : undefined);
-      throw new Error("locked");
+    let res: Response;
+    try {
+      res = await postImage({
+        file: imageFile,
+        question: question || (locale === "ar" ? "حلّل صورة المشروع هذه." : "Analyze this project image."),
+        headers: await authHeaders(),
+        advisorId,
+        locale,
+        playbookId,
+      });
+    } catch (err) {
+      if (err instanceof UploadError && err.status === 403) openLocked(err.code);
+      throw err;
     }
-    if (!res.ok) throw new Error(await res.text());
+    if (res.status === 403) {
+      const failure = await readApiError(res);
+      openLocked(failure.code);
+    }
+    if (!res.ok) {
+      const failure = await readApiError(res);
+      throw new UploadError(
+        failure.message || s.chat.imageFailed,
+        res.status,
+        failure.code
+      );
+    }
     const data = (await res.json()) as { reply: string };
     return data.reply || "";
   }
 
   async function analyzeDocument(question: string, docFile: File, playbookId: string): Promise<string> {
-    const formData = new FormData();
-    formData.append("file", docFile, docFile.name);
-    formData.append("question", question || "Review this project file.");
-    formData.append("advisorId", advisorId);
-    formData.append("locale", locale);
-    if (playbookId) formData.append("playbookId", playbookId);
-    const res = await fetch("/api/document", {
-      method: "POST",
-      body: formData,
-      headers: await authHeaders(),
-    });
-    if (res.status === 403) {
-      const data = await res.json().catch(() => null);
-      openGate(data?.code === "coming_soon" ? m.advisors.comingSoonBody : undefined);
-      throw new Error("locked");
+    let res: Response;
+    try {
+      res = await postDocument({
+        file: docFile,
+        question: question || (locale === "ar" ? "راجع ملف المشروع هذا." : "Review this project file."),
+        headers: await authHeaders(),
+        advisorId,
+        locale,
+        playbookId,
+      });
+    } catch (err) {
+      if (err instanceof UploadError && err.status === 403) openLocked(err.code);
+      throw err;
     }
-    if (!res.ok) throw new Error(await res.text());
+    if (res.status === 403) {
+      const failure = await readApiError(res);
+      openLocked(failure.code);
+    }
+    if (!res.ok) {
+      const failure = await readApiError(res);
+      throw new UploadError(
+        failure.message ||
+          s.chat.documentFailed,
+        res.status,
+        failure.code
+      );
+    }
     const data = (await res.json()) as { reply: string };
     return data.reply || "";
   }
@@ -270,10 +311,11 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     } catch (err) {
       if (err instanceof Error && err.message === "locked") return;
       console.error(err);
-      setMessages((prev) => [
-        ...prev,
-        { id: uuid(), role: "assistant", content: "Sorry, something failed. Please try again." },
-      ]);
+      const content =
+        err instanceof UploadError
+          ? err.message
+          : s.chat.sorry;
+      setMessages((prev) => [...prev, { id: uuid(), role: "assistant", content }]);
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -477,7 +519,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                               await exportPdf(message.content, filename);
                             } catch (err) {
                               console.error(err);
-                              alert("PDF export failed. Please try again.");
+                              alert(s.chat.pdfFailed);
                             }
                           }}
                         >
@@ -494,7 +536,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                                 await exportWordDocx(message.content, filename);
                               } catch (err) {
                                 console.error(err);
-                                alert("Word export failed. Please try again.");
+                                alert(s.chat.wordFailed);
                               }
                             }}
                           >
@@ -508,7 +550,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                                 await exportPptx(message.content, filename);
                               } catch (err) {
                                 console.error(err);
-                                alert("PowerPoint export failed. Please try again.");
+                                alert(s.chat.pptFailed);
                               }
                             }}
                           >
@@ -559,6 +601,11 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
 
       <div className="composer">
         <div className={"composer-box" + (unlocked ? "" : " advisor-composer-locked")}>
+          {uploadNotice && (
+            <div className="upload-notice" role="alert">
+              {uploadNotice}
+            </div>
+          )}
           {attachments.length > 0 && (
             <div className="attachments">
               {attachments.map((file) => (

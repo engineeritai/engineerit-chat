@@ -1,0 +1,779 @@
+import type { Locale } from "@/lib/i18n";
+import type { EngineerToolId } from "@/lib/engineerTools";
+
+export type ShellCopy = {
+  nav: {
+    navigation: string;
+    pages: string;
+    home: string;
+    chat: string;
+    pricing: string;
+    register: string;
+    profile: string;
+    feedback: string;
+    terms: string;
+  };
+  footer: {
+    blurb: string;
+    rights: string;
+    policyLead: string;
+    policyLink: string;
+  };
+  trust: { title: string; auth: string; verify: string };
+  header: {
+    openMenu: string;
+    login: string;
+    signInTitle: string;
+    email: string;
+    password: string;
+    signingIn: string;
+    signIn: string;
+    forgot: string;
+    noAccount: string;
+    register: string;
+    resetTitle: string;
+    yourEmail: string;
+    sending: string;
+    tryAgain: string;
+    sendReset: string;
+    backToLogin: string;
+    accountMenu: string;
+    profileAlt: string;
+    planSuffix: string;
+    myProfile: string;
+    plansRegistration: string;
+    subscribe: string;
+    logout: string;
+    resetPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+    updatePassword: string;
+    updating: string;
+    unableSignIn: string;
+    genericError: string;
+    enterEmail: string;
+    resetSent: string;
+    passwordShort: string;
+    passwordMismatch: string;
+    passwordUpdated: string;
+  };
+  chat: {
+    newChat: string;
+    discipline: string;
+    history: string;
+    emptyHistory: string;
+    welcomeTitle: string;
+    welcomeBody: string;
+    toolsForPlan: string;
+    askPlaceholder: string;
+    addAttachments: string;
+    photo: string;
+    document: string;
+    send: string;
+    attachLocked: string;
+    toolLocked: string;
+    dailyGuest: string;
+    dailyPaid: string;
+    dailyGuestReply: string;
+    dailyPaidReply: string;
+    sorry: string;
+    copyFailed: string;
+    pdfFailed: string;
+    wordFailed: string;
+    pptFailed: string;
+    newConversation: string;
+    attachmentOnly: string;
+    analyzeImage: string;
+    analyzeDocument: string;
+    imageFailed: string;
+    documentFailed: string;
+    registerTitle: string;
+    upgradeTitle: string;
+    registerBody: string;
+    upgradeBody: string;
+    close: string;
+    upgrade: string;
+    copy: string;
+    share: string;
+    exportPdf: string;
+    exportWord: string;
+    exportPpt: string;
+    toolsLabel: string;
+    empty: string;
+    you: string;
+    ai: string;
+    registerActions: string;
+    upgradeActions: string;
+    saveHtml: string;
+    print: string;
+    whatsapp: string;
+    closeShare: string;
+    prompts: Record<EngineerToolId, string>;
+  };
+  auth: {
+    signInTitle: string;
+    signInLead: string;
+    welcome: string;
+    email: string;
+    password: string;
+    signingIn: string;
+    signIn: string;
+    noAccount: string;
+    createOne: string;
+    unable: string;
+    genericError: string;
+    loggedIn: string;
+    registerTitle: string;
+    registerLead: string;
+    createAccount: string;
+    fullName: string;
+    fullNamePlaceholder: string;
+    confirmEmail: string;
+    confirmEmailPlaceholder: string;
+    confirmPassword: string;
+    confirmPasswordPlaceholder: string;
+    agreePrefix: string;
+    agreeSuffix: string;
+    creating: string;
+    create: string;
+    emailConfirmTitle: string;
+    emailConfirmHint: string;
+    afterRegister: string;
+    viewPlans: string;
+    plansOverview: string;
+    toolsInPlan: string;
+    createHere: string;
+    emailRequired: string;
+    emailMismatch: string;
+    passwordMismatch: string;
+    passwordMin: string;
+    createdConfirm: string;
+    createdRedirect: string;
+    upgradeAnytime: string;
+    policyName: string;
+  };
+  profile: {
+    title: string;
+    loading: string;
+    chooseFile: string;
+    avatarHint: string;
+    fullName: string;
+    fullNamePlaceholder: string;
+    email: string;
+    saving: string;
+    save: string;
+    subscription: string;
+    currentPlan: string;
+    freeBody: string;
+    status: string;
+    price: string;
+    startDate: string;
+    endDate: string;
+    noBilling: string;
+    billingNote: string;
+    manage: string;
+    activity: string;
+    chats: string;
+    documents: string;
+    projects: string;
+    soon: string;
+    history: string;
+    noPayments: string;
+    plan: string;
+    amount: string;
+    date: string;
+    invoiceNote: string;
+    unknown: string;
+    notLoggedIn: string;
+    paymentFailed: string;
+    paymentSaved: string;
+    loadFailed: string;
+    saveFailed: string;
+    saved: string;
+    photoFailed: string;
+    photoSaved: string;
+  };
+  subscription: {
+    title: string;
+    lead: string;
+    freePlan: string;
+    processing: string;
+    subscribe: string;
+    toolsInPlan: string;
+    back: string;
+    loginRequired: string;
+    saveFailed: string;
+    freeSaved: string;
+    paymentStartFailed: string;
+    processFailed: string;
+  };
+  feedback: {
+    title: string;
+    lead: string;
+    botHello: string;
+    botUnclear: string;
+    botError: string;
+    category: string;
+    feedback: string;
+    complaint: string;
+    suggestion: string;
+    emailOptional: string;
+    message: string;
+    messagePlaceholder: string;
+    sending: string;
+    submit: string;
+    thanks: string;
+    sendError: string;
+    assistant: string;
+    askPlaceholder: string;
+    send: string;
+    close: string;
+  };
+  legal: {
+    termsTitle: string;
+    termsLead: string;
+    privacyTitle: string;
+    privacyLead: string;
+    privacyBody: string;
+    privacyLink: string;
+    privacyNote: string;
+    refundTitle: string;
+    refundLead: string;
+    refundBody: string;
+    refundLink: string;
+    refundNote: string;
+    downloadTitle: string;
+    downloadLead: string;
+    downloadButton: string;
+  };
+};
+
+const en: ShellCopy = {
+  nav: {
+    navigation: "Navigation",
+    pages: "Pages",
+    home: "Home",
+    chat: "Chat",
+    pricing: "Pricing",
+    register: "Registration and plans",
+    profile: "My profile",
+    feedback: "Feedback and complaints",
+    terms: "User policy and agreement",
+  },
+  footer: {
+    blurb: "AI engineering assistant",
+    rights: "All rights reserved.",
+    policyLead: "Use of engineerit as per",
+    policyLink: "User policy and agreement",
+  },
+  trust: {
+    title: "Saudi Business Center",
+    auth: "Auth No.",
+    verify: "Verify via Saudi Business Center",
+  },
+  header: {
+    openMenu: "Open menu",
+    login: "Login",
+    signInTitle: "Sign in to engineerit.ai",
+    email: "Email",
+    password: "Password",
+    signingIn: "Signing in…",
+    signIn: "Sign in",
+    forgot: "Forgot password?",
+    noAccount: "Don't have an account?",
+    register: "Register",
+    resetTitle: "Reset your password",
+    yourEmail: "Your email",
+    sending: "Sending…",
+    tryAgain: "Try again in {seconds}s",
+    sendReset: "Send reset link",
+    backToLogin: "Back to login",
+    accountMenu: "Account menu",
+    profileAlt: "Profile",
+    planSuffix: "plan",
+    myProfile: "My profile",
+    plansRegistration: "Plans and registration",
+    subscribe: "Subscribe or upgrade",
+    logout: "Log out",
+    resetPassword: "Reset password",
+    newPassword: "New password",
+    confirmPassword: "Confirm password",
+    updatePassword: "Update password",
+    updating: "Updating…",
+    unableSignIn: "Unable to sign in. Please try again.",
+    genericError: "Something went wrong. Please try again.",
+    enterEmail: "Enter your email first.",
+    resetSent: "Reset link sent to your email.",
+    passwordShort: "Password must be at least 6 characters.",
+    passwordMismatch: "Passwords do not match.",
+    passwordUpdated: "Password updated successfully.",
+  },
+  chat: {
+    newChat: "+ New chat",
+    discipline: "Discipline",
+    history: "History",
+    emptyHistory: "No conversations yet",
+    welcomeTitle: "Welcome to engineerit.ai",
+    welcomeBody:
+      "A digital platform for engineering intelligence: analysis, document review, and an interactive assistant for drawings and technical work.",
+    toolsForPlan: "Engineer tools for your plan",
+    askPlaceholder: "Ask an engineering question…",
+    addAttachments: "Add attachments",
+    photo: "Photo",
+    document: "Document",
+    send: "Send message",
+    attachLocked: "Subscribe to attach photos or documents.",
+    toolLocked: "This tool requires a higher subscription plan.",
+    dailyGuest: "Daily limit reached. Please register or log in.",
+    dailyPaid: "Daily limit reached. Please upgrade.",
+    dailyGuestReply: "Daily limit reached. Please register or log in to continue using engineerit.ai.",
+    dailyPaidReply: "Daily limit reached. Please upgrade to continue.",
+    sorry: "Sorry, something failed. Please try again.",
+    copyFailed: "Copy failed on this browser.",
+    pdfFailed: "PDF export failed. Please try again.",
+    wordFailed: "Word export failed. Please try again.",
+    pptFailed: "PowerPoint export failed. Please try again.",
+    newConversation: "New conversation",
+    attachmentOnly: "[Attachment]",
+    analyzeImage: "Analyze this engineering image.",
+    analyzeDocument: "Extract and summarize this document.",
+    imageFailed: "Image analysis failed. Please try again or use a smaller image.",
+    documentFailed:
+      "Document processing failed. Please try again, or convert the file to PDF or text and upload it again.",
+    registerTitle: "Register or log in",
+    upgradeTitle: "Upgrade required",
+    registerBody: "Please register or log in to continue.",
+    upgradeBody: "Upgrade to continue without limits.",
+    close: "Close",
+    upgrade: "Upgrade",
+    copy: "Copy",
+    share: "Share",
+    exportPdf: "Export PDF",
+    exportWord: "Export Word",
+    exportPpt: "Export PowerPoint",
+    toolsLabel: "Engineer tools:",
+    empty: "Ask an engineering question to start the conversation.",
+    you: "You",
+    ai: "AI",
+    registerActions: "Register to copy, share, and attach files",
+    upgradeActions: "Upgrade to copy, share, and attach files",
+    saveHtml: "Save HTML",
+    print: "Print",
+    whatsapp: "WhatsApp",
+    closeShare: "Close",
+    prompts: {
+      drawing: "Explain and analyze the attached engineering drawing, including any process flow, piping and instrumentation, or block diagram.",
+      design: "Check this engineering design against the relevant codes and standards.",
+      itp: "Generate an inspection and test plan and a quality checklist.",
+      boq: "Propose a structured bill of quantities with items and units.",
+      schedule: "Build a high-level project schedule.",
+      value: "Perform a value engineering review.",
+      dashboard: "Create a management dashboard summary with indicators, risks, and actions.",
+    },
+  },
+  auth: {
+    signInTitle: "Sign in",
+    signInLead: "Use your engineerit.ai account to access your chats and documents.",
+    welcome: "Welcome back",
+    email: "Email address",
+    password: "Password",
+    signingIn: "Signing in…",
+    signIn: "Sign in",
+    noAccount: "New here?",
+    createOne: "Create an account",
+    unable: "Unable to sign in. Please try again.",
+    genericError: "Something went wrong. Please try again.",
+    loggedIn: "Logged in. Redirecting to your profile...",
+    registerTitle: "Register on engineerit.ai",
+    registerLead:
+      "Create your account, start on the free Assistant plan, and upgrade later to Engineer, Professional, or Consultant.",
+    createAccount: "Create your account",
+    fullName: "Full name",
+    fullNamePlaceholder: "Your full name",
+    confirmEmail: "Confirm email",
+    confirmEmailPlaceholder: "Repeat your email",
+    confirmPassword: "Confirm password",
+    confirmPasswordPlaceholder: "Repeat your password",
+    agreePrefix: "I have read and agree to the",
+    agreeSuffix:
+      ", including cancellation and refund policies, and I understand that engineerit.ai is not responsible for decisions based on its outputs.",
+    creating: "Creating account...",
+    create: "Create account",
+    emailConfirmTitle: "Email confirmation required",
+    emailConfirmHint: "After confirmation, come back and sign in from the top bar.",
+    afterRegister:
+      "After registration, your account starts on the free Assistant plan. When you are ready, open the subscription page to choose Engineer, Professional, or Consultant.",
+    viewPlans: "View plans and subscribe",
+    plansOverview: "Plans and engineer tools",
+    toolsInPlan: "Engineer tools in this plan",
+    createHere: "Create one here",
+    emailRequired: "Please enter and confirm your email.",
+    emailMismatch: "Email and confirmation email do not match.",
+    passwordMismatch: "Password and confirmation password do not match.",
+    passwordMin: "Password must be at least 8 characters.",
+    createdConfirm:
+      "Account created. We sent a confirmation email. Check your inbox and junk folder, confirm the address, then sign in from the top bar.",
+    createdRedirect: "Account created. Redirecting to your profile...",
+    upgradeAnytime: "You can change your plan at any time from your profile or the subscription page.",
+    policyName: "User policy and agreement",
+  },
+  profile: {
+    title: "Profile and subscription",
+    loading: "Loading profile…",
+    chooseFile: "Choose file",
+    avatarHint: "JPG, PNG, or GIF. Max 5 MB.",
+    fullName: "Full name",
+    fullNamePlaceholder: "Your full name",
+    email: "Email",
+    saving: "Saving…",
+    save: "Save changes",
+    subscription: "Subscription",
+    currentPlan: "Current plan",
+    freeBody: "You are on the free Assistant plan. No charges apply until you upgrade.",
+    status: "Status",
+    price: "Price",
+    startDate: "Start date",
+    endDate: "End date",
+    noBilling: "No billing data found yet for this plan.",
+    billingNote: "Plan changes are handled by engineerit.ai billing. Manage or upgrade from the subscription page.",
+    manage: "Manage or upgrade subscription",
+    activity: "Activity",
+    chats: "Total chats",
+    documents: "Total uploaded documents",
+    projects: "Saved projects",
+    soon: "soon",
+    history: "Billing history",
+    noPayments: "No payments recorded yet. Future subscriptions will appear here.",
+    plan: "Plan",
+    amount: "Amount",
+    date: "Date",
+    invoiceNote: "The payment provider also emails invoices. Keep those emails as receipts.",
+    unknown: "unknown",
+    notLoggedIn: "You are not logged in.",
+    paymentFailed: "Could not save the subscription after payment. Please contact support.",
+    paymentSaved: "Payment successful and subscription updated.",
+    loadFailed: "Could not load the profile.",
+    saveFailed: "Could not save the profile.",
+    saved: "Profile updated.",
+    photoFailed: "Could not upload the profile photo.",
+    photoSaved: "Profile photo updated.",
+  },
+  subscription: {
+    title: "Plans and subscription",
+    lead: "Choose Assistant, Engineer, Professional Engineer, or Consultant Engineer.",
+    freePlan: "This is your free plan",
+    processing: "Processing...",
+    subscribe: "Subscribe or upgrade",
+    toolsInPlan: "Engineer tools in this plan",
+    back: "Back to profile",
+    loginRequired: "Please log in or register before selecting a plan.",
+    saveFailed: "Could not save the subscription.",
+    freeSaved: "Your free Assistant plan is saved. Continue from your profile.",
+    paymentStartFailed: "Could not start payment. Please try again.",
+    processFailed: "Could not process the request. Please try again.",
+  },
+  feedback: {
+    title: "Feedback and complaints",
+    lead: "Help us improve engineerit.ai. Your message goes to info@engineerit.ai. You can also ask the smart assistant.",
+    botHello: "Hello. I am the smart assistant for engineerit.ai. How can I help with the platform, subscriptions, or an issue?",
+    botUnclear: "I could not understand that. Please try another wording.",
+    botError: "The smart assistant could not be reached. Please try again later.",
+    category: "Category",
+    feedback: "Feedback",
+    complaint: "Complaint",
+    suggestion: "Suggestion",
+    emailOptional: "Your email (optional)",
+    message: "Message",
+    messagePlaceholder: "Write your feedback, complaint, or suggestion…",
+    sending: "Sending…",
+    submit: "Submit",
+    thanks: "Thank you. Your message has been submitted.",
+    sendError: "There was a problem sending your message. Please try again later.",
+    assistant: "Smart assistant",
+    askPlaceholder: "Ask the smart assistant…",
+    send: "Send",
+    close: "Close",
+  },
+  legal: {
+    termsTitle: "User policy and agreement",
+    termsLead:
+      "This page describes the terms, the privacy policy, the cancellation and refund policy, and the liability limits for using engineerit.ai.",
+    privacyTitle: "Privacy policy – engineerit.ai",
+    privacyLead: "This page describes the privacy policy for the engineerit.ai platform.",
+    privacyBody: "The full privacy policy is in the legal document:",
+    privacyLink: "Open the privacy section on the legal page",
+    privacyNote: "This address exists for payment-provider compliance. The governing text is the legal page.",
+    refundTitle: "Refund and cancellation policy – engineerit.ai",
+    refundLead: "This page describes the refund and cancellation policy for engineerit.ai.",
+    refundBody: "The full refund policy is in the legal document:",
+    refundLink: "Open the refund section on the legal page",
+    refundNote: "This address exists for payment-provider compliance. The governing text is the legal page.",
+    downloadTitle: "Download the full terms",
+    downloadLead: "Download the terms of use in the language you are reading.",
+    downloadButton: "Download terms of use",
+  },
+};
+
+const ar: ShellCopy = {
+  nav: {
+    navigation: "التنقل",
+    pages: "الصفحات",
+    home: "الرئيسية",
+    chat: "المحادثة",
+    pricing: "الأسعار",
+    register: "التسجيل والباقات",
+    profile: "ملفي",
+    feedback: "الملاحظات والشكاوى",
+    terms: "سياسة الاستخدام والاتفاق",
+  },
+  footer: {
+    blurb: "مساعد هندسي بالذكاء الاصطناعي",
+    rights: "جميع الحقوق محفوظة.",
+    policyLead: "استخدام engineerit وفق",
+    policyLink: "سياسة الاستخدام والاتفاق",
+  },
+  trust: {
+    title: "المركز السعودي للأعمال",
+    auth: "رقم التوثيق",
+    verify: "تحقق عبر المركز السعودي للأعمال",
+  },
+  header: {
+    openMenu: "فتح القائمة",
+    login: "دخول",
+    signInTitle: "الدخول إلى engineerit.ai",
+    email: "البريد",
+    password: "كلمة المرور",
+    signingIn: "جارٍ الدخول…",
+    signIn: "دخول",
+    forgot: "نسيت كلمة المرور؟",
+    noAccount: "ليس لديك حساب؟",
+    register: "تسجيل",
+    resetTitle: "إعادة تعيين كلمة المرور",
+    yourEmail: "بريدك",
+    sending: "جارٍ الإرسال…",
+    tryAgain: "حاول بعد {seconds} ث",
+    sendReset: "إرسال رابط الاستعادة",
+    backToLogin: "العودة للدخول",
+    accountMenu: "قائمة الحساب",
+    profileAlt: "الملف",
+    planSuffix: "باقة",
+    myProfile: "ملفي",
+    plansRegistration: "الباقات والتسجيل",
+    subscribe: "اشترك أو رقِّ",
+    logout: "خروج",
+    resetPassword: "إعادة تعيين كلمة المرور",
+    newPassword: "كلمة المرور الجديدة",
+    confirmPassword: "تأكيد كلمة المرور",
+    updatePassword: "تحديث كلمة المرور",
+    updating: "جارٍ التحديث…",
+    unableSignIn: "تعذر الدخول. حاول مرة أخرى.",
+    genericError: "حدث خطأ. حاول مرة أخرى.",
+    enterEmail: "أدخل بريدك أولاً.",
+    resetSent: "أُرسل رابط الاستعادة إلى بريدك.",
+    passwordShort: "كلمة المرور يجب أن تكون 6 أحرف على الأقل.",
+    passwordMismatch: "كلمتا المرور غير متطابقتين.",
+    passwordUpdated: "تم تحديث كلمة المرور.",
+  },
+  chat: {
+    newChat: "+ محادثة جديدة",
+    discipline: "التخصص",
+    history: "السجل",
+    emptyHistory: "لا توجد محادثات بعد",
+    welcomeTitle: "مرحباً بك في engineerit.ai",
+    welcomeBody:
+      "منصة رقمية للذكاء الهندسي: التحليل، ومراجعة المستندات، ومساعد تفاعلي للرسومات والعمل الفني.",
+    toolsForPlan: "أدوات المهندس في باقتك",
+    askPlaceholder: "اسأل سؤالاً هندسياً…",
+    addAttachments: "إضافة مرفقات",
+    photo: "صورة",
+    document: "مستند",
+    send: "إرسال",
+    attachLocked: "اشترك لإرفاق الصور أو المستندات.",
+    toolLocked: "هذه الأداة تتطلب باقة أعلى.",
+    dailyGuest: "بلغت الحد اليومي. سجّل أو ادخل.",
+    dailyPaid: "بلغت الحد اليومي. يرجى الترقية.",
+    dailyGuestReply: "بلغت الحد اليومي. سجّل أو ادخل لمتابعة استخدام engineerit.ai.",
+    dailyPaidReply: "بلغت الحد اليومي. يرجى الترقية للمتابعة.",
+    sorry: "عذراً، حدث خطأ. حاول مرة أخرى.",
+    copyFailed: "تعذر النسخ في هذا المتصفح.",
+    pdfFailed: "تعذر تصدير PDF. حاول مرة أخرى.",
+    wordFailed: "تعذر تصدير وورد. حاول مرة أخرى.",
+    pptFailed: "تعذر تصدير باوربوينت. حاول مرة أخرى.",
+    newConversation: "محادثة جديدة",
+    attachmentOnly: "[مرفق]",
+    analyzeImage: "حلّل هذه الصورة الهندسية.",
+    analyzeDocument: "استخرج هذا المستند ولخّصه.",
+    imageFailed: "تعذر تحليل الصورة. حاول مرة أخرى أو استخدم صورة أصغر.",
+    documentFailed: "تعذرت معالجة المستند. حاول مرة أخرى، أو حوّله إلى PDF أو نص ثم أعد رفعه.",
+    registerTitle: "التسجيل أو الدخول",
+    upgradeTitle: "الترقية مطلوبة",
+    registerBody: "سجّل أو ادخل للمتابعة.",
+    upgradeBody: "رقِّ باقتك للمتابعة دون حدود.",
+    close: "إغلاق",
+    upgrade: "ترقية",
+    copy: "نسخ",
+    share: "مشاركة",
+    exportPdf: "تصدير PDF",
+    exportWord: "تصدير وورد",
+    exportPpt: "تصدير باوربوينت",
+    toolsLabel: "أدوات المهندس:",
+    empty: "اسأل سؤالاً هندسياً لبدء المحادثة.",
+    you: "أنت",
+    ai: "الذكاء",
+    registerActions: "سجّل للنسخ والمشاركة وإرفاق الملفات",
+    upgradeActions: "رقِّ باقتك للنسخ والمشاركة وإرفاق الملفات",
+    saveHtml: "حفظ HTML",
+    print: "طباعة",
+    whatsapp: "واتساب",
+    closeShare: "إغلاق",
+    prompts: {
+      drawing: "اشرح وحلّل الرسم الهندسي المرفق، بما في ذلك مخطط التدفق أو مخطط الأنابيب والأجهزة أو المخطط الصندوقي.",
+      design: "راجع هذا التصميم الهندسي مقابل الأكواد والمعايير ذات الصلة.",
+      itp: "أعد خطة فحص واختبار وقائمة جودة.",
+      boq: "اقترح جدول كميات منظماً بالبنود والوحدات.",
+      schedule: "ابنِ جدولاً زمنياً عالي المستوى للمشروع.",
+      value: "أجرِ مراجعة هندسة قيمية.",
+      dashboard: "أعد ملخص لوحة إدارة بالمؤشرات والمخاطر والإجراءات.",
+    },
+  },
+  auth: {
+    signInTitle: "دخول",
+    signInLead: "استخدم حساب engineerit.ai للوصول إلى محادثاتك ومستنداتك.",
+    welcome: "مرحباً بعودتك",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    signingIn: "جارٍ الدخول…",
+    signIn: "دخول",
+    noAccount: "جديد هنا؟",
+    createOne: "أنشئ حساباً",
+    unable: "تعذر الدخول. حاول مرة أخرى.",
+    genericError: "حدث خطأ. حاول مرة أخرى.",
+    loggedIn: "تم الدخول. جارٍ التحويل إلى ملفك...",
+    registerTitle: "التسجيل في engineerit.ai",
+    registerLead: "أنشئ حسابك، وابدأ بباقة المساعد المجانية، ثم رقِّ لاحقاً إلى مهندس أو محترف أو استشاري.",
+    createAccount: "إنشاء الحساب",
+    fullName: "الاسم الكامل",
+    fullNamePlaceholder: "اسمك الكامل",
+    confirmEmail: "تأكيد البريد",
+    confirmEmailPlaceholder: "أعد كتابة البريد",
+    confirmPassword: "تأكيد كلمة المرور",
+    confirmPasswordPlaceholder: "أعد كتابة كلمة المرور",
+    agreePrefix: "قرأت وأوافق على",
+    agreeSuffix: "، بما في ذلك سياسات الإلغاء والاسترداد، وأفهم أن engineerit.ai غير مسؤول عن القرارات المبنية على مخرجاته.",
+    creating: "جارٍ إنشاء الحساب...",
+    create: "إنشاء الحساب",
+    emailConfirmTitle: "يلزم تأكيد البريد",
+    emailConfirmHint: "بعد التأكيد، عد وسجّل الدخول من الشريط العلوي.",
+    afterRegister:
+      "بعد التسجيل تبدأ على باقة المساعد المجانية. عندما تكون جاهزاً، افتح صفحة الاشتراك لاختيار مهندس أو محترف أو استشاري.",
+    viewPlans: "عرض الباقات والاشتراك",
+    plansOverview: "الباقات وأدوات المهندس",
+    toolsInPlan: "أدوات المهندس في هذه الباقة",
+    createHere: "أنشئ حساباً من هنا",
+    emailRequired: "أدخل البريد وأكّده.",
+    emailMismatch: "البريد وتأكيده غير متطابقين.",
+    passwordMismatch: "كلمة المرور وتأكيدها غير متطابقين.",
+    passwordMin: "كلمة المرور يجب أن تكون 8 أحرف على الأقل.",
+    createdConfirm:
+      "تم إنشاء الحساب. أرسلنا رسالة تأكيد. راجع الوارد والبريد غير الهام، ثم أكّد العنوان وادخل من الشريط العلوي.",
+    createdRedirect: "تم إنشاء الحساب. جارٍ التحويل إلى ملفك...",
+    upgradeAnytime: "يمكنك تغيير الباقة في أي وقت من ملفك أو صفحة الاشتراك.",
+    policyName: "سياسة الاستخدام والاتفاق",
+  },
+  profile: {
+    title: "الملف والاشتراك",
+    loading: "جارٍ تحميل الملف…",
+    chooseFile: "اختيار ملف",
+    avatarHint: "JPG أو PNG أو GIF. الحد 5 ميجابايت.",
+    fullName: "الاسم الكامل",
+    fullNamePlaceholder: "اسمك الكامل",
+    email: "البريد",
+    saving: "جارٍ الحفظ…",
+    save: "حفظ التغييرات",
+    subscription: "الاشتراك",
+    currentPlan: "الباقة الحالية",
+    freeBody: "أنت على باقة المساعد المجانية. لا تُفرض رسوم حتى الترقية.",
+    status: "الحالة",
+    price: "السعر",
+    startDate: "تاريخ البدء",
+    endDate: "تاريخ الانتهاء",
+    noBilling: "لا توجد بيانات فوترة لهذه الباقة بعد.",
+    billingNote: "تغيير الباقة يتم عبر فوترة engineerit.ai. أدر الباقة أو رقّها من صفحة الاشتراك.",
+    manage: "إدارة الاشتراك أو ترقيته",
+    activity: "النشاط",
+    chats: "إجمالي المحادثات",
+    documents: "إجمالي المستندات المرفوعة",
+    projects: "المشاريع المحفوظة",
+    soon: "قريباً",
+    history: "سجل الفوترة",
+    noPayments: "لا توجد مدفوعات بعد. ستظهر الاشتراكات القادمة هنا.",
+    plan: "الباقة",
+    amount: "المبلغ",
+    date: "التاريخ",
+    invoiceNote: "يرسل مزود الدفع الفواتير بالبريد أيضاً. احتفظ بها كإيصالات.",
+    unknown: "غير معروف",
+    notLoggedIn: "لم تسجّل الدخول.",
+    paymentFailed: "تعذر حفظ الاشتراك بعد الدفع. تواصل مع الدعم.",
+    paymentSaved: "تم الدفع وتحديث الاشتراك.",
+    loadFailed: "تعذر تحميل الملف.",
+    saveFailed: "تعذر حفظ الملف.",
+    saved: "تم تحديث الملف.",
+    photoFailed: "تعذر رفع صورة الملف.",
+    photoSaved: "تم تحديث صورة الملف.",
+  },
+  subscription: {
+    title: "الباقات والاشتراك",
+    lead: "اختر المساعد أو المهندس أو المهندس المحترف أو المهندس الاستشاري.",
+    freePlan: "هذه باقتك المجانية",
+    processing: "جارٍ المعالجة...",
+    subscribe: "اشترك أو رقِّ",
+    toolsInPlan: "أدوات المهندس في هذه الباقة",
+    back: "العودة إلى الملف",
+    loginRequired: "ادخل أو سجّل قبل اختيار الباقة.",
+    saveFailed: "تعذر حفظ الاشتراك.",
+    freeSaved: "حُفظت باقة المساعد المجانية. تابع من ملفك.",
+    paymentStartFailed: "تعذر بدء الدفع. حاول مرة أخرى.",
+    processFailed: "تعذرت معالجة الطلب. حاول مرة أخرى.",
+  },
+  feedback: {
+    title: "الملاحظات والشكاوى",
+    lead: "ساعدنا على تحسين engineerit.ai. تُرسل رسالتك إلى info@engineerit.ai. يمكنك أيضاً سؤال المساعد الذكي.",
+    botHello: "مرحباً. أنا المساعد الذكي لـ engineerit.ai. كيف أساعدك في المنصة أو الاشتراكات أو مشكلة؟",
+    botUnclear: "لم أفهم ذلك. أعد الصياغة من فضلك.",
+    botError: "تعذر الاتصال بالمساعد الذكي. حاول لاحقاً.",
+    category: "التصنيف",
+    feedback: "ملاحظة",
+    complaint: "شكوى",
+    suggestion: "اقتراح",
+    emailOptional: "بريدك (اختياري)",
+    message: "الرسالة",
+    messagePlaceholder: "اكتب ملاحظتك أو شكواك أو اقتراحك…",
+    sending: "جارٍ الإرسال…",
+    submit: "إرسال",
+    thanks: "شكراً لك. تم إرسال رسالتك.",
+    sendError: "تعذر إرسال الرسالة. حاول لاحقاً.",
+    assistant: "المساعد الذكي",
+    askPlaceholder: "اسأل المساعد الذكي…",
+    send: "إرسال",
+    close: "إغلاق",
+  },
+  legal: {
+    termsTitle: "سياسة الاستخدام والاتفاق",
+    termsLead: "تصف هذه الصفحة الشروط وسياسة الخصوصية وسياسة الإلغاء والاسترداد وحدود المسؤولية عند استخدام engineerit.ai.",
+    privacyTitle: "سياسة الخصوصية – engineerit.ai",
+    privacyLead: "تصف هذه الصفحة سياسة الخصوصية لمنصة engineerit.ai.",
+    privacyBody: "النص الكامل لسياسة الخصوصية في المستند القانوني:",
+    privacyLink: "افتح قسم الخصوصية في الصفحة القانونية",
+    privacyNote: "هذا العنوان مخصص لمتطلبات مزود الدفع. النص الحاكم هو الصفحة القانونية.",
+    refundTitle: "سياسة الاسترداد والإلغاء – engineerit.ai",
+    refundLead: "تصف هذه الصفحة سياسة الاسترداد والإلغاء في engineerit.ai.",
+    refundBody: "النص الكامل لسياسة الاسترداد في المستند القانوني:",
+    refundLink: "افتح قسم الاسترداد في الصفحة القانونية",
+    refundNote: "هذا العنوان مخصص لمتطلبات مزود الدفع. النص الحاكم هو الصفحة القانونية.",
+    downloadTitle: "تنزيل الشروط الكاملة",
+    downloadLead: "نزّل شروط الاستخدام باللغة التي تقرأ بها.",
+    downloadButton: "تنزيل شروط الاستخدام",
+  },
+};
+
+export const shellCopy: Record<Locale, ShellCopy> = { en, ar };

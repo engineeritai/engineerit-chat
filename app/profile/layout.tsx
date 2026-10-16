@@ -1,11 +1,12 @@
+import { metaFor } from "@/lib/pageMeta";
+import { requestLocale } from "@/lib/requestLocale";
 import { pageMetadata } from "@/lib/seo";
 
-export const metadata = pageMetadata({
-  title: "My profile",
-  description: "Your engineerit.ai profile and account details.",
-  path: "/profile",
-  index: false,
-});
+export async function generateMetadata() {
+  const locale = await requestLocale();
+  const meta = metaFor(locale, "/profile");
+  return pageMetadata({ ...meta, path: "/profile", index: false, locale });
+}
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
   return children;

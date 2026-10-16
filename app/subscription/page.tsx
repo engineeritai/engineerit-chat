@@ -7,6 +7,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PLANS } from "@/lib/plans";
 import type { PlanId } from "@/lib/plans";
+import { localizedPlan, toolLabel } from "@/lib/labels";
+import { useMessages } from "@/lib/useMessages";
 import { supabase } from "@/lib/supabaseClient";
 
 const PLAN_COLORS: Record<PlanId, string> = {
@@ -67,6 +69,7 @@ function hasTool(planId: PlanId, toolId: ToolId) {
 }
 
 export default function SubscriptionPage() {
+  const { locale, shell: s } = useMessages();
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<PlanId | null>(null);
   const [savingPlanId, setSavingPlanId] = useState<PlanId | null>(null);
@@ -96,7 +99,7 @@ export default function SubscriptionPage() {
 
       // لو المستخدم مو مسجل → نمنع الاشتراك ونحوّله للتسجيل
       if (!isLoggedIn) {
-        setErrorMsg("Please login or register before selecting a plan.");
+        setErrorMsg(s.subscription.loginRequired);
         router.push("/register");
         return;
       }
@@ -115,16 +118,16 @@ export default function SubscriptionPage() {
 
         const json = await res
           .json()
-          .catch(() => ({ error: "Could not save subscription." }));
+          .catch(() => ({ error: s.subscription.saveFailed }));
 
         if (!res.ok) {
-          setErrorMsg(json.error || "Could not save subscription.");
+          setErrorMsg(json.error || s.subscription.saveFailed);
           return;
         }
 
         setSelectedPlanId(planId);
         setInfoMsg(
-          "Your free Assistant plan has been saved. You can continue from your profile page."
+          s.subscription.freeSaved
         );
         return;
       }
@@ -140,19 +143,17 @@ export default function SubscriptionPage() {
 
       const json = await res
         .json()
-        .catch(() => ({ error: "Could not start payment." }));
+        .catch(() => ({ error: s.subscription.paymentStartFailed }));
 
       if (!res.ok || !json.url) {
-        setErrorMsg(
-          json.error || "Could not start payment. Please try again."
-        );
+        setErrorMsg(json.error || s.subscription.paymentStartFailed);
         return;
       }
 
       window.location.href = json.url as string;
     } catch (err) {
       console.error(err);
-      setErrorMsg("Could not process your request. Please try again.");
+      setErrorMsg(s.subscription.processFailed);
     } finally {
       setSavingPlanId(null);
     }
@@ -173,11 +174,8 @@ export default function SubscriptionPage() {
         />
 
         <div className="page-wrap">
-          <h1 className="page-title">Plans &amp; Subscription</h1>
-          <p className="page-subtitle">
-            Choose your level: Assistant, Engineer, Professional Engineer, or
-            Consultant Engineer.
-          </p>
+          <h1 className="page-title">{s.subscription.title}</h1>
+          <p className="page-subtitle">{s.subscription.lead}</p>
 
           {errorMsg && (
             <p
@@ -212,14 +210,15 @@ export default function SubscriptionPage() {
               gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
             }}
           >
-            {PLANS.map((plan) => {
+            {PLANS.map((rawPlan) => {
+              const plan = localizedPlan(locale, rawPlan);
               const id = plan.id as PlanId;
               const color = PLAN_COLORS[id];
               const lightBg = PLAN_LIGHT_BG[id];
               const isSelected = selectedPlanId === id;
               const isSaving = savingPlanId === id;
 
-              const letter = (plan.shortName || plan.name || "E")
+              const letter = (rawPlan.shortName || plan.name || "E")
                 .charAt(0)
                 .toUpperCase();
 
@@ -350,7 +349,7 @@ export default function SubscriptionPage() {
                         marginBottom: 6,
                       }}
                     >
-                      Engineer tools in this plan:
+                      {s.subscription.toolsInPlan}
                     </div>
 
                     <div
@@ -379,7 +378,7 @@ export default function SubscriptionPage() {
                               gap: 4,
                             }}
                           >
-                            {enabled ? "✅" : "🔒"} {tool.label}
+                            {enabled ? "✅" : "🔒"} {toolLabel(locale, tool.id)}
                           </div>
                         );
                       })}
@@ -402,7 +401,7 @@ export default function SubscriptionPage() {
                         opacity: 0.95,
                       }}
                     >
-                      This is your free plan
+                      {s.subscription.freePlan}
                     </div>
                   ) : (
                     <button
@@ -422,9 +421,7 @@ export default function SubscriptionPage() {
                         cursor: "pointer",
                       }}
                     >
-                      {isSaving
-                        ? "Processing..."
-                        : "Subscribe / Upgrade"}
+                      {isSaving ? s.subscription.processing : s.subscription.subscribe}
                     </button>
                   )}
                 </div>
@@ -453,7 +450,7 @@ export default function SubscriptionPage() {
                 fontWeight: 500,
               }}
             >
-              Back to profile
+              {s.subscription.back}
             </Link>
           </div>
         </div>

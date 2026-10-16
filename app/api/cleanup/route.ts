@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { removeStaleIncoming } from "@/lib/incomingStorage";
 import {
   GENERATED_FILE_TTL_HOURS,
   CHAT_TTL_DAYS,
@@ -62,6 +63,8 @@ export async function GET() {
     if (chatsToDelete.error) {
       console.error("Error deleting old chat messages:", chatsToDelete.error);
     }
+
+    await removeStaleIncoming();
 
     return NextResponse.json({ ok: true });
   } catch (err) {

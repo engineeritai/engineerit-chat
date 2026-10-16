@@ -23,11 +23,13 @@ export function pageMetadata({
   description,
   path,
   index = true,
+  locale = "en",
 }: {
   title: string;
   description: string;
   path: string;
   index?: boolean;
+  locale?: "en" | "ar";
 }): Metadata {
   const canonical = new URL(path, SITE_URL).toString();
   const fullTitle = title.includes("engineerit.ai")
@@ -48,7 +50,7 @@ export function pageMetadata({
       siteName: SITE_NAME,
       images: [{ url: "/og.png", alt: SITE_NAME }],
       type: "website",
-      locale: "en_US",
+      locale: locale === "ar" ? "ar_SA" : "en_US",
     },
     twitter: {
       card: "summary_large_image",

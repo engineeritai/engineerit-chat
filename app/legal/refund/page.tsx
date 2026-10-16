@@ -1,40 +1,21 @@
-import Link from "next/link";
-import { pageMetadata } from "@/lib/seo";
+"use client";
 
-export const metadata = pageMetadata({
-  title: "Refund & Cancellation Policy",
-  description: "Refund and cancellation policy for engineerit.ai.",
-  path: "/legal/refund",
-});
+import Link from "next/link";
+import { useMessages } from "@/lib/useMessages";
 
 export default function RefundPage() {
+  const { shell: s } = useMessages();
   return (
     <div className="page-wrap" style={{ padding: "40px 20px" }}>
-      <h1 className="page-title">Refund &amp; Cancellation Policy – engineerit.ai</h1>
-
-      <p style={{ marginTop: 16, marginBottom: 16 }}>
-        This page describes the Refund and Cancellation Policy for{" "}
-        <strong>engineerit.ai</strong>.
-      </p>
-
-      <p style={{ marginBottom: 12 }}>
-        The full and detailed Refund Policy is available in our main legal
-        document here:
-      </p>
-
-      <ul style={{ marginLeft: 20, marginBottom: 16 }}>
+      <h1 className="page-title">{s.legal.refundTitle}</h1>
+      <p style={{ marginTop: 16, marginBottom: 16 }}>{s.legal.refundLead}</p>
+      <p style={{ marginBottom: 12 }}>{s.legal.refundBody}</p>
+      <ul style={{ marginInlineStart: 20, marginBottom: 16 }}>
         <li>
-          <Link href="/legal/terms#refund">
-            Go to Refund Policy section inside the Legal page
-          </Link>
+          <Link href="/legal/terms#refund">{s.legal.refundLink}</Link>
         </li>
       </ul>
-
-      <p style={{ fontSize: 14, color: "#6b7280" }}>
-        This dedicated URL is provided to meet payment provider and compliance
-        requirements. The governing legal text is the same as in the Legal /
-        Terms page.
-      </p>
+      <p style={{ fontSize: 14, color: "#6b7280" }}>{s.legal.refundNote}</p>
     </div>
   );
 }

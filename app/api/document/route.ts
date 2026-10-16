@@ -5,6 +5,15 @@ import OpenAI from "openai";
 import { toFile } from "openai/uploads";
 import JSZip from "jszip";
 import { gateAdvisor } from "@/lib/advisorGate";
+import { extractXlsxText } from "@/lib/xlsxText";
+import {
+  IncomingFileError,
+  filenameFromStoragePath,
+  readIncomingFile,
+  removeIncomingFile,
+} from "@/lib/incomingStorage";
+import { MAX_UPLOAD_BYTES, fileTooLargeMessage, messageLocale } from "@/lib/uploadLimits";
+import { replyLanguageRule, type UiLocale } from "@/lib/replyLanguage";
 
 export const runtime = "nodejs";
 
@@ -43,12 +52,9 @@ async function extractOfficeText(buffer: Buffer, filename: string): Promise<stri
       }
     }
   } else if (lower.endsWith(".xlsx")) {
-    // sharedStrings → النصوص الموجودة داخل الجداول
-    const shared = zip.file("xl/sharedStrings.xml");
-    if (shared) {
-      const xml = await shared.async("text");
-      texts.push(xmlToPlain(xml));
-    }
+    // Sheet XML holds numeric cells. sharedStrings alone drops those values.
+    const sheetText = await extractXlsxText(zip);
+    if (sheetText) texts.push(sheetText);
   }
 
   const result = texts.join("\n\n").trim();
@@ -59,20 +65,27 @@ async function extractOfficeText(buffer: Buffer, filename: string): Promise<stri
 }
 
 // Summarize from already-extracted plain text
+function emptyExtract(locale: UiLocale): string {
+  if (locale === "ar") {
+    return "لم أستطع استخراج نص مقروء من هذا المستند. قد يكون ملفاً ممسوحاً أو ثنائياً. ارفع نسخة أوضح، أو انسخ النص المهم إلى المحادثة.";
+  }
+  return "I couldn't extract readable text from this document. It may be a scanned or binary file. Upload a clearer PDF or image, or paste the important text into the chat.";
+}
+
+function summaryOutline(locale: UiLocale): string {
+  if (locale === "ar") {
+    return "قدّم الإجابة بماركداون واضح:\n1) عنوان\n2) سياق مختصر\n3) أهم النتائج في نقاط\n4) الأرقام والتواريخ والأسماء المهمة\n5) التوصيات الهندسية الرئيسية";
+  }
+  return "Provide the answer in clear Markdown:\n1) Title\n2) Short context\n3) Bullet points for key findings\n4) Important numbers, dates, and names\n5) Key engineering recommendations";
+}
+
 async function summarizeFromText(
   text: string,
   question: string,
-  advisorSystem?: string
+  advisorSystem: string | undefined,
+  locale: UiLocale
 ): Promise<string> {
-  if (!text.trim()) {
-    return `
-I couldn't extract readable text from this document.  
-It may be a scanned/image-based file or a pure binary file.
-
-Please try:
-- Uploading a clearer PDF or image, **or**
-- Copy/pasting the important text directly into the chat.`;
-  }
+  if (!text.trim()) return emptyExtract(locale);
 
   const maxChars = 20000;
   const truncated = text.slice(0, maxChars);
@@ -90,15 +103,9 @@ Below is the extracted content of a document:
 ${truncated}
 ---
 
-Please respond **bilingually (Arabic and English)** where useful.
+${replyLanguageRule(locale)}
 
-Provide, in clear Markdown:
-
-1) Title / عنوان مناسب
-2) Short context / سياق مختصر
-3) Bullet points for key findings / أهم النتائج بنقاط
-4) Important numbers, dates, names / الأرقام والتواريخ والأسماء المهمة
-5) Key engineering recommendations / التوصيات الهندسية الرئيسية
+${summaryOutline(locale)}
 `;
 
   const completion = await client.chat.completions.create({
@@ -108,7 +115,7 @@ Provide, in clear Markdown:
         role: "system",
         content:
           advisorSystem ||
-          "You are a precise engineering document summarizer. You handle technical reports, drawings, specs, codes, and project documents in Arabic and English.",
+          `You are a precise engineering document summarizer for technical reports, drawings, specifications, codes, and project documents. ${replyLanguageRule(locale)}`,
       },
       { role: "user", content: prompt },
     ],
@@ -117,7 +124,7 @@ Provide, in clear Markdown:
 
   return (
     completion.choices[0]?.message?.content ||
-    "I couldn't generate a summary for this document."
+    (locale === "ar" ? "تعذر إنشاء ملخص لهذا المستند." : "I couldn't generate a summary for this document.")
   );
 }
 
@@ -126,7 +133,8 @@ async function summarizeViaUpload(
   buffer: Buffer,
   filename: string,
   question: string,
-  advisorSystem?: string
+  advisorSystem: string | undefined,
+  locale: UiLocale
 ): Promise<string> {
   const uploaded = await client.files.create({
     file: await toFile(buffer, filename),
@@ -143,13 +151,7 @@ async function summarizeViaUpload(
             type: "input_text",
             text: advisorSystem
               ? `${advisorSystem}\n\nUser request:\n${question}\n\nFollow the output template. Use only evidence from this file and the request.`
-              : question +
-                "\n\nPlease answer in clear markdown with:\n" +
-                "1) Title / عنوان\n" +
-                "2) Short context\n" +
-                "3) Bullet points for key findings\n" +
-                "4) Important numbers/dates/names\n" +
-                "5) Key recommendations.",
+              : `${question}\n\n${replyLanguageRule(locale)}\n\n${summaryOutline(locale)}`,
           },
           {
             type: "input_file",
@@ -164,57 +166,36 @@ async function summarizeViaUpload(
   return (
     anyResponse.output_text ??
     anyResponse.output?.[0]?.content?.[0]?.text ??
-    "I couldn't generate a summary for this document."
+    (locale === "ar" ? "تعذر إنشاء ملخص لهذا المستند." : "I couldn't generate a summary for this document.")
   );
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-    const questionField = formData.get("question");
-    const advisorField = formData.get("advisorId");
-    const localeField = formData.get("locale");
-    const playbookField = formData.get("playbookId");
+function requestUiLocale(req: NextRequest, explicit?: unknown): UiLocale {
+  if (explicit === "ar" || explicit === "en") return explicit;
+  return messageLocale(req.cookies.get("engineerit_locale")?.value);
+}
 
-    const question =
-      typeof questionField === "string" && questionField.trim().length > 0
-        ? questionField
-        : "Summarize this engineering document (Arabic + English) with headings, bullet points, important numbers/dates, and key recommendations.";
+function documentFailed(locale: UiLocale): string {
+  return locale === "ar"
+    ? "تعذرت معالجة المستند. حاول مرة أخرى، أو حوّله إلى PDF أو نص ثم أعد رفعه."
+    : "Document processing failed. Please try again, or convert the file to a standard PDF or text file and upload it again.";
+}
 
-    const advisorGate = await gateAdvisor({
-      request: req,
-      advisorId: typeof advisorField === "string" ? advisorField : "",
-      locale: typeof localeField === "string" ? localeField : "",
-      playbookId: typeof playbookField === "string" ? playbookField : "",
-    });
-    if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
-    const advisorSystem = advisorGate.active && advisorGate.ok ? advisorGate.prompt : undefined;
+function defaultDocumentQuestion(locale: UiLocale): string {
+  return locale === "ar"
+    ? "لخّص هذا المستند الهندسي بعناوين ونقاط وأرقام وتواريخ مهمة وتوصيات رئيسية."
+    : "Summarize this engineering document with headings, bullet points, important numbers and dates, and key recommendations.";
+}
 
-    if (!file) {
-      return NextResponse.json(
-        { error: "No file uploaded" },
-        { status: 400 }
-      );
-    }
-
-    // Basic size guard (e.g. 20 MB) to avoid crazy huge files
-    const maxBytes = 20 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      return NextResponse.json(
-        {
-          error:
-            "File is too large. Please upload a smaller document (max ~20 MB) or split it into parts.",
-        },
-        { status: 413 }
-      );
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const lowerName = file.name.toLowerCase();
-
-    let reply: string;
+async function summarizeBuffer(
+  buffer: Buffer,
+  filename: string,
+  question: string,
+  advisorSystem: string | undefined,
+  locale: UiLocale
+): Promise<string> {
+  const lowerName = filename.toLowerCase();
+  let reply: string;
 
     // ─────────────────────────────────────
     // 1) Office formats: DOCX / PPTX / XLSX
@@ -226,18 +207,18 @@ export async function POST(req: NextRequest) {
     ) {
       try {
         const officeText = await extractOfficeText(buffer, lowerName);
-        reply = await summarizeFromText(officeText, question, advisorSystem);
+        reply = await summarizeFromText(officeText, question, advisorSystem, locale);
       } catch (err) {
         console.error(
           "OFFICE extraction failed, falling back to upload/raw:",
           err
         );
         try {
-          reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
+          reply = await summarizeViaUpload(buffer, filename, question, advisorSystem, locale);
         } catch (err2) {
           console.error("Upload also failed, falling back to raw text:", err2);
           const raw = buffer.toString("utf8").replace(/\0/g, " ");
-          reply = await summarizeFromText(raw, question, advisorSystem);
+          reply = await summarizeFromText(raw, question, advisorSystem, locale);
         }
       }
 
@@ -246,11 +227,11 @@ export async function POST(req: NextRequest) {
       // ─────────────────────────────────────
     } else if (lowerName.endsWith(".pdf")) {
       try {
-        reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
+        reply = await summarizeViaUpload(buffer, filename, question, advisorSystem, locale);
       } catch (err) {
         console.error("PDF upload failed, falling back to raw:", err);
         const raw = buffer.toString("utf8").replace(/\0/g, " ");
-        reply = await summarizeFromText(raw, question, advisorSystem);
+        reply = await summarizeFromText(raw, question, advisorSystem, locale);
       }
 
       // ─────────────────────────────────────
@@ -271,14 +252,14 @@ export async function POST(req: NextRequest) {
       lowerName.endsWith(".nas")
     ) {
       try {
-        reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
+        reply = await summarizeViaUpload(buffer, filename, question, advisorSystem, locale);
       } catch (err) {
         console.error(
           "Engineering/binary upload failed, falling back to raw:",
           err
         );
         const raw = buffer.toString("utf8").replace(/\0/g, " ");
-        reply = await summarizeFromText(raw, question, advisorSystem);
+        reply = await summarizeFromText(raw, question, advisorSystem, locale);
       }
 
       // ─────────────────────────────────────
@@ -286,23 +267,111 @@ export async function POST(req: NextRequest) {
       // ─────────────────────────────────────
     } else {
       try {
-        reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
+        reply = await summarizeViaUpload(buffer, filename, question, advisorSystem, locale);
       } catch (err) {
         console.error("Generic upload failed, falling back to raw:", err);
         const raw = buffer.toString("utf8").replace(/\0/g, " ");
-        reply = await summarizeFromText(raw, question, advisorSystem);
+        reply = await summarizeFromText(raw, question, advisorSystem, locale);
       }
     }
 
-    return NextResponse.json({ reply }, { status: 200 });
+  return reply;
+}
+
+async function openAdvisor(req: NextRequest, advisorId: unknown, locale: unknown, playbookId: unknown) {
+  const advisorGate = await gateAdvisor({ request: req, advisorId, locale, playbookId });
+  if (advisorGate.active && !advisorGate.ok) return { response: advisorGate.response };
+  return {
+    advisorSystem: advisorGate.active && advisorGate.ok ? advisorGate.prompt : undefined,
+  };
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const contentType = req.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return await handleStoredDocument(req);
+    }
+    return await handleFormDocument(req);
   } catch (err) {
     console.error("DOCUMENT API ERROR:", err);
+    return NextResponse.json({ error: documentFailed(requestUiLocale(req)) }, { status: 500 });
+  }
+}
+
+async function handleStoredDocument(req: NextRequest) {
+  const body = (await req.json().catch(() => null)) as {
+    storagePath?: unknown;
+    filename?: unknown;
+    question?: unknown;
+    advisorId?: unknown;
+    locale?: unknown;
+    playbookId?: unknown;
+  } | null;
+
+  const storagePath = typeof body?.storagePath === "string" ? body.storagePath : "";
+  const locale = requestUiLocale(req, body?.locale);
+  const question =
+    typeof body?.question === "string" && body.question.trim().length > 0
+      ? body.question
+      : defaultDocumentQuestion(locale);
+
+  const opened = await openAdvisor(req, body?.advisorId, body?.locale, body?.playbookId);
+  if ("response" in opened) {
+    await removeIncomingFile(storagePath);
+    return opened.response;
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = await readIncomingFile(storagePath, locale);
+  } catch (err) {
+    await removeIncomingFile(storagePath);
+    if (err instanceof IncomingFileError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    throw err;
+  }
+
+  try {
+    const filename = filenameFromStoragePath(storagePath);
+    const reply = await summarizeBuffer(buffer, filename, question, opened.advisorSystem, locale);
+    return NextResponse.json({ reply }, { status: 200 });
+  } finally {
+    await removeIncomingFile(storagePath);
+  }
+}
+
+async function handleFormDocument(req: NextRequest) {
+  const formData = await req.formData();
+  const file = formData.get("file") as File | null;
+  const questionField = formData.get("question");
+  const advisorField = formData.get("advisorId");
+  const localeField = formData.get("locale");
+  const playbookField = formData.get("playbookId");
+
+  const locale = requestUiLocale(req, localeField);
+  const question =
+    typeof questionField === "string" && questionField.trim().length > 0
+      ? questionField
+      : defaultDocumentQuestion(locale);
+
+  const opened = await openAdvisor(req, advisorField, localeField, playbookField);
+  if ("response" in opened) return opened.response;
+
+  if (!file) {
     return NextResponse.json(
-      {
-        error:
-          "Document processing failed. Please try again, or convert the file to a standard PDF/Text and upload again.",
-      },
-      { status: 500 }
+      { error: locale === "ar" ? "لم يُرفع ملف" : "No file uploaded" },
+      { status: 400 }
     );
   }
+
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: fileTooLargeMessage(locale) }, { status: 413 });
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const reply = await summarizeBuffer(buffer, file.name, question, opened.advisorSystem, locale);
+  return NextResponse.json({ reply }, { status: 200 });
 }

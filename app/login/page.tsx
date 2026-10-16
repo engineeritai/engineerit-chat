@@ -6,8 +6,10 @@ import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { useMessages } from "@/lib/useMessages";
 
 export default function LoginPage() {
+  const { shell: s } = useMessages();
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
   const [email, setEmail] = useState("");
@@ -37,18 +39,18 @@ export default function LoginPage() {
       }
 
       if (!data.session) {
-        setErrorMessage("Unable to sign in. Please try again.");
+        setErrorMessage(s.auth.unable);
         setLoading(false);
         return;
       }
 
-      setSuccessMessage("Logged in. Redirecting to your profile...");
+      setSuccessMessage(s.auth.loggedIn);
       setTimeout(() => {
         router.push("/profile");
       }, 1000);
     } catch (err) {
       console.error(err);
-      setErrorMessage("Something went wrong. Please try again.");
+      setErrorMessage(s.auth.genericError);
     } finally {
       setLoading(false);
     }
@@ -65,17 +67,15 @@ export default function LoginPage() {
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
 
         <div className="page-wrap">
-          <h1 className="page-title">Sign in</h1>
-          <p className="page-subtitle">
-            Use your engineerit.ai account to access your chats and documents.
-          </p>
+          <h1 className="page-title">{s.auth.signInTitle}</h1>
+          <p className="page-subtitle">{s.auth.signInLead}</p>
 
           <form className="register-form" onSubmit={handleSubmit}>
-            <h2 className="section-heading">Welcome back</h2>
+            <h2 className="section-heading">{s.auth.welcome}</h2>
 
             <div className="form-row">
               <label>
-                Email address
+                {s.auth.email}
                 <input
                   type="email"
                   className="input"
@@ -89,7 +89,7 @@ export default function LoginPage() {
 
             <div className="form-row">
               <label>
-                Password
+                {s.auth.password}
                 <input
                   type="password"
                   className="input"
@@ -126,7 +126,7 @@ export default function LoginPage() {
             )}
 
             <button className="btn" disabled={loading}>
-              {loading ? "Signing in…" : "Sign in"}
+              {loading ? s.auth.signingIn : s.auth.signIn}
             </button>
 
             <p
@@ -136,9 +136,9 @@ export default function LoginPage() {
                 color: "#4b5563",
               }}
             >
-              Don&apos;t have an account?{" "}
+              {s.header.noAccount}{" "}
               <Link href="/register" className="link">
-                Create one here
+                {s.auth.createHere}
               </Link>
               .
             </p>

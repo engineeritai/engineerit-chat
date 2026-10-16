@@ -17,6 +17,9 @@ import AdvisorBar from "../components/AdvisorBar";
 import AdvisorEcosystem from "../components/AdvisorEcosystem";
 import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
+import { disciplineLabel, toolLabel } from "@/lib/labels";
+import { postDocument, postImage, readApiError } from "@/lib/postAttachment";
+import { MAX_UPLOAD_BYTES, UploadError, fileTooLargeMessage } from "@/lib/uploadLimits";
 
 type Role = "user" | "assistant";
 
@@ -353,7 +356,7 @@ export default function Page() {
 
   const [planId, setPlanId] = useState<PlanId>("assistant");
   const [advisorPlan, setAdvisorPlan] = useState("guest");
-  const { m: ui } = useMessages();
+  const { locale, m: ui, shell: s } = useMessages();
 
   const [showMobileTools, setShowMobileTools] = useState(false);
 
@@ -365,6 +368,7 @@ export default function Page() {
   const [showGate, setShowGate] = useState(false);
   const [gateMode, setGateMode] = useState<"register" | "upgrade">("register");
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   const isPaidPlan =
     planId === "engineer" || planId === "professional" || planId === "consultant";
@@ -452,7 +456,7 @@ export default function Page() {
     if (!currentThreadId) {
       const t: Thread = {
         id: uuid(),
-        title: "New conversation",
+        title: s.chat.newConversation,
         discipline,
         messages: [],
       };
@@ -471,7 +475,7 @@ export default function Page() {
   function onNewChat() {
     const t: Thread = {
       id: uuid(),
-      title: "New conversation",
+      title: s.chat.newConversation,
       discipline,
       messages: [],
     };
@@ -491,6 +495,12 @@ export default function Page() {
     if (!attachmentsAllowed) return;
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadNotice(fileTooLargeMessage(locale));
+      e.target.value = "";
+      return;
+    }
+    setUploadNotice(null);
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -508,6 +518,12 @@ export default function Page() {
     if (!attachmentsAllowed) return;
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadNotice(fileTooLargeMessage(locale));
+      e.target.value = "";
+      return;
+    }
+    setUploadNotice(null);
 
     const url = URL.createObjectURL(file);
     setAttachments((prev) => [
@@ -522,23 +538,38 @@ export default function Page() {
   };
 
   async function analyzeImage(question: string, imageFile: File): Promise<string> {
-    const formData = new FormData();
-    formData.append("file", imageFile, imageFile.name);
-    formData.append("question", question || "Analyze this engineering image.");
-
-    const res = await fetch("/api/image", { method: "POST", body: formData });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await postImage({
+      file: imageFile,
+      question: question || s.chat.analyzeImage,
+      locale,
+    });
+    if (!res.ok) {
+      const failure = await readApiError(res);
+      throw new UploadError(
+        failure.message || s.chat.imageFailed,
+        res.status,
+        failure.code
+      );
+    }
     const data = (await res.json()) as { reply: string };
     return data.reply || "";
   }
 
   async function analyzeDocument(question: string, docFile: File): Promise<string> {
-    const formData = new FormData();
-    formData.append("file", docFile, docFile.name);
-    formData.append("question", question || "Extract and summarize this document.");
-
-    const res = await fetch("/api/document", { method: "POST", body: formData });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await postDocument({
+      file: docFile,
+      question: question || s.chat.analyzeDocument,
+      locale,
+    });
+    if (!res.ok) {
+      const failure = await readApiError(res);
+      throw new UploadError(
+        failure.message ||
+          s.chat.documentFailed,
+        res.status,
+        failure.code
+      );
+    }
     const data = (await res.json()) as { reply: string };
     return data.reply || "";
   }
@@ -550,27 +581,13 @@ export default function Page() {
   const handleEngineerToolClick = (toolId: ToolId) => {
     switch (toolId) {
       case "drawing":
-        insertTemplate(
-          "Explain and analyze the attached engineering drawing (PFD / P&ID / block diagram)."
-        );
-        break;
       case "design":
-        insertTemplate("Check this engineering design against relevant codes and standards.");
-        break;
       case "itp":
-        insertTemplate("Generate an Inspection & Test Plan (ITP) and QA/QC checklist.");
-        break;
       case "boq":
-        insertTemplate("Propose a structured BOQ with items and units.");
-        break;
       case "schedule":
-        insertTemplate("Build a high-level project schedule.");
-        break;
       case "value":
-        insertTemplate("Perform a value engineering review.");
-        break;
       case "dashboard":
-        insertTemplate("Create a management dashboard summary (KPIs, risks, actions).");
+        insertTemplate(s.chat.prompts[toolId]);
         break;
       default:
         break;
@@ -601,8 +618,8 @@ export default function Page() {
     if (Number.isFinite(max) && cur >= max) {
       const msg =
         isGuest
-          ? "Daily limit reached. Please register or log in."
-          : "Daily limit reached. Please upgrade.";
+          ? s.chat.dailyGuest
+          : s.chat.dailyPaid;
       if (isGuest) openRegisterGate(msg);
       else if (planId === "assistant") openUpgradeGate(msg);
       return { ok: false as const, key, cur };
@@ -630,13 +647,13 @@ export default function Page() {
     updateThread((t) => ({
       ...t,
       title:
-        t.messages.length === 0 ? userText.slice(0, 64) || "New conversation" : t.title,
+        t.messages.length === 0 ? userText.slice(0, 64) || s.chat.newConversation : t.title,
       messages: [
         ...t.messages,
         {
           id: uuid(),
           role: "user",
-          content: userText || "[Attachment-only message]",
+          content: userText || s.chat.attachmentOnly,
           attachments: userAttachments,
         },
       ],
@@ -673,7 +690,8 @@ export default function Page() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            discipline,
+            discipline: disciplineLabel(locale, discipline),
+            locale,
             messages: payloadMessages,
             planId: isGuest ? "guest" : planId,
             userId: userId,
@@ -683,10 +701,7 @@ export default function Page() {
         if (res.status === 429) {
           const data = await res.json().catch(() => null);
           const msg =
-            data?.error ||
-            (isGuest
-              ? "Daily limit reached. Please register or log in."
-              : "Daily limit reached. Please upgrade.");
+            data?.error || (isGuest ? s.chat.dailyGuest : s.chat.dailyPaid);
           if (isGuest) openRegisterGate(msg);
           else if (planId === "assistant") openUpgradeGate(msg);
 
@@ -697,9 +712,7 @@ export default function Page() {
               {
                 id: uuid(),
                 role: "assistant",
-                content: isGuest
-                  ? "Daily limit reached. Please register or log in to continue using engineerit.ai."
-                  : "Daily limit reached. Please upgrade to continue.",
+                content: isGuest ? s.chat.dailyGuestReply : s.chat.dailyPaidReply,
               },
             ],
           }));
@@ -722,11 +735,15 @@ export default function Page() {
       }
     } catch (e) {
       console.error(e);
+      const content =
+        e instanceof UploadError
+          ? e.message
+          : s.chat.sorry;
       updateThread((t) => ({
         ...t,
         messages: [
           ...t.messages,
-          { id: uuid(), role: "assistant", content: "Sorry, something failed. Please try again." },
+          { id: uuid(), role: "assistant", content },
         ],
       }));
     } finally {
@@ -771,13 +788,10 @@ export default function Page() {
           >
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
-                Welcome to engineerit.ai
+                {s.chat.welcomeTitle}
               </div>
               <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
-                A digital AI-powered platform providing engineering intelligence services,
-                including automated engineering analysis, data processing, remote technical
-                consulting, and operating an interactive system that utilizes AI technologies to
-                analyze documents, drawings, and enhance engineering experience.
+                {s.chat.welcomeBody}
               </div>
               <div style={{ marginTop: 8, fontSize: 12, color: "#374151", lineHeight: 1.4 }}>
                 {ui.advisors.homeWelcome}{" "}
@@ -789,7 +803,7 @@ export default function Page() {
             <button
               type="button"
               onClick={handleCloseLanding}
-              aria-label="Close"
+              aria-label={s.chat.close}
               style={{
                 border: "none",
                 background: "transparent",
@@ -809,7 +823,7 @@ export default function Page() {
           <AdvisorBar planId={advisorPlan} isGuest={isGuest} />
 
         <div className="engineer-tools">
-          <span className="engineer-tools-label">Engineer tools:</span>
+          <span className="engineer-tools-label">{s.chat.toolsLabel}</span>
           <div className="engineer-tools-row">
             {ENGINEER_TOOLS.map((tool) => {
               const enabled = hasAccess(planId, tool.id);
@@ -824,7 +838,7 @@ export default function Page() {
                   onClick={() => enabled && handleEngineerToolClick(tool.id)}
                 >
                   {!enabled && <span className="tool-lock">🔒</span>}
-                  <span>{tool.label}</span>
+                  <span>{toolLabel(locale, tool.id)}</span>
                 </button>
               );
             })}
@@ -837,7 +851,7 @@ export default function Page() {
             className="engineer-tools-mobile-toggle"
             onClick={() => setShowMobileTools((v) => !v)}
           >
-            <span>Engineer tools for your plan</span>
+            <span>{s.chat.toolsForPlan}</span>
             <span style={{ fontSize: 12 }}>{showMobileTools ? "▲" : "▼"}</span>
           </button>
 
@@ -857,7 +871,7 @@ export default function Page() {
                       disabled={!enabled}
                       onClick={() => {
                         if (!enabled) {
-                          openUpgradeGate("This tool requires a higher subscription plan.");
+                          openUpgradeGate(s.chat.toolLocked);
                           return;
                         }
                         handleEngineerToolClick(tool.id);
@@ -865,10 +879,10 @@ export default function Page() {
                       }}
                     >
                       <div>
-                        {enabled ? "✅" : "🔒"} <span>{tool.label}</span>
+                        {enabled ? "✅" : "🔒"} <span>{toolLabel(locale, tool.id)}</span>
                       </div>
                       {!enabled && (
-                        <span className="engineer-tools-mobile-plan-hint">Upgrade</span>
+                        <span className="engineer-tools-mobile-plan-hint">{s.chat.upgrade}</span>
                       )}
                     </button>
                   );
@@ -882,7 +896,7 @@ export default function Page() {
         <div className="conversation">
           {messages.length === 0 ? (
             <div className="empty-state">
-              <p>Ask an engineering question to start the conversation.</p>
+              <p>{s.chat.empty}</p>
             </div>
           ) : (
             messages.map((m) => {
@@ -897,7 +911,7 @@ export default function Page() {
                     (m.role === "user" ? "message-user" : "message-assistant")
                   }
                 >
-                  <div className="message-avatar">{m.role === "user" ? "You" : "AI"}</div>
+                  <div className="message-avatar">{m.role === "user" ? s.chat.you : s.chat.ai}</div>
 
                   <div className="message-bubble">
                     <div className="msg-content" dir={rtl ? "rtl" : "ltr"}>
@@ -975,11 +989,11 @@ export default function Page() {
                       <div className="msg-actions">
                         {planId === "assistant" && isGuest ? (
                           <span style={{ fontSize: 12, color: "#6b7280" }}>
-                            Register to copy, share and attach files
+                            {s.chat.registerActions}
                           </span>
                         ) : planId === "assistant" && !isGuest ? (
                           <span style={{ fontSize: 12, color: "#6b7280" }}>
-                            Upgrade to copy, share and attach files
+                            {s.chat.upgradeActions}
                           </span>
                         ) : (
                           <>
@@ -990,12 +1004,12 @@ export default function Page() {
                                   className="msg-action-btn"
                                   onClick={async () => {
                                     const ok = await copyAsHtml(m.content);
-                                    if (!ok) alert("Copy failed on this browser.");
+                                    if (!ok) alert(s.chat.copyFailed);
                                   }}
-                                  aria-label="Copy"
-                                  title="Copy"
+                                  aria-label={s.chat.copy}
+                                  title={s.chat.copy}
                                 >
-                                  📋 Copy
+                                  📋 {s.chat.copy}
                                 </button>
 
                                 <button
@@ -1006,10 +1020,10 @@ export default function Page() {
                                     if (ok) return;
                                     setOpenShareFor((prev) => (prev === m.id ? null : m.id));
                                   }}
-                                  aria-label="Share"
-                                  title="Share"
+                                  aria-label={s.chat.share}
+                                  title={s.chat.share}
                                 >
-                                  🔗 Share
+                                  🔗 {s.chat.share}
                                 </button>
 
                                 {/* ✅ Professional + Consultant */}
@@ -1022,10 +1036,10 @@ export default function Page() {
                                         await exportPdf(m.content);
                                       } catch (e) {
                                         console.error(e);
-                                        alert("PDF export failed. Please try again.");
+                                        alert(s.chat.pdfFailed);
                                       }
                                     }}
-                                    title="Export PDF"
+                                    title={s.chat.exportPdf}
                                   >
                                     📄 PDF
                                   </button>
@@ -1042,10 +1056,10 @@ export default function Page() {
                                           await exportWordDocx(m.content);
                                         } catch (e) {
                                           console.error(e);
-                                          alert("Word export failed. Please try again.");
+                                          alert(s.chat.wordFailed);
                                         }
                                       }}
-                                      title="Export Word"
+                                      title={s.chat.exportWord}
                                     >
                                       📝 Word
                                     </button>
@@ -1058,10 +1072,10 @@ export default function Page() {
                                           await exportPptx(m.content);
                                         } catch (e) {
                                           console.error(e);
-                                          alert("PowerPoint export failed. Please try again.");
+                                          alert(s.chat.pptFailed);
                                         }
                                       }}
-                                      title="Export PowerPoint"
+                                      title={s.chat.exportPpt}
                                     >
                                       📊 PPT
                                     </button>
@@ -1085,7 +1099,7 @@ export default function Page() {
                                   className="msg-action-btn"
                                   onClick={() => saveHtml(m.content)}
                                 >
-                                  Save HTML
+                                  {s.chat.saveHtml}
                                 </button>
 
                                 <button
@@ -1093,7 +1107,7 @@ export default function Page() {
                                   className="msg-action-btn"
                                   onClick={() => printHtml(m.content)}
                                 >
-                                  Print
+                                  {s.chat.print}
                                 </button>
 
                                 <button
@@ -1101,7 +1115,7 @@ export default function Page() {
                                   className="msg-action-btn"
                                   onClick={() => shareToWhatsApp(m.content)}
                                 >
-                                  WhatsApp
+                                  {s.chat.whatsapp}
                                 </button>
 
                                 <button
@@ -1109,7 +1123,7 @@ export default function Page() {
                                   className="msg-action-btn"
                                   onClick={() => setOpenShareFor(null)}
                                 >
-                                  ✕ Close
+                                  ✕ {s.chat.closeShare}
                                 </button>
                               </div>
                             )}
@@ -1126,6 +1140,11 @@ export default function Page() {
 
         <div className="composer">
           <div className="composer-box">
+            {uploadNotice && (
+              <div className="upload-notice" role="alert">
+                {uploadNotice}
+              </div>
+            )}
             {attachments.length > 0 && (
               <div className="attachments">
                 {attachments.map((a) => (
@@ -1148,11 +1167,11 @@ export default function Page() {
                 <button
                   type="button"
                   className="chat-input-icon-btn"
-                  aria-label="Add attachments"
+                  aria-label={s.chat.addAttachments}
                   onClick={() => {
                     if (!attachmentsAllowed) {
-                      if (isGuest) openRegisterGate("Subscribe to Attach photos or documents.");
-                      else openUpgradeGate("Subscribe to Attach photos or documents.");
+                      if (isGuest) openRegisterGate(s.chat.attachLocked);
+                      else openUpgradeGate(s.chat.attachLocked);
                       return;
                     }
                     setIsAttachMenuOpen((v) => !v);
@@ -1170,7 +1189,7 @@ export default function Page() {
                         document.getElementById("image-upload")?.click();
                       }}
                     >
-                      📷 Photo
+                      📷 {s.chat.photo}
                     </button>
                     <button
                       type="button"
@@ -1179,7 +1198,7 @@ export default function Page() {
                         document.getElementById("file-upload")?.click();
                       }}
                     >
-                      📄 Document
+                      📄 {s.chat.document}
                     </button>
                   </div>
                 )}
@@ -1187,7 +1206,7 @@ export default function Page() {
 
               <textarea
                 className="textarea"
-                placeholder="Ask an engineering question…"
+                placeholder={s.chat.askPlaceholder}
                 value={input}
                 onChange={(e) => {
                   setInput(e.target.value);
@@ -1202,7 +1221,7 @@ export default function Page() {
                 className="chat-input-send-btn"
                 disabled={sending || (!input.trim() && attachments.length === 0)}
                 onClick={send}
-                aria-label="Send message"
+                aria-label={s.chat.send}
               >
                 ➤
               </button>
@@ -1232,45 +1251,43 @@ export default function Page() {
           <div className="gate-overlay" role="dialog" aria-modal="true">
             <div className="gate-modal">
               <div className="gate-title">
-                {gateMode === "register"
-                  ? "Register / Login required"
-                  : "Upgrade required"}
+                {gateMode === "register" ? s.chat.registerTitle : s.chat.upgradeTitle}
               </div>
 
               {limitNotice && <div className="gate-note">{limitNotice}</div>}
 
               {gateMode === "register" ? (
                 <div className="gate-body">
-                  <div className="gate-text">Please register or login to continue.</div>
+                  <div className="gate-text">{s.chat.registerBody}</div>
                   <div className="gate-actions">
                     <a className="gate-btn" href="/login">
-                      Login
+                      {s.header.login}
                     </a>
                     <a className="gate-btn gate-btn-primary" href="/register">
-                      Register
+                      {s.header.register}
                     </a>
                     <button
                       className="gate-btn"
                       type="button"
                       onClick={() => setShowGate(false)}
                     >
-                      Close
+                      {s.chat.close}
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="gate-body">
-                  <div className="gate-text">Upgrade to continue without limits.</div>
+                  <div className="gate-text">{s.chat.upgradeBody}</div>
                   <div className="gate-actions">
                     <a className="gate-btn gate-btn-primary" href="/subscription">
-                      Upgrade
+                      {s.chat.upgrade}
                     </a>
                     <button
                       className="gate-btn"
                       type="button"
                       onClick={() => setShowGate(false)}
                     >
-                      Close
+                      {s.chat.close}
                     </button>
                   </div>
                 </div>

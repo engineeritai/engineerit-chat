@@ -2,19 +2,13 @@ import { NextResponse } from "next/server";
 import { resolveAdvisorPrompt } from "@/lib/advisorPrompts";
 import { hasAdvisorAccess, isAdvisorId, normalizeAdvisorPlan, type AdvisorId, type AdvisorPlanId } from "@/lib/advisors";
 import { advisorsAreLive } from "@/lib/advisorLaunch";
-import { isLocale, type Locale } from "@/lib/i18n";
+import { isLocale, translate, type Locale } from "@/lib/i18n";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export type AdvisorGate =
   | { active: false }
   | { active: true; ok: true; advisorId: AdvisorId; locale: Locale; prompt: string }
   | { active: true; ok: false; response: NextResponse };
-
-const LOCKED_MESSAGE =
-  "AI Advisors are included on Consultant, Team, and Enterprise plans.";
-
-const COMING_SOON_MESSAGE =
-  "AI Advisors are coming soon. Playbooks are not open yet.";
 
 /**
  * No advisor id → the existing chat / document path.
@@ -34,11 +28,17 @@ export async function gateAdvisor(args: {
   const { request, advisorId, locale, playbookId } = args;
   if (advisorId == null || advisorId === "") return { active: false };
 
+  const resolvedLocale: Locale = isLocale(locale) ? locale : "en";
+  const copy = translate(resolvedLocale);
+
   if (!isAdvisorId(advisorId)) {
     return {
       active: true,
       ok: false,
-      response: NextResponse.json({ error: "Unknown advisor." }, { status: 400 }),
+      response: NextResponse.json(
+        { error: resolvedLocale === "ar" ? "مستشار غير معروف." : "Unknown advisor." },
+        { status: 400 }
+      ),
     };
   }
 
@@ -47,7 +47,7 @@ export async function gateAdvisor(args: {
       active: true,
       ok: false,
       response: NextResponse.json(
-        { error: COMING_SOON_MESSAGE, code: "coming_soon" },
+        { error: copy.advisors.comingSoonBody, code: "coming_soon" },
         { status: 403 }
       ),
     };
@@ -59,20 +59,22 @@ export async function gateAdvisor(args: {
       active: true,
       ok: false,
       response: NextResponse.json(
-        { error: LOCKED_MESSAGE, code: "locked", upgrade: true },
+        { error: copy.gating.sendLocked, code: "locked", upgrade: true },
         { status: 403 }
       ),
     };
   }
 
-  const resolvedLocale: Locale = isLocale(locale) ? locale : "en";
   const prompt = resolveAdvisorPrompt(advisorId, resolvedLocale, playbookId);
   if (!prompt.ok) {
     return {
       active: true,
       ok: false,
       response: NextResponse.json(
-        { error: "Unknown advisor or playbook." },
+        {
+          error:
+            resolvedLocale === "ar" ? "مستشار أو كتيب غير معروف." : "Unknown advisor or playbook.",
+        },
         { status: 400 }
       ),
     };

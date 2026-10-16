@@ -180,9 +180,9 @@ export const en: MarketingContent = {
           "Individual monthly plans stay on the prices shown at registration and are paid in the app. Team, Enterprise, and annual billing are arranged by email for now. Use Request a team pilot or contact us. They are not sent to the card checkout.",
       },
       {
-        question: "Can I write to the assistant in Arabic?",
+        question: "How do I change the interface language?",
         answer:
-          "These pages are in English. In chat, you can write in Arabic, and an Arabic reply is shown right to left.",
+          "Use the language control in the header. Chat replies follow that language unless you write in the other one.",
       },
       {
         question: "Where is the company verification?",

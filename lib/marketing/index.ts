@@ -1,19 +1,14 @@
+import { ar } from "@/lib/marketing/ar";
 import { en } from "@/lib/marketing/en";
 import type { MarketingContent } from "@/lib/marketing/types";
+import type { Locale } from "@/lib/i18n";
 
-/**
- * English is the only locale shipped today.
- * To add Arabic: implement MarketingContent in ./ar.ts (dir "rtl", htmlLang "ar")
- * and add it to CATALOGS. Pages already read copy through getMarketingContent.
- */
-export type Locale = "en";
+export type { Locale };
 
-const CATALOGS: Record<Locale, MarketingContent> = {
-  en,
-};
+const CATALOGS: Record<Locale, MarketingContent> = { en, ar };
 
 export function getMarketingContent(locale: Locale = "en"): MarketingContent {
-  return CATALOGS[locale];
+  return CATALOGS[locale] ?? CATALOGS.en;
 }
 
 export type { MarketingContent };

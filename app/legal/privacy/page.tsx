@@ -1,40 +1,21 @@
-import Link from "next/link";
-import { pageMetadata } from "@/lib/seo";
+"use client";
 
-export const metadata = pageMetadata({
-  title: "Privacy Policy",
-  description: "Privacy Policy for the engineerit.ai platform.",
-  path: "/legal/privacy",
-});
+import Link from "next/link";
+import { useMessages } from "@/lib/useMessages";
 
 export default function PrivacyPage() {
+  const { shell: s } = useMessages();
   return (
     <div className="page-wrap" style={{ padding: "40px 20px" }}>
-      <h1 className="page-title">Privacy Policy – engineerit.ai</h1>
-
-      <p style={{ marginTop: 16, marginBottom: 16 }}>
-        This page describes the Privacy Policy for the{" "}
-        <strong>engineerit.ai</strong> platform.
-      </p>
-
-      <p style={{ marginBottom: 12 }}>
-        The full and detailed Privacy Policy is available in our legal
-        document here:
-      </p>
-
-      <ul style={{ marginLeft: 20, marginBottom: 16 }}>
+      <h1 className="page-title">{s.legal.privacyTitle}</h1>
+      <p style={{ marginTop: 16, marginBottom: 16 }}>{s.legal.privacyLead}</p>
+      <p style={{ marginBottom: 12 }}>{s.legal.privacyBody}</p>
+      <ul style={{ marginInlineStart: 20, marginBottom: 16 }}>
         <li>
-          <Link href="/legal/terms#privacy">
-            Go to Privacy Policy section inside the Legal page
-          </Link>
+          <Link href="/legal/terms#privacy">{s.legal.privacyLink}</Link>
         </li>
       </ul>
-
-      <p style={{ fontSize: 14, color: "#6b7280" }}>
-        This dedicated URL is provided to meet payment provider and compliance
-        requirements. The governing legal text is the same as in the Legal /
-        Terms page.
-      </p>
+      <p style={{ fontSize: 14, color: "#6b7280" }}>{s.legal.privacyNote}</p>
     </div>
   );
 }

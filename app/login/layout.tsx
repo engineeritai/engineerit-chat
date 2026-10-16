@@ -1,11 +1,12 @@
+import { metaFor } from "@/lib/pageMeta";
+import { requestLocale } from "@/lib/requestLocale";
 import { pageMetadata } from "@/lib/seo";
 
-export const metadata = pageMetadata({
-  title: "Login",
-  description: "Sign in to engineerit.ai to continue your engineering chats and manage your plan.",
-  path: "/login",
-  index: false,
-});
+export async function generateMetadata() {
+  const locale = await requestLocale();
+  const meta = metaFor(locale, "/login");
+  return pageMetadata({ ...meta, path: "/login", index: false, locale });
+}
 
 export default function LoginLayout({ children }: { children: React.ReactNode }) {
   return children;
