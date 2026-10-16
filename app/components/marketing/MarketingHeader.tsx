@@ -16,7 +16,7 @@ export default function MarketingHeader({ onMenu }: { onMenu: () => void }) {
   const { shell } = useMessages();
   const content = getMarketingContent(locale);
   const onChat = pathname === "/chat";
-  const chatLabel = shell.nav.chat;
+  const chatLabel = shell.nav.openChat;
 
   return (
     <header className="mkt-header">
@@ -51,7 +51,7 @@ export default function MarketingHeader({ onMenu }: { onMenu: () => void }) {
         <div className="mkt-header-spacer" />
         {onChat ? null : (
           <Link className="eit-chat" href="/chat" aria-label={chatLabel} title={chatLabel}>
-            <EitMark size={28} tone="inverse" title="eit" />
+            <EitMark size={28} tone="inverse" title={chatLabel} />
           </Link>
         )}
         <LanguageToggle compact className="mkt-header-lang" />

@@ -7,6 +7,7 @@ export type ShellCopy = {
     pages: string;
     home: string;
     chat: string;
+    openChat: string;
     pricing: string;
     register: string;
     profile: string;
@@ -381,6 +382,7 @@ const en: ShellCopy = {
     pages: "Pages",
     home: "Home",
     chat: "Chat",
+    openChat: "Open chat",
     pricing: "Pricing",
     register: "Registration and plans",
     profile: "My profile",
@@ -777,6 +779,7 @@ const ar: ShellCopy = {
     pages: "الصفحات",
     home: "الرئيسية",
     chat: "المحادثة",
+    openChat: "افتح المحادثة",
     pricing: "الأسعار",
     register: "التسجيل والباقات",
     profile: "ملفي",

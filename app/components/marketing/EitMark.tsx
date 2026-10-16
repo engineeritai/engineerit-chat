@@ -30,7 +30,7 @@ export default function EitMark({
       fill={tone === "inverse" ? "#ffffff" : "#0d60e4"}
       fillRule="evenodd"
     >
-      <title>eit</title>
+      {title ? <title>{title}</title> : null}
       <path d={EIT_PATH} />
     </svg>
   );
