@@ -1,6 +1,7 @@
 import JsonLd from "@/app/components/marketing/JsonLd";
 import MarketingShell from "@/app/components/marketing/MarketingShell";
 import PricingBoard from "@/app/components/marketing/PricingBoard";
+import AdvisorPricingNote from "@/app/components/AdvisorPricingNote";
 import { getMarketingContent } from "@/lib/marketing";
 import { pageMetadata, softwareApplicationJsonLd } from "@/lib/seo";
 
@@ -22,6 +23,7 @@ export default function PricingPage() {
           <h1>{content.pricing.title}</h1>
           <p className="mkt-lead">{content.pricing.intro}</p>
           <PricingBoard />
+          <AdvisorPricingNote />
         </div>
       </MarketingShell>
     </>

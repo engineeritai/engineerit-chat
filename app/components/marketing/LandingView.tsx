@@ -9,6 +9,8 @@ import {
 } from "@/lib/pricingDisplay";
 import PilotRequestForm from "@/app/components/marketing/PilotRequestForm";
 import SaudiBusinessBadge from "@/app/components/marketing/SaudiBusinessBadge";
+import AdvisorEcosystem from "@/app/components/AdvisorEcosystem";
+import en from "@/lib/i18n/en";
 
 function fill(template: string, values: Record<string, string>) {
   return Object.entries(values).reduce(
@@ -62,6 +64,13 @@ export default function LandingView({ locale = "en" }: { locale?: Locale }) {
           </Link>
           <SaudiBusinessBadge locale={locale} />
         </div>
+      </section>
+
+      <section className="mkt-section" id="advisors">
+        <AdvisorEcosystem />
+        <p className="mkt-intro">
+          <Link href="/advisors">{en.advisors.homeCta}</Link>
+        </p>
       </section>
 
       <section className="mkt-section" id="disciplines">

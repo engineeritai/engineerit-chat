@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type React from "react";
+import AdvisorNav from "./AdvisorNav";
 import { DISCIPLINES } from "@/lib/disciplines";
 import { SAUDI_BUSINESS_AUTH_NO, SAUDI_BUSINESS_VERIFY_URL } from "@/lib/trust";
 
@@ -82,6 +83,7 @@ export default function Sidebar({
               label="Registration & Plans"
               currentPath={pathname}
             />
+            <SidebarLink href="/pricing" label="Pricing" currentPath={pathname} />
             <SidebarLink
               href="/profile"
               label="My Profile"
@@ -99,6 +101,8 @@ export default function Sidebar({
             />
           </nav>
         </div>
+
+        <AdvisorNav currentPath={pathname} />
 
         <div>
           <h3>History</h3>

@@ -10,9 +10,13 @@ import React, {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import Link from "next/link";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
+import AdvisorBar from "../components/AdvisorBar";
+import AdvisorEcosystem from "../components/AdvisorEcosystem";
 import { supabase } from "@/lib/supabaseClient";
+import { useMessages } from "@/lib/useMessages";
 
 type Role = "user" | "assistant";
 
@@ -348,6 +352,8 @@ export default function Page() {
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
 
   const [planId, setPlanId] = useState<PlanId>("assistant");
+  const [advisorPlan, setAdvisorPlan] = useState("guest");
+  const { m: ui } = useMessages();
 
   const [showMobileTools, setShowMobileTools] = useState(false);
 
@@ -381,6 +387,7 @@ export default function Page() {
           setPlanId("assistant");
           setIsGuest(true);
           setUserId(null);
+          setAdvisorPlan("guest");
           return;
         }
 
@@ -394,7 +401,9 @@ export default function Page() {
           .maybeSingle();
 
         if (!error && profile?.subscription_tier) {
-          const p = profile.subscription_tier as PlanId;
+          const rawTier = String(profile.subscription_tier);
+          setAdvisorPlan(rawTier);
+          const p = rawTier as PlanId;
           if (
             p === "assistant" ||
             p === "engineer" ||
@@ -407,12 +416,14 @@ export default function Page() {
           }
         } else {
           setPlanId("assistant");
+          setAdvisorPlan("assistant");
         }
       } catch (err) {
         console.error(err);
         setPlanId("assistant");
         setIsGuest(true);
         setUserId(null);
+        setAdvisorPlan("guest");
       }
     };
 
@@ -768,6 +779,12 @@ export default function Page() {
                 consulting, and operating an interactive system that utilizes AI technologies to
                 analyze documents, drawings, and enhance engineering experience.
               </div>
+              <div style={{ marginTop: 8, fontSize: 12, color: "#374151", lineHeight: 1.4 }}>
+                {ui.advisors.homeWelcome}{" "}
+                <Link href="/advisors" className="link">
+                  {ui.advisors.homeCta}
+                </Link>
+              </div>
             </div>
             <button
               type="button"
@@ -786,6 +803,10 @@ export default function Page() {
             </button>
           </div>
         )}
+
+        <div className="chat-mode-stack">
+          <AdvisorEcosystem compact />
+          <AdvisorBar planId={advisorPlan} isGuest={isGuest} />
 
         <div className="engineer-tools">
           <span className="engineer-tools-label">Engineer tools:</span>
@@ -855,6 +876,7 @@ export default function Page() {
               </div>
             </div>
           )}
+        </div>
         </div>
 
         <div className="conversation">

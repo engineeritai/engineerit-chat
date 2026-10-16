@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import AdvisorNav from "./AdvisorNav";
 
 type Props = {
   isMobileOpen: boolean;
@@ -42,6 +43,8 @@ export default function NavSidebar({ isMobileOpen, onCloseMobile }: Props) {
             />
           </nav>
         </div>
+
+        <AdvisorNav currentPath={pathname} />
       </div>
 
       <div

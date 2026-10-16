@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { gateAdvisor } from "@/lib/advisorGate";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -11,6 +12,17 @@ export async function POST(req: Request) {
     const question =
       (formData.get("question") as string) ||
       "Describe this engineering image in detail and extract useful technical information.";
+    const advisorField = formData.get("advisorId");
+    const localeField = formData.get("locale");
+    const playbookField = formData.get("playbookId");
+
+    const advisorGate = await gateAdvisor({
+      request: req,
+      advisorId: typeof advisorField === "string" ? advisorField : "",
+      locale: typeof localeField === "string" ? localeField : "",
+      playbookId: typeof playbookField === "string" ? playbookField : "",
+    });
+    if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
 
     if (!(file instanceof File)) {
       return new Response("No image uploaded", { status: 400 });
@@ -24,10 +36,19 @@ export async function POST(req: Request) {
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
+        ...(advisorGate.active && advisorGate.ok
+          ? [{ role: "system" as const, content: advisorGate.prompt }]
+          : []),
         {
           role: "user",
           content: [
-            { type: "text", text: question },
+            {
+              type: "text",
+              text:
+                advisorGate.active && advisorGate.ok
+                  ? `${question}\n\nFollow the output template in the system message. Use only what is visible in the image.`
+                  : question,
+            },
             {
               type: "image_url",
               image_url: {
