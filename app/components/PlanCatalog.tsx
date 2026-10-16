@@ -95,7 +95,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
 
       <ResumeCheckout onError={setErrorMsg} />
       <p style={{ fontSize: 13, color: "#6b7280", marginTop: 0 }}>
-        Annual price is 10 times the monthly price (2 months free). Prices include VAT.
+        Annual price is 10 times the monthly price (2 months free).
         US dollar amounts are approximate, at SAR 3.75 per USD 1.
       </p>
 

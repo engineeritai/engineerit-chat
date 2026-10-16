@@ -196,7 +196,7 @@ export const en: MarketingContent = {
     annualExplainer:
       "Annual price is 10 times the monthly price (2 months free). Paid plans open Moyasar checkout and renew automatically until you cancel.",
     usdNote: "US dollar amounts are approximate, at SAR 3.75 per USD 1.",
-    vatNote: "Prices include VAT.",
+    vatNote: "",
     individualTitle: "Individual plans",
     individualIntro:
       "Assistant Engineer, Engineer, Professional Engineer, and Consultant Engineer. Same names, prices, and features as registration.",

@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     const periodLabel = interval === "year" ? "yearly" : "monthly";
     const seated = quote.planId === "team" || quote.planId === "enterprise";
     const seatNote = seated ? `, ${quote.seatLimit} seats` : "";
-    const description = `engineerit.ai ${label} plan (SAR ${quote.amountSar} ${periodLabel}${seatNote}, VAT included)`;
+    const description = `engineerit.ai ${label} plan (SAR ${quote.amountSar} ${periodLabel}${seatNote})`;
     const checkoutId = crypto.randomUUID();
     const baseUrl = getAppBaseUrl(req);
     const pageUrl = `${baseUrl}/checkout/${checkoutId}`;

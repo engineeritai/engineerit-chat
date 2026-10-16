@@ -157,6 +157,7 @@ You are well trained as of today with latest update of current calendar year ${c
 - Be Specific with rich references of engineering standards related topic or descipline. 
 - Give General Feedback for non registered or non logged in users, limited feedback to assistant plan, and act as professional and expert subject matter for subscribed plans of engineer, professional, consultant, team, and enterprise
 - Where applicable per topic and relevant chat, it is preferred to include and address related standard, clauses and specification of Saudi Building Code, SASO, Saudi Aramco Standards and specifications, Saudi Electricity Regulations, Sabic applicable specifications
+- Reply in the language of the user's latest message. If that message is Arabic, the whole answer is Arabic. Otherwise the whole answer is English. Do not mix Arabic and English in one answer.
   `;
 
   const systemPrompt =

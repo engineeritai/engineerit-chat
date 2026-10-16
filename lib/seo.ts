@@ -95,7 +95,7 @@ export function softwareApplicationJsonLd() {
         name: TEAM_PLAN.name,
         price: String(TEAM_PLAN.monthlySar),
         priceCurrency: "SAR",
-        description: `Team plan, SAR ${TEAM_PLAN.monthlySar} per month for ${TEAM_PLAN.includedSeats} seats. Extra seat SAR ${TEAM_PLAN.extraSeatMonthlySar} per month. Annual price is 10 times monthly. Paid through Moyasar. Includes AI Advisors (coming soon). Prices include VAT.`,
+        description: `Team plan, SAR ${TEAM_PLAN.monthlySar} per month for ${TEAM_PLAN.includedSeats} seats. Extra seat SAR ${TEAM_PLAN.extraSeatMonthlySar} per month. Annual price is 10 times monthly. Paid through Moyasar. Includes AI Advisors (coming soon).`,
         url: `${SITE_URL}/pricing`,
       },
       {
@@ -104,7 +104,7 @@ export function softwareApplicationJsonLd() {
         price: String(ENTERPRISE_PLAN.monthlySarFrom),
         priceCurrency: "SAR",
         description:
-          "SAR 2,500 per month for 10 seats, SAR 25,000 per year. Extra seat SAR 199 per month. Bought and renewed through Moyasar. Includes AI Advisors (coming soon). Prices include VAT.",
+          "SAR 2,500 per month for 10 seats, SAR 25,000 per year. Extra seat SAR 199 per month. Bought and renewed through Moyasar. Includes AI Advisors (coming soon).",
         url: `${SITE_URL}/pricing`,
       },
     ],

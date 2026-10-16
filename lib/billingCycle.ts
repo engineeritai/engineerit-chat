@@ -141,3 +141,14 @@ export function vatFromInclusive(amountSar: number) {
 export function zatcaInvoicesEnabled(flag: string | undefined) {
   return flag === "true" || flag === "1";
 }
+
+/** VAT breakdown needs a VAT number. Tax-invoice wording also needs the ZATCA switch. */
+export function receiptVatMode(vatNumber: string | undefined, zatcaFlag: string | undefined) {
+  const number = (vatNumber ?? "").trim();
+  if (!number) return { kind: "plain" as const };
+  return {
+    kind: "vat" as const,
+    vatNumber: number,
+    taxInvoice: zatcaInvoicesEnabled(zatcaFlag),
+  };
+}

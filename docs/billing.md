@@ -2,7 +2,7 @@
 
 Team, Enterprise, and the individual paid plans are bought and renewed in the product through Moyasar. No invoice, bank transfer, or owner step is part of a purchase.
 
-Published prices (VAT included, annual = 10× monthly):
+Published prices (annual = 10× monthly):
 
 | Plan | Monthly | Annual | Seats |
 | --- | --- | --- | --- |
@@ -21,7 +21,7 @@ The first payment uses the Moyasar payment form with **Save card** after the cus
 3. In the Moyasar dashboard, enable **Tokenization** for the merchant. Test mode and live mode are separate.
 4. In Moyasar, add a webhook for `payment_paid` (and payment failed events if offered) to `https://<your-domain>/api/payments/moyasar/callback`. Set the webhook secret to the same value as `MOYASAR_WEBHOOK_SECRET`.
 5. Set `CRON_SECRET`. Vercel Cron calls `GET /api/cron/renewals` daily at 02:15 UTC (`vercel.json`) and sends `Authorization: Bearer <CRON_SECRET>`.
-6. Leave `ZATCA_INVOICES_ENABLED` unset until a ZATCA connection exists. Receipts already show net and 15% VAT.
+6. Leave `VAT_NUMBER` and `ZATCA_INVOICES_ENABLED` unset. The business is VAT-exempt until a VAT number exists, so receipts stay a plain total.
 
 ## Environment variables
 
@@ -42,7 +42,8 @@ The first payment uses the Moyasar payment form with **Save card** after the cus
 | `SALES_TO_EMAIL` | no | Inbox for non-purchase mail |
 | `FEEDBACK_TO_EMAIL` | no | Feedback inbox |
 | `ADMIN_EMAILS` | yes for the monitor | Comma-separated emails allowed to open `/admin/subscriptions` |
-| `ZATCA_INVOICES_ENABLED` | no | `true` or `1` marks the receipt as ZATCA-ready. Unset means “ZATCA tax invoice: not issued yet.” This does not generate ZATCA XML. |
+| `VAT_NUMBER` | no | Leave unset while the business is VAT-exempt. When set, receipts show a VAT-inclusive net and 15% breakdown plus this number. | 
+| `ZATCA_INVOICES_ENABLED` | no | `true` or `1`, and only together with `VAT_NUMBER`, titles the receipt as a tax invoice. This does not generate ZATCA XML. Unset receipts do not use the words “tax invoice”. |
 
 ## Supabase migrations
 

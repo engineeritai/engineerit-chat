@@ -27,7 +27,7 @@ export type Plan = {
 export const TEAM_INCLUDED_SEATS = 5;
 export const ENTERPRISE_INCLUDED_SEATS = 10;
 
-/** List prices in SAR. Annual is 10× monthly. Team and Enterprise amounts include VAT. */
+/** List prices in SAR. Annual is 10× monthly. */
 export const PLAN_AMOUNTS_SAR: Record<
   SelfServePlanId,
   { month: number; year: number }
@@ -241,7 +241,6 @@ export const PLANS: Plan[] = [
       `Extra seat ${formatSar(EXTRA_SEAT_SAR.month, "month")}`,
       "Renews automatically until you cancel",
       "Invite colleagues by email",
-      "VAT included",
       "Access ends for the whole team if the subscription lapses",
       AI_ADVISORS_FEATURE,
     ],
@@ -258,7 +257,6 @@ export const PLANS: Plan[] = [
       `${ENTERPRISE_INCLUDED_SEATS} seats included`,
       `Extra seat ${formatSar(ENTERPRISE_EXTRA_SEAT_SAR.month, "month")}`,
       "Renews automatically until you cancel",
-      "VAT included",
       AI_ADVISORS_FEATURE,
     ],
   },

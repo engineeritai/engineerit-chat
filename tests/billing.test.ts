@@ -35,6 +35,7 @@ import {
   verifyMoyasarSecretToken,
   verifyMoyasarSignature,
 } from "../lib/moyasar";
+import { chosenLanguage } from "../lib/replyLanguage";
 import { buildReceipt } from "../lib/receipt";
 import crypto from "node:crypto";
 
@@ -157,23 +158,69 @@ describe("Moyasar confirmation and receipts", () => {
     assert.equal(verifyMoyasarSecretToken("nope", "whsec"), false);
   });
 
-  it("builds a VAT-inclusive receipt with plan, amount, and period", () => {
-    const receipt = buildReceipt({
-      plan: "enterprise",
-      amountSar: 4800,
-      interval: "year",
-      seats: 12,
-      periodEnd: "2027-10-16T00:00:00.000Z",
-    });
+  it("builds a plain receipt with the total only until a VAT number is set", () => {
+    const receipt = buildReceipt(
+      {
+        plan: "enterprise",
+        amountSar: 4800,
+        interval: "year",
+        seats: 12,
+        periodEnd: "2027-10-16T00:00:00.000Z",
+      },
+      { vatNumber: "", zatcaFlag: "true" }
+    );
+    assert.match(receipt.subject, /^engineerit.ai Receipt/);
     assert.match(receipt.subject, /Enterprise/);
     assert.match(receipt.subject, /4,800/);
-    assert.match(receipt.text, /This amount is VAT inclusive/);
+    assert.match(receipt.text, /^Thank you/);
+    assert.match(receipt.text, /\nReceipt\n/);
+    assert.match(receipt.text, /Total paid: SAR 4,800/);
     assert.match(receipt.text, /Period: Annual/);
     assert.match(receipt.text, /Seats: 12/);
-    assert.match(receipt.html, /VAT inclusive/);
-    assert.match(receipt.text, /Net: SAR/);
-    assert.match(receipt.text, /VAT 15%/);
-    assert.match(receipt.text, /ZATCA tax invoice: not issued yet/);
+    assert.doesNotMatch(receipt.text, /VAT|Net:|tax invoice/i);
+    assert.doesNotMatch(receipt.html, /VAT|Net:|tax invoice/i);
+    assert.equal(/[\u0600-\u06FF]/.test(receipt.text), false);
+  });
+
+  it("adds a VAT breakdown and the VAT number only after VAT_NUMBER is set", () => {
+    const input = {
+      plan: "enterprise" as const,
+      amountSar: 4800,
+      interval: "year" as const,
+      seats: 12,
+      periodEnd: "2027-10-16T00:00:00.000Z",
+    };
+    const registered = buildReceipt(input, { vatNumber: "312345678900003", zatcaFlag: "" });
+    assert.match(registered.text, /Receipt/);
+    assert.match(registered.text, /This amount is VAT inclusive/);
+    assert.match(registered.text, /Net: SAR/);
+    assert.match(registered.text, /VAT 15%/);
+    assert.match(registered.text, /VAT number: 312345678900003/);
+    assert.doesNotMatch(registered.text, /tax invoice/i);
+
+    const invoice = buildReceipt(input, { vatNumber: "312345678900003", zatcaFlag: "true" });
+    assert.match(invoice.text, /Tax invoice/);
+    assert.match(invoice.text, /VAT number: 312345678900003/);
+    assert.doesNotMatch(invoice.text, /not issued yet/);
+  });
+
+  it("keeps an Arabic receipt in Arabic and an English receipt in English", () => {
+    const arabic = buildReceipt(
+      {
+        plan: "team",
+        amountSar: 349,
+        interval: "month",
+        seats: 5,
+        locale: "ar",
+      },
+      { vatNumber: "312345678900003", zatcaFlag: "1" }
+    );
+    assert.match(arabic.text, /فاتورة ضريبية/);
+    assert.match(arabic.text, /الرقم الضريبي: 312345678900003/);
+    assert.match(arabic.text, /ضريبة القيمة المضافة 15٪/);
+    assert.doesNotMatch(arabic.text, /Receipt|VAT|Net:|Plan:|tax invoice|Total paid/);
+    assert.equal(chosenLanguage("لخص هذه الوثيقة"), "ar");
+    assert.equal(chosenLanguage("Summarize this document"), "en");
   });
 });
 

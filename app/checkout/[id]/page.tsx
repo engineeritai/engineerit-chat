@@ -76,7 +76,7 @@ export default function CheckoutPage() {
             <>
               <p className="page-subtitle">
                 {label} · {formatSar(Number(checkout.amount_sar), checkout.billing_interval === "year" ? "year" : "month")}
-                {checkout.seat_limit && checkout.seat_limit > 1 ? ` · ${checkout.seat_limit} seats` : ""}. Prices include VAT.
+                {checkout.seat_limit && checkout.seat_limit > 1 ? ` · ${checkout.seat_limit} seats` : ""}.
                 The card is saved for automatic renewal until you cancel.
               </p>
               <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 16 }}>
