@@ -24,7 +24,7 @@ export const en: MarketingContent = {
       "Attach files, pick a tool, and get structured answers. Paid plans add exports.",
     primaryCta: "Open chat",
     secondaryCta: "View pricing",
-    tertiaryCta: "Buy Team",
+    tertiaryCta: "Subscribe",
     panelTitle: "Chat is one click away",
     panelBody:
       "Attach a file, pick a tool, and get a structured answer. Paid plans add exports.",
@@ -177,7 +177,7 @@ export const en: MarketingContent = {
     title: "Start with a question, or buy a plan",
     body: "Engineers can open the chat now. Paid plans, Team, and Enterprise are bought through Moyasar and renew automatically.",
     primaryCta: "Open chat",
-    secondaryCta: "Buy Team",
+    secondaryCta: "Subscribe",
   },
   footer: {
     blurb: "AI engineering assistant for consultancies, engineers, and students.",

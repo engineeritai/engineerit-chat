@@ -12,7 +12,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/faq": {
       title: "Questions | engineerit.ai",
       description:
-        "Answers for engineering consultancies: trying the chat, team pilots, standards, billing, language, and company verification.",
+        "Answers for engineering consultancies: trying the chat, standards, Moyasar billing, language, and company verification.",
     },
     "/pricing": {
       title: "Pricing | engineerit.ai",
@@ -92,7 +92,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/faq": {
       title: "الأسئلة الشائعة | engineerit.ai",
       description:
-        "إجابات للمكاتب الهندسية: تجربة المحادثة، وتجربة الفريق، والمعايير، والفوترة، واللغة، وتوثيق الشركة.",
+        "إجابات للمكاتب الهندسية: تجربة المحادثة، والمعايير، وفوترة Moyasar، واللغة، وتوثيق الشركة.",
     },
     "/pricing": {
       title: "الأسعار | engineerit.ai",

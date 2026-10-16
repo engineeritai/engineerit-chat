@@ -267,7 +267,7 @@ const en: Messages = {
     lockedTitle: "Buy the plan that includes this advisor",
     lockedBody:
       "A short preview is on this page. Checkout for the plan named on the advisor opens in Moyasar.",
-    upgradeCta: "Upgrade",
+    upgradeCta: "Subscribe",
     compareCta: "Compare plans",
     registerCta: "Register",
     loginCta: "Login",

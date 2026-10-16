@@ -229,7 +229,7 @@ const ar: Messages = {
   gating: {
     lockedTitle: "اشترِ الباقة التي تشمل هذا المستشار",
     lockedBody: "معاينة قصيرة في هذه الصفحة. الدفع للباقة المذكورة يفتح عبر Moyasar.",
-    upgradeCta: "ترقية",
+    upgradeCta: "اشترك الآن",
     compareCta: "قارن الباقات",
     registerCta: "تسجيل",
     loginCta: "دخول",

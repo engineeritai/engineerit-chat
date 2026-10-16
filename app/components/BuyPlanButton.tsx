@@ -21,22 +21,10 @@ type Props = {
   onError?: (message: string) => void;
 };
 
-export function buyLabel(planId: PlanId, verb: "buy" | "upgrade" = "buy", locale: "en" | "ar" = "en") {
+export function buyLabel(planId: PlanId, _verb: "buy" | "upgrade" = "buy", locale: "en" | "ar" = "en") {
   const ar = locale === "ar";
   if (planId === "assistant") return ar ? "ابدأ مجاناً" : "Start free";
-  if (planId === "enterprise") {
-    return verb === "upgrade"
-      ? ar
-        ? "الترقية إلى المؤسسات"
-        : "Upgrade to Enterprise"
-      : ar
-        ? "اشترِ المؤسسات"
-        : "Buy Enterprise";
-  }
-  if (planId === "team") {
-    return verb === "upgrade" ? (ar ? "الترقية إلى الفريق" : "Upgrade to Team") : ar ? "اشترِ الفريق" : "Buy Team";
-  }
-  return verb === "upgrade" ? (ar ? "ترقية" : "Upgrade") : ar ? "اشترِ" : "Buy";
+  return ar ? "اشترك الآن" : "Subscribe";
 }
 
 export function ResumeCheckout({ onError }: { onError?: (message: string) => void }) {
