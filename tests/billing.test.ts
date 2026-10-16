@@ -65,12 +65,13 @@ import fontkit from "@pdf-lib/fontkit";
 import { paymentSuccessPath } from "../lib/checkoutReturn";
 import {
   buildInvoiceDocument,
+  formatArabicAmount,
   invoiceLanguage,
   paymentMethodLabel,
   usesLogicalArabic,
 } from "../lib/invoiceDocument";
 import { invoicePdfHref } from "../lib/invoiceDownload";
-import { renderInvoicePdf } from "../lib/invoicePdf";
+import { invoiceLineVisual, renderInvoicePdf } from "../lib/invoicePdf";
 import { shellCopy } from "../lib/shell";
 import { buildReceipt } from "../lib/receipt";
 import crypto from "node:crypto";
@@ -705,6 +706,17 @@ describe("checkout and invoice regressions", () => {
     assert.match(arabic.customerName, /نورة/);
     assert.equal(paymentMethodLabel("stcpay", "ar"), "STC Pay");
     assert.equal(usesLogicalArabic(arabic), true);
+    assert.equal(arabic.totalValue, "41.00 ر.س");
+    assert.equal(formatArabicAmount(41), "41.00 ر.س");
+    assert.equal(invoiceLineVisual("41.00 ر.س"), "41.00 ر.س");
+    const card = paymentMethodLabel("creditcard", "ar");
+    assert.equal(card, "بطاقة — مدى، فيزا، ماستركارد، أمريكان إكسبريس");
+    assert.doesNotMatch(card, /[()]/);
+    assert.doesNotMatch(invoiceLineVisual(card), /[()]/);
+    const logo = readFileSync("assets/invoice-logo.png");
+    const logoWidth = logo.readUInt32BE(16);
+    const logoHeight = logo.readUInt32BE(20);
+    assert.ok(logoHeight < 80 && logoHeight > 40, `logo is cropped, not the padded square (${logoWidth}x${logoHeight})`);
   });
 
   it("still charges a renewal on the period end for the cron", () => {
