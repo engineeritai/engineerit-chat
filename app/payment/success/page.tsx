@@ -5,6 +5,7 @@ import Header from "../../components/Header";
 import NavSidebar from "../../components/NavSidebar";
 import { useMessages } from "@/lib/useMessages";
 import { planById, formatMoney } from "@/lib/labels";
+import { SarText } from "@/app/components/RiyalAmount";
 import { isPlanId, type PlanId } from "@/lib/plans";
 import { downloadInvoicePdf } from "@/lib/invoiceDownload";
 import { supabase } from "@/lib/supabaseClient";
@@ -111,7 +112,9 @@ export default function PaymentSuccessPage() {
                   </div>
                   <div>
                     <dt>{s.profile.amount}</dt>
-                    <dd>{amount}</dd>
+                    <dd>
+                      <SarText>{amount}</SarText>
+                    </dd>
                   </div>
                   {until ? (
                     <div>

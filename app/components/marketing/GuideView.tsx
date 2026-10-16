@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { guideCopy, type GuideStep } from "@/lib/guide";
+import { useMessages } from "@/lib/useMessages";
 
 function FlowSvg({ title }: { title: string }) {
   const nodes = [1, 2, 3, 4, 5, 6, 7];
@@ -133,18 +134,27 @@ function FlowLinks({ steps, prefix }: { steps: GuideStep[]; prefix: string }) {
 
 export default function GuideView({ mode }: { mode: "how" | "guide" }) {
   const { locale } = useLocale();
+  const { shell } = useMessages();
   const copy = guideCopy(locale);
   const detailed = mode === "guide";
+  const title = detailed ? copy.guideTitle : copy.howTitle;
 
   return (
-    <article className="mkt-section guide-page">
-      <h1>{detailed ? copy.guideTitle : copy.howTitle}</h1>
-      <p className="mkt-intro">{detailed ? copy.guideLead : copy.howLead}</p>
+    <article className="page-wrap guide-page">
+      <div className="advisor-breadcrumb">
+        <Link href="/">{shell.nav.home}</Link>
+        <span aria-hidden="true">›</span>
+        <span>{title}</span>
+      </div>
+      <div className="advisor-title-row">
+        <h1 className="page-title">{title}</h1>
+      </div>
+      <p className="page-subtitle">{detailed ? copy.guideLead : copy.howLead}</p>
       <FlowSvg title={copy.flowLabel} />
       <FlowLinks steps={copy.steps} prefix={detailed ? "" : "/guide"} />
-      <ol className="guide-steps">
+      <div className="advisor-grid">
         {copy.steps.map((step, index) => (
-          <li key={step.id} id={`step-${index + 1}`} className="mkt-card guide-step">
+          <article key={step.id} id={`step-${index + 1}`} className="card advisor-card guide-step">
             <StepArt id={step.id} />
             <div>
               <h2>
@@ -152,11 +162,11 @@ export default function GuideView({ mode }: { mode: "how" | "guide" }) {
                 {step.title}
               </h2>
               <p>{detailed ? step.body : step.short}</p>
-              <Link href={step.href}>{step.hrefLabel}</Link>
+              <Link className="advisor-card-link" href={step.href}>{step.hrefLabel}</Link>
             </div>
-          </li>
+          </article>
         ))}
-      </ol>
+      </div>
       <p className="guide-more">
         {detailed ? (
           <Link className="mkt-btn mkt-btn-secondary" href="/how-it-works">

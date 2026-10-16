@@ -8,6 +8,8 @@ import UserAvatar from "@/app/components/marketing/UserAvatar";
 import { useMessages } from "@/lib/useMessages";
 import { planById } from "@/lib/labels";
 import { HEADER_PLAN_ABBREV, PLAN_THEME, type PlanId } from "@/lib/plans";
+import { planPriceLabel } from "@/lib/pricingDisplay";
+import { SarText } from "@/app/components/RiyalAmount";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -78,6 +80,7 @@ export function PlanSummary({ onNavigate }: { onNavigate?: () => void }) {
   const [now, setNow] = useState(() => Date.now());
   const theme = PLAN_THEME[account.planId];
   const fullPlan = planById(locale, account.planId).name;
+  const price = planPriceLabel(account.planId, "month", 0, locale);
   const free = account.planId === "assistant";
   const progress = useMemo(
     () => (free ? null : periodProgress(account.periodStart, account.periodEnd, now)),
@@ -106,6 +109,9 @@ export function PlanSummary({ onNavigate }: { onNavigate?: () => void }) {
         </span>
         <div className="acct-plan-copy">
           <strong style={{ color: theme.ink }}>{fullPlan}</strong>
+          <span className="acct-plan-price">
+            <SarText>{price.primary}</SarText>
+          </span>
           {progress ? <span>{daysLabel}</span> : null}
         </div>
         {progress ? <PeriodRing used={progress.used} color={theme.accent} /> : null}

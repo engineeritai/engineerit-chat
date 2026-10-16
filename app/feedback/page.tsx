@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import MarketingShell from "../components/marketing/MarketingShell";
 import { useMessages } from "@/lib/useMessages";
 
@@ -100,7 +101,14 @@ export default function FeedbackPage() {
   return (
     <MarketingShell>
         <div className="page-wrap">
-          <h1 className="page-title">{s.feedback.title}</h1>
+          <div className="advisor-breadcrumb">
+            <Link href="/">{s.nav.home}</Link>
+            <span aria-hidden="true">›</span>
+            <span>{s.feedback.title}</span>
+          </div>
+          <div className="advisor-title-row">
+            <h1 className="page-title">{s.feedback.title}</h1>
+          </div>
           <p className="page-subtitle">{s.feedback.lead}</p>
 
           <form className="card" onSubmit={handleSubmit}>

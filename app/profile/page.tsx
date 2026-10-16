@@ -2,13 +2,15 @@
 
 import React, { useEffect, useState, ChangeEvent } from "react";
 import MarketingShell from "../components/marketing/MarketingShell";
+import { useAccount } from "../components/marketing/AccountState";
 import { supabase } from "../../lib/supabaseClient";
 import Link from "next/link";
 import { localizedPlan, planById, formatMoney } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
-import { PLANS, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
+import { PLANS, PLAN_THEME, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
 import { displayFeatures, formatSar, formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
+import { SarText } from "@/app/components/RiyalAmount";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
 import { downloadInvoicePdf } from "@/lib/invoiceDownload";
 import AvatarCropper from "@/app/components/AvatarCropper";
@@ -83,6 +85,35 @@ type SubscriptionRow = {
   end_date: string | null;
 };
 
+function ThemedPlanShell({
+  fallbackPlanId,
+  fallbackStart,
+  fallbackEnd,
+  children,
+}: {
+  fallbackPlanId: PlanId;
+  fallbackStart: string | null;
+  fallbackEnd: string | null;
+  children: (shown: {
+    planId: PlanId;
+    theme: (typeof PLAN_THEME)[PlanId];
+    start: string | null;
+    end: string | null;
+    label: string;
+  }) => React.ReactNode;
+}) {
+  const account = useAccount();
+  const { locale } = useMessages();
+  const planId = account.ready && account.signedIn ? account.planId : fallbackPlanId;
+  return children({
+    planId,
+    theme: PLAN_THEME[planId],
+    start: account.ready && account.signedIn ? account.periodStart : fallbackStart,
+    end: account.ready && account.signedIn ? account.periodEnd : fallbackEnd,
+    label: planById(locale, planId).name,
+  });
+}
+
 function formatDate(value: string | null | undefined, locale: Locale) {
   if (!value) return "-";
   const d = new Date(value);
@@ -96,6 +127,7 @@ function formatDate(value: string | null | undefined, locale: Locale) {
 
 export default function ProfilePage() {
   const { locale, shell: s } = useMessages();
+  const [photoBroken, setPhotoBroken] = useState(false);
 
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [fullName, setFullName] = useState("");
@@ -514,8 +546,9 @@ export default function ProfilePage() {
         .upload(filePath, blob, { upsert: true, contentType: "image/jpeg" });
 
       if (uploadError) {
-        console.error("AVATAR UPLOAD ERROR:", uploadError);
-        setErrorMsg(s.profile.photoFailed);
+        const message = (uploadError.message || "").toLowerCase();
+        const missing = message.includes("bucket") || message.includes("not found");
+        setErrorMsg(missing ? s.profile.photoUnavailable : s.profile.photoFailed);
         return;
       }
 
@@ -553,10 +586,7 @@ export default function ProfilePage() {
   const currentPlanId: PlanId = isPlanId(currentPlan) ? currentPlan : "assistant";
   const currentPlanLabel = planById(locale, currentPlanId).name;
   const catalogSource = PLANS.find((plan) => plan.id === currentPlanId) ?? PLANS[0];
-  const catalogPlan = localizedPlan(locale, catalogSource);
   const legacyPrice = consultantLegacy && currentPlanId === "consultant";
-  const catalogMonth = planPriceLabel(currentPlanId, "month", 0, locale, legacyPrice);
-  const catalogYear = planPriceLabel(currentPlanId, "year", 0, locale, legacyPrice);
   const approx = locale === "ar" ? "تقريباً" : "approx.";
   const teamLapsed =
     (storedPlan === "team" || storedPlan === "enterprise") && currentPlan === "assistant";
@@ -566,9 +596,9 @@ export default function ProfilePage() {
         <div className="page-wrap">
           <div className="profile-hero">
             <div className="profile-photo">
-              {profile?.avatar_url ? (
+              {profile?.avatar_url && !photoBroken ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={profile.avatar_url} alt={s.profile.photo} />
+                <img src={profile.avatar_url} alt={s.profile.photo} onError={() => setPhotoBroken(true)} />
               ) : (
                 <span>{(fullName.trim()[0] || "E").toLocaleUpperCase(locale === "ar" ? "ar" : "en")}</span>
               )}
@@ -647,12 +677,13 @@ export default function ProfilePage() {
                     color: "#111827",
                   }}
                 >
-                  {profile?.avatar_url ? (
+                  {profile?.avatar_url && !photoBroken ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={profile.avatar_url}
                       alt={s.header.profileAlt}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={() => setPhotoBroken(true)}
                     />
                   ) : (
                     (fullName?.trim()[0] || (locale === "ar" ? "م" : "E")).toLocaleUpperCase(
@@ -760,18 +791,31 @@ export default function ProfilePage() {
           ))}
 
           {tab === "overview" && (
-          <div className="card" style={{ marginTop: 24 }}>
-            <h2 className="card-title">{s.profile.subscription}</h2>
+          <ThemedPlanShell
+            fallbackPlanId={currentPlanId}
+            fallbackStart={billing?.current_period_start ?? null}
+            fallbackEnd={billing?.current_period_end ?? null}
+          >
+          {(shown) => {
+            const shownSource = PLANS.find((plan) => plan.id === shown.planId) ?? catalogSource;
+            const shownPlan = localizedPlan(locale, shownSource);
+            const shownLegacy = legacyPrice && shown.planId === "consultant";
+            const shownMonth = planPriceLabel(shown.planId, "month", 0, locale, shownLegacy);
+            const shownYear = planPriceLabel(shown.planId, "year", 0, locale, shownLegacy);
+            return (
+          <div className="plan-premium card" style={{ marginTop: 24, background: shown.theme.soft, borderColor: shown.theme.accent }}>
+            <span className="plan-ribbon" style={{ background: shown.theme.accent }}>{s.profile.yourPlan}</span>
+            <h2 className="card-title" style={{ color: shown.theme.ink }}>{shown.label}</h2>
 
             <p style={{ marginBottom: 12, fontSize: 15 }}>
-              {s.profile.currentPlan}: <strong>{currentPlanLabel}</strong>
+              {s.profile.currentPlan}: <strong>{shown.label}</strong>
             </p>
 
             {teamLapsed ? (
               <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
                 {s.profile.teamLapsed}
               </p>
-            ) : currentPlan === "assistant" ? (
+            ) : shown.planId === "assistant" ? (
               <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
                 {s.profile.freeBody}
               </p>
@@ -781,7 +825,7 @@ export default function ProfilePage() {
                   {s.profile.status}: <strong>{billing.status}</strong>
                 </div>
                 <div>
-                  {s.profile.price}: <strong>{formatMoney(Number(billing.amount_sar), locale)}</strong>
+                  {s.profile.price}: <strong><SarText>{formatMoney(Number(billing.amount_sar), locale)}</SarText></strong>
                 </div>
                 <div>
                   {s.profile.cycle}:{" "}
@@ -817,11 +861,15 @@ export default function ProfilePage() {
                     <div>
                       {s.profile.price}:{" "}
                       <strong>
-                        {activeSub.currency === "SAR"
-                          ? locale === "ar"
-                            ? formatMoney(activeSub.price, "ar")
-                            : `${formatSar(activeSub.price)} (approx. ${formatUsdApprox(activeSub.price)})`
-                          : `${activeSub.price} ${activeSub.currency}`}
+                        {activeSub.currency === "SAR" ? (
+                          <SarText>
+                            {locale === "ar"
+                              ? formatMoney(activeSub.price, "ar")
+                              : `${formatSar(activeSub.price)} (approx. ${formatUsdApprox(activeSub.price)})`}
+                          </SarText>
+                        ) : (
+                          `${activeSub.price} ${activeSub.currency}`
+                        )}
                       </strong>
                     </div>
                   )}
@@ -835,6 +883,15 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
+            ) : shown.start || shown.end ? (
+              <div style={{ fontSize: 14, color: "#374151", marginBottom: 10, lineHeight: 1.7 }}>
+                <div>
+                  {s.profile.startDate}: <strong>{formatDate(shown.start, locale)}</strong>
+                </div>
+                <div>
+                  {s.profile.endDate}: <strong>{formatDate(shown.end, locale)}</strong>
+                </div>
+              </div>
             ) : (
               <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 10 }}>
                 {s.profile.noBilling}
@@ -842,15 +899,21 @@ export default function ProfilePage() {
             )}
 
             <p style={{ fontSize: 14, color: "#374151", marginBottom: 8 }}>
-              {catalogMonth.primary}
-              {catalogMonth.usd ? ` (${approx} ${catalogMonth.usd})` : ""}
-              {catalogYear.amountSar > 0
-                ? ` · ${catalogYear.primary} (${approx} ${catalogYear.usd})`
-                : ""}
+              <SarText>{shownMonth.primary}</SarText>
+              {shownMonth.usd ? ` (${approx} ${shownMonth.usd})` : ""}
+              {shownYear.amountSar > 0 ? (
+                <>
+                  {" · "}
+                  <SarText>{shownYear.primary}</SarText>
+                  {` (${approx} ${shownYear.usd})`}
+                </>
+              ) : null}
             </p>
             <ul style={{ margin: "0 0 12px", paddingLeft: 18, fontSize: 14, color: "#374151" }}>
-              {(locale === "ar" ? catalogPlan.features : displayFeatures(catalogSource, "month")).map((feature) => (
-                <li key={feature}>{feature}</li>
+              {(locale === "ar" ? shownPlan.features : displayFeatures(shownSource, "month")).map((feature) => (
+                <li key={feature}>
+                  <SarText>{feature}</SarText>
+                </li>
               ))}
             </ul>
             <p style={{ fontSize: 14, color: "#6b7280" }}>
@@ -901,6 +964,9 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+            );
+          }}
+          </ThemedPlanShell>
           )}
 
           {tab === "overview" && (
@@ -949,7 +1015,9 @@ export default function ProfilePage() {
                     }}
                   >
                     <span>{planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}</span>
-                    <span>{formatMoney(Number(row.amount_sar), locale)}</span>
+                    <span>
+                      <SarText>{formatMoney(Number(row.amount_sar), locale)}</SarText>
+                    </span>
                     <span>{row.billing_interval === "year" ? s.profile.annual : s.profile.monthly}</span>
                     <span>{formatDate(row.paid_at, locale)}</span>
                     <button
@@ -1014,9 +1082,13 @@ export default function ProfilePage() {
                     <span>
                       {row.price !== null && row.currency
                         ? row.currency === "SAR"
-                          ? locale === "ar"
-                            ? formatMoney(row.price, "ar")
-                            : `${formatSar(row.price)} (approx. ${formatUsdApprox(row.price)})`
+                          ? (
+                            <SarText>
+                              {locale === "ar"
+                                ? formatMoney(row.price, "ar")
+                                : `${formatSar(row.price)} (approx. ${formatUsdApprox(row.price)})`}
+                            </SarText>
+                          )
                           : `${row.price} ${row.currency}`
                         : "-"}
                     </span>
@@ -1051,7 +1123,9 @@ export default function ProfilePage() {
                     {planHistory.map((row) => (
                       <tr key={row.id}>
                         <td>{planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}</td>
-                        <td>{formatMoney(Number(row.amount_sar), locale)}</td>
+                        <td>
+                          <SarText>{formatMoney(Number(row.amount_sar), locale)}</SarText>
+                        </td>
                         <td>{row.status}</td>
                         <td>{formatDate(row.paid_at || row.current_period_start || row.created_at, locale)}</td>
                         <td>

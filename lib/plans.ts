@@ -1,5 +1,7 @@
 // lib/plans.ts
 
+import { RIYAL, riyalAmount } from "@/lib/riyal";
+
 export type PlanId =
   | "assistant"
   | "engineer"
@@ -166,10 +168,12 @@ export function periodDays(interval: BillingInterval) {
 }
 
 export function formatSar(amount: number, interval?: BillingInterval) {
-  const formatted = amount.toLocaleString("en-US");
-  if (!interval) return `SAR ${formatted}`;
-  return `SAR ${formatted} / ${interval === "year" ? "year" : "month"}`;
+  const formatted = riyalAmount(amount.toLocaleString("en-US"));
+  if (!interval) return formatted;
+  return `${formatted} / ${interval === "year" ? "year" : "month"}`;
 }
+
+export { RIYAL };
 
 export type PriceQuote = {
   planId: SelfServePlanId;

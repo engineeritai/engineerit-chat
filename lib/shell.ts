@@ -210,6 +210,7 @@ export type ShellCopy = {
     save: string;
     subscription: string;
     currentPlan: string;
+    yourPlan: string;
     freeBody: string;
     status: string;
     price: string;
@@ -243,6 +244,7 @@ export type ShellCopy = {
     saveFailed: string;
     saved: string;
     photoFailed: string;
+    photoUnavailable: string;
     photoSaved: string;
     cycle: string;
     monthly: string;
@@ -595,6 +597,7 @@ const en: ShellCopy = {
     save: "Save changes",
     subscription: "Subscription",
     currentPlan: "Current plan",
+    yourPlan: "Your plan",
     freeBody: "You are on the free Assistant Engineer plan. No charges apply until you upgrade.",
     status: "Status",
     price: "Price",
@@ -629,6 +632,7 @@ const en: ShellCopy = {
     saveFailed: "Could not save the profile.",
     saved: "Profile updated.",
     photoFailed: "Could not upload the profile photo.",
+    photoUnavailable: "Profile photos are not available yet. Your initials stay in the header.",
     photoSaved: "Profile photo updated.",
     cycle: "Billing cycle",
     monthly: "Monthly",
@@ -982,6 +986,7 @@ const ar: ShellCopy = {
     save: "حفظ التغييرات",
     subscription: "الاشتراك",
     currentPlan: "الباقة الحالية",
+    yourPlan: "باقتك",
     freeBody: "أنت على باقة المهندس المساعد المجانية. لا تُفرض رسوم حتى الترقية.",
     status: "الحالة",
     price: "السعر",
@@ -1015,6 +1020,7 @@ const ar: ShellCopy = {
     saveFailed: "تعذر حفظ الملف.",
     saved: "تم تحديث الملف.",
     photoFailed: "تعذر رفع صورة الملف.",
+    photoUnavailable: "صور الملف غير متاحة بعد. تبقى الأحرف الأولى في الترويسة.",
     photoSaved: "تم تحديث صورة الملف.",
     cycle: "دورة الفوترة",
     monthly: "شهري",

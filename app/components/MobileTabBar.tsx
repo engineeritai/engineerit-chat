@@ -7,7 +7,7 @@ import { useLocale } from "@/app/components/LocaleProvider";
 
 const TABS = [
   { href: "/chat", en: "Chat", ar: "المحادثة", id: "chat" },
-  { href: "/#tools", en: "Tools", ar: "الأدوات", id: "tools" },
+  { href: "/tools", en: "Tools", ar: "الأدوات", id: "tools" },
   { href: "/advisors", en: "Advisors", ar: "المستشارون", id: "advisors" },
   { href: "/profile", en: "Profile", ar: "الملف", id: "profile" },
 ] as const;
@@ -22,7 +22,7 @@ export default function MobileTabBar() {
       {TABS.map((tab) => {
         const active =
           tab.id === "tools"
-            ? false
+            ? pathname === "/tools"
             : tab.id === "advisors"
               ? pathname === "/advisors" || pathname.startsWith("/advisors/")
               : pathname === tab.href;

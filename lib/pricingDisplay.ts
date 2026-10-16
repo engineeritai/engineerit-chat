@@ -11,6 +11,7 @@ import {
   type Plan,
   type PlanId,
 } from "@/lib/plans";
+import { RIYAL, riyalAmount } from "@/lib/riyal";
 
 /**
  * Public price display. Amounts come from lib/plans.ts, which is also what
@@ -27,20 +28,20 @@ export type BillingPeriod = "monthly" | "annual";
 
 const EXPECTED_PRICE_LABELS: Record<PlanId, string> = {
   assistant: "Free",
-  engineer: "SAR 19 / month",
-  professional: "SAR 41 / month",
-  consultant: "SAR 99 / month",
-  team: "SAR 499 / month",
-  enterprise: "SAR 3,900 / month",
+  engineer: `${RIYAL} 19 / month`,
+  professional: `${RIYAL} 41 / month`,
+  consultant: `${RIYAL} 99 / month`,
+  team: `${RIYAL} 499 / month`,
+  enterprise: `${RIYAL} 3,900 / month`,
 };
 
 const EXPECTED_YEARLY_LABELS: Record<PlanId, string> = {
   assistant: "Free",
-  engineer: "SAR 190 / year",
-  professional: "SAR 410 / year",
-  consultant: "SAR 990 / year",
-  team: "SAR 4,990 / year",
-  enterprise: "SAR 39,000 / year",
+  engineer: `${RIYAL} 190 / year`,
+  professional: `${RIYAL} 410 / year`,
+  consultant: `${RIYAL} 990 / year`,
+  team: `${RIYAL} 4,990 / year`,
+  enterprise: `${RIYAL} 39,000 / year`,
 };
 
 export function assertIndividualPlanPrices() {
@@ -72,7 +73,7 @@ export function annualSar(monthlySar: number) {
 }
 
 export function formatSar(amount: number) {
-  return `SAR ${amount.toLocaleString("en-US")}`;
+  return riyalAmount(amount.toLocaleString("en-US"));
 }
 
 export function formatUsdApprox(sar: number) {
@@ -104,7 +105,7 @@ export function planPriceLabel(
       maximumFractionDigits: 2,
     }).format(quote.amountSar / SAR_PER_USD);
     return {
-      primary: `${quote.amountSar.toLocaleString("en-US")} ر.س ${period}`,
+      primary: `${riyalAmount(quote.amountSar.toLocaleString("en-US"))} ${period}`,
       usd: `${usd} دولار`,
       amountSar: quote.amountSar,
     };

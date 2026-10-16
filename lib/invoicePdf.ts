@@ -3,6 +3,7 @@ import { join } from "path";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import type { InvoiceDocument } from "@/lib/invoiceDocument";
+import { RIYAL, RIYAL_PATHS, RIYAL_VIEWBOX } from "@/lib/riyal";
 
 const MARGIN = 48;
 const PAGE_WIDTH = 595;
@@ -172,63 +173,122 @@ function drawLine(
   if (!safe) return;
   const direction = lineDirection(safe);
   const parts = runs(safe);
-  const widthOf = (part: Run) => fontFor(fonts, part, strong).widthOfTextAtSize(part.text, size);
+  const widthOf = (part: Run) => runWidth(fonts, part, size, strong);
   const total = parts.reduce((sum, part) => sum + widthOf(part), 0);
-  let cursor = align === "right" ? x + width - total : x;
-  const ordered = direction === "rtl" ? parts : parts;
+  const paintLtr = (sequence: Run[], startX: number) => {
+    let cursor = startX;
+    for (const part of sequence) {
+      paintRun(page, fonts, part, cursor, y, size, color, strong);
+      cursor += widthOf(part);
+    }
+  };
   if (direction === "rtl") {
-    cursor = align === "right" ? x + width : x + total;
-    for (const part of ordered) {
-      const partWidth = widthOf(part);
-      cursor -= partWidth;
-      page.drawText(part.text, {
-        x: cursor,
-        y,
-        size,
-        font: fontFor(fonts, part, strong),
-        color,
-      });
+    const clusters = clusterAmounts(parts);
+    let cursor = align === "right" ? x + width : x + total;
+    for (const cluster of clusters) {
+      const clusterWidth = cluster.reduce((sum, part) => sum + widthOf(part), 0);
+      cursor -= clusterWidth;
+      paintLtr(cluster, cursor);
     }
     return;
   }
-  if (align === "right") cursor = x + width - total;
-  for (const part of ordered) {
-    page.drawText(part.text, {
-      x: cursor,
-      y,
-      size,
-      font: fontFor(fonts, part, strong),
-      color,
-    });
-    cursor += widthOf(part);
-  }
+  paintLtr(parts, align === "right" ? x + width - total : x);
 }
 
-type Run = { text: string; arabic: boolean };
+type RunKind = "ar" | "lat" | "sp" | "riyal";
+type Run = { text: string; kind: RunKind };
 
 function fontFor(fonts: Fonts, part: Run, strong: boolean) {
-  if (part.arabic) return fonts.arabic;
+  if (part.kind === "ar") return fonts.arabic;
   return strong ? fonts.strong : fonts.text;
 }
 
-/** Left-to-right text as it is drawn. Amounts that start with a digit stay "41.00 ر.س". */
+function riyalAdvance(size: number) {
+  return size * (RIYAL_VIEWBOX.width / RIYAL_VIEWBOX.height);
+}
+
+function runWidth(fonts: Fonts, part: Run, size: number, strong: boolean) {
+  if (part.kind === "riyal") return part.text.length * riyalAdvance(size);
+  return fontFor(fonts, part, strong).widthOfTextAtSize(part.text, size);
+}
+
+function paintRun(
+  page: PDFPage,
+  fonts: Fonts,
+  part: Run,
+  x: number,
+  y: number,
+  size: number,
+  color: ReturnType<typeof rgb>,
+  strong: boolean
+) {
+  if (part.kind === "riyal") {
+    const advance = riyalAdvance(size);
+    for (let i = 0; i < part.text.length; i += 1) {
+      paintRiyal(page, x + i * advance, y, size, color);
+    }
+    return;
+  }
+  page.drawText(part.text, {
+    x,
+    y,
+    size,
+    font: fontFor(fonts, part, strong),
+    color,
+  });
+}
+
+/** pdf-lib flips the SVG Y axis, so `y` is the top of the viewBox and the baseline is one em below. */
+function paintRiyal(page: PDFPage, x: number, baseline: number, size: number, color: ReturnType<typeof rgb>) {
+  const scale = size / RIYAL_VIEWBOX.height;
+  for (const path of RIYAL_PATHS) {
+    page.drawSvgPath(path, { x, y: baseline + size, scale, color });
+  }
+}
+
+/**
+ * A riyal sign plus the number after it stays left-to-right, even inside an Arabic line,
+ * so the sign remains on the left of the digits.
+ */
+function clusterAmounts(parts: Run[]): Run[][] {
+  const clusters: Run[][] = [];
+  for (let i = 0; i < parts.length; i += 1) {
+    const part = parts[i];
+    if (part.kind !== "riyal") {
+      clusters.push([part]);
+      continue;
+    }
+    const cluster = [part];
+    while (i + 1 < parts.length && parts[i + 1].kind !== "ar") {
+      i += 1;
+      cluster.push(parts[i]);
+    }
+    clusters.push(cluster);
+  }
+  return clusters;
+}
+
+/** Visual order of an invoice line. Amounts keep the riyal sign on the left of the number. */
 export function invoiceLineVisual(text: string) {
   const parts = runs(text);
-  const ordered = lineDirection(text) === "rtl" ? [...parts].reverse() : parts;
-  return ordered.map((part) => part.text).join("");
+  if (lineDirection(text) !== "rtl") return parts.map((part) => part.text).join("");
+  return [...clusterAmounts(parts)]
+    .reverse()
+    .map((cluster) => cluster.map((part) => part.text).join(""))
+    .join("");
 }
 
 function runs(text: string): Run[] {
   const parts: Run[] = [];
   let buf = "";
-  let kind: "ar" | "lat" | "sp" | null = null;
+  let kind: RunKind | null = null;
   const flush = () => {
     if (!buf || !kind) return;
-    parts.push({ text: buf, arabic: kind === "ar" });
+    parts.push({ text: buf, kind });
     buf = "";
   };
   for (const ch of text) {
-    const next = isSpace(ch) ? "sp" : isArabicScript(ch) ? "ar" : "lat";
+    const next = runKind(ch);
     if (kind === null || next === kind) {
       buf += ch;
       kind = next;
@@ -240,6 +300,13 @@ function runs(text: string): Run[] {
   }
   flush();
   return parts;
+}
+
+function runKind(ch: string): RunKind {
+  if (ch === RIYAL) return "riyal";
+  if (isSpace(ch)) return "sp";
+  if (isArabicScript(ch)) return "ar";
+  return "lat";
 }
 
 function lineDirection(text: string) {
@@ -271,6 +338,10 @@ function sanitize(text: string, fonts: Fonts) {
   for (const ch of text) {
     if (ch === "\n" || ch === "\t") {
       out += " ";
+      continue;
+    }
+    if (ch === RIYAL) {
+      out += ch;
       continue;
     }
     const arabic = isArabicScript(ch);

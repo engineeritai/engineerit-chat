@@ -113,7 +113,7 @@ test.describe("header plan abbreviations stay inside the phone header", () => {
       "/advisors",
       "/how-it-works",
       "/guide",
-      "/#tools",
+      "/tools",
       "/pricing",
       "/profile",
       "/feedback",

@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { useLocale } from "@/app/components/LocaleProvider";
-import { PLANS, type BillingInterval } from "@/lib/plans";
+import { useAccount } from "@/app/components/marketing/AccountState";
+import { PLAN_THEME, PLANS, type BillingInterval, type PlanId } from "@/lib/plans";
 import { getMarketingContent, type Locale } from "@/lib/marketing";
 import { featuresForLocale, localizedPlan } from "@/lib/labels";
 import { assertIndividualPlanPrices, planPriceLabel } from "@/lib/pricingDisplay";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
 import PriceRateNote from "@/app/components/marketing/PriceRateNote";
+import { SarText } from "@/app/components/RiyalAmount";
+import { useMessages } from "@/lib/useMessages";
 
 assertIndividualPlanPrices();
 
@@ -16,6 +19,7 @@ const FIRM = PLANS.filter((plan) => plan.id === "team" || plan.id === "enterpris
 
 export default function PricingBoard() {
   const { locale } = useLocale();
+  const account = useAccount();
   const content = getMarketingContent(locale);
   const [interval, setInterval] = useState<BillingInterval>("month");
   const [extraSeats, setExtraSeats] = useState({ team: 0, enterprise: 0 });
@@ -91,6 +95,7 @@ export default function PricingBoard() {
           />
         ))}
       </div>
+      <PlanComparison locale={locale} current={account.signedIn ? account.planId : null} />
       <PriceRateNote />
     </div>
   );
@@ -112,17 +117,32 @@ function PlanCard({
   onExtraSeats?: (value: number) => void;
 }) {
   const content = getMarketingContent(locale);
+  const { shell: s } = useMessages();
+  const account = useAccount();
   const source = PLANS.find((item) => item.id === planId)!;
   const plan = localizedPlan(locale, source);
   const price = planPriceLabel(plan.id, interval, extraSeats, locale);
   const features = featuresForLocale(locale, source, interval);
+  const theme = PLAN_THEME[plan.id];
+  const yours = account.signedIn && account.planId === plan.id;
 
   return (
-    <article id={plan.id} className={plan.id === "team" ? "mkt-card mkt-plan mkt-plan-team" : "mkt-card mkt-plan"}>
-      <h3>{plan.name}</h3>
+    <article
+      id={plan.id}
+      className={"mkt-card mkt-plan" + (yours ? " is-current" : "")}
+      style={{ borderTop: `3px solid ${theme.accent}`, background: theme.soft }}
+    >
+      {yours ? (
+        <span className="plan-ribbon" style={{ background: theme.accent }}>
+          {s.profile.yourPlan}
+        </span>
+      ) : null}
+      <h3 style={{ color: theme.ink }}>{plan.name}</h3>
       <p className="mkt-muted">{plan.tagline}</p>
       <div className="mkt-price">
-        <div className="mkt-price-main">{price.primary}</div>
+        <div className="mkt-price-main">
+          <SarText>{price.primary}</SarText>
+        </div>
         {price.usd && (
           <div className="mkt-price-usd">
             {content.pricing.approx} {price.usd}
@@ -131,7 +151,9 @@ function PlanCard({
       </div>
       <ul className="mkt-bullets">
         {features.map((feature) => (
-          <li key={feature}>{feature}</li>
+          <li key={feature}>
+            <SarText>{feature}</SarText>
+          </li>
         ))}
       </ul>
       {onExtraSeats && (
@@ -157,5 +179,66 @@ function PlanCard({
         onError={onError}
       />
     </article>
+  );
+}
+
+function PlanComparison({ locale, current }: { locale: Locale; current: PlanId | null }) {
+  const { shell: s } = useMessages();
+  const monthLabel = locale === "ar" ? "شهرياً" : "Monthly";
+  const yearLabel = locale === "ar" ? "سنوياً" : "Annual";
+  const includes = locale === "ar" ? "يشمل" : "Includes";
+
+  return (
+    <div className="plan-compare-wrap">
+      <table className="plan-compare">
+        <thead>
+          <tr>
+            <th />
+            {PLANS.map((plan) => {
+              const theme = PLAN_THEME[plan.id];
+              const name = localizedPlan(locale, plan).name;
+              return (
+                <th key={plan.id} style={{ background: theme.accent, color: "#fff" }}>
+                  {current === plan.id ? <span className="plan-ribbon plan-ribbon-inline">{s.profile.yourPlan}</span> : null}
+                  {name}
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>{monthLabel}</th>
+            {PLANS.map((plan) => (
+              <td key={plan.id}>
+                <SarText>{planPriceLabel(plan.id, "month", 0, locale).primary}</SarText>
+              </td>
+            ))}
+          </tr>
+          <tr>
+            <th>{yearLabel}</th>
+            {PLANS.map((plan) => (
+              <td key={plan.id}>
+                <SarText>{planPriceLabel(plan.id, "year", 0, locale).primary}</SarText>
+              </td>
+            ))}
+          </tr>
+          <tr>
+            <th>{includes}</th>
+            {PLANS.map((plan) => (
+              <td key={plan.id}>
+                <ul>
+                  {featuresForLocale(locale, plan, "month").slice(0, 4).map((feature) => (
+                    <li key={feature}>
+                      <SarText>{feature}</SarText>
+                    </li>
+                  ))}
+                </ul>
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 }

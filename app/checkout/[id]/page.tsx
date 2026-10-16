@@ -9,6 +9,7 @@ import PhonePayQr from "../../components/PhonePayQr";
 import { supabase } from "@/lib/supabaseClient";
 import { type PlanId } from "@/lib/plans";
 import { formatMoney, planById } from "@/lib/labels";
+import { SarText } from "@/app/components/RiyalAmount";
 import { paymentSuccessPath } from "@/lib/checkoutReturn";
 import { phonePayStartsOpen, saveCardStartsChecked } from "@/lib/moyasarEnv";
 import { useMessages } from "@/lib/useMessages";
@@ -185,7 +186,9 @@ export default function CheckoutPage() {
                       ) : null}
                       <div>
                         <dt>{s.profile.amount}</dt>
-                        <dd className="checkout-amount">{amount}</dd>
+                        <dd className="checkout-amount">
+                          <SarText>{amount}</SarText>
+                        </dd>
                       </div>
                     </dl>
                     <p className="checkout-vat-note">{s.checkout.vatNote}</p>

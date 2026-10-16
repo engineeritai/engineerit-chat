@@ -6,6 +6,7 @@ import Header from "../../components/Header";
 import NavSidebar from "../../components/NavSidebar";
 import { supabase } from "@/lib/supabaseClient";
 import { PLAN_LABELS, formatSar, type PlanId } from "@/lib/plans";
+import { SarText } from "@/app/components/RiyalAmount";
 
 type Sub = {
   plan: PlanId;
@@ -80,7 +81,9 @@ export default function BillingPage() {
                 {sub.cancel_at_period_end ? " · cancels at period end" : ""}
               </p>
               <p>
-                {formatSar(Number(sub.amount_sar), sub.billing_interval === "year" ? "year" : "month")}
+                <SarText>
+                  {formatSar(Number(sub.amount_sar), sub.billing_interval === "year" ? "year" : "month")}
+                </SarText>
                 {sub.seat_limit > 1 ? ` · ${sub.seat_limit} seats` : ""}
               </p>
               <p>Renews {new Date(sub.current_period_end).toLocaleDateString("en-GB")} unless you cancel.</p>

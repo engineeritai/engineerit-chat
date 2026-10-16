@@ -41,7 +41,7 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
     },
     { href: "/how-it-works", label: content.nav.how, active: pathname === "/how-it-works" },
     { href: "/guide", label: content.nav.guide, active: pathname === "/guide" },
-    { href: "/#tools", label: content.nav.tools, hash: "tools", active: false },
+    { href: "/tools", label: content.nav.tools, active: pathname === "/tools" },
     { href: "/#disciplines", label: content.nav.disciplines, hash: "disciplines", active: false },
     { href: "/pricing", label: content.nav.pricing, active: pathname === "/pricing" },
     { href: "/faq", label: content.nav.faq, active: pathname === "/faq" },

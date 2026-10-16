@@ -16,6 +16,7 @@ import {
   type SelfServePlanId,
 } from "@/lib/plans";
 import { formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
+import { SarText } from "@/app/components/RiyalAmount";
 
 type Member = {
   id: string;
@@ -211,16 +212,20 @@ export default function TeamPage() {
           </p>
 
           {error && <p style={{ color: "#b91c1c", fontSize: 14 }}>{error}</p>}
-          {info && <p style={{ color: "#166534", fontSize: 14 }}>{info}</p>}
+          {info && (
+            <p style={{ color: "#166534", fontSize: 14 }}>
+              <SarText>{info}</SarText>
+            </p>
+          )}
 
           {loading ? (
             <p>Loading team…</p>
           ) : !team ? (
             <div className="card">
               <p style={{ marginTop: 0 }}>
-                You are not on a team yet. Team is {teamMonth.primary} (approx. {teamMonth.usd}) for 5
-                seats, or {teamYear.primary} (approx. {teamYear.usd}). Extra seats are{" "}
-                {formatSar(EXTRA_SEAT_SAR.month, "month")} (approx. {formatUsdApprox(EXTRA_SEAT_SAR.month)}).{" "}
+                You are not on a team yet. Team is <SarText>{teamMonth.primary}</SarText> (approx. {teamMonth.usd}) for 5
+                seats, or <SarText>{teamYear.primary}</SarText> (approx. {teamYear.usd}). Extra seats are{" "}
+                <SarText>{formatSar(EXTRA_SEAT_SAR.month, "month")}</SarText> (approx. {formatUsdApprox(EXTRA_SEAT_SAR.month)}).{" "}
                 {ADVISOR_FEATURE_BY_PLAN.team}.
               </p>
               <Link href="/pricing" className="btn" style={{ display: "inline-block" }}>
@@ -286,9 +291,9 @@ export default function TeamPage() {
                   </h2>
                   <p style={{ fontSize: 14, color: "#374151" }}>
                     {includedSeats(team.plan as SelfServePlanId)} seats are included. Each extra seat is{" "}
-                    {formatSar(extraSeatPrice(team.plan as SelfServePlanId).month, "month")} (approx.{" "}
+                    <SarText>{formatSar(extraSeatPrice(team.plan as SelfServePlanId).month, "month")}</SarText> (approx.{" "}
                     {formatUsdApprox(extraSeatPrice(team.plan as SelfServePlanId).month)}), or{" "}
-                    {formatSar(extraSeatPrice(team.plan as SelfServePlanId).year, "year")} on an annual plan.
+                    <SarText>{formatSar(extraSeatPrice(team.plan as SelfServePlanId).year, "year")}</SarText> on an annual plan.
                     Adding seats charges the saved card for the rest of this period. Removing seats credits
                     the next renewal.
                   </p>

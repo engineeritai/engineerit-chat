@@ -24,6 +24,11 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       description:
         "Step-by-step guide to engineerit.ai: sign up, discipline, questions and uploads, tools, AI Advisors, export, and plans.",
     },
+    "/tools": {
+      title: "Tools | engineerit.ai",
+      description:
+        "Seven engineer tools: drawings, design checks, inspection plans, quantities, schedules, value engineering, and dashboards.",
+    },
     "/pricing": {
       title: "Pricing | engineerit.ai",
       description:
@@ -113,6 +118,11 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       title: "دليل الاستخدام | engineerit.ai",
       description:
         "دليل استخدام engineerit.ai خطوة بخطوة: التسجيل، التخصص، السؤال والملفات، الأدوات، المستشارون، التصدير، والباقات.",
+    },
+    "/tools": {
+      title: "الأدوات | engineerit.ai",
+      description:
+        "سبع أدوات هندسية: الرسومات، مراجعة التصميم، خطط الفحص، الكميات، الجداول، هندسة القيمة، ولوحات المتابعة.",
     },
     "/pricing": {
       title: "الأسعار | engineerit.ai",

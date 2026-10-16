@@ -75,6 +75,22 @@ import { invoiceLineVisual, renderInvoicePdf } from "../lib/invoicePdf";
 import { shellCopy } from "../lib/shell";
 import { buildReceipt } from "../lib/receipt";
 import crypto from "node:crypto";
+import zlib from "node:zlib";
+import { embedRiyal } from "../lib/riyal";
+
+describe("riyal sign", () => {
+  it("puts the official sign on the left of the number and leaves the currency name", () => {
+    assert.equal(embedRiyal("SAR 19"), "\u20C1 19");
+    assert.equal(embedRiyal("SAR 3,900"), "\u20C1 3,900");
+    assert.equal(embedRiyal("19 SAR"), "\u20C1 19");
+    assert.equal(embedRiyal("1 USD = 3.75 SAR"), "1 USD = \u20C1 3.75");
+    assert.equal(embedRiyal("41.00 ر.س"), "\u20C1 41.00");
+    assert.equal(embedRiyal("3.75 ريال"), "\u20C1 3.75");
+    assert.match(embedRiyal("Prices in Saudi Riyal."), /Saudi Riyal/);
+    assert.equal(embedRiyal("الأسعار بالريال السعودي"), "الأسعار بالريال السعودي");
+    assert.doesNotMatch(embedRiyal("Saudi Riyal"), /\u20C1/);
+  });
+});
 
 describe("self-serve prices", () => {
   it("keeps individual monthly prices and bills annual at 10×", () => {
@@ -116,7 +132,7 @@ describe("self-serve prices", () => {
     assert.equal(consultantLegacyActive(future), true);
     assert.equal(consultantLegacyActive(past), false);
     assert.equal(consultantLegacyActive(null), false);
-    assert.equal(planPriceLabel("consultant", "year", 0, "en", true).primary, "SAR 790 / year");
+    assert.equal(planPriceLabel("consultant", "year", 0, "en", true).primary, "\u20C1 790 / year");
   });
 
   it("shows the same names, SAR prices, USD, features, and annual prices", () => {
@@ -125,9 +141,9 @@ describe("self-serve prices", () => {
     assert.equal(formatUsdApprox(499), "USD 133.07");
     assert.equal(formatUsdApprox(3900), "USD 1,040.00");
     assert.equal(planPriceLabel("consultant", "year").amountSar, 990);
-    assert.equal(planPriceLabel("consultant", "year").primary, "SAR 990 / year");
+    assert.equal(planPriceLabel("consultant", "year").primary, "\u20C1 990 / year");
     assert.equal(planPriceLabel("team", "year", 1).amountSar, 4990 + 890);
-    assert.equal(planPriceLabel("enterprise", "year").primary, "SAR 39,000 / year");
+    assert.equal(planPriceLabel("enterprise", "year").primary, "\u20C1 39,000 / year");
     assert.equal(planPriceLabel("enterprise", "month", 2).amountSar, 3900 + 2 * 299);
 
     for (const id of ["consultant", "team", "enterprise"] as const) {
@@ -226,7 +242,7 @@ describe("Moyasar confirmation and receipts", () => {
     assert.match(receipt.subject, /4,800/);
     assert.match(receipt.text, /^Thank you/);
     assert.match(receipt.text, /\nReceipt\n/);
-    assert.match(receipt.text, /Total paid: SAR 4,800/);
+    assert.match(receipt.text, /Total paid: \u20C1 4,800/);
     assert.match(receipt.text, /Period: Annual/);
     assert.match(receipt.text, /Seats: 12/);
     assert.doesNotMatch(receipt.text, /VAT|Net:|tax invoice/i);
@@ -245,7 +261,7 @@ describe("Moyasar confirmation and receipts", () => {
     const registered = buildReceipt(input, { vatNumber: "312345678900003", zatcaFlag: "" });
     assert.match(registered.text, /Receipt/);
     assert.match(registered.text, /This amount is VAT inclusive/);
-    assert.match(registered.text, /Net: SAR/);
+    assert.match(registered.text, /Net: \u20C1/);
     assert.match(registered.text, /VAT 15%/);
     assert.match(registered.text, /VAT number: 312345678900003/);
     assert.doesNotMatch(registered.text, /tax invoice/i);
@@ -314,6 +330,9 @@ describe("Moyasar confirmation and receipts", () => {
     const arabicPdf = Buffer.from(await renderInvoicePdf(arabic.document));
     const loadedArabic = await PDFDocument.load(arabicPdf);
     assert.ok(loadedArabic.getPageCount() >= 1);
+    const drawn = pdfStreams(pdf) + pdfStreams(arabicPdf);
+    assert.match(drawn, /699\.62/);
+    assert.match(drawn, /1085\.73/);
     assertFontDraws("assets/fonts/Inter-Regular.ttf", ["Invoice", "SAR 41.00", "info@engineerit.ai"]);
     assertFontDraws("assets/fonts/NotoSansArabic-Regular.ttf", [
       "فاتورة",
@@ -322,6 +341,22 @@ describe("Moyasar confirmation and receipts", () => {
     ]);
   });
 });
+
+function pdfStreams(buf: Buffer) {
+  const parts: string[] = [];
+  const src = buf.toString("latin1");
+  const re = /stream\r?\n([\s\S]*?)endstream/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(src))) {
+    const data = Buffer.from(match[1], "latin1");
+    try {
+      parts.push(zlib.inflateSync(data).toString("latin1"));
+    } catch {
+      parts.push(data.toString("latin1"));
+    }
+  }
+  return parts.join("\n");
+}
 
 function assertFontDraws(path: string, samples: string[]) {
   const font = fontkit.create(readFileSync(path)) as {
@@ -706,9 +741,10 @@ describe("checkout and invoice regressions", () => {
     assert.match(arabic.customerName, /نورة/);
     assert.equal(paymentMethodLabel("stcpay", "ar"), "STC Pay");
     assert.equal(usesLogicalArabic(arabic), true);
-    assert.equal(arabic.totalValue, "41.00 ر.س");
-    assert.equal(formatArabicAmount(41), "41.00 ر.س");
-    assert.equal(invoiceLineVisual("41.00 ر.س"), "41.00 ر.س");
+    assert.equal(arabic.totalValue, "\u20C1 41.00");
+    assert.equal(formatArabicAmount(41), "\u20C1 41.00");
+    assert.equal(invoiceLineVisual("\u20C1 41.00"), "\u20C1 41.00");
+    assert.equal(invoiceLineVisual("الصافي: \u20C1 41.00").startsWith("\u20C1 41.00"), true);
     const card = paymentMethodLabel("creditcard", "ar");
     assert.equal(card, "بطاقة — مدى، فيزا، ماستركارد، أمريكان إكسبريس");
     assert.doesNotMatch(card, /[()]/);
