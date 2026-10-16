@@ -51,7 +51,7 @@ export default function MarketingHeader({ onMenu }: { onMenu: () => void }) {
         <div className="mkt-header-spacer" />
         {onChat ? null : (
           <Link className="eit-chat" href="/chat" aria-label={chatLabel} title={chatLabel}>
-            <EitMark size={28} tone="inverse" title="eit" />
+            <EitMark size={16} tone="inverse" title="eit" />
           </Link>
         )}
         <LanguageToggle compact className="mkt-header-lang" />
