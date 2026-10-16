@@ -1920,11 +1920,8 @@ body.acct-open .mkt-header {
   display: inline-block;
   width: calc(0.9em * 1124.14 / 1256.39);
   height: 0.9em;
-  vertical-align: -0.12em;
-}
-
-.riyal-char {
-  font-weight: inherit;
+  vertical-align: baseline;
+  fill: currentColor;
 }
 
 .acct-plan-price {
