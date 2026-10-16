@@ -5,6 +5,14 @@ import OpenAI from "openai";
 import { toFile } from "openai/uploads";
 import JSZip from "jszip";
 import { gateAdvisor } from "@/lib/advisorGate";
+import { extractXlsxText } from "@/lib/xlsxText";
+import {
+  IncomingFileError,
+  filenameFromStoragePath,
+  readIncomingFile,
+  removeIncomingFile,
+} from "@/lib/incomingStorage";
+import { MAX_UPLOAD_BYTES, fileTooLargeMessage } from "@/lib/uploadLimits";
 
 export const runtime = "nodejs";
 
@@ -43,12 +51,9 @@ async function extractOfficeText(buffer: Buffer, filename: string): Promise<stri
       }
     }
   } else if (lower.endsWith(".xlsx")) {
-    // sharedStrings → النصوص الموجودة داخل الجداول
-    const shared = zip.file("xl/sharedStrings.xml");
-    if (shared) {
-      const xml = await shared.async("text");
-      texts.push(xmlToPlain(xml));
-    }
+    // Sheet XML holds numeric cells. sharedStrings alone drops those values.
+    const sheetText = await extractXlsxText(zip);
+    if (sheetText) texts.push(sheetText);
   }
 
   const result = texts.join("\n\n").trim();
@@ -168,53 +173,17 @@ async function summarizeViaUpload(
   );
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
-    const questionField = formData.get("question");
-    const advisorField = formData.get("advisorId");
-    const localeField = formData.get("locale");
-    const playbookField = formData.get("playbookId");
+const DOCUMENT_FAILED =
+  "Document processing failed. Please try again, or convert the file to a standard PDF/Text and upload again.";
 
-    const question =
-      typeof questionField === "string" && questionField.trim().length > 0
-        ? questionField
-        : "Summarize this engineering document (Arabic + English) with headings, bullet points, important numbers/dates, and key recommendations.";
-
-    const advisorGate = await gateAdvisor({
-      request: req,
-      advisorId: typeof advisorField === "string" ? advisorField : "",
-      locale: typeof localeField === "string" ? localeField : "",
-      playbookId: typeof playbookField === "string" ? playbookField : "",
-    });
-    if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
-    const advisorSystem = advisorGate.active && advisorGate.ok ? advisorGate.prompt : undefined;
-
-    if (!file) {
-      return NextResponse.json(
-        { error: "No file uploaded" },
-        { status: 400 }
-      );
-    }
-
-    // Basic size guard (e.g. 20 MB) to avoid crazy huge files
-    const maxBytes = 20 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      return NextResponse.json(
-        {
-          error:
-            "File is too large. Please upload a smaller document (max ~20 MB) or split it into parts.",
-        },
-        { status: 413 }
-      );
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const lowerName = file.name.toLowerCase();
-
-    let reply: string;
+async function summarizeBuffer(
+  buffer: Buffer,
+  filename: string,
+  question: string,
+  advisorSystem?: string
+): Promise<string> {
+  const lowerName = filename.toLowerCase();
+  let reply: string;
 
     // ─────────────────────────────────────
     // 1) Office formats: DOCX / PPTX / XLSX
@@ -233,7 +202,7 @@ export async function POST(req: NextRequest) {
           err
         );
         try {
-          reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
+          reply = await summarizeViaUpload(buffer, filename, question, advisorSystem);
         } catch (err2) {
           console.error("Upload also failed, falling back to raw text:", err2);
           const raw = buffer.toString("utf8").replace(/\0/g, " ");
@@ -246,7 +215,7 @@ export async function POST(req: NextRequest) {
       // ─────────────────────────────────────
     } else if (lowerName.endsWith(".pdf")) {
       try {
-        reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
+        reply = await summarizeViaUpload(buffer, filename, question, advisorSystem);
       } catch (err) {
         console.error("PDF upload failed, falling back to raw:", err);
         const raw = buffer.toString("utf8").replace(/\0/g, " ");
@@ -271,7 +240,7 @@ export async function POST(req: NextRequest) {
       lowerName.endsWith(".nas")
     ) {
       try {
-        reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
+        reply = await summarizeViaUpload(buffer, filename, question, advisorSystem);
       } catch (err) {
         console.error(
           "Engineering/binary upload failed, falling back to raw:",
@@ -286,7 +255,7 @@ export async function POST(req: NextRequest) {
       // ─────────────────────────────────────
     } else {
       try {
-        reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
+        reply = await summarizeViaUpload(buffer, filename, question, advisorSystem);
       } catch (err) {
         console.error("Generic upload failed, falling back to raw:", err);
         const raw = buffer.toString("utf8").replace(/\0/g, " ");
@@ -294,15 +263,98 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ reply }, { status: 200 });
+  return reply;
+}
+
+async function openAdvisor(req: NextRequest, advisorId: unknown, locale: unknown, playbookId: unknown) {
+  const advisorGate = await gateAdvisor({ request: req, advisorId, locale, playbookId });
+  if (advisorGate.active && !advisorGate.ok) return { response: advisorGate.response };
+  return {
+    advisorSystem: advisorGate.active && advisorGate.ok ? advisorGate.prompt : undefined,
+  };
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const contentType = req.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return await handleStoredDocument(req);
+    }
+    return await handleFormDocument(req);
   } catch (err) {
     console.error("DOCUMENT API ERROR:", err);
-    return NextResponse.json(
-      {
-        error:
-          "Document processing failed. Please try again, or convert the file to a standard PDF/Text and upload again.",
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: DOCUMENT_FAILED }, { status: 500 });
   }
+}
+
+async function handleStoredDocument(req: NextRequest) {
+  const body = (await req.json().catch(() => null)) as {
+    storagePath?: unknown;
+    filename?: unknown;
+    question?: unknown;
+    advisorId?: unknown;
+    locale?: unknown;
+    playbookId?: unknown;
+  } | null;
+
+  const storagePath = typeof body?.storagePath === "string" ? body.storagePath : "";
+  const question =
+    typeof body?.question === "string" && body.question.trim().length > 0
+      ? body.question
+      : "Summarize this engineering document (Arabic + English) with headings, bullet points, important numbers/dates, and key recommendations.";
+
+  const opened = await openAdvisor(req, body?.advisorId, body?.locale, body?.playbookId);
+  if ("response" in opened) {
+    await removeIncomingFile(storagePath);
+    return opened.response;
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = await readIncomingFile(storagePath);
+  } catch (err) {
+    await removeIncomingFile(storagePath);
+    if (err instanceof IncomingFileError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    throw err;
+  }
+
+  try {
+    const filename = filenameFromStoragePath(storagePath);
+    const reply = await summarizeBuffer(buffer, filename, question, opened.advisorSystem);
+    return NextResponse.json({ reply }, { status: 200 });
+  } finally {
+    await removeIncomingFile(storagePath);
+  }
+}
+
+async function handleFormDocument(req: NextRequest) {
+  const formData = await req.formData();
+  const file = formData.get("file") as File | null;
+  const questionField = formData.get("question");
+  const advisorField = formData.get("advisorId");
+  const localeField = formData.get("locale");
+  const playbookField = formData.get("playbookId");
+
+  const question =
+    typeof questionField === "string" && questionField.trim().length > 0
+      ? questionField
+      : "Summarize this engineering document (Arabic + English) with headings, bullet points, important numbers/dates, and key recommendations.";
+
+  const opened = await openAdvisor(req, advisorField, localeField, playbookField);
+  if ("response" in opened) return opened.response;
+
+  if (!file) {
+    return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+  }
+
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: fileTooLargeMessage() }, { status: 413 });
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const reply = await summarizeBuffer(buffer, file.name, question, opened.advisorSystem);
+  return NextResponse.json({ reply }, { status: 200 });
 }

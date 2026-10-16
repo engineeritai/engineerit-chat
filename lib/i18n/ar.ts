@@ -7,7 +7,7 @@ const ar: Messages = {
     sectionTitle: "مستشارو الذكاء الاصطناعي",
     ecosystem: "engineerit AI › مستشارو الذكاء الاصطناعي",
     ecosystemTitle: "كيف تعمل",
-    ecosystemTagline: "من الاستراتيجية إلى تسليم مضمون",
+    ecosystemTagline: "من الاستراتيجية إلى تسليم موثوق",
     ecosystemAi: "engineerit AI",
     ecosystemAdvisors: "مستشارو الذكاء الاصطناعي",
     ecosystemTracks: "إدارة المشاريع، ضمان البرنامج، جاهزية التشغيل، دعم القرار",

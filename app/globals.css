@@ -602,6 +602,16 @@ body {
   gap: 8px;
 }
 
+.upload-notice {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+
 /* =========
    Conversation (ChatGPT-like)
    IMPORTANT: this is the vertical scroll area (NOT the whole page)

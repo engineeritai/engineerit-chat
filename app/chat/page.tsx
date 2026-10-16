@@ -17,6 +17,8 @@ import AdvisorBar from "../components/AdvisorBar";
 import AdvisorEcosystem from "../components/AdvisorEcosystem";
 import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
+import { postDocument, postImage, readApiError } from "@/lib/postAttachment";
+import { MAX_UPLOAD_BYTES, UploadError, fileTooLargeMessage } from "@/lib/uploadLimits";
 
 type Role = "user" | "assistant";
 
@@ -365,6 +367,7 @@ export default function Page() {
   const [showGate, setShowGate] = useState(false);
   const [gateMode, setGateMode] = useState<"register" | "upgrade">("register");
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
   const isPaidPlan =
     planId === "engineer" || planId === "professional" || planId === "consultant";
@@ -491,6 +494,12 @@ export default function Page() {
     if (!attachmentsAllowed) return;
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadNotice(fileTooLargeMessage());
+      e.target.value = "";
+      return;
+    }
+    setUploadNotice(null);
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -508,6 +517,12 @@ export default function Page() {
     if (!attachmentsAllowed) return;
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadNotice(fileTooLargeMessage());
+      e.target.value = "";
+      return;
+    }
+    setUploadNotice(null);
 
     const url = URL.createObjectURL(file);
     setAttachments((prev) => [
@@ -522,23 +537,36 @@ export default function Page() {
   };
 
   async function analyzeImage(question: string, imageFile: File): Promise<string> {
-    const formData = new FormData();
-    formData.append("file", imageFile, imageFile.name);
-    formData.append("question", question || "Analyze this engineering image.");
-
-    const res = await fetch("/api/image", { method: "POST", body: formData });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await postImage({
+      file: imageFile,
+      question: question || "Analyze this engineering image.",
+    });
+    if (!res.ok) {
+      const failure = await readApiError(res);
+      throw new UploadError(
+        failure.message || "Image analysis failed. Please try again or use a smaller image.",
+        res.status,
+        failure.code
+      );
+    }
     const data = (await res.json()) as { reply: string };
     return data.reply || "";
   }
 
   async function analyzeDocument(question: string, docFile: File): Promise<string> {
-    const formData = new FormData();
-    formData.append("file", docFile, docFile.name);
-    formData.append("question", question || "Extract and summarize this document.");
-
-    const res = await fetch("/api/document", { method: "POST", body: formData });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await postDocument({
+      file: docFile,
+      question: question || "Extract and summarize this document.",
+    });
+    if (!res.ok) {
+      const failure = await readApiError(res);
+      throw new UploadError(
+        failure.message ||
+          "Document processing failed. Please try again, or convert the file to a standard PDF/Text and upload again.",
+        res.status,
+        failure.code
+      );
+    }
     const data = (await res.json()) as { reply: string };
     return data.reply || "";
   }
@@ -722,11 +750,15 @@ export default function Page() {
       }
     } catch (e) {
       console.error(e);
+      const content =
+        e instanceof UploadError
+          ? e.message
+          : "Sorry, something failed. Please try again.";
       updateThread((t) => ({
         ...t,
         messages: [
           ...t.messages,
-          { id: uuid(), role: "assistant", content: "Sorry, something failed. Please try again." },
+          { id: uuid(), role: "assistant", content },
         ],
       }));
     } finally {
@@ -1126,6 +1158,11 @@ export default function Page() {
 
         <div className="composer">
           <div className="composer-box">
+            {uploadNotice && (
+              <div className="upload-notice" role="alert">
+                {uploadNotice}
+              </div>
+            )}
             {attachments.length > 0 && (
               <div className="attachments">
                 {attachments.map((a) => (
