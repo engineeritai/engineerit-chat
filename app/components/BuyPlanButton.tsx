@@ -1,15 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { isSelfServePlan, type BillingInterval, type PlanId } from "@/lib/plans";
-import {
-  clearPendingCheckout,
-  readPendingCheckout,
-  startMoyasarCheckout,
-} from "@/lib/checkoutClient";
+import { startMoyasarCheckout } from "@/lib/checkoutClient";
 
 type Props = {
   planId: PlanId;
@@ -27,26 +22,6 @@ export function buyLabel(planId: PlanId, _verb: "buy" | "upgrade" = "buy", local
   return ar ? "اشترك الآن" : "Subscribe";
 }
 
-export function ResumeCheckout({ onError }: { onError?: (message: string) => void }) {
-  const onErrorRef = useRef(onError);
-  onErrorRef.current = onError;
-  useEffect(() => {
-    const pending = readPendingCheckout();
-    if (!pending) return;
-    let cancelled = false;
-    void (async () => {
-      const result = await startMoyasarCheckout(pending);
-      if (cancelled || result.ok || result.needsAuth) return;
-      clearPendingCheckout();
-      onErrorRef.current?.(result.error);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return null;
-}
-
 export default function BuyPlanButton({
   planId,
   interval,
@@ -56,7 +31,6 @@ export default function BuyPlanButton({
   style,
   onError,
 }: Props) {
-  const router = useRouter();
   const { locale } = useLocale();
   const [busy, setBusy] = useState(false);
   const label = buyLabel(planId, verb, locale);
@@ -76,12 +50,7 @@ export default function BuyPlanButton({
     setBusy(true);
     try {
       const result = await startMoyasarCheckout({ planId, interval, extraSeats });
-      if (result.ok) return;
-      if (result.needsAuth) {
-        const next = `${window.location.pathname}${window.location.search}` || "/pricing";
-        router.push(`/login?next=${encodeURIComponent(next)}`);
-        return;
-      }
+      if (result.ok || result.needsAuth) return;
       onError?.(result.error);
     } catch (err) {
       console.error(err);

@@ -9,6 +9,7 @@ import {
   quoteSelfServe,
   type SelfServePlanId,
 } from "@/lib/plans";
+import { moyasarKeysError, readMoyasarKeys } from "@/lib/moyasarEnv";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
 
 export const runtime = "nodejs";
@@ -38,9 +39,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Checkout not found." }, { status: 404 });
   }
   const base = getAppBaseUrl(req);
+  const keys = readMoyasarKeys();
   return NextResponse.json({
     checkout: data,
-    publishableKey: process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY || "",
+    publishableKey: keys.publishable,
     callbackUrl: `${base}/checkout/return?checkout=${id}`,
     description: `engineerit.ai ${data.plan} plan`,
   });
@@ -62,11 +64,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!process.env.MOYASAR_SECRET_KEY || !process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY) {
-      return NextResponse.json(
-        { error: "MOYASAR_SECRET_KEY and NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY must be set." },
-        { status: 500 }
-      );
+    const keys = readMoyasarKeys();
+    if (keys.missing.length > 0) {
+      return NextResponse.json({ error: moyasarKeysError(keys.missing) }, { status: 500 });
     }
 
     const user = await getUserFromRequest(req);

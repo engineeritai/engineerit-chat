@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
@@ -18,8 +18,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [registerHref, setRegisterHref] = useState("/register");
 
   const router = useRouter();
+
+  useEffect(() => {
+    const next = new URLSearchParams(window.location.search).get("next");
+    if (next) setRegisterHref(`/register?next=${encodeURIComponent(next)}`);
+  }, []);
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
@@ -150,7 +156,7 @@ export default function LoginPage() {
               }}
             >
               {s.header.noAccount}{" "}
-              <Link href="/register" className="link">
+              <Link href={registerHref} className="link">
                 {s.auth.createHere}
               </Link>
               .

@@ -253,6 +253,8 @@ export type ShellCopy = {
     openFailed: string;
     missingKey: string;
     seats: string;
+    payOnce: string;
+    saveRejected: string;
   };
   subscription: {
     title: string;
@@ -581,6 +583,8 @@ const en: ShellCopy = {
     openFailed: "Could not open checkout.",
     missingKey: "The card form is not configured yet.",
     seats: "seats",
+    payOnce: "Pay once now. Auto-renew stays off until a card is saved.",
+    saveRejected: "Saving the card is unavailable. Enter the card again to pay once. Auto-renew stays off.",
   },
   subscription: {
     title: "Plans and subscription",
@@ -907,6 +911,8 @@ const ar: ShellCopy = {
     openFailed: "تعذر فتح صفحة الدفع.",
     missingKey: "نموذج البطاقة غير مُعد بعد.",
     seats: "مقاعد",
+    payOnce: "ادفع مرة واحدة الآن. يبقى التجديد التلقائي متوقفاً حتى تُحفظ البطاقة.",
+    saveRejected: "حفظ البطاقة غير متاح. أدخل البطاقة مرة أخرى للدفع مرة واحدة. يبقى التجديد التلقائي متوقفاً.",
   },
   subscription: {
     title: "الباقات والاشتراك",

@@ -14,7 +14,7 @@ import {
   type BillingInterval,
 } from "@/lib/plans";
 import { planPriceLabel } from "@/lib/pricingDisplay";
-import BuyPlanButton, { ResumeCheckout } from "@/app/components/BuyPlanButton";
+import BuyPlanButton from "@/app/components/BuyPlanButton";
 
 const ENGINEER_TOOLS = [
   { id: "drawing", label: "Drawing & Diagrams" },
@@ -97,7 +97,6 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
         </div>
       </div>
 
-      <ResumeCheckout onError={setErrorMsg} />
       <p style={{ fontSize: 13, color: "#6b7280", marginTop: 0 }}>
         {content.pricing.annualExplainer} {content.pricing.usdNote}
       </p>
