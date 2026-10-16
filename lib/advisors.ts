@@ -10,7 +10,8 @@ import type { Locale } from "@/lib/i18n";
  * Included: Consultant, Team, Enterprise.
  * Locked preview: guest, Free (assistant), Engineer, Professional.
  */
-export const ADVISOR_IDS = ["pmo", "assurance", "decision", "supply"] as const;
+/** Display order everywhere: PMO, Supply Chain, Program Assurance, Decision Support. */
+export const ADVISOR_IDS = ["pmo", "supply", "assurance", "decision"] as const;
 
 export type AdvisorId = (typeof ADVISOR_IDS)[number];
 
@@ -363,6 +364,11 @@ export const ADVISORS: readonly Advisor[] = [
     templates: { en: PMO_TEMPLATE_EN, ar: PMO_TEMPLATE_AR },
   },
   {
+    id: "supply",
+    track: "Supply Chain",
+    templates: { en: SUPPLY_TEMPLATE_EN, ar: SUPPLY_TEMPLATE_AR },
+  },
+  {
     id: "assurance",
     track: "Assurance",
     templates: { en: ASSURANCE_TEMPLATE_EN, ar: ASSURANCE_TEMPLATE_AR },
@@ -371,11 +377,6 @@ export const ADVISORS: readonly Advisor[] = [
     id: "decision",
     track: "Decision",
     templates: { en: DECISION_TEMPLATE_EN, ar: DECISION_TEMPLATE_AR },
-  },
-  {
-    id: "supply",
-    track: "Supply Chain",
-    templates: { en: SUPPLY_TEMPLATE_EN, ar: SUPPLY_TEMPLATE_AR },
   },
 ];
 

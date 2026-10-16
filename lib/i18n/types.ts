@@ -7,6 +7,8 @@ export type PlaybookCopy = {
 
 export type AdvisorCopy = {
   name: string;
+  /** Short label used in the ecosystem path. */
+  flowLabel: string;
   track: string;
   summary: string;
   capabilities: string[];
@@ -45,9 +47,9 @@ export type Messages = {
     playbookRun: string;
     items: {
       pmo: AdvisorCopy;
+      supply: AdvisorCopy;
       assurance: AdvisorCopy;
       decision: AdvisorCopy;
-      supply: AdvisorCopy;
     };
   };
   gating: {

@@ -9,12 +9,12 @@ const en: Messages = {
     ecosystemTitle: "Ecosystem",
     ecosystemAi: "engineerit AI",
     ecosystemAdvisors: "AI Advisors",
-    ecosystemTracks: "PMO, Assurance, Decision, Supply Chain",
+    ecosystemTracks: "PMO, Supply Chain, Program Assurance, Decision Support",
     ecosystemOutcomesLabel: "Outcomes",
     ecosystemOutcomes:
-      "Charters, status reports, risk registers, schedule health, RACI, stage-gate reviews, design checklists, RAG audits, options analysis, MCDA, decision briefs, cost-benefit, vendor evaluation, TBE, procurement plans, and long-lead trackers.",
+      "Charters, status reports, risk registers, schedule health, RACI, vendor evaluation, TBE, procurement plans, long-lead trackers, stage-gate reviews, design checklists, RAG audits, options analysis, MCDA, decision briefs, and cost-benefit.",
     ecosystemOutcomesShort:
-      "Charters, status and RAG reports, decision briefs, TBE, and long-lead trackers.",
+      "Charters, TBE, long-lead trackers, RAG reports, and decision briefs.",
     landingNav: "All advisors",
     landingTitle: "AI Advisors",
     landingSubtitle:
@@ -30,7 +30,7 @@ const en: Messages = {
     backToAdvisors: "All AI Advisors",
     layerNote: "engineerit AI › AI Advisors ›",
     homeWelcome:
-      "AI Advisors sit above chat and engineer tools: PMO, Assurance, Decision, and Supply Chain. One-click playbooks turn uploaded files into export-ready reports.",
+      "AI Advisors sit above chat and engineer tools: PMO, Supply Chain, Program Assurance, and Decision Support. One-click playbooks turn uploaded files into export-ready reports.",
     homeCta: "Explore AI Advisors",
     notFound: "That advisor does not exist.",
     capabilitiesTitle: "What this advisor prepares",
@@ -41,6 +41,7 @@ const en: Messages = {
     items: {
       pmo: {
         name: "PMO Advisor",
+        flowLabel: "PMO",
         track: "PMO",
         summary:
           "Project plans, work breakdown structures, schedules, RACI, risk registers, and progress or status reports from uploaded files.",
@@ -75,6 +76,7 @@ const en: Messages = {
       },
       assurance: {
         name: "Program Assurance Advisor",
+        flowLabel: "Program Assurance",
         track: "Assurance",
         summary:
           "Governance and stage-gate reviews, design and deliverable reviews, compliance checklists, audit findings, lessons learned, and assurance reports with RAG ratings.",
@@ -109,6 +111,7 @@ const en: Messages = {
       },
       decision: {
         name: "Decision Support Advisor",
+        flowLabel: "Decision Support",
         track: "Decision",
         summary:
           "Options analysis, multi-criteria decision matrices, cost-benefit analysis, risk-based recommendations, and executive decision briefs.",
@@ -138,6 +141,7 @@ const en: Messages = {
       },
       supply: {
         name: "Supply Chain & Procurement Advisor",
+        flowLabel: "Supply Chain",
         track: "Supply Chain",
         summary:
           "Procurement strategy, vendor prequalification, technical bid evaluation, RFQ/RFP packages, long-lead tracking, expediting, IKTVA and logistics risk, and supply chain risk registers.",
@@ -179,7 +183,7 @@ const en: Messages = {
   gating: {
     lockedTitle: "AI Advisors are locked on this plan",
     lockedBody:
-      "PMO, Assurance, Decision, and Supply Chain are included on Consultant, Team, and Enterprise. You can preview the playbooks and report templates here.",
+      "PMO, Supply Chain, Program Assurance, and Decision Support are included on Consultant, Team, and Enterprise. You can preview the playbooks and report templates here.",
     upgradeCta: "Upgrade",
     compareCta: "Compare plans",
     registerCta: "Register",
@@ -195,9 +199,9 @@ const en: Messages = {
     subtitle:
       "Feature lists for each plan. AI Advisors are a separate layer from engineer tools and are included on Consultant, Team, and Enterprise.",
     advisorsIncluded:
-      "AI Advisors: PMO, Assurance, Decision, and Supply Chain playbooks",
+      "AI Advisors: PMO, Supply Chain, Program Assurance, and Decision Support",
     advisorsLocked:
-      "AI Advisors (locked): PMO, Assurance, Decision, and Supply Chain — included on Consultant, Team, and Enterprise",
+      "AI Advisors (locked): PMO, Supply Chain, Program Assurance, and Decision Support — included on Consultant, Team, and Enterprise",
     availabilityTitle: "AI Advisors by plan",
     availabilityNote:
       "Access is config-driven. Consultant, Team, and Enterprise include every advisor and playbook. Free, Engineer, and Professional keep a locked preview.",
@@ -221,9 +225,9 @@ const en: Messages = {
 };
 
 assertPlaybooks("pmo", en.advisors.items.pmo.playbooks);
+assertPlaybooks("supply", en.advisors.items.supply.playbooks);
 assertPlaybooks("assurance", en.advisors.items.assurance.playbooks);
 assertPlaybooks("decision", en.advisors.items.decision.playbooks);
-assertPlaybooks("supply", en.advisors.items.supply.playbooks);
 
 function assertPlaybooks(advisorId: AdvisorId, copy: Record<string, { name: string }>) {
   for (const playbook of playbooksFor(advisorId)) {

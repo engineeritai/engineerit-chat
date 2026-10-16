@@ -2002,6 +2002,12 @@ body {
   font-weight: 700;
 }
 
+.advisor-ecosystem-piece {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
 .advisor-ecosystem-compact {
   margin: 8px 16px 0;
   padding: 8px 12px;

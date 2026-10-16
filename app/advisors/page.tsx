@@ -5,7 +5,7 @@ import Link from "next/link";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import AdvisorEcosystem from "../components/AdvisorEcosystem";
-import { ADVISORS, hasAdvisorAccess } from "@/lib/advisors";
+import { ADVISOR_IDS, ADVISORS, getAdvisor, hasAdvisorAccess } from "@/lib/advisors";
 import { playbooksFor } from "@/lib/playbooks";
 import { useMessages } from "@/lib/useMessages";
 import { useSubscriptionTier } from "@/lib/useSubscriptionTier";
@@ -59,7 +59,9 @@ export default function AdvisorsPage() {
           )}
 
           <div className="advisor-grid">
-            {ADVISORS.map((advisor) => {
+            {ADVISOR_IDS.map((id) => {
+              const advisor = getAdvisor(id);
+              if (!advisor) return null;
               const copy = m.advisors.items[advisor.id];
               const unlocked = ready && hasAdvisorAccess(tier, advisor.id, isGuest);
               return (
