@@ -1,5 +1,4 @@
 import LandingView from "@/app/components/marketing/LandingView";
-import LoggedInChatRedirect from "@/app/components/marketing/LoggedInChatRedirect";
 import MarketingShell from "@/app/components/marketing/MarketingShell";
 import SoftwareJsonLd from "@/app/components/marketing/SoftwareJsonLd";
 import { metaFor } from "@/lib/pageMeta";
@@ -16,7 +15,6 @@ export default async function HomePage() {
   return (
     <>
       <SoftwareJsonLd />
-      <LoggedInChatRedirect />
       <MarketingShell>
         <LandingView />
       </MarketingShell>
