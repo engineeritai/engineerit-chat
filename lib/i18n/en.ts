@@ -7,14 +7,15 @@ const en: Messages = {
     sectionTitle: "AI Advisors",
     ecosystem: "engineerit AI › AI Advisors",
     ecosystemTitle: "Ecosystem",
+    ecosystemTagline: "From Strategy to Assured Delivery",
     ecosystemAi: "engineerit AI",
     ecosystemAdvisors: "AI Advisors",
-    ecosystemTracks: "PMO, Supply Chain, Program Assurance, Decision Support",
+    ecosystemTracks: "PMO, Program Assurance, Operations Readiness, Decision Support",
     ecosystemOutcomesLabel: "Outcomes",
     ecosystemOutcomes:
-      "Charters, status reports, risk registers, schedule health, RACI, vendor evaluation, TBE, procurement plans, long-lead trackers, stage-gate reviews, design checklists, RAG audits, options analysis, MCDA, decision briefs, and cost-benefit.",
+      "Capital project assessments, charters, cost and schedule, vendor evaluation, TBE, IKTVA, interface registers, execution health, stage-gate reviews, commissioning, start-up and regularisation, handover dossiers, and executive decision briefs.",
     ecosystemOutcomesShort:
-      "Charters, TBE, long-lead trackers, RAG reports, and decision briefs.",
+      "Capital assessments, execution health, handover, and decision briefs.",
     landingNav: "All advisors",
     landingTitle: "AI Advisors",
     landingSubtitle:
@@ -30,7 +31,7 @@ const en: Messages = {
     backToAdvisors: "All AI Advisors",
     layerNote: "engineerit AI › AI Advisors ›",
     homeWelcome:
-      "AI Advisors sit above chat and engineer tools: PMO, Supply Chain, Program Assurance, and Decision Support. One-click playbooks turn uploaded files into export-ready reports.",
+      "AI Advisors sit above chat and engineer tools: PMO, Program Assurance, Operations Readiness, and Decision Support. One-click playbooks turn uploaded files into export-ready reports.",
     homeCta: "Explore AI Advisors",
     notFound: "That advisor does not exist.",
     capabilitiesTitle: "What this advisor prepares",
@@ -38,39 +39,70 @@ const en: Messages = {
     playbookHint: "One click builds the report from the attached files.",
     playbookRun:
       "Run the {name} playbook. Produce the export-ready report from the uploaded files and this conversation.",
+    playbookGroups: {
+      controls: "Project controls",
+      procurement: "Procurement & Supply Chain",
+      program: "Program oversight",
+      execution: "Execution Health",
+      capital: "Opens the chain",
+    },
     items: {
       pmo: {
         name: "PMO Advisor",
         flowLabel: "PMO",
         track: "PMO",
         summary:
-          "Project plans, work breakdown structures, schedules, RACI, risk registers, and progress or status reports from uploaded files.",
+          "The project inside battery limits: charter, schedule, cost, risk, RACI, and status, plus a Procurement & Supply Chain group for vendor evaluation, TBE, RFQ/RFP packages, long-lead tracking, and IKTVA.",
         capabilities: [
-          "Project charters and control baselines",
-          "Monthly status with schedule, cost, and scope RAG",
-          "Risk registers and schedule health checks",
-          "RACI matrices with a single accountable owner",
+          "Charter, schedule, and cost inside battery limits",
+          "Risk register, RACI, and status with RAG",
+          "Vendor evaluation and technical bid evaluation",
+          "RFQ/RFP packages, long-lead tracking, and IKTVA",
         ],
         playbooks: {
           charter: {
             name: "Project Charter",
-            outcome: "Scope, objectives, milestones, and a charter RAG.",
-          },
-          status: {
-            name: "Monthly Status Report",
-            outcome: "Period RAG, variances, and decisions needed.",
-          },
-          risk: {
-            name: "Risk Register",
-            outcome: "Scored risks, owners, responses, and a RAG band.",
+            outcome: "ISBL scope, objectives, milestones, and a charter RAG.",
           },
           schedule: {
             name: "Schedule Health Check",
-            outcome: "Logic, float, critical path, and recovery items.",
+            outcome: "Inside-battery-limit logic, float, and the critical path.",
+          },
+          cost: {
+            name: "Cost Report",
+            outcome: "Baseline, forecast, variance, and commitments.",
+          },
+          risk: {
+            name: "Risk Register",
+            outcome: "Scored project risks, owners, and responses.",
           },
           raci: {
             name: "RACI",
             outcome: "One accountable owner per activity, with gaps flagged.",
+          },
+          status: {
+            name: "Monthly Status Report",
+            outcome: "Period RAG for schedule, cost, and scope.",
+          },
+          vendor: {
+            name: "Vendor Evaluation",
+            outcome: "Prequalification matrix with pass/fail and RAG.",
+          },
+          tbe: {
+            name: "TBE",
+            outcome: "Technical scores, deviations, and who is acceptable.",
+          },
+          rfq: {
+            name: "RFQ / RFP Package",
+            outcome: "Issue checklist for scope, specs, and bid rules.",
+          },
+          "long-lead": {
+            name: "Long-Lead Tracker",
+            outcome: "Need date, promised date, float, and expediting.",
+          },
+          iktva: {
+            name: "IKTVA",
+            outcome: "Local-content targets, evidence, and the gap to the plan.",
           },
         },
       },
@@ -79,33 +111,92 @@ const en: Messages = {
         flowLabel: "Program Assurance",
         track: "Assurance",
         summary:
-          "Governance and stage-gate reviews, design and deliverable reviews, compliance checklists, audit findings, lessons learned, and assurance reports with RAG ratings.",
+          "Program oversight across projects, including outside-battery-limit interfaces: utilities, demand, stakeholders, and external dependencies. Interface register, stakeholder map, OSBL dependency tracker, stage-gate and assurance reviews, and Execution Health checks for schedule, cost, risk, and quality.",
         capabilities: [
-          "Stage-gate decisions with conditions",
-          "Design review and compliance checklists",
-          "Audit reports with severity and RAG",
-          "Lessons learned that name what to repeat or avoid",
+          "Interface register for utilities, demand, stakeholders, and external dependencies",
+          "Stakeholder map and OSBL dependency tracker",
+          "Stage-gate and assurance reviews across the program",
+          "Execution Health: schedule, cost, risk, and quality RAG across projects",
         ],
         playbooks: {
+          interface: {
+            name: "Interface Register",
+            outcome: "Utilities, demand, stakeholders, and external dependencies.",
+          },
+          stakeholder: {
+            name: "Stakeholder Map",
+            outcome: "Interest, influence, and the owner for each stakeholder.",
+          },
+          osbl: {
+            name: "OSBL Dependency Tracker",
+            outcome: "Outside-battery-limit needs, dates, and the impact if late.",
+          },
           "stage-gate": {
             name: "Stage-Gate Review",
-            outcome: "Gate criteria, evidence, and proceed / hold / recycle.",
+            outcome: "Program gate decision: proceed, hold, or recycle.",
           },
-          "design-review": {
-            name: "Design Review Checklist",
-            outcome: "Deliverables scored Met, Partial, or Gap.",
+          "assurance-review": {
+            name: "Assurance Review",
+            outcome: "Cross-project assurance opinion with conditions.",
           },
-          audit: {
-            name: "Audit Report",
-            outcome: "Findings, owners, due dates, and an overall RAG.",
+          "schedule-health": {
+            name: "Schedule Health",
+            outcome: "Program schedule RAG and the projects that drive the finish.",
           },
-          compliance: {
-            name: "Compliance Checklist",
-            outcome: "Requirements tied to evidence, or marked as a gap.",
+          "cost-health": {
+            name: "Cost Health",
+            outcome: "Program cost RAG, variance, and contingency.",
           },
-          lessons: {
-            name: "Lessons Learned",
-            outcome: "Reusable lessons with an owner and where they apply.",
+          "risk-health": {
+            name: "Risk Health",
+            outcome: "Cross-project risks with a RAG band.",
+          },
+          "quality-health": {
+            name: "Quality Health",
+            outcome: "Design, inspection, NCR, and handover quality RAG.",
+          },
+        },
+      },
+      operations: {
+        name: "Operations Readiness Advisor",
+        flowLabel: "Operations Readiness",
+        track: "Operations",
+        summary:
+          "Testing, commissioning, handover, start-up, and regularisation of operation: the transition to steady-state operations, performance tests, operating KPIs, and the warranty and defects period, plus permits, offtakers, capacity, and O&M readiness.",
+        capabilities: [
+          "Testing, commissioning, and handover dossiers",
+          "Start-up and regularisation of operation",
+          "Performance tests, operating KPIs, and the warranty and defects period",
+          "Punch lists, permits, offtakers, capacity, and O&M readiness",
+        ],
+        playbooks: {
+          testing: {
+            name: "Testing & Pre-commissioning",
+            outcome: "Test results and whether the next step can start.",
+          },
+          handover: {
+            name: "Mechanical Completion & Handover Dossiers",
+            outcome: "Certificates, as-builts, dossiers, and accepted punch.",
+          },
+          commissioning: {
+            name: "Commissioning Plan",
+            outcome: "Sequence through commissioning and ready for start-up.",
+          },
+          startup: {
+            name: "Start-up & Regularisation of Operation",
+            outcome: "Steady-state transition, performance tests, KPIs, and warranty.",
+          },
+          punch: {
+            name: "Punch List Tracker",
+            outcome: "Categorized punch and what still blocks handover.",
+          },
+          alignment: {
+            name: "Permits, Offtakers & Capacity",
+            outcome: "Regulators, customers, offtake, and capacity alignment.",
+          },
+          om: {
+            name: "O&M Readiness",
+            outcome: "Spares, procedures, training matrix, and maintenance.",
           },
         },
       },
@@ -114,16 +205,33 @@ const en: Messages = {
         flowLabel: "Decision Support",
         track: "Decision",
         summary:
-          "Options analysis, multi-criteria decision matrices, cost-benefit analysis, risk-based recommendations, and executive decision briefs.",
+          "Opens with Capital Projects Assessment: business case, technical commercial and schedule feasibility, CAPEX and OPEX, funding (equity, project finance, PPP, government or PIF, grants), strategy and customer alignment, options, and a stage-gate go or no-go.",
         capabilities: [
-          "Options, including defer or do nothing when it is real",
-          "Weighted MCDA matrices and cost-benefit from source figures",
-          "Executive briefs a decision owner can act on",
+          "Capital Projects Assessment: feasibility, funding, and a stage-gate go or no-go",
+          "CAPEX and OPEX evaluation from source figures",
+          "Alignment with strategy and governance",
+          "Audits, investment and options analysis, MCDA, and executive briefs",
         ],
         playbooks: {
+          "capital-assessment": {
+            name: "Capital Projects Assessment",
+            outcome: "Feasibility, funding, strategy and customer fit, and go or no-go.",
+          },
+          "capex-opex": {
+            name: "CAPEX & OPEX Evaluation",
+            outcome: "Capital and operating cost from figures in the file.",
+          },
+          strategy: {
+            name: "Strategy & Governance Alignment",
+            outcome: "Fit to strategy and the forum that must approve.",
+          },
+          audit: {
+            name: "Audit",
+            outcome: "Findings that condition the investment decision.",
+          },
           options: {
-            name: "Options Analysis",
-            outcome: "Comparable options with pros, cons, and readiness.",
+            name: "Investment & Options Analysis",
+            outcome: "Comparable investment options with strategic fit.",
           },
           mcda: {
             name: "MCDA Matrix",
@@ -133,49 +241,6 @@ const en: Messages = {
             name: "Executive Decision Brief",
             outcome: "The decision, the recommendation, and the ask.",
           },
-          cba: {
-            name: "Cost-Benefit",
-            outcome: "Cost, benefit, and net from figures in the file.",
-          },
-        },
-      },
-      supply: {
-        name: "Supply Chain & Procurement Advisor",
-        flowLabel: "Supply Chain",
-        track: "Supply Chain",
-        summary:
-          "Procurement strategy, vendor prequalification, technical bid evaluation, RFQ/RFP packages, long-lead tracking, expediting, IKTVA and logistics risk, and supply chain risk registers.",
-        capabilities: [
-          "Vendor prequalification and evaluation matrices",
-          "Technical bid evaluation kept separate from price",
-          "RFQ/RFP packages and procurement plans",
-          "Long-lead tracking, expediting, IKTVA, and logistics risk",
-        ],
-        playbooks: {
-          vendor: {
-            name: "Vendor Evaluation",
-            outcome: "Prequalification matrix with pass/fail and RAG.",
-          },
-          tbe: {
-            name: "TBE",
-            outcome: "Technical scores, deviations, and who is acceptable.",
-          },
-          "procurement-plan": {
-            name: "Procurement Plan",
-            outcome: "Packages, route, need dates, and IKTVA notes.",
-          },
-          "long-lead": {
-            name: "Long-Lead Tracker",
-            outcome: "Need date, promised date, float, and expediting.",
-          },
-          rfq: {
-            name: "RFQ / RFP Package",
-            outcome: "Issue checklist for scope, specs, and bid rules.",
-          },
-          risk: {
-            name: "Supply Chain Risk Register",
-            outcome: "Vendor, lead-time, logistics, and IKTVA risks.",
-          },
         },
       },
     },
@@ -183,7 +248,7 @@ const en: Messages = {
   gating: {
     lockedTitle: "AI Advisors are locked on this plan",
     lockedBody:
-      "PMO, Supply Chain, Program Assurance, and Decision Support are included on Consultant, Team, and Enterprise. You can preview the playbooks and report templates here.",
+      "PMO, Program Assurance, Operations Readiness, and Decision Support are included on Consultant, Team, and Enterprise. You can preview the playbooks and report templates here.",
     upgradeCta: "Upgrade",
     compareCta: "Compare plans",
     registerCta: "Register",
@@ -199,9 +264,9 @@ const en: Messages = {
     subtitle:
       "Feature lists for each plan. AI Advisors are a separate layer from engineer tools and are included on Consultant, Team, and Enterprise.",
     advisorsIncluded:
-      "AI Advisors: PMO, Supply Chain, Program Assurance, and Decision Support",
+      "AI Advisors: PMO, Program Assurance, Operations Readiness, and Decision Support",
     advisorsLocked:
-      "AI Advisors (locked): PMO, Supply Chain, Program Assurance, and Decision Support — included on Consultant, Team, and Enterprise",
+      "AI Advisors (locked): PMO, Program Assurance, Operations Readiness, and Decision Support — included on Consultant, Team, and Enterprise",
     availabilityTitle: "AI Advisors by plan",
     availabilityNote:
       "Access is config-driven. Consultant, Team, and Enterprise include every advisor and playbook. Free, Engineer, and Professional keep a locked preview.",
@@ -225,8 +290,8 @@ const en: Messages = {
 };
 
 assertPlaybooks("pmo", en.advisors.items.pmo.playbooks);
-assertPlaybooks("supply", en.advisors.items.supply.playbooks);
 assertPlaybooks("assurance", en.advisors.items.assurance.playbooks);
+assertPlaybooks("operations", en.advisors.items.operations.playbooks);
 assertPlaybooks("decision", en.advisors.items.decision.playbooks);
 
 function assertPlaybooks(advisorId: AdvisorId, copy: Record<string, { name: string }>) {

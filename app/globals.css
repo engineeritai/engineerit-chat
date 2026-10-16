@@ -1923,11 +1923,33 @@ body {
   line-height: 1.35;
 }
 
+.advisor-playbook-group {
+  margin-bottom: 10px;
+}
+
+.advisor-playbook-group-title,
+.advisor-playbook-group-label {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+}
+
 .advisor-card-playbooks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.advisor-card-playbook-group {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 10px;
+}
+
+.advisor-playbook-group-label {
+  width: 100%;
 }
 
 .advisor-card-playbooks span {
@@ -1952,6 +1974,13 @@ body {
   font-size: 13px;
   font-weight: 700;
   color: #111827;
+}
+
+.advisor-ecosystem-tagline {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d4ed8;
 }
 
 .advisor-ecosystem-flow {

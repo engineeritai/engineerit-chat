@@ -1,11 +1,30 @@
 import type { AdvisorId } from "@/lib/advisors";
 import type { Locale } from "@/lib/i18n/types";
 
+export type PlaybookGroup = "controls" | "procurement" | "program" | "execution" | "capital";
+
 export type Playbook = {
   id: string;
   advisorId: AdvisorId;
+  /** Set on PMO so project controls and procurement render as separate groups. */
+  group?: PlaybookGroup;
   templates: Record<Locale, string>;
 };
+
+const PROCUREMENT_IDS = new Set(["vendor", "tbe", "rfq", "long-lead", "iktva"]);
+const EXECUTION_IDS = new Set([
+  "schedule-health",
+  "cost-health",
+  "risk-health",
+  "quality-health",
+]);
+
+function playbookGroup(advisorId: AdvisorId, id: string): PlaybookGroup | undefined {
+  if (advisorId === "pmo") return PROCUREMENT_IDS.has(id) ? "procurement" : "controls";
+  if (advisorId === "assurance") return EXECUTION_IDS.has(id) ? "execution" : "program";
+  if (advisorId === "decision" && id === "capital-assessment") return "capital";
+  return undefined;
+}
 
 function enReport(title: string, findings: string) {
   return `# ${title}
@@ -56,6 +75,7 @@ function pack(
   return {
     id,
     advisorId,
+    group: playbookGroup(advisorId, id),
     templates: {
       en: enReport(enTitle, enFindings),
       ar: arReport(arTitle, arFindings),
@@ -75,8 +95,8 @@ export const PLAYBOOKS: readonly Playbook[] = [
 | Sponsor | |
 | Project manager | |
 | Objective | |
-| Scope in | |
-| Scope out | |
+| Scope in (inside battery limits) | |
+| Scope out (OSBL, for Program Assurance) | |
 | Success measures | |
 | Milestone outline | |
 | Budget reference | |
@@ -99,8 +119,8 @@ export const PLAYBOOKS: readonly Playbook[] = [
 | الراعي | |
 | مدير المشروع | |
 | الهدف | |
-| داخل النطاق | |
-| خارج النطاق | |
+| داخل النطاق (داخل حدود البطارية) | |
+| خارج النطاق (خارج حدود البطارية، لضمان البرنامج) | |
 | مقاييس النجاح | |
 | معالم مختصرة | |
 | مرجع الميزانية | |
@@ -181,6 +201,7 @@ export const PLAYBOOKS: readonly Playbook[] = [
     `
 | Check | Evidence | Result | RAG |
 | --- | --- | --- | --- |
+| Battery limit (inside battery limits) | | | |
 | Logic and predecessors | | | |
 | Critical path | | | |
 | Float on key activities | | | |
@@ -195,6 +216,7 @@ export const PLAYBOOKS: readonly Playbook[] = [
     `
 | الفحص | الدليل | النتيجة | RAG |
 | --- | --- | --- | --- |
+| حدود البطارية (داخل حدود البطارية) | | | |
 | المنطق والأنشطة السابقة | | | |
 | المسار الحرج | | | |
 | الهامش على الأنشطة الرئيسية | | | |
@@ -227,123 +249,285 @@ export const PLAYBOOKS: readonly Playbook[] = [
 `
   ),
   pack(
+    "pmo",
+    "cost",
+    "Cost Report",
+    `
+| Cost element | Baseline | Forecast | Variance | Commitment | RAG |
+| --- | --- | --- | --- | --- | --- |
+| Direct cost | | | | | |
+| Indirect cost | | | | | |
+| Procurement commitments | | | | | |
+| Contingency | | | | | |
+
+- Cost baseline source:
+- Figures marked Not provided:
+`,
+    "تقرير التكلفة",
+    `
+| عنصر التكلفة | خط الأساس | التوقع | الانحراف | الالتزام | RAG |
+| --- | --- | --- | --- | --- | --- |
+| التكلفة المباشرة | | | | | |
+| التكلفة غير المباشرة | | | | | |
+| التزامات المشتريات | | | | | |
+| الاحتياطي | | | | | |
+
+- مصدر خط أساس التكلفة:
+- أرقام معلّمة غير متوفرة:
+`
+  ),
+  pack(
     "assurance",
     "stage-gate",
     "Stage-Gate Review",
     `
-| Criterion | Evidence | Finding | RAG |
-| --- | --- | --- | --- |
+| Criterion | ISBL evidence | OSBL / interface evidence | Finding | RAG |
+| --- | --- | --- | --- | --- |
+| Scope and battery limit | | | | |
+| Utilities and demand | | | | |
+| Stakeholders and external dependencies | | | | |
+| Cost and schedule assurance | | | | |
 
 - Gate:
+- Projects in the program covered:
 - Decision supported: proceed / proceed with conditions / hold / recycle
 - Conditions:
 `,
     "مراجعة بوابة المرحلة",
     `
-| المعيار | الدليل | الملاحظة | RAG |
-| --- | --- | --- | --- |
+| المعيار | دليل داخل حدود البطارية | دليل خارج حدود البطارية / الواجهة | الملاحظة | RAG |
+| --- | --- | --- | --- | --- |
+| النطاق وحدود البطارية | | | | |
+| المنافع والطلب | | | | |
+| أصحاب المصلحة والاعتمادات الخارجية | | | | |
+| ضمان التكلفة والجدول | | | | |
 
 - البوابة:
+- المشاريع المشمولة في البرنامج:
 - القرار المدعوم: متابعة / متابعة بشروط / إيقاف / إعادة
 - الشروط:
 `
   ),
   pack(
     "assurance",
-    "design-review",
-    "Design Review Checklist",
+    "interface",
+    "Interface Register",
     `
-| Deliverable | Requirement / standard | Observation | Status (Met / Partial / Gap) | Severity | RAG |
-| --- | --- | --- | --- | --- | --- |
+| ID | Interface | Type (utility / demand / stakeholder / external) | From | To | Battery limit | Need date | Owner | Status | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
-- Review decision:
-- Items that block issue:
+- Interfaces that cross the battery limit:
+- Interfaces with no owner:
 `,
-    "قائمة مراجعة التصميم",
+    "سجل الواجهات",
     `
-| المخرج | المتطلب / المعيار | الملاحظة | الحالة (مستوفى / جزئي / فجوة) | الشدة | RAG |
-| --- | --- | --- | --- | --- | --- |
+| المعرف | الواجهة | النوع (منفعة / طلب / صاحب مصلحة / خارجي) | من | إلى | حدود البطارية | تاريخ الحاجة | المالك | الحالة | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
-- قرار المراجعة:
-- البنود التي تمنع الإصدار:
+- واجهات تعبر حدود البطارية:
+- واجهات بلا مالك:
 `
   ),
   pack(
     "assurance",
-    "audit",
-    "Audit Report",
+    "stakeholder",
+    "Stakeholder Map",
     `
-| ID | Finding | Severity | Cause | Recommendation | Owner | Due | RAG |
+| Stakeholder | Interest | Influence | Inside or outside battery limit | Expectation | Owner | Engagement | RAG |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 
-- Audit opinion:
-- Overall RAG:
+- Stakeholders who can change a gate decision:
+- Stakeholders with no named owner:
 `,
-    "تقرير التدقيق",
+    "خريطة أصحاب المصلحة",
     `
-| المعرف | الملاحظة | الشدة | السبب | التوصية | المالك | الاستحقاق | RAG |
+| صاحب المصلحة | الاهتمام | التأثير | داخل أو خارج حدود البطارية | التوقع | المالك | المشاركة | RAG |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 
-- رأي التدقيق:
-- RAG الإجمالي:
+- أصحاب مصلحة يمكنهم تغيير قرار البوابة:
+- أصحاب مصلحة بلا مالك مسمّى:
 `
   ),
   pack(
     "assurance",
-    "compliance",
-    "Compliance Checklist",
+    "osbl",
+    "OSBL Dependency Tracker",
     `
-| Item | Requirement | Status (Met / Partial / Gap) | Evidence | Owner | RAG |
-| --- | --- | --- | --- | --- | --- |
+| ID | Dependency | Provider | What the project needs | Need date | Promised | Impact if late | Owner | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Utility | | | | | | | | |
+| Demand | | | | | | | | |
+| Third party / external project | | | | | | | | |
 
-- Requirements cited by the file:
-- Requirements still to be evidenced:
+- Dependencies outside the battery limit:
+- Dependencies that can move the ISBL schedule:
 `,
-    "قائمة الامتثال",
+    "متابعة اعتمادات خارج حدود البطارية",
     `
-| البند | المتطلب | الحالة (مستوفى / جزئي / فجوة) | الدليل | المالك | RAG |
-| --- | --- | --- | --- | --- | --- |
+| المعرف | الاعتماد | المزوّد | ما يحتاجه المشروع | تاريخ الحاجة | الموعود | الأثر إذا تأخر | المالك | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| منفعة | | | | | | | | |
+| طلب | | | | | | | | |
+| طرف ثالث / مشروع خارجي | | | | | | | | |
 
-- المتطلبات التي يذكرها الملف:
-- المتطلبات التي ما زالت بلا دليل:
+- اعتمادات خارج حدود البطارية:
+- اعتمادات يمكنها تحريك جدول داخل حدود البطارية:
 `
   ),
   pack(
     "assurance",
-    "lessons",
-    "Lessons Learned",
+    "assurance-review",
+    "Assurance Review",
     `
-| Lesson | Context | Repeat or avoid | Recommendation | Applies to | RAG |
+| Area | Scope (program / project / OSBL) | Evidence | Finding | Owner | RAG |
 | --- | --- | --- | --- | --- | --- |
+| Program governance | | | | | |
+| Cross-project interfaces | | | | | |
+| Utilities and demand | | | | | |
+| External dependencies | | | | | |
+| Stage-gate readiness | | | | | |
 
-- Lessons that are actionable now:
-- Lessons that lack an owner:
+- Assurance opinion:
+- Conditions before the next gate:
 `,
-    "الدروس المستفادة",
+    "مراجعة الضمان",
     `
-| الدرس | السياق | يُكرَّر أو يُتجنَّب | التوصية | ينطبق على | RAG |
+| المجال | النطاق (البرنامج / المشروع / خارج حدود البطارية) | الدليل | الملاحظة | المالك | RAG |
+| --- | --- | --- | --- | --- | --- |
+| حوكمة البرنامج | | | | | |
+| الواجهات بين المشاريع | | | | | |
+| المنافع والطلب | | | | | |
+| الاعتمادات الخارجية | | | | | |
+| جاهزية بوابة المرحلة | | | | | |
+
+- رأي الضمان:
+- الشروط قبل البوابة التالية:
+`
+  ),
+  pack(
+    "assurance",
+    "schedule-health",
+    "Schedule Health",
+    `
+| Project | Milestone | Baseline | Forecast | Variance | Interface that moves it | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+
+| Program roll-up | Finish | Variance | RAG |
+| --- | --- | --- | --- |
+
+- Projects driving the program finish:
+- OSBL dependencies moving an inside-battery-limit date:
+`,
+    "صحة الجدول",
+    `
+| المشروع | المعلم | خط الأساس | التوقع | الانحراف | الواجهة التي تحرّكه | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+
+| تجميع البرنامج | النهاية | الانحراف | RAG |
+| --- | --- | --- | --- |
+
+- المشاريع التي تقود نهاية البرنامج:
+- اعتمادات خارج حدود البطارية تحرّك تاريخًا داخل حدود البطارية:
+`
+  ),
+  pack(
+    "assurance",
+    "cost-health",
+    "Cost Health",
+    `
+| Project | Baseline | Forecast | Variance | Contingency left | RAG |
 | --- | --- | --- | --- | --- | --- |
 
-- دروس قابلة للتنفيذ الآن:
-- دروس بلا مالك:
+| Program roll-up | Baseline | Forecast | Variance | RAG |
+| --- | --- | --- | --- | --- |
+
+- Projects driving the variance:
+- Figures marked Not provided:
+`,
+    "صحة التكلفة",
+    `
+| المشروع | خط الأساس | التوقع | الانحراف | الاحتياطي المتبقي | RAG |
+| --- | --- | --- | --- | --- | --- |
+
+| تجميع البرنامج | خط الأساس | التوقع | الانحراف | RAG |
+| --- | --- | --- | --- | --- |
+
+- المشاريع التي تقود الانحراف:
+- أرقام معلّمة غير متوفرة:
+`
+  ),
+  pack(
+    "assurance",
+    "risk-health",
+    "Risk Health",
+    `
+| Project | Top risk | Score | Owner | Response | Cross-project impact | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+
+| Band | Count | Top item |
+| --- | --- | --- |
+| Red | | |
+| Amber | | |
+| Green | | |
+
+- Risks that cross more than one project:
+`,
+    "صحة المخاطر",
+    `
+| المشروع | أبرز خطر | الدرجة | المالك | الاستجابة | الأثر عبر المشاريع | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+
+| النطاق | العدد | أبرز بند |
+| --- | --- | --- |
+| أحمر | | |
+| كهرماني | | |
+| أخضر | | |
+
+- مخاطر تعبر أكثر من مشروع:
+`
+  ),
+  pack(
+    "assurance",
+    "quality-health",
+    "Quality Health",
+    `
+| Project | Quality area | Evidence | Finding | Owner | RAG |
+| --- | --- | --- | --- | --- | --- |
+|  | Design | | | | |
+|  | Inspection / ITP | | | | |
+|  | NCR or punch trend | | | | |
+|  | Handover quality | | | | |
+
+- Quality issues that repeat across projects:
+`,
+    "صحة الجودة",
+    `
+| المشروع | مجال الجودة | الدليل | الملاحظة | المالك | RAG |
+| --- | --- | --- | --- | --- | --- |
+|  | التصميم | | | | |
+|  | الفحص / خطة الفحص | | | | |
+|  | اتجاه عدم المطابقة أو النواقص | | | | |
+|  | جودة التسليم | | | | |
+
+- مسائل جودة تتكرر عبر المشاريع:
 `
   ),
   pack(
     "decision",
     "options",
-    "Options Analysis",
+    "Investment and Options Analysis",
     `
-| Option | Description | Pros | Cons | RAG |
-| --- | --- | --- | --- | --- |
+| Option | Investment case | Strategic fit | CAPEX note | OPEX note | Pros | Cons | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 
 - Decision question:
 - Include defer or do nothing when it is a real alternative:
 - Readiness of the option set:
 `,
-    "تحليل الخيارات",
+    "تحليل الاستثمار والخيارات",
     `
-| الخيار | الوصف | المزايا | العيوب | RAG |
-| --- | --- | --- | --- | --- |
+| الخيار | حالة الاستثمار | الملاءمة الاستراتيجية | ملاحظة النفقات الرأسمالية | ملاحظة النفقات التشغيلية | المزايا | العيوب | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 
 - سؤال القرار:
 - تضمين التأجيل أو عدم الفعل عندما يكون بديلاً حقيقيًا:
@@ -414,28 +598,178 @@ export const PLAYBOOKS: readonly Playbook[] = [
   ),
   pack(
     "decision",
-    "cba",
-    "Cost-Benefit",
+    "capital-assessment",
+    "Capital Projects Assessment",
     `
-| Option | Cost | Benefit | Net | Payback / notes | RAG |
-| --- | --- | --- | --- | --- | --- |
+| Item | Content |
+| --- | --- |
+| Business case | |
+| CAPEX estimate | |
+| OPEX estimate | |
+| Preferred option | |
+| Stage-gate decision (go / no-go / hold) | |
+| Conditions | |
 
-- Figures taken from the source:
-- Figures marked Not provided:
-- Qualitative cost drivers where a number is absent:
+| Feasibility | Finding | Evidence | RAG |
+| --- | --- | --- | --- |
+| Technical | | | |
+| Commercial | | | |
+| Schedule | | | |
+
+| Funding mechanism | Applicable | Amount or share | Evidence | Gap | RAG |
+| --- | --- | --- | --- | --- | --- |
+| Equity | | | | | |
+| Project finance | | | | | |
+| PPP | | | | | |
+| Government / PIF funding | | | | | |
+| Grants | | | | | |
+
+| Alignment | Expectation | Fit | Evidence | RAG |
+| --- | --- | --- | --- | --- |
+| Strategy | | | | |
+| Customer | | | | |
+
+| Option | CAPEX | OPEX | Benefit | Strategic fit | RAG |
+| --- | --- | --- | --- | --- | --- |
+| Do nothing | | | | | |
+| Recommended | | | | | |
+| Alternative | | | | | |
+
+- Gate decision:
+- What would reverse the decision:
+- Figures and funding amounts marked Not provided:
 `,
-    "التكلفة والعائد",
+    "تقييم المشاريع الرأسمالية",
     `
-| الخيار | التكلفة | العائد | الصافي | الاسترداد / ملاحظات | RAG |
-| --- | --- | --- | --- | --- | --- |
+| البند | المحتوى |
+| --- | --- |
+| دراسة الجدوى | |
+| تقدير النفقات الرأسمالية | |
+| تقدير النفقات التشغيلية | |
+| الخيار المفضل | |
+| قرار بوابة المرحلة (متابعة / عدم متابعة / إيقاف) | |
+| الشروط | |
 
-- الأرقام المأخوذة من المصدر:
-- الأرقام المعلّمة غير متوفرة:
-- محركات التكلفة النوعية حيث الرقم غائب:
+| الجدوى | الملاحظة | الدليل | RAG |
+| --- | --- | --- | --- |
+| فنية | | | |
+| تجارية | | | |
+| الجدول | | | |
+
+| آلية التمويل | تنطبق | المبلغ أو الحصة | الدليل | الفجوة | RAG |
+| --- | --- | --- | --- | --- | --- |
+| حقوق الملكية | | | | | |
+| تمويل المشاريع | | | | | |
+| شراكة بين القطاعين | | | | | |
+| تمويل حكومي / صندوق الاستثمارات العامة | | | | | |
+| المنح | | | | | |
+
+| المواءمة | التوقع | الملاءمة | الدليل | RAG |
+| --- | --- | --- | --- | --- |
+| الاستراتيجية | | | | |
+| العميل | | | | |
+
+| الخيار | النفقات الرأسمالية | النفقات التشغيلية | العائد | الملاءمة الاستراتيجية | RAG |
+| --- | --- | --- | --- | --- | --- |
+| عدم الفعل | | | | | |
+| الموصى به | | | | | |
+| البديل | | | | | |
+
+- قرار البوابة:
+- ما الذي يعكس القرار:
+- الأرقام ومبالغ التمويل المعلّمة غير متوفرة:
 `
   ),
   pack(
-    "supply",
+    "decision",
+    "capex-opex",
+    "CAPEX and OPEX Evaluation",
+    `
+| Case | CAPEX | OPEX (annual) | Life | Source in the file | Note | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+| Base | | | | | | |
+| Alternative | | | | | | |
+
+| Cost class | Included | Figure | Gap |
+| --- | --- | --- | --- |
+| Direct CAPEX | | | |
+| Indirect CAPEX | | | |
+| Contingency | | | |
+| Fixed OPEX | | | |
+| Variable OPEX | | | |
+
+- Figures taken from the source:
+- Figures marked Not provided:
+`,
+    "تقييم النفقات الرأسمالية والتشغيلية",
+    `
+| الحالة | النفقات الرأسمالية | النفقات التشغيلية (سنوي) | العمر | المصدر في الملف | ملاحظة | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+| الأساس | | | | | | |
+| البديل | | | | | | |
+
+| فئة التكلفة | مضمّنة | الرقم | الفجوة |
+| --- | --- | --- | --- |
+| رأسمالية مباشرة | | | |
+| رأسمالية غير مباشرة | | | |
+| احتياطي | | | |
+| تشغيلية ثابتة | | | |
+| تشغيلية متغيرة | | | |
+
+- الأرقام المأخوذة من المصدر:
+- الأرقام المعلّمة غير متوفرة:
+`
+  ),
+  pack(
+    "decision",
+    "strategy",
+    "Strategy and Governance Alignment",
+    `
+| Decision | Strategy objective | Governance forum | Alignment | Evidence | RAG |
+| --- | --- | --- | --- | --- | --- |
+| Investment | | | | | |
+| Scope | | | | | |
+| Schedule | | | | | |
+| Risk appetite | | | | | |
+
+- Approvals the governance forum must give:
+- Misalignment that conditions the decision:
+`,
+    "المواءمة مع الاستراتيجية والحوكمة",
+    `
+| القرار | الهدف الاستراتيجي | منتدى الحوكمة | المواءمة | الدليل | RAG |
+| --- | --- | --- | --- | --- | --- |
+| الاستثمار | | | | | |
+| النطاق | | | | | |
+| الجدول | | | | | |
+| شهية المخاطر | | | | | |
+
+- الموافقات التي يجب أن يمنحها منتدى الحوكمة:
+- عدم المواءمة الذي يضع شرطًا على القرار:
+`
+  ),
+  pack(
+    "decision",
+    "audit",
+    "Audit",
+    `
+| ID | Finding | Area (CAPEX / OPEX / governance / strategy / controls) | Severity | Recommendation | Owner | Due | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+
+- Audit opinion:
+- Findings that should condition the investment decision:
+`,
+    "التدقيق",
+    `
+| المعرف | الملاحظة | المجال (رأسمالي / تشغيلي / حوكمة / استراتيجية / ضوابط) | الشدة | التوصية | المالك | الاستحقاق | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+
+- رأي التدقيق:
+- ملاحظات يجب أن تشرط قرار الاستثمار:
+`
+  ),
+  pack(
+    "pmo",
     "vendor",
     "Vendor Evaluation",
     `
@@ -469,7 +803,7 @@ export const PLAYBOOKS: readonly Playbook[] = [
 `
   ),
   pack(
-    "supply",
+    "pmo",
     "tbe",
     "Technical Bid Evaluation",
     `
@@ -495,29 +829,7 @@ export const PLAYBOOKS: readonly Playbook[] = [
 `
   ),
   pack(
-    "supply",
-    "procurement-plan",
-    "Procurement Plan",
-    `
-| Package | Strategy | Route (RFQ / RFP / single source) | Need date | Owner | IKTVA note | RAG |
-| --- | --- | --- | --- | --- | --- | --- |
-
-- Sourcing strategy:
-- Local content (IKTVA) approach:
-- Packages that need a decision:
-`,
-    "خطة المشتريات",
-    `
-| الحزمة | الاستراتيجية | المسار (طلب عرض سعر / طلب عرض / مصدر واحد) | تاريخ الحاجة | المالك | ملاحظة اكتفاء | RAG |
-| --- | --- | --- | --- | --- | --- | --- |
-
-- استراتيجية التوريد:
-- منهج المحتوى المحلي (اكتفاء):
-- الحزم التي تحتاج قرارًا:
-`
-  ),
-  pack(
-    "supply",
+    "pmo",
     "long-lead",
     "Long-Lead Tracker",
     `
@@ -537,7 +849,7 @@ export const PLAYBOOKS: readonly Playbook[] = [
 `
   ),
   pack(
-    "supply",
+    "pmo",
     "rfq",
     "RFQ / RFP Package",
     `
@@ -573,31 +885,263 @@ export const PLAYBOOKS: readonly Playbook[] = [
 `
   ),
   pack(
-    "supply",
-    "risk",
-    "Supply Chain Risk Register",
+    "pmo",
+    "iktva",
+    "IKTVA",
     `
-| ID | Risk | Type (vendor / lead time / logistics / IKTVA / quality) | Cause | Impact | Likelihood | Owner | Response | RAG |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Package / vendor | IKTVA plan | Target % | Evidenced % | Gap | Owner | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
 
-| Theme | RAG | Reason |
-| --- | --- | --- |
-| Vendor | | |
-| Long-lead | | |
-| Logistics | | |
-| Local content (IKTVA) | | |
+| Local-content element | Evidence in the file | Status | Gap |
+| --- | --- | --- | --- |
+| Workforce localization | | | |
+| Goods manufactured in KSA | | | |
+| Services sourced in KSA | | | |
+| Supplier development / training | | | |
+
+- Score stated in the file:
+- Score not claimed because the file does not state it:
 `,
-    "سجل مخاطر سلسلة الإمداد",
+    "اكتفاء",
     `
-| المعرف | الخطر | النوع (مورد / مدة توريد / لوجستيات / اكتفاء / جودة) | السبب | الأثر | الاحتمال | المالك | الاستجابة | RAG |
+| الحزمة / المورد | خطة اكتفاء | النسبة المستهدفة | النسبة الموثّقة | الفجوة | المالك | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+
+| عنصر المحتوى المحلي | الدليل في الملف | الحالة | الفجوة |
+| --- | --- | --- | --- |
+| توطين القوى العاملة | | | |
+| السلع المصنّعة في المملكة | | | |
+| الخدمات من مصادر محلية | | | |
+| تطوير الموردين / التدريب | | | |
+
+- الدرجة المذكورة في الملف:
+- درجة لم تُدَّعَ لأن الملف لا يذكرها:
+`
+  ),
+  pack(
+    "operations",
+    "testing",
+    "Testing and Pre-commissioning",
+    `
+| System | Test type | Procedure | Result | Open defects | Owner | Ready for next step | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+
+| Step | Predecessor complete | Evidence | RAG |
+| --- | --- | --- | --- |
+| Mechanical completion | | | |
+| Pre-commissioning | | | |
+| Ready for commissioning | | | |
+
+- Tests the file records:
+- Tests still open:
+`,
+    "الاختبار وما قبل التشغيل التجريبي",
+    `
+| النظام | نوع الاختبار | الإجراء | النتيجة | العيوب المفتوحة | المالك | جاهز للخطوة التالية | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+
+| الخطوة | السابق مكتمل | الدليل | RAG |
+| --- | --- | --- | --- |
+| الإكمال الميكانيكي | | | |
+| ما قبل التشغيل التجريبي | | | |
+| الجاهزية للتشغيل التجريبي | | | |
+
+- الاختبارات التي يسجلها الملف:
+- الاختبارات التي ما زالت مفتوحة:
+`
+  ),
+  pack(
+    "operations",
+    "handover",
+    "Mechanical Completion and Handover Dossiers",
+    `
+| System / package | MC certificate | Open punch | Owner | Ready for handover | RAG |
+| --- | --- | --- | --- | --- | --- |
+
+| Handover item | Included | Gap | Owner |
+| --- | --- | --- | --- |
+| Mechanical completion certificate | | | |
+| As-built drawings | | | |
+| Test and inspection records | | | |
+| Vendor dossiers | | | |
+| Spare parts list | | | |
+| Punch list closed or accepted | | | |
+`,
+    "الإكمال الميكانيكي وملفات التسليم",
+    `
+| النظام / الحزمة | شهادة الإكمال | نواقص مفتوحة | المالك | جاهز للتسليم | RAG |
+| --- | --- | --- | --- | --- | --- |
+
+| بند التسليم | مضمّن | الفجوة | المالك |
+| --- | --- | --- | --- |
+| شهادة الإكمال الميكانيكي | | | |
+| مخططات كما نُفّذ | | | |
+| سجلات الاختبار والفحص | | | |
+| ملفات الموردين | | | |
+| قائمة قطع الغيار | | | |
+| قائمة النواقص مغلقة أو مقبولة | | | |
+`
+  ),
+  pack(
+    "operations",
+    "commissioning",
+    "Commissioning Plan",
+    `
+| System | Pre-commissioning | Commissioning | Need date | Owner | Constraint | Ready for start-up | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Utilities | | | | | | | |
+| Process | | | | | | | |
+| Safety systems | | | | | | | |
+
+| Milestone | Planned | Forecast | Predecessor | RAG |
+| --- | --- | --- | --- | --- |
+| Mechanical completion | | | | |
+| Pre-commissioning complete | | | | |
+| Commissioning complete | | | | |
+| Ready for start-up | | | | |
+`,
+    "خطة التشغيل التجريبي",
+    `
+| النظام | ما قبل التشغيل التجريبي | التشغيل التجريبي | تاريخ الحاجة | المالك | القيد | جاهز للإقلاع | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| المنافع | | | | | | | |
+| العملية | | | | | | | |
+| أنظمة السلامة | | | | | | | |
+
+| المعلم | المخطط | المتوقع | السابق | RAG |
+| --- | --- | --- | --- | --- |
+| الإكمال الميكانيكي | | | | |
+| اكتمال ما قبل التشغيل التجريبي | | | | |
+| اكتمال التشغيل التجريبي | | | | |
+| الجاهزية للإقلاع | | | | |
+`
+  ),
+  pack(
+    "operations",
+    "startup",
+    "Start-up and Regularisation of Operation",
+    `
+| System | Start-up date | Steady-state date | Performance test | Result | Owner | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+
+| Operating KPI | Target | Actual | Period | Owner | RAG |
+| --- | --- | --- | --- | --- | --- |
+
+| Warranty / defects item | Opened | Due | Owner | Status | Blocks steady state | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+
+- Transition to steady-state operations:
+- Performance tests still open:
+- Warranty / defects period end:
+`,
+    "الإقلاع وانتظام التشغيل",
+    `
+| النظام | تاريخ الإقلاع | تاريخ التشغيل المستقر | اختبار الأداء | النتيجة | المالك | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+
+| مؤشر التشغيل | المستهدف | الفعلي | الفترة | المالك | RAG |
+| --- | --- | --- | --- | --- | --- |
+
+| بند الضمان / العيوب | تاريخ الفتح | الاستحقاق | المالك | الحالة | يعوق الاستقرار | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+
+- الانتقال إلى التشغيل المستقر:
+- اختبارات الأداء التي ما زالت مفتوحة:
+- نهاية فترة الضمان والعيوب:
+`
+  ),
+  pack(
+    "operations",
+    "om",
+    "O&M Readiness",
+    `
+| Area | Item | Required | Available | Gap | Owner | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+| Spares | Critical spares | | | | | |
+| Spares | Consumables | | | | | |
+| Procedures | Operating procedures | | | | | |
+| Procedures | Maintenance procedures | | | | | |
+| Training | Training matrix | | | | | |
+| Training | Competency evidence | | | | | |
+| Maintenance | Asset register and criticality | | | | | |
+| Maintenance | Preventive maintenance loaded | | | | | |
+
+| Role | Training required | People trained | Gap | RAG |
+| --- | --- | --- | --- | --- |
+`,
+    "جاهزية التشغيل والصيانة",
+    `
+| المجال | البند | المطلوب | المتاح | الفجوة | المالك | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+| قطع الغيار | قطع الغيار الحرجة | | | | | |
+| قطع الغيار | المواد المستهلكة | | | | | |
+| الإجراءات | إجراءات التشغيل | | | | | |
+| الإجراءات | إجراءات الصيانة | | | | | |
+| التدريب | مصفوفة التدريب | | | | | |
+| التدريب | دليل الكفاءة | | | | | |
+| الصيانة | سجل الأصول والحرجية | | | | | |
+| الصيانة | الصيانة الوقائية محمّلة | | | | | |
+
+| الدور | التدريب المطلوب | من تدرّب | الفجوة | RAG |
+| --- | --- | --- | --- | --- |
+`
+  ),
+  pack(
+    "operations",
+    "punch",
+    "Punch List Tracker",
+    `
+| ID | System | Description | Category (A / B / C) | Owner | Due | Status | Blocks handover | RAG |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
-| المحور | RAG | السبب |
-| --- | --- | --- |
-| المورد | | |
-| التوريد الطويل | | |
-| اللوجستيات | | |
-| المحتوى المحلي (اكتفاء) | | |
+| Category | Open | Closed | Blocking handover | RAG |
+| --- | --- | --- | --- | --- |
+| A | | | | |
+| B | | | | |
+| C | | | | |
+`,
+    "متابعة قائمة النواقص",
+    `
+| المعرف | النظام | الوصف | الفئة (أ / ب / ج) | المالك | الاستحقاق | الحالة | يعوق التسليم | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
+| الفئة | مفتوح | مغلق | يعوق التسليم | RAG |
+| --- | --- | --- | --- | --- |
+| أ | | | | |
+| ب | | | | |
+| ج | | | | |
+`
+  ),
+  pack(
+    "operations",
+    "alignment",
+    "Permits, Offtakers, and Capacity",
+    `
+| Party | Topic | Requirement | Evidence | Gap | Owner | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+| Regulator / permit | | | | | | |
+| Customer / offtaker | | | | | | |
+| Capacity (nameplate or contracted) | | | | | | |
+
+| Alignment item | Status | Impact on startup or handover | RAG |
+| --- | --- | --- | --- |
+| Permits in force | | | |
+| Offtake conditions | | | |
+| Capacity match | | | |
+`,
+    "التصاريح والمستلمون والطاقة",
+    `
+| الطرف | الموضوع | المتطلب | الدليل | الفجوة | المالك | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+| الجهة المنظمة / التصريح | | | | | | |
+| العميل / المستلم | | | | | | |
+| الطاقة (الاسمية أو المتعاقد عليها) | | | | | | |
+
+| بند المواءمة | الحالة | الأثر على الإقلاع أو التسليم | RAG |
+| --- | --- | --- | --- |
+| التصاريح سارية | | | |
+| شروط الاستلام | | | |
+| مطابقة الطاقة | | | |
 `
   ),
 ];
@@ -609,8 +1153,56 @@ for (const playbook of PLAYBOOKS) {
   BY_ADVISOR.set(playbook.advisorId, list);
 }
 
+const PLAYBOOK_ORDER: Partial<Record<AdvisorId, readonly string[]>> = {
+  pmo: [
+    "charter",
+    "schedule",
+    "cost",
+    "risk",
+    "raci",
+    "status",
+    "vendor",
+    "tbe",
+    "rfq",
+    "long-lead",
+    "iktva",
+  ],
+  assurance: [
+    "interface",
+    "stakeholder",
+    "osbl",
+    "stage-gate",
+    "assurance-review",
+    "schedule-health",
+    "cost-health",
+    "risk-health",
+    "quality-health",
+  ],
+  operations: ["testing", "handover", "commissioning", "startup", "punch", "alignment", "om"],
+  decision: ["capital-assessment", "capex-opex", "strategy", "audit", "options", "mcda", "brief"],
+};
+
+for (const [advisorId, order] of Object.entries(PLAYBOOK_ORDER)) {
+  const list = BY_ADVISOR.get(advisorId as AdvisorId);
+  if (!list || !order) continue;
+  list.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+}
+
 export function playbooksFor(advisorId: AdvisorId): readonly Playbook[] {
   return BY_ADVISOR.get(advisorId) ?? [];
+}
+
+export function groupedPlaybooks(
+  advisorId: AdvisorId
+): { group: PlaybookGroup | null; playbooks: Playbook[] }[] {
+  const groups: { group: PlaybookGroup | null; playbooks: Playbook[] }[] = [];
+  for (const playbook of playbooksFor(advisorId)) {
+    const group = playbook.group ?? null;
+    const last = groups[groups.length - 1];
+    if (last && last.group === group) last.playbooks.push(playbook);
+    else groups.push({ group, playbooks: [playbook] });
+  }
+  return groups;
 }
 
 export function getPlaybook(advisorId: AdvisorId, playbookId: string): Playbook | undefined {

@@ -3,7 +3,7 @@
 import { ADVISOR_IDS } from "@/lib/advisors";
 import { useMessages } from "@/lib/useMessages";
 
-/** engineerit AI > PMO > Supply Chain > Program Assurance > Decision Support */
+/** engineerit AI > PMO > Program Assurance > Operations Readiness > Decision Support */
 export default function AdvisorEcosystem({ compact = false }: { compact?: boolean }) {
   const { m } = useMessages();
   const steps = ADVISOR_IDS.map((id) => m.advisors.items[id].flowLabel);
@@ -11,6 +11,7 @@ export default function AdvisorEcosystem({ compact = false }: { compact?: boolea
   if (compact) {
     return (
       <section className="advisor-ecosystem advisor-ecosystem-compact" aria-label={m.advisors.ecosystemTitle}>
+        <p className="advisor-ecosystem-tagline">{m.advisors.ecosystemTagline}</p>
         <p className="advisor-ecosystem-line">
           <strong>{m.advisors.ecosystemAi}</strong>
           {steps.map((step) => (
@@ -27,6 +28,7 @@ export default function AdvisorEcosystem({ compact = false }: { compact?: boolea
   return (
     <section className="advisor-ecosystem" aria-label={m.advisors.ecosystemTitle}>
       <h2 className="advisor-ecosystem-title">{m.advisors.ecosystemTitle}</h2>
+      <p className="advisor-ecosystem-tagline">{m.advisors.ecosystemTagline}</p>
       <ol className="advisor-ecosystem-flow">
         <li>
           <span className="advisor-ecosystem-step">{m.advisors.ecosystemAi}</span>

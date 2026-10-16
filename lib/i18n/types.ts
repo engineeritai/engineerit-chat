@@ -20,6 +20,7 @@ export type Messages = {
     sectionTitle: string;
     ecosystem: string;
     ecosystemTitle: string;
+    ecosystemTagline: string;
     ecosystemAi: string;
     ecosystemAdvisors: string;
     ecosystemTracks: string;
@@ -45,10 +46,17 @@ export type Messages = {
     playbooksTitle: string;
     playbookHint: string;
     playbookRun: string;
+    playbookGroups: {
+      controls: string;
+      procurement: string;
+      program: string;
+      execution: string;
+      capital: string;
+    };
     items: {
       pmo: AdvisorCopy;
-      supply: AdvisorCopy;
       assurance: AdvisorCopy;
+      operations: AdvisorCopy;
       decision: AdvisorCopy;
     };
   };

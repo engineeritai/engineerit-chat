@@ -10,7 +10,7 @@ import {
   hasAdvisorAccess,
   type AdvisorId,
 } from "@/lib/advisors";
-import { getPlaybook, playbooksFor, playbookTemplate } from "@/lib/playbooks";
+import { getPlaybook, groupedPlaybooks, playbooksFor, playbookTemplate } from "@/lib/playbooks";
 import {
   copyAsHtml,
   exportPdf,
@@ -318,32 +318,44 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
             </ul>
             <h2 className="section-heading">{m.advisors.playbooksTitle}</h2>
             <p className="advisor-playbook-hint">{m.advisors.playbookHint}</p>
-            <div className="advisor-starters">
-              {playbooks.map((playbook) => {
-                const label = copy.playbooks[playbook.id];
-                if (!label) return null;
-                const active = selected?.id === playbook.id;
-                return (
-                  <button
-                    key={playbook.id}
-                    type="button"
-                    className={"advisor-starter" + (active ? " advisor-starter-active" : "")}
-                    disabled={sending}
-                    onClick={() => {
-                      setActivePlaybook(playbook.id);
-                      if (!unlocked) {
-                        openGate();
-                        return;
-                      }
-                      void submit(m.advisors.playbookRun.replace("{name}", label.name), playbook.id);
-                    }}
-                  >
-                    <span className="advisor-playbook-name">{label.name}</span>
-                    <span className="advisor-playbook-outcome">{label.outcome}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {groupedPlaybooks(advisor.id).map((group) => (
+              <div key={group.group ?? "all"} className="advisor-playbook-group">
+                {group.group ? (
+                  <h3 className="advisor-playbook-group-title">
+                    {m.advisors.playbookGroups[group.group]}
+                  </h3>
+                ) : null}
+                <div className="advisor-starters">
+                  {group.playbooks.map((playbook) => {
+                    const label = copy.playbooks[playbook.id];
+                    if (!label) return null;
+                    const active = selected?.id === playbook.id;
+                    return (
+                      <button
+                        key={playbook.id}
+                        type="button"
+                        className={"advisor-starter" + (active ? " advisor-starter-active" : "")}
+                        disabled={sending}
+                        onClick={() => {
+                          setActivePlaybook(playbook.id);
+                          if (!unlocked) {
+                            openGate();
+                            return;
+                          }
+                          void submit(
+                            m.advisors.playbookRun.replace("{name}", label.name),
+                            playbook.id
+                          );
+                        }}
+                      >
+                        <span className="advisor-playbook-name">{label.name}</span>
+                        <span className="advisor-playbook-outcome">{label.outcome}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
           <details className="advisor-template" open>
             <summary>

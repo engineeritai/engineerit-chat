@@ -6,7 +6,7 @@ import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import AdvisorEcosystem from "../components/AdvisorEcosystem";
 import { ADVISOR_IDS, ADVISORS, getAdvisor, hasAdvisorAccess } from "@/lib/advisors";
-import { playbooksFor } from "@/lib/playbooks";
+import { groupedPlaybooks } from "@/lib/playbooks";
 import { useMessages } from "@/lib/useMessages";
 import { useSubscriptionTier } from "@/lib/useSubscriptionTier";
 
@@ -82,8 +82,17 @@ export default function AdvisorsPage() {
                     ))}
                   </ul>
                   <div className="advisor-card-playbooks">
-                    {playbooksFor(advisor.id).map((playbook) => (
-                      <span key={playbook.id}>{copy.playbooks[playbook.id]?.name}</span>
+                    {groupedPlaybooks(advisor.id).map((group) => (
+                      <div key={group.group ?? "all"} className="advisor-card-playbook-group">
+                        {group.group ? (
+                          <p className="advisor-playbook-group-label">
+                            {m.advisors.playbookGroups[group.group]}
+                          </p>
+                        ) : null}
+                        {group.playbooks.map((playbook) => (
+                          <span key={playbook.id}>{copy.playbooks[playbook.id]?.name}</span>
+                        ))}
+                      </div>
                     ))}
                   </div>
                   <Link className="advisor-card-link" href={`/advisors/${advisor.id}`}>

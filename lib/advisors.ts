@@ -10,8 +10,8 @@ import type { Locale } from "@/lib/i18n";
  * Included: Consultant, Team, Enterprise.
  * Locked preview: guest, Free (assistant), Engineer, Professional.
  */
-/** Display order everywhere: PMO, Supply Chain, Program Assurance, Decision Support. */
-export const ADVISOR_IDS = ["pmo", "supply", "assurance", "decision"] as const;
+/** Display order everywhere: PMO, Program Assurance, Operations Readiness, Decision Support. */
+export const ADVISOR_IDS = ["pmo", "assurance", "operations", "decision"] as const;
 
 export type AdvisorId = (typeof ADVISOR_IDS)[number];
 
@@ -73,7 +73,7 @@ const PLAN_ALIASES: Record<string, AdvisorPlanId> = {
 export type Advisor = {
   id: AdvisorId;
   /** Ecosystem segment: engineerit AI > AI Advisors > track */
-  track: "PMO" | "Assurance" | "Decision" | "Supply Chain";
+  track: "PMO" | "Assurance" | "Operations" | "Decision";
   templates: Record<Locale, string>;
 };
 
@@ -81,6 +81,7 @@ const PMO_TEMPLATE_EN = `# PMO Status Pack
 
 ## 1. Project snapshot
 - Project / package:
+- Battery limit: inside battery limits (ISBL)
 - Phase:
 - Reporting period:
 - Overall status (RAG):
@@ -93,27 +94,36 @@ const PMO_TEMPLATE_EN = `# PMO Status Pack
 | ID | Activity | Predecessor | Duration | Start | Finish | Float | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 
-## 4. RACI
+## 4. Cost
+| Cost element | Baseline | Forecast | Variance | Commitment | RAG |
+| --- | --- | --- | --- | --- | --- |
+
+## 5. RACI
 | Activity | Responsible | Accountable | Consulted | Informed |
 | --- | --- | --- | --- | --- |
 
-## 5. Risk register
+## 6. Risk register
 | ID | Risk | Cause | Impact | Likelihood | Score | Owner | Response | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
-## 6. Progress and status
+## 7. Progress and status
 - Accomplishments:
 - Planned next period:
 - Variances:
 - Decisions needed:
 
-## 7. Assumptions and gaps
+## 8. Assumptions and gaps
+
+## 9. Procurement and supply chain
+| Package | Route | Vendor status | Long-lead | IKTVA note | RAG |
+| --- | --- | --- | --- | --- | --- |
 `;
 
 const PMO_TEMPLATE_AR = `# حزمة حالة إدارة المشروع
 
 ## 1. لمحة المشروع
 - المشروع / الحزمة:
+- حدود البطارية: داخل حدود البطارية
 - المرحلة:
 - فترة التقرير:
 - الحالة الإجمالية (RAG):
@@ -126,97 +136,87 @@ const PMO_TEMPLATE_AR = `# حزمة حالة إدارة المشروع
 | المعرف | النشاط | السابق | المدة | البداية | النهاية | الهامش | الحالة |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 
-## 4. مصفوفة RACI
+## 4. التكلفة
+| عنصر التكلفة | خط الأساس | التوقع | الانحراف | الالتزام | RAG |
+| --- | --- | --- | --- | --- | --- |
+
+## 5. مصفوفة RACI
 | النشاط | منفّذ | مسؤول | يُستشار | يُبلَّغ |
 | --- | --- | --- | --- | --- |
 
-## 5. سجل المخاطر
+## 6. سجل المخاطر
 | المعرف | الخطر | السبب | الأثر | الاحتمال | الدرجة | المالك | الاستجابة | الحالة |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
-## 6. التقدم والحالة
+## 7. التقدم والحالة
 - ما أُنجز:
 - المخطط للفترة التالية:
 - الانحرافات:
 - القرارات المطلوبة:
 
-## 7. الافتراضات والفجوات
+## 8. الافتراضات والفجوات
+
+## 9. المشتريات وسلسلة الإمداد
+| الحزمة | المسار | حالة المورد | التوريد الطويل | ملاحظة اكتفاء | RAG |
+| --- | --- | --- | --- | --- | --- |
 `;
 
-const ASSURANCE_TEMPLATE_EN = `# Assurance Report
+const ASSURANCE_TEMPLATE_EN = `# Program Assurance Report
 
 ## 1. Review header
-- Review type: (stage-gate / design / deliverable / compliance / audit / lessons learned)
-- Project / package:
-- Stage or gate:
+- Review type: (interface / stakeholder / OSBL / stage-gate / assurance / execution health)
+- Program:
+- Projects covered:
 - Decision supported: (proceed / proceed with conditions / hold / recycle)
 
 ## 2. RAG summary
 | Area | RAG | Rationale |
 | --- | --- | --- |
 
-## 3. Governance and stage-gate
-| Criterion | Evidence | Finding | RAG |
-| --- | --- | --- | --- |
+## 3. Interface register
+| ID | Interface | Type | From | To | Owner | Need date | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 
-## 4. Design and deliverable review
-| Deliverable | Requirement / standard | Observation | Severity |
-| --- | --- | --- | --- |
+## 4. OSBL dependencies
+| Dependency | Provider | Need | Need date | Impact if late | RAG |
+| --- | --- | --- | --- | --- | --- |
 
-## 5. Compliance checklist
-| Item | Requirement | Status (Met / Partial / Gap) | Evidence |
-| --- | --- | --- | --- |
+## 5. Execution health across projects
+| Project | Schedule RAG | Cost RAG | Risk RAG | Quality RAG |
+| --- | --- | --- | --- | --- |
 
-## 6. Audit findings
-| ID | Finding | Severity | Cause | Recommendation | Owner | Due |
-| --- | --- | --- | --- | --- | --- | --- |
-
-## 7. Lessons learned
-| Lesson | Context | Recommendation | Applies to |
-| --- | --- | --- | --- |
-
-## 8. Assurance opinion
+## 6. Assurance opinion
 - Overall RAG:
 - Conditions to proceed:
-- Residual risks:
 `;
 
-const ASSURANCE_TEMPLATE_AR = `# تقرير الضمان
+const ASSURANCE_TEMPLATE_AR = `# تقرير ضمان البرنامج
 
 ## 1. رأس المراجعة
-- نوع المراجعة: (بوابة مرحلة / تصميم / مخرج / امتثال / تدقيق / دروس مستفادة)
-- المشروع / الحزمة:
-- المرحلة أو البوابة:
+- نوع المراجعة: (واجهة / أصحاب مصلحة / خارج حدود البطارية / بوابة / ضمان / صحة التنفيذ)
+- البرنامج:
+- المشاريع المشمولة:
 - القرار الذي تدعمه المراجعة: (متابعة / متابعة بشروط / إيقاف / إعادة)
 
 ## 2. ملخص RAG
 | المجال | RAG | المبرر |
 | --- | --- | --- |
 
-## 3. الحوكمة وبوابة المرحلة
-| المعيار | الدليل | الملاحظة | RAG |
-| --- | --- | --- | --- |
+## 3. سجل الواجهات
+| المعرف | الواجهة | النوع | من | إلى | المالك | تاريخ الحاجة | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 
-## 4. مراجعة التصميم والمخرجات
-| المخرج | المتطلب / المعيار | الملاحظة | الشدة |
-| --- | --- | --- | --- |
+## 4. اعتمادات خارج حدود البطارية
+| الاعتماد | المزوّد | الاحتياج | تاريخ الحاجة | الأثر إذا تأخر | RAG |
+| --- | --- | --- | --- | --- | --- |
 
-## 5. قائمة الامتثال
-| البند | المتطلب | الحالة (مستوفى / جزئي / فجوة) | الدليل |
-| --- | --- | --- | --- |
+## 5. صحة التنفيذ عبر المشاريع
+| المشروع | RAG الجدول | RAG التكلفة | RAG المخاطر | RAG الجودة |
+| --- | --- | --- | --- | --- |
 
-## 6. ملاحظات التدقيق
-| المعرف | الملاحظة | الشدة | السبب | التوصية | المالك | الاستحقاق |
-| --- | --- | --- | --- | --- | --- | --- |
-
-## 7. الدروس المستفادة
-| الدرس | السياق | التوصية | ينطبق على |
-| --- | --- | --- | --- |
-
-## 8. رأي الضمان
+## 6. رأي الضمان
 - RAG الإجمالي:
 - شروط المتابعة:
-- المخاطر المتبقية:
 `;
 
 const DECISION_TEMPLATE_EN = `# Executive Decision Brief
@@ -227,30 +227,40 @@ const DECISION_TEMPLATE_EN = `# Executive Decision Brief
 - Needed by:
 - Constraints:
 
-## 2. Options
-| Option | Description | Pros | Cons |
-| --- | --- | --- | --- |
+## 2. Capital projects assessment
+- Business case:
+- CAPEX estimate:
+- OPEX estimate:
+- Feasibility (technical / commercial / schedule):
+- Funding mechanism: (equity / project finance / PPP / government or PIF / grants)
+- Strategy alignment:
+- Customer expectations:
+- Stage-gate decision: (go / no-go / hold)
 
-## 3. Multi-criteria matrix
+## 3. Options
+| Option | Description | CAPEX | OPEX | Pros | Cons |
+| --- | --- | --- | --- | --- | --- |
+
+## 4. Multi-criteria matrix
 | Criterion | Weight | Option A | Option B | Option C |
 | --- | --- | --- | --- | --- |
 | Weighted total | 100 |  |  |  |
 
-## 4. Cost-benefit
-| Option | Cost | Benefit | Net | Payback / notes |
+## 5. Strategy and governance
+| Decision | Strategy objective | Governance forum | Alignment | RAG |
 | --- | --- | --- | --- | --- |
 
-## 5. Risk-based view
-| Option | Key risks | Likelihood | Impact | Mitigation |
-| --- | --- | --- | --- | --- |
+## 6. Audit
+| ID | Finding | Severity | Owner | Due | RAG |
+| --- | --- | --- | --- | --- | --- |
 
-## 6. Recommendation
+## 7. Recommendation
 - Preferred option:
 - Why:
 - Conditions:
 - What would change the decision:
 
-## 7. Ask of the executive
+## 8. Ask of the executive
 `;
 
 const DECISION_TEMPLATE_AR = `# مذكرة قرار تنفيذية
@@ -261,99 +271,119 @@ const DECISION_TEMPLATE_AR = `# مذكرة قرار تنفيذية
 - مطلوب قبل:
 - القيود:
 
-## 2. الخيارات
-| الخيار | الوصف | المزايا | العيوب |
-| --- | --- | --- | --- |
+## 2. تقييم المشاريع الرأسمالية
+- دراسة الجدوى:
+- تقدير النفقات الرأسمالية:
+- تقدير النفقات التشغيلية:
+- الجدوى (فنية / تجارية / الجدول):
+- آلية التمويل: (حقوق ملكية / تمويل مشاريع / شراكة / حكومي أو صندوق الاستثمارات / منح)
+- المواءمة مع الاستراتيجية:
+- توقعات العميل:
+- قرار بوابة المرحلة: (متابعة / عدم متابعة / إيقاف)
 
-## 3. مصفوفة المعايير
+## 3. الخيارات
+| الخيار | الوصف | النفقات الرأسمالية | النفقات التشغيلية | المزايا | العيوب |
+| --- | --- | --- | --- | --- | --- |
+
+## 4. مصفوفة المعايير
 | المعيار | الوزن | الخيار أ | الخيار ب | الخيار ج |
 | --- | --- | --- | --- | --- |
 | المجموع المرجّح | 100 |  |  |  |
 
-## 4. التكلفة والعائد
-| الخيار | التكلفة | العائد | الصافي | الاسترداد / ملاحظات |
+## 5. الاستراتيجية والحوكمة
+| القرار | الهدف الاستراتيجي | منتدى الحوكمة | المواءمة | RAG |
 | --- | --- | --- | --- | --- |
 
-## 5. منظور المخاطر
-| الخيار | أهم المخاطر | الاحتمال | الأثر | المعالجة |
-| --- | --- | --- | --- | --- |
+## 6. التدقيق
+| المعرف | الملاحظة | الشدة | المالك | الاستحقاق | RAG |
+| --- | --- | --- | --- | --- | --- |
 
-## 6. التوصية
+## 7. التوصية
 - الخيار المفضل:
 - السبب:
 - الشروط:
 - ما الذي يغيّر القرار:
 
-## 7. المطلوب من التنفيذي
+## 8. المطلوب من التنفيذي
 `;
 
-const SUPPLY_TEMPLATE_EN = `# Supply Chain Report
+const OPERATIONS_TEMPLATE_EN = `# Operations Readiness Pack
 
 ## 1. Executive summary
-- Package:
+- System / facility:
 - Overall RAG:
 - Why:
-- Recommended action:
+- Decision: (ready / ready with conditions / not ready)
 
-## 2. Procurement strategy
-| Package | Strategy | Route | Need date | Owner | RAG |
+## 2. Testing and pre-commissioning
+| System | Test | Result | Open defects | Ready for next step | RAG |
 | --- | --- | --- | --- | --- | --- |
 
-## 3. Vendor evaluation
-| Vendor | Criterion | Score | Result | RAG |
-| --- | --- | --- | --- | --- |
-
-## 4. Technical bid evaluation
-| Bidder | Technical score | Deviations | Acceptable | RAG |
-| --- | --- | --- | --- | --- |
-
-## 5. Long-lead and expediting
-| Item | Supplier | Need date | Promised date | Expediting action | RAG |
+## 3. Mechanical completion and handover dossiers
+| System | MC certificate | Dossier | Open punch | Ready for handover | RAG |
 | --- | --- | --- | --- | --- | --- |
 
-## 6. Local content and logistics
-| Topic | Evidence | Risk | RAG |
-| --- | --- | --- | --- |
-| IKTVA / local content | | | |
-| Logistics | | | |
+## 4. Commissioning
+| System | Pre-commissioning | Commissioning | Ready for start-up | Constraint | RAG |
+| --- | --- | --- | --- | --- | --- |
 
-## 7. Supply chain risk register
-| ID | Risk | Impact | Owner | Response | RAG |
+## 5. Start-up and regularisation of operation
+| System | Start-up | Steady state | Performance test | Operating KPI | Warranty / defects | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+
+## 6. Punch list
+| ID | Category | Blocks handover | Owner | Due | Status |
+| --- | --- | --- | --- | --- | --- |
+
+## 7. Permits, offtakers, and capacity
+| Party | Requirement | Evidence | Gap | RAG |
+| --- | --- | --- | --- | --- |
+| Regulator / permit | | | | |
+| Customer / offtaker | | | | |
+| Capacity | | | | |
+
+## 8. O&M readiness
+| Area | Spares | Procedures | Training matrix | Maintenance | RAG |
 | --- | --- | --- | --- | --- | --- |
 `;
 
-const SUPPLY_TEMPLATE_AR = `# تقرير سلسلة الإمداد
+const OPERATIONS_TEMPLATE_AR = `# حزمة جاهزية التشغيل
 
 ## 1. الملخص التنفيذي
-- الحزمة:
+- النظام / المرفق:
 - RAG الإجمالي:
 - السبب:
-- الإجراء الموصى به:
+- القرار: (جاهز / جاهز بشروط / غير جاهز)
 
-## 2. استراتيجية المشتريات
-| الحزمة | الاستراتيجية | المسار | تاريخ الحاجة | المالك | RAG |
+## 2. الاختبار وما قبل التشغيل التجريبي
+| النظام | الاختبار | النتيجة | العيوب المفتوحة | جاهز للخطوة التالية | RAG |
 | --- | --- | --- | --- | --- | --- |
 
-## 3. تقييم الموردين
-| المورد | المعيار | الدرجة | النتيجة | RAG |
-| --- | --- | --- | --- | --- |
-
-## 4. التقييم الفني للعروض
-| مقدم العرض | الدرجة الفنية | الانحرافات | مقبول | RAG |
-| --- | --- | --- | --- | --- |
-
-## 5. التوريد الطويل والتعجيل
-| البند | المورد | تاريخ الحاجة | التاريخ الموعود | إجراء التعجيل | RAG |
+## 3. الإكمال الميكانيكي وملفات التسليم
+| النظام | شهادة الإكمال | ملف التسليم | نواقص مفتوحة | جاهز للتسليم | RAG |
 | --- | --- | --- | --- | --- | --- |
 
-## 6. المحتوى المحلي واللوجستيات
-| الموضوع | الدليل | الخطر | RAG |
-| --- | --- | --- | --- |
-| اكتفاء / المحتوى المحلي | | | |
-| اللوجستيات | | | |
+## 4. التشغيل التجريبي
+| النظام | ما قبل التشغيل التجريبي | التشغيل التجريبي | جاهز للإقلاع | القيد | RAG |
+| --- | --- | --- | --- | --- | --- |
 
-## 7. سجل مخاطر سلسلة الإمداد
-| المعرف | الخطر | الأثر | المالك | الاستجابة | RAG |
+## 5. الإقلاع وانتظام التشغيل
+| النظام | الإقلاع | التشغيل المستقر | اختبار الأداء | مؤشر التشغيل | الضمان / العيوب | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
+
+## 6. قائمة النواقص
+| المعرف | الفئة | يعوق التسليم | المالك | الاستحقاق | الحالة |
+| --- | --- | --- | --- | --- | --- |
+
+## 7. التصاريح والمستلمون والطاقة
+| الطرف | المتطلب | الدليل | الفجوة | RAG |
+| --- | --- | --- | --- | --- |
+| الجهة المنظمة / التصريح | | | | |
+| العميل / المستلم | | | | |
+| الطاقة | | | | |
+
+## 8. جاهزية التشغيل والصيانة
+| المجال | قطع الغيار | الإجراءات | مصفوفة التدريب | الصيانة | RAG |
 | --- | --- | --- | --- | --- | --- |
 `;
 
@@ -364,14 +394,14 @@ export const ADVISORS: readonly Advisor[] = [
     templates: { en: PMO_TEMPLATE_EN, ar: PMO_TEMPLATE_AR },
   },
   {
-    id: "supply",
-    track: "Supply Chain",
-    templates: { en: SUPPLY_TEMPLATE_EN, ar: SUPPLY_TEMPLATE_AR },
-  },
-  {
     id: "assurance",
     track: "Assurance",
     templates: { en: ASSURANCE_TEMPLATE_EN, ar: ASSURANCE_TEMPLATE_AR },
+  },
+  {
+    id: "operations",
+    track: "Operations",
+    templates: { en: OPERATIONS_TEMPLATE_EN, ar: OPERATIONS_TEMPLATE_AR },
   },
   {
     id: "decision",
