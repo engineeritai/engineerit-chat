@@ -6,7 +6,7 @@ import Header from "../../components/Header";
 import NavSidebar from "../../components/NavSidebar";
 import { supabase } from "@/lib/supabaseClient";
 import {
-  AI_ADVISORS_FEATURE,
+  ADVISOR_FEATURE_BY_PLAN,
   EXTRA_SEAT_SAR,
   PLAN_LABELS,
   extraSeatPrice,
@@ -206,7 +206,8 @@ export default function TeamPage() {
           <h1 className="page-title">Team</h1>
           <p className="page-subtitle">
             The buyer is the owner. Colleagues who accept an invite get Consultant-tier
-            access, including {AI_ADVISORS_FEATURE}, until the subscription ends.
+            engineer tools until the subscription ends. {ADVISOR_FEATURE_BY_PLAN.team}.{" "}
+            {ADVISOR_FEATURE_BY_PLAN.enterprise}.
           </p>
 
           {error && <p style={{ color: "#b91c1c", fontSize: 14 }}>{error}</p>}
@@ -220,7 +221,7 @@ export default function TeamPage() {
                 You are not on a team yet. Team is {teamMonth.primary} (approx. {teamMonth.usd}) for 5
                 seats, or {teamYear.primary} (approx. {teamYear.usd}). Extra seats are{" "}
                 {formatSar(EXTRA_SEAT_SAR.month, "month")} (approx. {formatUsdApprox(EXTRA_SEAT_SAR.month)}).{" "}
-                {AI_ADVISORS_FEATURE} is included.
+                {ADVISOR_FEATURE_BY_PLAN.team}.
               </p>
               <Link href="/pricing" className="btn" style={{ display: "inline-block" }}>
                 View Team pricing

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { localizedPlan, planById, formatMoney } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
-import { PLANS, isPlanId, type PlanId } from "@/lib/plans";
+import { PLANS, consultantLegacyActive, isPlanId, type PlanId } from "@/lib/plans";
 import { displayFeatures, formatSar, formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
 
@@ -54,6 +54,7 @@ export default function ProfilePage() {
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const [effectivePlan, setEffectivePlan] = useState<PlanId>("assistant");
+  const [consultantLegacy, setConsultantLegacy] = useState(false);
   const [activeSub, setActiveSub] = useState<SubscriptionRow | null>(null);
   const [subHistory, setSubHistory] = useState<SubscriptionRow[]>([]);
   const [chatCount, setChatCount] = useState<number | null>(null);
@@ -166,6 +167,14 @@ export default function ProfilePage() {
           subscription_tier: subscriptionTier,
         });
         setFullName(initialFullName);
+        const { data: legacyRow, error: legacyError } = await supabase
+          .from("profiles")
+          .select("consultant_legacy_price_until")
+          .eq("id", user.id)
+          .maybeSingle();
+        setConsultantLegacy(
+          !legacyError && consultantLegacyActive(legacyRow?.consultant_legacy_price_until)
+        );
         setEffectivePlan(await resolveEffectivePlan(supabase, user.id));
 
         // 3) Current subscription billing row
@@ -345,8 +354,9 @@ export default function ProfilePage() {
   const currentPlanLabel = planById(locale, currentPlanId).name;
   const catalogSource = PLANS.find((plan) => plan.id === currentPlanId) ?? PLANS[0];
   const catalogPlan = localizedPlan(locale, catalogSource);
-  const catalogMonth = planPriceLabel(currentPlanId, "month", 0, locale);
-  const catalogYear = planPriceLabel(currentPlanId, "year", 0, locale);
+  const legacyPrice = consultantLegacy && currentPlanId === "consultant";
+  const catalogMonth = planPriceLabel(currentPlanId, "month", 0, locale, legacyPrice);
+  const catalogYear = planPriceLabel(currentPlanId, "year", 0, locale, legacyPrice);
   const approx = locale === "ar" ? "تقريباً" : "approx.";
   const teamLapsed =
     (storedPlan === "team" || storedPlan === "enterprise") && currentPlan === "assistant";

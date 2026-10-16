@@ -34,25 +34,31 @@ export const PLAN_AMOUNTS_SAR: Record<
 > = {
   engineer: { month: 19, year: 190 },
   professional: { month: 41, year: 410 },
-  consultant: { month: 79, year: 790 },
-  team: { month: 349, year: 3490 },
-  enterprise: { month: 2500, year: 25000 },
+  consultant: { month: 99, year: 990 },
+  team: { month: 499, year: 4990 },
+  enterprise: { month: 3900, year: 39000 },
+};
+
+/** Existing Consultant subscribers keep this price until consultant_legacy_price_until. */
+export const CONSULTANT_LEGACY_SAR: { month: number; year: number } = {
+  month: 79,
+  year: 790,
 };
 
 export const EXTRA_SEAT_SAR: { month: number; year: number } = {
-  month: 69,
-  year: 690,
+  month: 89,
+  year: 890,
 };
 
 /** Published Enterprise add-on. Annual is 10× monthly, same as every other price. */
 export const ENTERPRISE_EXTRA_SEAT_SAR: { month: number; year: number } = {
-  month: 199,
-  year: 1990,
+  month: 299,
+  year: 2990,
 };
 
 export const ENTERPRISE_FROM_SAR: { month: number; year: number } = {
-  month: 2500,
-  year: 25000,
+  month: 3900,
+  year: 39000,
 };
 
 export const PLAN_LABELS: Record<PlanId, string> = {
@@ -64,7 +70,11 @@ export const PLAN_LABELS: Record<PlanId, string> = {
   enterprise: "Enterprise",
 };
 
-export const AI_ADVISORS_FEATURE = "AI Advisors included";
+export const ADVISOR_FEATURE_BY_PLAN = {
+  consultant: "PMO Advisor included",
+  team: "PMO and Program Assurance included",
+  enterprise: "PMO, Program Assurance, Operations Readiness, and Decision Support included",
+} as const;
 
 export const PLAN_COLORS: Record<PlanId, string> = {
   assistant: "#2563eb",
@@ -135,14 +145,27 @@ export type PriceQuote = {
   currency: "SAR";
 };
 
+export function consultantLegacyActive(
+  until: string | Date | null | undefined,
+  now = new Date()
+) {
+  if (!until) return false;
+  const end = until instanceof Date ? until : new Date(until);
+  return !Number.isNaN(end.getTime()) && end.getTime() > now.getTime();
+}
+
 export function quoteSelfServe(
   planId: SelfServePlanId,
   interval: BillingInterval,
-  extraSeats = 0
+  extraSeats = 0,
+  options?: { consultantLegacy?: boolean }
 ): PriceQuote {
   const seated = planId === "team" || planId === "enterprise";
   const seats = seated ? normalizeExtraSeats(extraSeats) : 0;
-  const base = PLAN_AMOUNTS_SAR[planId][interval];
+  const base =
+    planId === "consultant" && options?.consultantLegacy
+      ? CONSULTANT_LEGACY_SAR[interval]
+      : PLAN_AMOUNTS_SAR[planId][interval];
   const extra = seated ? seats * extraSeatPrice(planId)[interval] : 0;
   const amountSar = base + extra;
   return {
@@ -225,7 +248,7 @@ export const PLANS: Plan[] = [
       "Resource & cost estimation & schedule check",
       "Project dashboards and portfolio overview",
       "Export to pdf, word and Powerpoint",
-      AI_ADVISORS_FEATURE,
+      ADVISOR_FEATURE_BY_PLAN.consultant,
     ],
   },
   {
@@ -242,7 +265,7 @@ export const PLANS: Plan[] = [
       "Renews automatically until you cancel",
       "Invite colleagues by email",
       "Access ends for the whole team if the subscription lapses",
-      AI_ADVISORS_FEATURE,
+      ADVISOR_FEATURE_BY_PLAN.team,
     ],
   },
   {
@@ -257,7 +280,7 @@ export const PLANS: Plan[] = [
       `${ENTERPRISE_INCLUDED_SEATS} seats included`,
       `Extra seat ${formatSar(ENTERPRISE_EXTRA_SEAT_SAR.month, "month")}`,
       "Renews automatically until you cancel",
-      AI_ADVISORS_FEATURE,
+      ADVISOR_FEATURE_BY_PLAN.enterprise,
     ],
   },
 ];

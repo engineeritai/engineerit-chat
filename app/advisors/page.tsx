@@ -5,7 +5,8 @@ import Link from "next/link";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import AdvisorEcosystem from "../components/AdvisorEcosystem";
-import { ADVISOR_IDS, ADVISORS, getAdvisor, hasAdvisorAccess } from "@/lib/advisors";
+import { ADVISOR_IDS, ADVISORS, getAdvisor, hasAdvisorAccess, unlockPlanForAdvisor } from "@/lib/advisors";
+import BuyPlanButton from "@/app/components/BuyPlanButton";
 import { advisorsAreLive, advisorsNowLive } from "@/lib/advisorLaunch";
 import { groupedPlaybooks } from "@/lib/playbooks";
 import { useMessages } from "@/lib/useMessages";
@@ -18,7 +19,6 @@ export default function AdvisorsPage() {
   const live = advisorsAreLive();
   const nowLive = advisorsNowLive();
   const anyUnlocked = ADVISORS.some((advisor) => hasAdvisorAccess(tier, advisor.id, isGuest));
-  const showPilot = live && ready && (isGuest || !anyUnlocked);
 
   return (
     <div className="app-shell" dir={dir}>
@@ -58,26 +58,15 @@ export default function AdvisorsPage() {
             <div className="advisor-lock-banner">
               <div>
                 <div className="advisor-lock-title">{m.gating.lockedTitle}</div>
-                <p>{m.gating.lockedBody}</p>
+                <p>{m.gating.pilotNote}</p>
               </div>
               <div className="gate-actions">
-                {isGuest ? (
-                  <a className="gate-btn gate-btn-primary" href="/register">
-                    {m.gating.registerCta}
-                  </a>
-                ) : (
-                  <a className="gate-btn gate-btn-primary" href="/subscription">
-                    {m.gating.upgradeCta}
-                  </a>
-                )}
                 <a className="gate-btn" href="/pricing">
                   {m.gating.compareCta}
                 </a>
               </div>
             </div>
           )}
-
-          {showPilot && <p className="advisor-pilot">{m.gating.pilotNote}</p>}
 
           <div className="advisor-grid">
             {ADVISOR_IDS.map((id) => {
@@ -102,34 +91,54 @@ export default function AdvisorsPage() {
                     )}
                   </div>
                   <h2>{copy.name}</h2>
+                  <p className="advisor-included-on">{m.advisors.includedOn[advisor.id]}</p>
                   <p>{copy.summary}</p>
-                  <ul className="advisor-capabilities">
-                    {copy.capabilities.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                  <div className="advisor-card-playbooks">
-                    {groupedPlaybooks(advisor.id).map((group) => (
-                      <div key={group.group ?? "all"} className="advisor-card-playbook-group">
-                        {group.group ? (
-                          <p className="advisor-playbook-group-label">
-                            {m.advisors.playbookGroups[group.group]}
-                          </p>
-                        ) : null}
-                        {group.playbooks.map((playbook) => (
-                          <span key={playbook.id}>{copy.playbooks[playbook.id]?.name}</span>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+                  {unlocked ? (
+                    <ul className="advisor-capabilities">
+                      {copy.capabilities.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <ul className="advisor-capabilities">
+                      {copy.capabilities.slice(0, 2).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {unlocked ? (
+                    <div className="advisor-card-playbooks">
+                      {groupedPlaybooks(advisor.id).map((group) => (
+                        <div key={group.group ?? "all"} className="advisor-card-playbook-group">
+                          {group.group ? (
+                            <p className="advisor-playbook-group-label">
+                              {m.advisors.playbookGroups[group.group]}
+                            </p>
+                          ) : null}
+                          {group.playbooks.map((playbook) => (
+                            <span key={playbook.id}>{copy.playbooks[playbook.id]?.name}</span>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                   <div className="advisor-card-actions">
-                    <Link className="advisor-card-link" href={`/advisors/${advisor.id}`}>
-                      {!live ? m.advisors.comingSoonCta : entitled ? m.advisors.open : m.advisors.preview}
-                    </Link>
-                    {(!live || !entitled) && (
-                      <Link className="advisor-card-link advisor-card-link-secondary" href="/pricing">
-                        {m.gating.compareCta}
+                    {unlocked ? (
+                      <Link className="advisor-card-link" href={`/advisors/${advisor.id}`}>
+                        {m.advisors.open}
                       </Link>
+                    ) : (
+                      <>
+                        <BuyPlanButton
+                          planId={unlockPlanForAdvisor(advisor.id)}
+                          interval="month"
+                          verb="upgrade"
+                          className="advisor-card-link"
+                        />
+                        <Link className="advisor-card-link advisor-card-link-secondary" href={`/advisors/${advisor.id}`}>
+                          {!live ? m.advisors.comingSoonCta : m.advisors.preview}
+                        </Link>
+                      </>
                     )}
                   </div>
                 </article>

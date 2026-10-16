@@ -132,7 +132,7 @@ export const en: MarketingContent = {
   teams: {
     title: "Plans and pricing",
     intro:
-      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing is 10 times the monthly price. Team and Enterprise are bought through Moyasar and renew automatically. Consultant Engineer, Team, and Enterprise include AI Advisors.",
+      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing is 10 times the monthly price. Team and Enterprise are bought through Moyasar and renew automatically. Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes all four advisors.",
   },
   faq: {
     title: "Questions consultancies ask",
@@ -156,7 +156,7 @@ export const en: MarketingContent = {
       {
         question: "How do Team, Enterprise, and annual billing get paid?",
         answer:
-          "Engineer is SAR 190 per year, Professional Engineer SAR 410 per year, and Consultant Engineer SAR 790 per year. Team is SAR 349 per month or SAR 3,490 per year for 5 seats, plus SAR 69 per extra seat. Enterprise is SAR 2,500 per month or SAR 25,000 per year for 10 seats, plus SAR 199 per extra seat. All are paid through Moyasar and renew until you cancel. Consultant Engineer, Team, and Enterprise include AI Advisors.",
+          "Engineer is SAR 190 per year, Professional Engineer SAR 410 per year, and Consultant Engineer SAR 990 per year. Team is SAR 499 per month or SAR 4,990 per year for 5 seats, plus SAR 89 per extra seat. Enterprise is SAR 3,900 per month or SAR 39,000 per year for 10 seats, plus SAR 299 per extra seat. All are paid through Moyasar and renew until you cancel. Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
       },
       {
         question: "How do I change the interface language?",
@@ -203,7 +203,7 @@ export const en: MarketingContent = {
       "Assistant Engineer, Engineer, Professional Engineer, and Consultant Engineer. Same names, prices, and features as registration.",
     firmTitle: "Team and Enterprise",
     firmIntro:
-      "Team is SAR 349 per month or SAR 3,490 per year for 5 seats, plus SAR 69 per extra seat. Enterprise is SAR 2,500 per month or SAR 25,000 per year for 10 seats, plus SAR 199 per extra seat. Extra seats are charged on the saved card. Both renew automatically and include AI Advisors.",
+      "Team is SAR 499 per month or SAR 4,990 per year for 5 seats, plus SAR 89 per extra seat, and includes PMO and Program Assurance. Enterprise is SAR 3,900 per month or SAR 39,000 per year for 10 seats, plus SAR 299 per extra seat, and includes PMO, Program Assurance, Operations Readiness, and Decision Support. Extra seats are charged on the saved card. Both renew automatically.",
     approx: "approx.",
   },
 };

@@ -10,7 +10,15 @@ import {
 } from "@/lib/billingCycle";
 import { appBaseUrl, escapeHtml, getMailer } from "@/lib/mail";
 import { createMoyasarTokenPayment, fetchMoyasarPayment } from "@/lib/moyasar";
-import { PLAN_LABELS, periodDays, quoteSelfServe, type BillingInterval, type PlanId, type SelfServePlanId } from "@/lib/plans";
+import {
+  PLAN_LABELS,
+  consultantLegacyActive,
+  periodDays,
+  quoteSelfServe,
+  type BillingInterval,
+  type PlanId,
+  type SelfServePlanId,
+} from "@/lib/plans";
 import { sendReceipt } from "@/lib/receipt";
 
 export type OpenSubscription = {
@@ -88,7 +96,7 @@ export async function applyRenewalDecision(
     return decision.action;
   }
 
-  const quote = quoteSelfServe(sub.plan, sub.billing_interval, sub.extra_seats);
+  const quote = await quoteRenewal(admin, sub, now);
   const priced = renewalChargeHalalas(quote.amountHalalas, sub.credit_halalas);
   if (priced.chargeHalalas === 0) {
     await extendSubscription(admin, sub, now, priced.creditRemaining);
@@ -297,13 +305,26 @@ async function finishAttempt(
   };
 }
 
+async function quoteRenewal(admin: SupabaseClient, sub: OpenSubscription, now: Date) {
+  let consultantLegacy = false;
+  if (sub.plan === "consultant") {
+    const { data } = await admin
+      .from("profiles")
+      .select("consultant_legacy_price_until")
+      .eq("id", sub.user_id)
+      .maybeSingle();
+    consultantLegacy = consultantLegacyActive(data?.consultant_legacy_price_until, now);
+  }
+  return quoteSelfServe(sub.plan, sub.billing_interval, sub.extra_seats, { consultantLegacy });
+}
+
 async function extendSubscription(
   admin: SupabaseClient,
   sub: OpenSubscription,
   now: Date,
   creditRemaining: number
 ) {
-  const quote = quoteSelfServe(sub.plan, sub.billing_interval, sub.extra_seats);
+  const quote = await quoteRenewal(admin, sub, now);
   const periodEnd = nextPeriodEnd(now, new Date(sub.current_period_end), sub.billing_interval);
   const nowIso = now.toISOString();
   const endIso = periodEnd.toISOString();

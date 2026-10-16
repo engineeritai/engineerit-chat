@@ -51,6 +51,12 @@ export type Messages = {
     playbooksTitle: string;
     playbookHint: string;
     playbookRun: string;
+    includedOn: {
+      pmo: string;
+      assurance: string;
+      operations: string;
+      decision: string;
+    };
     playbookGroups: {
       controls: string;
       procurement: string;

@@ -5,6 +5,7 @@ import {
   isSelfServePlan,
   normalizeExtraSeats,
   parseInterval,
+  consultantLegacyActive,
   quoteSelfServe,
   type SelfServePlanId,
 } from "@/lib/plans";
@@ -71,7 +72,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Sign in required." }, { status: 401 });
     }
     const interval = parseInterval(body?.interval);
-    const quote = quoteSelfServe(planId as SelfServePlanId, interval, normalizeExtraSeats(body?.extraSeats));
+    const admin = getSupabaseAdmin();
+    let consultantLegacy = false;
+    if (planId === "consultant") {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("consultant_legacy_price_until")
+        .eq("id", user.id)
+        .maybeSingle();
+      consultantLegacy = consultantLegacyActive(profile?.consultant_legacy_price_until);
+    }
+    const quote = quoteSelfServe(planId as SelfServePlanId, interval, normalizeExtraSeats(body?.extraSeats), {
+      consultantLegacy,
+    });
     const label = PLAN_LABELS[quote.planId];
     const periodLabel = interval === "year" ? "yearly" : "monthly";
     const seated = quote.planId === "team" || quote.planId === "enterprise";
@@ -81,7 +94,6 @@ export async function POST(req: NextRequest) {
     const baseUrl = getAppBaseUrl(req);
     const pageUrl = `${baseUrl}/checkout/${checkoutId}`;
 
-    const admin = getSupabaseAdmin();
     const { error: insertErr } = await admin.from("moyasar_invoices").insert({
       id: checkoutId,
       invoice_id: null,

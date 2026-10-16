@@ -8,9 +8,13 @@ Published prices (annual = 10× monthly):
 | --- | --- | --- | --- |
 | Engineer | SAR 19 | SAR 190 | 1 |
 | Professional Engineer | SAR 41 | SAR 410 | 1 |
-| Consultant Engineer | SAR 79 | SAR 790 | 1 |
-| Team | SAR 349 | SAR 3,490 | 5 included, extra seat SAR 69 / month (SAR 690 / year) |
-| Enterprise | SAR 2,500 | SAR 25,000 | 10 included, extra seat SAR 199 / month (SAR 1,990 / year) |
+| Consultant Engineer | SAR 99 | SAR 990 | 1. PMO Advisor |
+| Team | SAR 499 | SAR 4,990 | 5 included, extra seat SAR 89 / month (SAR 890 / year). PMO and Program Assurance |
+| Enterprise | SAR 3,900 | SAR 39,000 | 10 included, extra seat SAR 299 / month (SAR 2,990 / year). PMO, Program Assurance, Operations Readiness, and Decision Support |
+
+Engineer and Professional Engineer have no advisors. Advisor access is an allow-list per advisor, checked on the server from the signed-in profile. A locked advisor shows a short preview and a Moyasar checkout button for the lowest plan that includes it: PMO on Consultant Engineer, Program Assurance on Team, Operations Readiness and Decision Support on Enterprise.
+
+Existing Consultant subscribers keep SAR 79 / month (SAR 790 / year) while `profiles.consultant_legacy_price_until` is in the future. The migration sets that timestamp to three months from when it is applied. After the timestamp, checkout and renewal use SAR 99 / SAR 990. New Consultant buyers pay the list price. A pilot or trial uses `profiles.advisor_trial_plan` (`consultant`, `team`, or `enterprise`) for advisor access. Apply the migration before deploy so renewals keep the grandfathered price.
 
 The first payment uses the Moyasar payment form with **Save card** after the customer checks the consent box. Moyasar returns a card token. A Vercel Cron job charges that token on the renewal date.
 
@@ -52,6 +56,7 @@ Run once, in order. Each file is idempotent (`if not exists` / `add column if no
 1. `supabase/migrations/20261016120000_teams_and_enterprise.sql` — `teams`, `team_members`, RLS.
 2. `supabase/migrations/20261016140000_moyasar_invoices.sql` — checkout rows used by the first payment.
 3. `supabase/migrations/20261016160000_recurring_billing.sql` — `saved_cards`, `billing_subscriptions`, `renewal_attempts`, plus `payment_id` on checkout rows.
+4. `supabase/migrations/20261016180000_advisor_tiers_and_legacy_price.sql` — `consultant_legacy_price_until` and `advisor_trial_plan` on `profiles`, and a three-month grandfather backfill for current Consultant rows. Apply this before the new prices go live.
 
 `saved_cards`, `billing_subscriptions`, and `renewal_attempts` have RLS enabled and no client policies. Only the service role reads or writes them. Card tokens are never returned to the browser.
 

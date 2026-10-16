@@ -12,16 +12,23 @@ import {
   zatcaInvoicesEnabled,
 } from "../lib/billingCycle";
 import {
-  AI_ADVISORS_FEATURE,
+  ADVISOR_FEATURE_BY_PLAN,
+  CONSULTANT_LEGACY_SAR,
   ENTERPRISE_EXTRA_SEAT_SAR,
   ENTERPRISE_FROM_SAR,
   ENTERPRISE_INCLUDED_SEATS,
   EXTRA_SEAT_SAR,
   PLANS,
   PLAN_AMOUNTS_SAR,
+  consultantLegacyActive,
   featureTier,
   quoteSelfServe,
 } from "../lib/plans";
+import {
+  hasAdvisorAccess,
+  resolveAdvisorAccessPlan,
+  unlockPlanForAdvisor,
+} from "../lib/advisors";
 import {
   assertIndividualPlanPrices,
   displayFeatures,
@@ -51,39 +58,54 @@ describe("self-serve prices", () => {
     }
   });
 
-  it("prices the Team plan at SAR 349 / 3,490 with 5 seats and SAR 69 extra seats", () => {
+  it("prices the Team plan at SAR 499 / 4,990 with 5 seats and SAR 89 extra seats", () => {
     const month = quoteSelfServe("team", "month", 0);
     const year = quoteSelfServe("team", "year", 2);
-    assert.equal(month.amountSar, 349);
+    assert.equal(month.amountSar, 499);
     assert.equal(month.seatLimit, 5);
-    assert.equal(year.amountSar, 3490 + 2 * 690);
+    assert.equal(year.amountSar, 4990 + 2 * 890);
     assert.equal(year.seatLimit, 7);
+    assert.equal(EXTRA_SEAT_SAR.month, 89);
     assert.equal(EXTRA_SEAT_SAR.year, EXTRA_SEAT_SAR.month * 10);
     assert.equal(quoteSelfServe("engineer", "month", 4).extraSeats, 0);
   });
 
-  it("lists Enterprise from SAR 2,500 / month, 10× annually", () => {
-    assert.equal(ENTERPRISE_FROM_SAR.month, 2500);
-    assert.equal(ENTERPRISE_FROM_SAR.year, 25000);
+  it("lists Enterprise at SAR 3,900 / month, 10× annually", () => {
+    assert.equal(ENTERPRISE_FROM_SAR.month, 3900);
+    assert.equal(ENTERPRISE_FROM_SAR.year, 39000);
+  });
+
+  it("keeps existing Consultant subscribers on SAR 79 until the grandfather date", () => {
+    assert.equal(quoteSelfServe("consultant", "month").amountSar, 99);
+    assert.equal(quoteSelfServe("consultant", "year").amountSar, 990);
+    assert.equal(quoteSelfServe("consultant", "month", 0, { consultantLegacy: true }).amountSar, 79);
+    assert.equal(quoteSelfServe("consultant", "year", 0, { consultantLegacy: true }).amountSar, 790);
+    assert.equal(CONSULTANT_LEGACY_SAR.month, 79);
+    const future = new Date(Date.now() + 86_400_000).toISOString();
+    const past = new Date(Date.now() - 86_400_000).toISOString();
+    assert.equal(consultantLegacyActive(future), true);
+    assert.equal(consultantLegacyActive(past), false);
+    assert.equal(consultantLegacyActive(null), false);
+    assert.equal(planPriceLabel("consultant", "year", 0, "en", true).primary, "SAR 790 / year");
   });
 
   it("shows the same names, SAR prices, USD, features, and annual prices", () => {
     assertIndividualPlanPrices();
     assert.equal(formatUsdApprox(19), "USD 5.07");
-    assert.equal(formatUsdApprox(349), "USD 93.07");
-    assert.equal(formatUsdApprox(2500), "USD 666.67");
-    assert.equal(planPriceLabel("consultant", "year").amountSar, 790);
-    assert.equal(planPriceLabel("consultant", "year").primary, "SAR 790 / year");
-    assert.equal(planPriceLabel("team", "year", 1).amountSar, 3490 + 690);
-    assert.equal(planPriceLabel("enterprise", "year").primary, "SAR 25,000 / year");
-    assert.equal(planPriceLabel("enterprise", "month", 2).amountSar, 2500 + 2 * 199);
+    assert.equal(formatUsdApprox(499), "USD 133.07");
+    assert.equal(formatUsdApprox(3900), "USD 1,040.00");
+    assert.equal(planPriceLabel("consultant", "year").amountSar, 990);
+    assert.equal(planPriceLabel("consultant", "year").primary, "SAR 990 / year");
+    assert.equal(planPriceLabel("team", "year", 1).amountSar, 4990 + 890);
+    assert.equal(planPriceLabel("enterprise", "year").primary, "SAR 39,000 / year");
+    assert.equal(planPriceLabel("enterprise", "month", 2).amountSar, 3900 + 2 * 299);
 
     for (const id of ["consultant", "team", "enterprise"] as const) {
       const plan = PLANS.find((item) => item.id === id);
       assert.ok(plan);
       assert.ok(plan.features.length > 0);
-      assert.ok(plan.features.includes(AI_ADVISORS_FEATURE));
-      assert.equal(displayFeatures(plan, "month").includes(AI_ADVISORS_FEATURE), true);
+      assert.ok(plan.features.includes(ADVISOR_FEATURE_BY_PLAN[id]));
+      assert.equal(displayFeatures(plan, "month").includes(ADVISOR_FEATURE_BY_PLAN[id]), true);
     }
 
     const consultant = PLANS.find((item) => item.id === "consultant");
@@ -234,15 +256,57 @@ describe("renewals, cancellation, and seat changes", () => {
     failureCount: 0,
   };
 
-  it("prices Enterprise at SAR 2,500 for 10 seats, plus SAR 199 per extra seat", () => {
+  it("prices Enterprise at SAR 3,900 for 10 seats, plus SAR 299 per extra seat", () => {
     const month = quoteSelfServe("enterprise", "month", 0);
     const year = quoteSelfServe("enterprise", "year", 2);
     assert.equal(ENTERPRISE_INCLUDED_SEATS, 10);
-    assert.equal(month.amountSar, 2500);
+    assert.equal(month.amountSar, 3900);
     assert.equal(month.seatLimit, 10);
-    assert.equal(year.amountSar, 25000 + 2 * ENTERPRISE_EXTRA_SEAT_SAR.year);
+    assert.equal(year.amountSar, 39000 + 2 * ENTERPRISE_EXTRA_SEAT_SAR.year);
     assert.equal(year.seatLimit, 12);
+    assert.equal(ENTERPRISE_EXTRA_SEAT_SAR.month, 299);
     assert.equal(ENTERPRISE_EXTRA_SEAT_SAR.year, ENTERPRISE_EXTRA_SEAT_SAR.month * 10);
+  });
+
+  it("gates each advisor to the plan that includes it", () => {
+    assert.equal(hasAdvisorAccess("consultant", "pmo"), true);
+    assert.equal(hasAdvisorAccess("consultant", "assurance"), false);
+    assert.equal(hasAdvisorAccess("team", "assurance"), true);
+    assert.equal(hasAdvisorAccess("team", "operations"), false);
+    assert.equal(hasAdvisorAccess("engineer", "pmo"), false);
+    assert.equal(hasAdvisorAccess("professional", "decision"), false);
+    assert.equal(hasAdvisorAccess("enterprise", "decision"), true);
+    assert.equal(hasAdvisorAccess("enterprise", "operations"), true);
+    assert.equal(unlockPlanForAdvisor("pmo"), "consultant");
+    assert.equal(unlockPlanForAdvisor("assurance"), "team");
+    assert.equal(unlockPlanForAdvisor("operations"), "enterprise");
+    assert.equal(unlockPlanForAdvisor("decision"), "enterprise");
+    assert.equal(
+      resolveAdvisorAccessPlan({ tier: "pilot", trialPlan: "team", effectivePlan: "assistant" }),
+      "team"
+    );
+    assert.equal(
+      hasAdvisorAccess(
+        resolveAdvisorAccessPlan({ tier: "trial", trialPlan: "team" }),
+        "assurance"
+      ),
+      true
+    );
+    assert.equal(
+      hasAdvisorAccess(
+        resolveAdvisorAccessPlan({ tier: "pilot", trialPlan: "consultant" }),
+        "assurance"
+      ),
+      false
+    );
+    assert.equal(
+      resolveAdvisorAccessPlan({ tier: "free_trial", trialPlan: null, effectivePlan: "enterprise" }),
+      "assistant"
+    );
+    assert.equal(
+      resolveAdvisorAccessPlan({ tier: "assistant", effectivePlan: "enterprise" }),
+      "enterprise"
+    );
   });
 
   it("charges on the renewal date and retries on day 1, 3, and 7", () => {

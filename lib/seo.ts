@@ -96,19 +96,19 @@ function offerDescription(plan: Plan, locale: "en" | "ar") {
   const year = grouped(amounts.year);
   if (plan.id === "team") {
     return locale === "ar"
-      ? `الفريق ${month} ر.س شهرياً أو ${year} ر.س سنوياً لـ ${TEAM_INCLUDED_SEATS} مقاعد. المقعد الإضافي ${grouped(EXTRA_SEAT_SAR.month)} ر.س شهرياً أو ${grouped(EXTRA_SEAT_SAR.year)} ر.س سنوياً. الشراء عبر Moyasar. مستشارو الذكاء الاصطناعي مشمولون في المهندس الاستشاري والفريق والمؤسسات.`
-      : `Team is SAR ${month} per month or SAR ${year} per year for ${TEAM_INCLUDED_SEATS} seats. Extra seat SAR ${grouped(EXTRA_SEAT_SAR.month)} per month or SAR ${grouped(EXTRA_SEAT_SAR.year)} per year. Bought through Moyasar. AI Advisors are included on Consultant Engineer, Team, and Enterprise.`;
+      ? `الفريق ${month} ر.س شهرياً أو ${year} ر.س سنوياً لـ ${TEAM_INCLUDED_SEATS} مقاعد. المقعد الإضافي ${grouped(EXTRA_SEAT_SAR.month)} ر.س شهرياً أو ${grouped(EXTRA_SEAT_SAR.year)} ر.س سنوياً. الشراء عبر Moyasar. الفريق يشمل مستشار إدارة المشاريع ومستشار ضمان البرنامج.`
+      : `Team is SAR ${month} per month or SAR ${year} per year for ${TEAM_INCLUDED_SEATS} seats. Extra seat SAR ${grouped(EXTRA_SEAT_SAR.month)} per month or SAR ${grouped(EXTRA_SEAT_SAR.year)} per year. Bought through Moyasar. Team includes the PMO Advisor and Program Assurance.`;
   }
   if (plan.id === "enterprise") {
     return locale === "ar"
-      ? `المؤسسات ${month} ر.س شهرياً أو ${year} ر.س سنوياً لـ ${ENTERPRISE_INCLUDED_SEATS} مقاعد. المقعد الإضافي ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.month)} ر.س شهرياً أو ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.year)} ر.س سنوياً. الشراء عبر Moyasar. مستشارو الذكاء الاصطناعي مشمولون في المهندس الاستشاري والفريق والمؤسسات.`
-      : `Enterprise is SAR ${month} per month or SAR ${year} per year for ${ENTERPRISE_INCLUDED_SEATS} seats. Extra seat SAR ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.month)} per month or SAR ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.year)} per year. Bought through Moyasar. AI Advisors are included on Consultant Engineer, Team, and Enterprise.`;
+      ? `المؤسسات ${month} ر.س شهرياً أو ${year} ر.س سنوياً لـ ${ENTERPRISE_INCLUDED_SEATS} مقاعد. المقعد الإضافي ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.month)} ر.س شهرياً أو ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.year)} ر.س سنوياً. الشراء عبر Moyasar. المؤسسات تشمل مستشار إدارة المشاريع وضمان البرنامج وجاهزية التشغيل ودعم القرار.`
+      : `Enterprise is SAR ${month} per month or SAR ${year} per year for ${ENTERPRISE_INCLUDED_SEATS} seats. Extra seat SAR ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.month)} per month or SAR ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.year)} per year. Bought through Moyasar. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.`;
   }
   const advisors =
     plan.id === "consultant"
       ? locale === "ar"
-        ? " مستشارو الذكاء الاصطناعي مشمولون في المهندس الاستشاري والفريق والمؤسسات."
-        : " AI Advisors are included on Consultant Engineer, Team, and Enterprise."
+        ? " المهندس الاستشاري يشمل مستشار إدارة المشاريع."
+        : " Consultant Engineer includes the PMO Advisor."
       : "";
   return locale === "ar"
     ? `${localizedPlan("ar", plan).name} ${month} ر.س شهرياً أو ${year} ر.س سنوياً. الشراء عبر Moyasar.${advisors}`

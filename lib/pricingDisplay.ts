@@ -29,18 +29,18 @@ const EXPECTED_PRICE_LABELS: Record<PlanId, string> = {
   assistant: "Free",
   engineer: "SAR 19 / month",
   professional: "SAR 41 / month",
-  consultant: "SAR 79 / month",
-  team: "SAR 349 / month",
-  enterprise: "SAR 2,500 / month",
+  consultant: "SAR 99 / month",
+  team: "SAR 499 / month",
+  enterprise: "SAR 3,900 / month",
 };
 
 const EXPECTED_YEARLY_LABELS: Record<PlanId, string> = {
   assistant: "Free",
   engineer: "SAR 190 / year",
   professional: "SAR 410 / year",
-  consultant: "SAR 790 / year",
-  team: "SAR 3,490 / year",
-  enterprise: "SAR 25,000 / year",
+  consultant: "SAR 990 / year",
+  team: "SAR 4,990 / year",
+  enterprise: "SAR 39,000 / year",
 };
 
 export function assertIndividualPlanPrices() {
@@ -88,12 +88,15 @@ export function planPriceLabel(
   planId: PlanId,
   interval: BillingInterval,
   extraSeats = 0,
-  locale: "en" | "ar" = "en"
+  locale: "en" | "ar" = "en",
+  consultantLegacy = false
 ): { primary: string; usd: string | null; amountSar: number } {
   if (planId === "assistant") {
     return { primary: locale === "ar" ? "مجاناً" : "Free", usd: null, amountSar: 0 };
   }
-  const quote = quoteSelfServe(planId, interval, extraSeats);
+  const quote = quoteSelfServe(planId, interval, extraSeats, {
+    consultantLegacy: consultantLegacy && planId === "consultant",
+  });
   if (locale === "ar") {
     const period = interval === "year" ? "سنوياً" : "شهرياً";
     const usd = new Intl.NumberFormat("en-US", {

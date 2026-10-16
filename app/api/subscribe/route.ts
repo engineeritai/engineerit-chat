@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PLAN_AMOUNTS_SAR } from "@/lib/plans";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type PlanId = "assistant" | "engineer" | "professional" | "consultant";
 
 const PLAN_PRICES: Record<PlanId, number> = {
   assistant: 0,
-  engineer: 19,
-  professional: 41,
-  consultant: 79,
+  engineer: PLAN_AMOUNTS_SAR.engineer.month,
+  professional: PLAN_AMOUNTS_SAR.professional.month,
+  consultant: PLAN_AMOUNTS_SAR.consultant.month,
 };
 
 const PLAN_DURATION_DAYS = 30;

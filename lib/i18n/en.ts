@@ -22,9 +22,15 @@ const en: Messages = {
       "Four AI advisors that engineer your project documents with a structured approach. Attach your files, run a one-click playbook, and get an export-ready report with tables, a RAG rating and an executive summary.",
     open: "Open advisor",
     preview: "View locked preview",
-    comingSoonBadge: "Included on Consultant Engineer, Team, and Enterprise",
+    comingSoonBadge: "Included by plan",
     comingSoonBody:
-      "AI Advisors are included on Consultant Engineer, Team, and Enterprise. Preview every playbook and report template below.",
+      "Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
+    includedOn: {
+      pmo: "Included on Consultant Engineer",
+      assurance: "Included on Team",
+      operations: "Included on Enterprise",
+      decision: "Included on Enterprise",
+    },
     comingSoonCta: "Preview playbooks",
     nowLiveBadge: "Now live",
     responsibility:
@@ -258,8 +264,9 @@ const en: Messages = {
     },
   },
   gating: {
-    lockedTitle: "Included on Consultant Engineer, Team, and Enterprise",
-    lockedBody: "Preview every playbook and report template below.",
+    lockedTitle: "Buy the plan that includes this advisor",
+    lockedBody:
+      "A short preview is on this page. Checkout for the plan named on the advisor opens in Moyasar.",
     upgradeCta: "Upgrade",
     compareCta: "Compare plans",
     registerCta: "Register",
@@ -267,28 +274,28 @@ const en: Messages = {
     close: "Close",
     upgradeRequired: "Upgrade required",
     registerRequired: "Register / Login required",
-    sendLocked: "Playbooks run on Consultant Engineer, Team, and Enterprise.",
+    sendLocked: "Buy the plan named on this advisor through Moyasar to run its playbooks.",
     pilotNote:
-      "Team includes 5 seats and Enterprise includes 10 seats. Both are bought through Moyasar.",
+      "Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support. Each plan is bought through Moyasar.",
   },
   pricing: {
     title: "Plans and AI Advisors",
     subtitle:
-      "PMO, Program Assurance, Operations Readiness, and Decision Support are included on Consultant, Team, and Enterprise.",
+      "Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
     advisorsIncluded:
-      "AI Advisors: PMO, Program Assurance, Operations Readiness, and Decision Support",
+      "PMO Advisor on Consultant Engineer. PMO and Program Assurance on Team. All four advisors on Enterprise.",
     advisorsLocked:
-      "AI Advisors — PMO, Program Assurance, Operations Readiness, and Decision Support — included on Consultant, Team, and Enterprise",
+      "A locked advisor shows a short preview. Buy the plan that includes it through Moyasar.",
     availabilityTitle: "AI Advisors by plan",
     availabilityNote:
-      "Consultant Engineer, Team, and Enterprise include every advisor and playbook. Assistant Engineer, Engineer, and Professional Engineer keep a locked preview.",
+      "Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
     planColumn: "Plan",
     accessColumn: "AI Advisors",
     included: "Included",
     locked: "Locked preview",
     manageCta: "Manage subscription",
     teamEnterpriseNote:
-      "Team and Enterprise include all four advisors.",
+      "Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
     teamPrice:
       "Team is SAR {monthly} per month for {seats} seats, plus SAR {extra} per extra seat.",
     enterprisePrice:
