@@ -27,6 +27,7 @@ const pages: { path: string; marker: string; note?: string }[] = [
   { path: "/account/billing/card", marker: "body" },
   { path: "/account/team", marker: "body" },
   { path: "/admin/subscriptions", marker: "body" },
+  { path: "/admin/stats", marker: "h1" },
   { path: "/enterprise/paid", marker: "body" },
   { path: "/team/join", marker: "body" },
   { path: "/offline", marker: "h1" },

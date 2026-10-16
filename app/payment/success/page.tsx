@@ -9,6 +9,7 @@ import { SarText } from "@/app/components/RiyalAmount";
 import { isPlanId, type PlanId } from "@/lib/plans";
 import { downloadInvoicePdf } from "@/lib/invoiceDownload";
 import { supabase } from "@/lib/supabaseClient";
+import { trackOnce } from "@/lib/attribution";
 
 type Invoice = {
   id: string;
@@ -55,6 +56,9 @@ export default function PaymentSuccessPage() {
         return;
       }
       setInvoice(json.invoice);
+      if (json.invoice.status === "paid" || json.invoice.paid_at) {
+        trackOnce(`payment_succeeded:${checkout}`, "payment_succeeded", { plan: json.invoice.plan });
+      }
     })();
     const timer = window.setTimeout(() => {
       window.location.href = "/chat";

@@ -4,7 +4,9 @@ import "./globals.css";
 import "./design.css";
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { LocaleProvider } from "@/app/components/LocaleProvider";
+import Attribution from "@/app/components/Attribution";
 import KeyboardInset from "@/app/components/KeyboardInset";
 import PwaRegister from "@/app/components/PwaRegister";
 import { metaFor } from "@/lib/pageMeta";
@@ -118,6 +120,8 @@ export default async function RootLayout({
         <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
         <KeyboardInset />
         <PwaRegister />
+        <Attribution />
+        <Analytics />
       </body>
     </html>
   );
