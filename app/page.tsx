@@ -14,6 +14,7 @@ import Link from "next/link";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import AdvisorBar from "./components/AdvisorBar";
+import AdvisorEcosystem from "./components/AdvisorEcosystem";
 import { supabase } from "@/lib/supabaseClient";
 import {
   copyAsHtml,
@@ -566,6 +567,7 @@ export default function Page() {
         )}
 
         <div className="chat-mode-stack">
+          <AdvisorEcosystem compact />
           <AdvisorBar planId={advisorPlan} isGuest={isGuest} />
 
         <div className="engineer-tools">

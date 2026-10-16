@@ -20,8 +20,9 @@ export function gateAdvisor(args: {
   advisorId: unknown;
   planId: unknown;
   locale: unknown;
+  playbookId?: unknown;
 }): AdvisorGate {
-  const { advisorId, planId, locale } = args;
+  const { advisorId, planId, locale, playbookId } = args;
   if (advisorId == null || advisorId === "") return { active: false };
 
   if (!isAdvisorId(advisorId)) {
@@ -46,12 +47,15 @@ export function gateAdvisor(args: {
   }
 
   const resolvedLocale: Locale = isLocale(locale) ? locale : "en";
-  const prompt = resolveAdvisorPrompt(advisorId, resolvedLocale);
+  const prompt = resolveAdvisorPrompt(advisorId, resolvedLocale, playbookId);
   if (!prompt.ok) {
     return {
       active: true,
       ok: false,
-      response: NextResponse.json({ error: "Unknown advisor." }, { status: 400 }),
+      response: NextResponse.json(
+        { error: "Unknown advisor or playbook." },
+        { status: 400 }
+      ),
     };
   }
 

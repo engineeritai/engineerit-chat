@@ -4,7 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
+import AdvisorEcosystem from "../components/AdvisorEcosystem";
 import { ADVISORS, hasAdvisorAccess } from "@/lib/advisors";
+import { playbooksFor } from "@/lib/playbooks";
 import { useMessages } from "@/lib/useMessages";
 import { useSubscriptionTier } from "@/lib/useSubscriptionTier";
 
@@ -30,6 +32,8 @@ export default function AdvisorsPage() {
           </div>
           <h1 className="page-title">{m.advisors.landingTitle}</h1>
           <p className="page-subtitle">{m.advisors.landingSubtitle}</p>
+
+          <AdvisorEcosystem />
 
           {ready && !anyUnlocked && (
             <div className="advisor-lock-banner">
@@ -75,6 +79,11 @@ export default function AdvisorsPage() {
                       <li key={item}>{item}</li>
                     ))}
                   </ul>
+                  <div className="advisor-card-playbooks">
+                    {playbooksFor(advisor.id).map((playbook) => (
+                      <span key={playbook.id}>{copy.playbooks[playbook.id]?.name}</span>
+                    ))}
+                  </div>
                   <Link className="advisor-card-link" href={`/advisors/${advisor.id}`}>
                     {ready && !unlocked ? m.advisors.preview : m.advisors.open}
                   </Link>

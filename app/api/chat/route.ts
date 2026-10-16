@@ -100,7 +100,7 @@ async function enforceDailyLimit(args: {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { discipline, messages, attachments, planId, userId, advisorId, locale } = body as {
+  const { discipline, messages, attachments, planId, userId, advisorId, locale, playbookId } = body as {
     discipline: string;
     messages: { role: "user" | "assistant"; content: string }[];
     attachments?: { type: "image" | "file"; url: string }[];
@@ -108,9 +108,10 @@ export async function POST(req: NextRequest) {
     userId?: string | null;
     advisorId?: string;
     locale?: string;
+    playbookId?: string;
   };
 
-  const advisorGate = gateAdvisor({ advisorId, planId, locale });
+  const advisorGate = gateAdvisor({ advisorId, planId, locale, playbookId });
   if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
 
   // Enforce daily limit per IP

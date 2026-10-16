@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  advisorTemplate,
   exportCapabilities,
   getAdvisor,
   hasAdvisorAccess,
   type AdvisorId,
 } from "@/lib/advisors";
+import { getPlaybook, playbooksFor, playbookTemplate } from "@/lib/playbooks";
 import {
   copyAsHtml,
   exportPdf,
@@ -58,20 +58,24 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
   const unlocked = ready && !!advisor && hasAdvisorAccess(tier, advisorId, isGuest);
   const showLocked = ready && !unlocked;
   const exports = exportCapabilities(tier, isGuest);
-  const filename = `engineerit-${advisorId}`;
+  const playbooks = advisor ? playbooksFor(advisor.id) : [];
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [openShareFor, setOpenShareFor] = useState<string | null>(null);
   const [showGate, setShowGate] = useState(false);
   const [gateNotice, setGateNotice] = useState<string | null>(null);
+  const [activePlaybook, setActivePlaybook] = useState(playbooks[0]?.id ?? "");
 
   if (!advisor) return null;
 
-  const template = advisorTemplate(advisor, locale);
+  const selected = getPlaybook(advisor.id, activePlaybook) ?? playbooks[0];
+  const template = selected ? playbookTemplate(selected, locale) : "";
+  const filename = `engineerit-${advisorId}${selected ? `-${selected.id}` : ""}`;
 
   function openGate(notice?: string) {
     setGateNotice(notice || (isGuest ? m.gating.lockedBody : m.gating.sendLocked));
@@ -122,13 +126,14 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     e.target.value = "";
   };
 
-  async function analyzeImage(question: string, imageFile: File): Promise<string> {
+  async function analyzeImage(question: string, imageFile: File, playbookId: string): Promise<string> {
     const formData = new FormData();
     formData.append("file", imageFile, imageFile.name);
     formData.append("question", question || "Analyze this project image.");
     formData.append("advisorId", advisorId);
     formData.append("planId", isGuest ? "guest" : tier);
     formData.append("locale", locale);
+    if (playbookId) formData.append("playbookId", playbookId);
     const res = await fetch("/api/image", { method: "POST", body: formData });
     if (res.status === 403) {
       openGate();
@@ -139,13 +144,14 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     return data.reply || "";
   }
 
-  async function analyzeDocument(question: string, docFile: File): Promise<string> {
+  async function analyzeDocument(question: string, docFile: File, playbookId: string): Promise<string> {
     const formData = new FormData();
     formData.append("file", docFile, docFile.name);
     formData.append("question", question || "Review this project file.");
     formData.append("advisorId", advisorId);
     formData.append("planId", isGuest ? "guest" : tier);
     formData.append("locale", locale);
+    if (playbookId) formData.append("playbookId", playbookId);
     const res = await fetch("/api/document", { method: "POST", body: formData });
     if (res.status === 403) {
       openGate();
@@ -156,22 +162,23 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     return data.reply || "";
   }
 
-  async function send() {
-    if (sending || !ready) return;
+  async function submit(text: string, playbookId: string) {
+    if (sendingRef.current || !ready) return;
     if (!unlocked) {
       openGate();
       return;
     }
-    if (!input.trim() && attachments.length === 0) return;
+    const userText = text.trim();
+    if (!userText && attachments.length === 0) return;
 
     const check = checkDailyLimit();
     if (!check.ok) return;
 
-    const userText = input.trim();
     const userAttachments = attachments;
     setInput("");
     setAttachments([]);
     setAttachOpen(false);
+    if (playbookId) setActivePlaybook(playbookId);
 
     const history = messages;
     setMessages((prev) => [
@@ -183,6 +190,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         attachments: userAttachments,
       },
     ]);
+    sendingRef.current = true;
     setSending(true);
 
     try {
@@ -191,20 +199,25 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
       let reply = "";
 
       if (docAttachment?.file) {
-        reply = await analyzeDocument(userText, docAttachment.file);
+        reply = await analyzeDocument(userText, docAttachment.file, playbookId);
       } else if (imgAttachment?.file) {
-        reply = await analyzeImage(userText, imgAttachment.file);
+        reply = await analyzeImage(userText, imgAttachment.file, playbookId);
       } else {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             discipline: copy.name,
-            messages: history.concat({ id: "temp", role: "user" as const, content: userText }),
+            messages: history.concat({
+              id: "temp",
+              role: "user" as const,
+              content: userText,
+            }),
             planId: isGuest ? "guest" : tier,
             userId,
             advisorId,
             locale,
+            playbookId,
           }),
         });
 
@@ -240,6 +253,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         { id: uuid(), role: "assistant", content: "Sorry, something failed. Please try again." },
       ]);
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   }
@@ -247,7 +261,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      void send();
+      void submit(input, activePlaybook);
     }
   }
 
@@ -302,28 +316,40 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                 <li key={item}>{item}</li>
               ))}
             </ul>
-            <h2 className="section-heading">{m.advisors.startersTitle}</h2>
+            <h2 className="section-heading">{m.advisors.playbooksTitle}</h2>
+            <p className="advisor-playbook-hint">{m.advisors.playbookHint}</p>
             <div className="advisor-starters">
-              {copy.starters.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  className="advisor-starter"
-                  onClick={() => {
-                    if (!unlocked) {
-                      openGate();
-                      return;
-                    }
-                    setInput(prompt);
-                  }}
-                >
-                  {prompt}
-                </button>
-              ))}
+              {playbooks.map((playbook) => {
+                const label = copy.playbooks[playbook.id];
+                if (!label) return null;
+                const active = selected?.id === playbook.id;
+                return (
+                  <button
+                    key={playbook.id}
+                    type="button"
+                    className={"advisor-starter" + (active ? " advisor-starter-active" : "")}
+                    disabled={sending}
+                    onClick={() => {
+                      setActivePlaybook(playbook.id);
+                      if (!unlocked) {
+                        openGate();
+                        return;
+                      }
+                      void submit(m.advisors.playbookRun.replace("{name}", label.name), playbook.id);
+                    }}
+                  >
+                    <span className="advisor-playbook-name">{label.name}</span>
+                    <span className="advisor-playbook-outcome">{label.outcome}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <details className="advisor-template" open>
-            <summary>{m.advisors.outputTemplate}</summary>
+            <summary>
+              {m.advisors.outputTemplate}
+              {selected ? `: ${copy.playbooks[selected.id]?.name ?? ""}` : ""}
+            </summary>
             <pre>{template.trim()}</pre>
           </details>
         </div>
@@ -550,7 +576,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
               type="button"
               className="chat-input-send-btn"
               disabled={unlocked && (sending || (!input.trim() && attachments.length === 0))}
-              onClick={() => void send()}
+              onClick={() => void submit(input, activePlaybook)}
               aria-label="Send message"
             >
               ➤

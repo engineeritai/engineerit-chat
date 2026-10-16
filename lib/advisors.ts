@@ -10,7 +10,7 @@ import type { Locale } from "@/lib/i18n";
  * Included: Consultant, Team, Enterprise.
  * Locked preview: guest, Free (assistant), Engineer, Professional.
  */
-export const ADVISOR_IDS = ["pmo", "assurance", "decision"] as const;
+export const ADVISOR_IDS = ["pmo", "assurance", "decision", "supply"] as const;
 
 export type AdvisorId = (typeof ADVISOR_IDS)[number];
 
@@ -72,7 +72,7 @@ const PLAN_ALIASES: Record<string, AdvisorPlanId> = {
 export type Advisor = {
   id: AdvisorId;
   /** Ecosystem segment: engineerit AI > AI Advisors > track */
-  track: "PMO" | "Governance" | "Decision";
+  track: "PMO" | "Assurance" | "Decision" | "Supply Chain";
   templates: Record<Locale, string>;
 };
 
@@ -286,6 +286,76 @@ const DECISION_TEMPLATE_AR = `# مذكرة قرار تنفيذية
 ## 7. المطلوب من التنفيذي
 `;
 
+const SUPPLY_TEMPLATE_EN = `# Supply Chain Report
+
+## 1. Executive summary
+- Package:
+- Overall RAG:
+- Why:
+- Recommended action:
+
+## 2. Procurement strategy
+| Package | Strategy | Route | Need date | Owner | RAG |
+| --- | --- | --- | --- | --- | --- |
+
+## 3. Vendor evaluation
+| Vendor | Criterion | Score | Result | RAG |
+| --- | --- | --- | --- | --- |
+
+## 4. Technical bid evaluation
+| Bidder | Technical score | Deviations | Acceptable | RAG |
+| --- | --- | --- | --- | --- |
+
+## 5. Long-lead and expediting
+| Item | Supplier | Need date | Promised date | Expediting action | RAG |
+| --- | --- | --- | --- | --- | --- |
+
+## 6. Local content and logistics
+| Topic | Evidence | Risk | RAG |
+| --- | --- | --- | --- |
+| IKTVA / local content | | | |
+| Logistics | | | |
+
+## 7. Supply chain risk register
+| ID | Risk | Impact | Owner | Response | RAG |
+| --- | --- | --- | --- | --- | --- |
+`;
+
+const SUPPLY_TEMPLATE_AR = `# تقرير سلسلة الإمداد
+
+## 1. الملخص التنفيذي
+- الحزمة:
+- RAG الإجمالي:
+- السبب:
+- الإجراء الموصى به:
+
+## 2. استراتيجية المشتريات
+| الحزمة | الاستراتيجية | المسار | تاريخ الحاجة | المالك | RAG |
+| --- | --- | --- | --- | --- | --- |
+
+## 3. تقييم الموردين
+| المورد | المعيار | الدرجة | النتيجة | RAG |
+| --- | --- | --- | --- | --- |
+
+## 4. التقييم الفني للعروض
+| مقدم العرض | الدرجة الفنية | الانحرافات | مقبول | RAG |
+| --- | --- | --- | --- | --- |
+
+## 5. التوريد الطويل والتعجيل
+| البند | المورد | تاريخ الحاجة | التاريخ الموعود | إجراء التعجيل | RAG |
+| --- | --- | --- | --- | --- | --- |
+
+## 6. المحتوى المحلي واللوجستيات
+| الموضوع | الدليل | الخطر | RAG |
+| --- | --- | --- | --- |
+| اكتفاء / المحتوى المحلي | | | |
+| اللوجستيات | | | |
+
+## 7. سجل مخاطر سلسلة الإمداد
+| المعرف | الخطر | الأثر | المالك | الاستجابة | RAG |
+| --- | --- | --- | --- | --- | --- |
+`;
+
 export const ADVISORS: readonly Advisor[] = [
   {
     id: "pmo",
@@ -294,13 +364,18 @@ export const ADVISORS: readonly Advisor[] = [
   },
   {
     id: "assurance",
-    track: "Governance",
+    track: "Assurance",
     templates: { en: ASSURANCE_TEMPLATE_EN, ar: ASSURANCE_TEMPLATE_AR },
   },
   {
     id: "decision",
     track: "Decision",
     templates: { en: DECISION_TEMPLATE_EN, ar: DECISION_TEMPLATE_AR },
+  },
+  {
+    id: "supply",
+    track: "Supply Chain",
+    templates: { en: SUPPLY_TEMPLATE_EN, ar: SUPPLY_TEMPLATE_AR },
   },
 ];
 

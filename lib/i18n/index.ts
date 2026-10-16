@@ -2,7 +2,7 @@ import ar from "./ar";
 import en from "./en";
 import type { Locale, Messages } from "./types";
 
-export type { AdvisorCopy, Locale, Messages } from "./types";
+export type { AdvisorCopy, Locale, Messages, PlaybookCopy } from "./types";
 
 /**
  * English is the default catalog.

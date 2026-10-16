@@ -1898,9 +1898,119 @@ body {
   color: #111827;
 }
 
-.advisor-starter:hover {
-  border-color: #93c5fd;
-  background: #f8fafc;
+.advisor-starter-active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.advisor-playbook-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.advisor-playbook-name {
+  display: block;
+  font-weight: 600;
+  color: #111827;
+}
+
+.advisor-playbook-outcome {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.35;
+}
+
+.advisor-card-playbooks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.advisor-card-playbooks span {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+}
+
+.advisor-ecosystem {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.advisor-ecosystem-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.advisor-ecosystem-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.advisor-ecosystem-flow li {
+  flex: 1 1 180px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #f9fafb;
+}
+
+.advisor-ecosystem-step {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.advisor-ecosystem-detail {
+  display: block;
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.advisor-ecosystem-line {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #4b5563;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.advisor-ecosystem-line strong {
+  color: #111827;
+  font-weight: 700;
+}
+
+.advisor-ecosystem-compact {
+  margin: 8px 16px 0;
+  padding: 8px 12px;
+}
+
+@media (min-width: 900px) {
+  .advisor-ecosystem-compact {
+    margin: 8px 24px 2px;
+  }
 }
 
 .advisor-composer-locked {

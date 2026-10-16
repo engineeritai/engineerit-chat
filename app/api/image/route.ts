@@ -15,11 +15,13 @@ export async function POST(req: Request) {
     const advisorField = formData.get("advisorId");
     const planField = formData.get("planId");
     const localeField = formData.get("locale");
+    const playbookField = formData.get("playbookId");
 
     const advisorGate = gateAdvisor({
       advisorId: typeof advisorField === "string" ? advisorField : "",
       planId: typeof planField === "string" ? planField : "",
       locale: typeof localeField === "string" ? localeField : "",
+      playbookId: typeof playbookField === "string" ? playbookField : "",
     });
     if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
 

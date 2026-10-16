@@ -176,6 +176,7 @@ export async function POST(req: NextRequest) {
     const advisorField = formData.get("advisorId");
     const planField = formData.get("planId");
     const localeField = formData.get("locale");
+    const playbookField = formData.get("playbookId");
 
     const question =
       typeof questionField === "string" && questionField.trim().length > 0
@@ -186,6 +187,7 @@ export async function POST(req: NextRequest) {
       advisorId: typeof advisorField === "string" ? advisorField : "",
       planId: typeof planField === "string" ? planField : "",
       locale: typeof localeField === "string" ? localeField : "",
+      playbookId: typeof playbookField === "string" ? playbookField : "",
     });
     if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
     const advisorSystem = advisorGate.active && advisorGate.ok ? advisorGate.prompt : undefined;

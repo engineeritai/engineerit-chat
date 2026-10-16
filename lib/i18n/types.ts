@@ -1,17 +1,29 @@
 export type Locale = "en" | "ar";
 
+export type PlaybookCopy = {
+  name: string;
+  outcome: string;
+};
+
 export type AdvisorCopy = {
   name: string;
   track: string;
   summary: string;
   capabilities: string[];
-  starters: string[];
+  playbooks: Record<string, PlaybookCopy>;
 };
 
 export type Messages = {
   advisors: {
     sectionTitle: string;
     ecosystem: string;
+    ecosystemTitle: string;
+    ecosystemAi: string;
+    ecosystemAdvisors: string;
+    ecosystemTracks: string;
+    ecosystemOutcomesLabel: string;
+    ecosystemOutcomes: string;
+    ecosystemOutcomesShort: string;
     landingNav: string;
     landingTitle: string;
     landingSubtitle: string;
@@ -28,11 +40,14 @@ export type Messages = {
     homeCta: string;
     notFound: string;
     capabilitiesTitle: string;
-    startersTitle: string;
+    playbooksTitle: string;
+    playbookHint: string;
+    playbookRun: string;
     items: {
       pmo: AdvisorCopy;
       assurance: AdvisorCopy;
       decision: AdvisorCopy;
+      supply: AdvisorCopy;
     };
   };
   gating: {

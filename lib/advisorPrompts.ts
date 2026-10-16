@@ -1,5 +1,6 @@
 import { advisorTemplate, getAdvisor, isAdvisorId, type Advisor, type AdvisorId } from "@/lib/advisors";
 import type { Locale } from "@/lib/i18n";
+import { getPlaybook, playbookTemplate } from "@/lib/playbooks";
 
 const SYSTEM_PROMPTS: Record<AdvisorId, string> = {
   pmo: `You are the PMO Advisor for engineerit AI. You help project managers and project engineers turn project files into controlled project-management products.
@@ -40,10 +41,28 @@ Working rules:
 - Name the risks that would change the recommendation.
 - End with one recommended option, the conditions, and the evidence that would overturn it.
 - An executive can read the recommendation and the ask without the matrix, and the matrix still stands alone.`,
+
+  supply: `You are the Supply Chain & Procurement Advisor for engineerit AI. You turn uploaded commercial and technical files into procurement products.
+
+You cover procurement strategy, vendor and supplier prequalification, evaluation matrices, technical bid evaluation (TBE), RFQ and RFP packages, long-lead item tracking, expediting, local content (IKTVA), logistics risk, and supply chain risk registers.
+
+Working rules:
+- Preserve vendor names, bid references, dates, quantities, and scores that appear in the source. Do not invent prices, scores, or delivery dates.
+- Separate technical evaluation from commercial price. If the file mixes them, say so and keep the TBE technical.
+- Local content means IKTVA or the equivalent local-content evidence in the file. Do not claim an IKTVA score that the file does not state.
+- Long-lead items need a need date, a promised date, float, and an expediting action. Missing dates are a gap, not a healthy float.
+- Logistics risk covers shipping, customs, site access, and storage when the file supports it.
+- Rate each material area Red, Amber, or Green with a one-line reason. Red means the package should not proceed as written.
+- Write for a procurement review. No marketing language.`,
 };
 
-export function buildAdvisorSystemPrompt(advisor: Advisor, locale: Locale = "en"): string {
-  const template = advisorTemplate(advisor, locale);
+export function buildAdvisorSystemPrompt(
+  advisor: Advisor,
+  locale: Locale = "en",
+  playbookId?: string | null
+): string {
+  const playbook = playbookId ? getPlaybook(advisor.id, playbookId) : undefined;
+  const template = playbook ? playbookTemplate(playbook, locale) : advisorTemplate(advisor, locale);
   const language =
     locale === "ar"
       ? "Answer in Arabic and keep the template headings in Arabic."
@@ -51,20 +70,30 @@ export function buildAdvisorSystemPrompt(advisor: Advisor, locale: Locale = "en"
 
   return [
     "You are engineerit AI, operating in the AI Advisors layer.",
-    "Ecosystem: engineerit AI > AI Advisors > " + advisor.track + ".",
+    "Ecosystem: engineerit AI > AI Advisors > " + advisor.track + " > export-ready report.",
     SYSTEM_PROMPTS[advisor.id],
+    playbook
+      ? `Active playbook: ${playbook.id}. Produce only this playbook's report from the uploaded files and the conversation.`
+      : "No playbook was selected. Use the advisor template.",
     language,
-    "Follow the output template exactly. Use Markdown. Keep every heading and table. If a field is unknown, write \"Not provided\" and state the assumption or the missing file. Do not invent costs, dates, owners, or compliance status that the conversation or the uploaded files do not support.",
+    "The report is export-ready. Follow the output template exactly. Use Markdown. Keep every heading and table. Start with the executive summary. Include an overall RAG rating with a one-line reason. If a field is unknown, write \"Not provided\" and name the missing file. Do not invent costs, dates, scores, owners, or compliance status.",
     template,
   ].join("\n\n");
 }
 
 export function resolveAdvisorPrompt(
   advisorId: unknown,
-  locale: Locale
+  locale: Locale,
+  playbookId?: unknown
 ): { ok: true; prompt: string; advisorId: AdvisorId } | { ok: false } {
   if (!isAdvisorId(advisorId)) return { ok: false };
   const advisor = getAdvisor(advisorId);
   if (!advisor) return { ok: false };
-  return { ok: true, advisorId, prompt: buildAdvisorSystemPrompt(advisor, locale) };
+  const selected = typeof playbookId === "string" ? playbookId.trim() : "";
+  if (selected && !getPlaybook(advisor.id, selected)) return { ok: false };
+  return {
+    ok: true,
+    advisorId,
+    prompt: buildAdvisorSystemPrompt(advisor, locale, selected || null),
+  };
 }
