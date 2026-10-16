@@ -2662,7 +2662,14 @@ body.acct-open .mkt-header {
   min-height: 64px;
   padding: 0 18px;
   font-size: 17px;
-  gap: 10px;
+  gap: 8px;
+  align-items: center;
+}
+
+.chat-showcase-cta .eit-mark {
+  height: 28px;
+  width: auto;
+  flex: 0 0 auto;
 }
 
 .chat-page .mic-btn {
