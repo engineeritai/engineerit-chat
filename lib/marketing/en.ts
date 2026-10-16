@@ -188,7 +188,7 @@ export const en: MarketingContent = {
   },
   closing: {
     title: "Start with a question, or buy a plan",
-    body: "Engineers can open the chat now. Paid plans, Team, and Enterprise are bought through Moyasar and renew automatically.",
+    body: "Open the chat, or buy a Team plan.",
     primaryCta: "Start chatting",
     secondaryCta: "Subscribe",
   },

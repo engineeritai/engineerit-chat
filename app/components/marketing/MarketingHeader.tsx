@@ -20,7 +20,18 @@ export default function MarketingHeader({ onMenu }: { onMenu: () => void }) {
   return (
     <header className="mkt-header">
       <div className="mkt-header-inner">
-        <button type="button" className="mkt-menu-btn" aria-label={content.nav.menu} onClick={onMenu}>
+        <button
+          type="button"
+          className="mkt-menu-btn"
+          aria-label={content.nav.menu}
+          onClick={() => {
+            if (pathname === "/chat") {
+              window.dispatchEvent(new Event("engineerit-open-chat-drawer"));
+              return;
+            }
+            onMenu();
+          }}
+        >
           <span />
           <span />
           <span />

@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import React, { useRef, useState } from "react";
-import { DISCIPLINES } from "@/lib/disciplines";
-import { disciplineLabel } from "@/lib/labels";
+import { PlanSummary } from "@/app/components/marketing/AccountMenu";
+import { useAccount } from "@/app/components/marketing/AccountState";
+import { getMarketingContent } from "@/lib/marketing";
 import { useMessages } from "@/lib/useMessages";
-import { SAUDI_BUSINESS_AUTH_NO, SAUDI_BUSINESS_VERIFY_URL } from "@/lib/trust";
 
 export type HistoryItem = {
   id: string;
@@ -39,14 +40,7 @@ type Props = {
   onRefresh?: () => void;
 };
 
-function openExternal(url: string) {
-  if (typeof window === "undefined") return;
-  window.open(url, "_blank", "noopener,noreferrer");
-}
-
 export default function Sidebar({
-  discipline,
-  onDisciplineChange,
   onNewChat,
   threads,
   currentThreadId,
@@ -65,6 +59,9 @@ export default function Sidebar({
   onRefresh,
 }: Props) {
   const { locale, shell: s } = useMessages();
+  const account = useAccount();
+  const pathname = usePathname() || "/";
+  const content = getMarketingContent(locale);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [menuId, setMenuId] = useState<string | null>(null);
@@ -73,435 +70,232 @@ export default function Sidebar({
   const cancelEdit = React.useRef(false);
   const visibleThreads = signedIn
     ? threads
-    : threads.filter((thread) =>
-        thread.title.toLowerCase().includes(historyQuery.trim().toLowerCase())
-      );
-  const contactLabel = locale === "ar" ? "ملاحظات" : "Feedback";
-  const payLabel = locale === "ar" ? "الدفع عبر ميسر" : "Payment processed by Moyasar";
+    : threads.filter((thread) => thread.title.toLowerCase().includes(historyQuery.trim().toLowerCase()));
 
-  const content = (
-    <aside
-      className="sidebar-inner"
-      style={{
-        maxWidth: "100%",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-          flexGrow: 1,
-          paddingRight: 6,
-        }}
-      >
-        <button className="btn w-full mb-3" onClick={onNewChat}>
-          {s.chat.newChat}
-        </button>
+  const nav = [
+    { href: "/advisors", label: content.nav.advisors },
+    { href: "/pricing", label: content.nav.pricing },
+    { href: "/how-it-works", label: content.nav.how },
+    { href: "/guide", label: content.nav.guide },
+    { href: "/tools", label: content.nav.tools },
+    { href: "/feedback", label: locale === "ar" ? "الملاحظات" : "Feedback" },
+  ];
 
-        <div>
-          <h3>{s.chat.discipline}</h3>
-          <select
-            className="select"
-            value={discipline}
-            aria-label={s.chat.discipline}
-            onChange={(e) => onDisciplineChange(e.target.value)}
-          >
-            {DISCIPLINES.map((d) => (
-              <option key={d} value={d}>
-                {disciplineLabel(locale, d)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <Link href="/advisors" className="sidebar-link">
-          {s.chat.advisorsMenu}
+  const panel = (idSuffix: string) => (
+    <aside className="sidebar-inner chat-side">
+      <div className="chat-side-top">
+        <Link href="/" className="chat-side-brand brand" aria-label={s.nav.home} onClick={onCloseMobile}>
+          <span className="word">
+            <span className="engineer">engineer</span>
+            <span className="it">it</span>
+          </span>
         </Link>
-
-        <div
-          onTouchStart={(event) => {
-            pullStart.current = event.touches[0]?.clientY ?? null;
-          }}
-          onTouchMove={(event) => {
-            if (pullStart.current == null) return;
-            const delta = (event.touches[0]?.clientY ?? pullStart.current) - pullStart.current;
-            if (delta > 0) setPull(Math.min(72, delta));
-          }}
-          onTouchEnd={() => {
-            if (pull > 48) onRefresh?.();
-            setPull(0);
-            pullStart.current = null;
+        <Link href="/" className="chat-side-row" onClick={onCloseMobile}>
+          {s.nav.home}
+        </Link>
+        <button
+          type="button"
+          className="chat-side-row"
+          onClick={() => {
+            onNewChat();
+            onCloseMobile();
           }}
         >
-          <p className={"pull-hint" + (pull > 24 ? " is-ready" : "")}>
-            {pull > 48 ? s.chat.historyLoading : ""}
-          </p>
-          <h3>{s.chat.history}</h3>
-          <label className="history-search-label" htmlFor="history-search">
-            {s.chat.searchHistory}
-          </label>
-          <input
-            id="history-search"
-            className="history-search"
-            value={historyQuery}
-            onChange={(event) => onHistoryQuery(event.target.value)}
-            placeholder={s.chat.searchHistory}
-            type="search"
-          />
-          {!signedIn && <p className="history-note">{s.chat.historySignIn}</p>}
-          <div className="history-list">
-            {historyLoading && (
-              <div className="history-note">{s.chat.historyLoading}</div>
-            )}
-            {!historyLoading && visibleThreads.length === 0 && (
-              <div className="history-note">
-                {historyQuery.trim() ? s.chat.noSearchResults : s.chat.emptyHistory}
-              </div>
-            )}
-
-            {visibleThreads.map((thread) => {
-              const active = currentThreadId === thread.id;
-              const owned = thread.owned !== false;
-              return (
-                <div key={thread.id} className={active ? "history-item history-item-active" : "history-item"}>
-                  {editingId === thread.id ? (
-                    <input
-                      className="history-search"
-                      value={editingTitle}
-                      aria-label={s.chat.rename}
-                      onChange={(event) => setEditingTitle(event.target.value)}
-                      onBlur={() => {
-                        if (cancelEdit.current) {
-                          cancelEdit.current = false;
-                          return;
-                        }
-                        onRenameThread(thread.id, editingTitle);
-                        setEditingId(null);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") event.currentTarget.blur();
-                        if (event.key === "Escape") {
-                          cancelEdit.current = true;
-                          setEditingTitle(thread.title);
-                          setEditingId(null);
-                          event.currentTarget.blur();
-                        }
-                      }}
-                      autoFocus
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      className="history-title"
-                      onClick={() => {
-                        onSelectThread(thread.id);
-                        onCloseMobile();
-                      }}
-                      title={thread.title}
-                    >
-                      {thread.pinned ? <span className="history-badge">{s.chat.pin}</span> : null}
-                      <span>{thread.title}</span>
-                      {thread.sharedWithTeam ? <span className="history-badge">{s.chat.shared}</span> : null}
-                    </button>
-                  )}
-                  {thread.nearingExpiry && thread.expiresInDays != null && (
-                    <p className="history-expiry">
-                      {thread.expiresInDays <= 1
-                        ? s.chat.expiryToday
-                        : s.chat.expiryNote.replace("{days}", String(thread.expiresInDays))}{" "}
-                      <Link href="/pricing">{s.chat.upgradeKeep}</Link>
-                    </p>
-                  )}
-                  {owned && (
-                    <>
-                      <button
-                        type="button"
-                        className="history-more"
-                        aria-label={s.chat.moreActions}
-                        aria-expanded={menuId === thread.id}
-                        onClick={() => setMenuId((current) => (current === thread.id ? null : thread.id))}
-                      >
-                        ⋯
-                      </button>
-                      {menuId === thread.id && (
-                        <div className="history-menu" role="menu">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingId(thread.id);
-                              setEditingTitle(thread.title);
-                              setMenuId(null);
-                            }}
-                          >
-                            {s.chat.rename}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onPinThread(thread.id, !thread.pinned);
-                              setMenuId(null);
-                            }}
-                          >
-                            {thread.pinned ? s.chat.unpin : s.chat.pin}
-                          </button>
-                          {signedIn && canShareTeam && thread.persisted !== false && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onShareThread(thread.id, !thread.sharedWithTeam);
-                                setMenuId(null);
-                              }}
-                            >
-                              {thread.sharedWithTeam ? s.chat.unshareTeam : s.chat.shareTeam}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setMenuId(null);
-                              if (window.confirm(s.chat.deleteConfirm)) onDeleteThread(thread.id);
-                            }}
-                          >
-                            {s.chat.deleteChat}
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+          {s.chat.newChat}
+        </button>
+        <label className="history-search-label" htmlFor={`history-search-${idSuffix}`}>
+          {s.chat.searchHistory}
+        </label>
+        <input
+          id={`history-search-${idSuffix}`}
+          className="history-search"
+          value={historyQuery}
+          onChange={(event) => onHistoryQuery(event.target.value)}
+          placeholder={s.chat.searchHistory}
+          type="search"
+        />
+        <nav className="chat-side-nav" aria-label={s.nav.navigation}>
+          {nav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={pathname === item.href ? "is-active" : undefined}
+              aria-current={pathname === item.href ? "page" : undefined}
+              onClick={onCloseMobile}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
       </div>
 
       <div
-        style={{
-          marginTop: 10,
-          paddingTop: 10,
-          borderTop: "1px solid #e5e7eb",
-          fontSize: 11,
-          color: "#6b7280",
-          lineHeight: 1.5,
-          flexShrink: 0,
+        className="chat-side-history"
+        onTouchStart={(event) => {
+          pullStart.current = event.touches[0]?.clientY ?? null;
+        }}
+        onTouchMove={(event) => {
+          if (pullStart.current == null) return;
+          const delta = (event.touches[0]?.clientY ?? pullStart.current) - pullStart.current;
+          if (delta > 0) setPull(Math.min(72, delta));
+        }}
+        onTouchEnd={() => {
+          if (pull > 48) onRefresh?.();
+          setPull(0);
+          pullStart.current = null;
         }}
       >
-        <div
-          style={{
-            marginTop: 10,
-            padding: "7px 9px",
-            borderRadius: 10,
-            background: "#EEF2FF",
-            border: "1px solid #E0E7FF",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              width: 26,
-              height: 26,
-              borderRadius: "9999px",
-              background: "#DBEAFE",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#1D4ED8"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              <path d="M9 12l2 2 4-4" />
-            </svg>
-          </div>
+        <p className={"pull-hint" + (pull > 24 ? " is-ready" : "")}>{pull > 48 ? s.chat.historyLoading : ""}</p>
+        <h3>{s.chat.history}</h3>
+        {!signedIn && <p className="history-note">{s.chat.historySignIn}</p>}
+        <div className="history-list">
+          {historyLoading && <div className="history-note">{s.chat.historyLoading}</div>}
+          {!historyLoading && visibleThreads.length === 0 && (
+            <div className="history-note">{historyQuery.trim() ? s.chat.noSearchResults : s.chat.emptyHistory}</div>
+          )}
 
-          <div style={{ fontSize: 10.5, lineHeight: 1.35, flex: 1 }}>
-            <div
-              style={{
-                fontSize: 9,
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: "#1D4ED8",
-              }}
-            >
-              {s.trust.title}
-            </div>
-            <div style={{ color: "#374151" }}>
-              {s.trust.auth} <span style={{ fontWeight: 600 }}>{SAUDI_BUSINESS_AUTH_NO}</span>
-            </div>
+          {visibleThreads.map((thread) => {
+            const active = currentThreadId === thread.id;
+            const owned = thread.owned !== false;
+            return (
+              <div key={thread.id} className={active ? "history-item history-item-active" : "history-item"}>
+                {editingId === thread.id ? (
+                  <input
+                    className="history-search"
+                    value={editingTitle}
+                    aria-label={s.chat.rename}
+                    onChange={(event) => setEditingTitle(event.target.value)}
+                    onBlur={() => {
+                      if (cancelEdit.current) {
+                        cancelEdit.current = false;
+                        return;
+                      }
+                      onRenameThread(thread.id, editingTitle);
+                      setEditingId(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.currentTarget.blur();
+                      if (event.key === "Escape") {
+                        cancelEdit.current = true;
+                        setEditingTitle(thread.title);
+                        setEditingId(null);
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="history-title"
+                    onClick={() => {
+                      onSelectThread(thread.id);
+                      onCloseMobile();
+                    }}
+                    title={thread.title}
+                  >
+                    {thread.pinned ? <span className="history-badge">{s.chat.pin}</span> : null}
+                    <span>{thread.title}</span>
+                    {thread.sharedWithTeam ? <span className="history-badge">{s.chat.shared}</span> : null}
+                  </button>
+                )}
+                {thread.nearingExpiry && thread.expiresInDays != null && (
+                  <p className="history-expiry">
+                    {thread.expiresInDays <= 1
+                      ? s.chat.expiryToday
+                      : s.chat.expiryNote.replace("{days}", String(thread.expiresInDays))}{" "}
+                    <Link href="/pricing">{s.chat.upgradeKeep}</Link>
+                  </p>
+                )}
+                {owned && (
+                  <>
+                    <button
+                      type="button"
+                      className="history-more"
+                      aria-label={s.chat.moreActions}
+                      aria-expanded={menuId === thread.id}
+                      onClick={() => setMenuId((current) => (current === thread.id ? null : thread.id))}
+                    >
+                      ⋯
+                    </button>
+                    {menuId === thread.id && (
+                      <div className="history-menu" role="menu">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingId(thread.id);
+                            setEditingTitle(thread.title);
+                            setMenuId(null);
+                          }}
+                        >
+                          {s.chat.rename}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onPinThread(thread.id, !thread.pinned);
+                            setMenuId(null);
+                          }}
+                        >
+                          {thread.pinned ? s.chat.unpin : s.chat.pin}
+                        </button>
+                        {signedIn && canShareTeam && thread.persisted !== false && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onShareThread(thread.id, !thread.sharedWithTeam);
+                              setMenuId(null);
+                            }}
+                          >
+                            {thread.sharedWithTeam ? s.chat.unshareTeam : s.chat.shareTeam}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMenuId(null);
+                            if (window.confirm(s.chat.deleteConfirm)) onDeleteThread(thread.id);
+                          }}
+                        >
+                          {s.chat.deleteChat}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-            <Link
-              href={SAUDI_BUSINESS_VERIFY_URL}
-              target="_blank"
-              className="sidebar-legal-link"
-              style={{
-                marginTop: 4,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                padding: "2px 8px",
-                borderRadius: 9999,
-                border: "1px solid #BFDBFE",
-                background: "#EFF6FF",
-                fontSize: 9.5,
-                color: "#1D4ED8",
-                fontWeight: 500,
-              }}
-            >
-              <span>{s.trust.verify}</span>
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#1D4ED8"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M18 13V6H11" />
-                <path d="M6 18L18 6" />
-              </svg>
+      <div className="chat-side-foot">
+        <PlanSummary onNavigate={onCloseMobile} />
+        {account.ready && !account.signedIn ? (
+          <div className="acct-guest acct-guest-side">
+            <Link className="mkt-header-link" href="/login" onClick={onCloseMobile}>
+              {s.header.signIn}
+            </Link>
+            <Link className="mkt-header-link is-accent" href="/register" onClick={onCloseMobile}>
+              {s.header.register}
             </Link>
           </div>
-        </div>
-
-        <div
-          style={{
-            marginTop: 10,
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "center",
-            gap: 6,
-          }}
-        >
-          <button
-            type="button"
-            onClick={() =>
-              openExternal("https://www.linkedin.com/in/engineerit-ai-40788339a")
-            }
-            title="LinkedIn"
-            aria-label="LinkedIn"
-            style={iconButtonStyle}
-          >
-            <img
-              src="/linkedin.png"
-              alt="LinkedIn"
-              style={{ width: 14, height: 14, display: "block", objectFit: "contain" }}
-            />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openExternal("https://x.com/engineeritai")}
-            title="X"
-            aria-label="X"
-            style={iconButtonStyle}
-          >
-            <img src="/x.png" alt="X" style={iconImageStyle} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openExternal("https://www.tiktok.com/@engineerit.ai")}
-            title="TikTok"
-            aria-label="TikTok"
-            style={iconButtonStyle}
-          >
-            <img src="/tiktok.png" alt="TikTok" style={iconImageStyle} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openExternal("https://www.snapchat.com/add/engineerit.ai")}
-            title="Snapchat"
-            aria-label="Snapchat"
-            style={iconButtonStyle}
-          >
-            <img
-              src="/snapchat.png"
-              alt="Snapchat"
-              style={{ width: 14, height: 14, display: "block", objectFit: "contain" }}
-            />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openExternal("https://moyasar.com")}
-            title={payLabel}
-            aria-label={payLabel}
-            style={iconButtonStyle}
-          >
-            <img
-              src="/moyasar-icon.png"
-              alt="Moyasar"
-              style={{ width: 12, height: 12, display: "block", objectFit: "contain" }}
-            />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openExternal("https://engineerit.ai/feedback")}
-            title={contactLabel}
-            aria-label={contactLabel}
-            style={iconButtonStyle}
-          >
-            <img src="/favicon.ico" alt="eit" style={iconImageStyle} />
-          </button>
-        </div>
+        ) : null}
       </div>
     </aside>
   );
 
   return (
     <>
-      <div className="sidebar desktop-only">{content}</div>
+      <div className="sidebar desktop-only">{panel("desk")}</div>
 
       {isMobileOpen && (
         <div className="sidebar-mobile-overlay" onClick={onCloseMobile}>
-          <div
-            className="sidebar sidebar-mobile-panel"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {content}
+          <div className="sidebar sidebar-mobile-panel" onClick={(event) => event.stopPropagation()}>
+            {panel("drawer")}
           </div>
         </div>
       )}
     </>
   );
 }
-
-const iconButtonStyle: React.CSSProperties = {
-  width: 30,
-  height: 30,
-  borderRadius: 8,
-  background: "#F9FAFB",
-  border: "1px solid #E5E7EB",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 0,
-  cursor: "pointer",
-};
-
-const iconImageStyle: React.CSSProperties = {
-  width: 18,
-  height: 18,
-  display: "block",
-  objectFit: "contain",
-};

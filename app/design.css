@@ -1867,3 +1867,360 @@ body.acct-open .mkt-header {
   font-weight: 500;
   color: var(--muted, #5c6b82);
 }
+
+/* Chat start screen: one column, centered empty state, docked composer after the first message. */
+.mkt-chat {
+  grid-template-columns: minmax(0, 1fr);
+  --tab-h: 0px;
+}
+
+.mkt .chat-mobile-bar,
+.mkt-chat .mkt-tabbar {
+  display: none;
+}
+
+.mkt-chat .chat-page.app-shell,
+.mkt-chat .chat-page .main,
+.mkt-chat .chat-page .sidebar.desktop-only {
+  height: 100%;
+  min-height: 0;
+  top: 0;
+}
+
+.mkt-chat .chat-page .main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mkt-chat .chat-page .main.is-start {
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
+  padding: 24px 0 32px;
+}
+
+.chat-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(680px, calc(100% - 32px));
+  text-align: center;
+}
+
+.chat-start h1 {
+  margin: 0;
+  max-width: 18ch;
+  font-size: clamp(22px, 4.2vw, 32px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.mkt-chat .main.is-start .composer {
+  position: relative;
+  bottom: auto;
+  width: min(680px, calc(100% - 32px));
+  margin-top: 22px;
+  padding: 0;
+  background: transparent;
+}
+
+.mkt-chat .main.is-start .composer-box {
+  width: 100%;
+}
+
+.mkt-chat .main:not(.is-start) .conversation {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+
+.mkt-chat .main:not(.is-start) .composer {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: min(680px, calc(100% - 32px));
+  margin-top: 14px;
+}
+
+.chat-suggestion {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.35;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.chat-suggestion:hover {
+  background: #fff;
+  color: var(--ink);
+}
+
+.chat-side {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0;
+  padding: 8px 10px 12px;
+}
+
+.chat-side-top,
+.chat-side-foot {
+  flex: 0 0 auto;
+}
+
+.chat-side-brand {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px 6px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.chat-side-row,
+.chat-side-nav a {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.chat-side-row:hover,
+.chat-side-nav a:hover,
+.chat-side-nav a.is-active {
+  background: #eef0f4;
+}
+
+.chat-side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 4px 0 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.chat-side .history-search {
+  margin: 6px 0 8px;
+  background: #f6f7f9;
+}
+
+.chat-side-history {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.chat-side .history-list {
+  max-height: none;
+  overflow: visible;
+}
+
+.chat-side-foot {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.sidebar.sidebar-mobile-panel {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  background: #fff;
+}
+
+.chat-page .sidebar.desktop-only {
+  background: #fff;
+  border-inline-end: 1px solid var(--line);
+  border-right: 0;
+}
+
+[dir="rtl"] .sidebar-mobile-overlay {
+  justify-content: flex-end;
+}
+
+.plus-menu {
+  max-height: min(420px, 62dvh);
+  overflow: auto;
+  min-width: 240px;
+}
+
+.plus-menu-label {
+  margin: 8px 10px 4px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.plus-menu .select {
+  width: calc(100% - 12px);
+  margin: 0 6px 4px;
+  min-height: 40px;
+}
+
+.plus-menu a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.plus-menu a:hover {
+  background: #f4f6fa;
+}
+
+.home-plans {
+  margin-top: 8px;
+}
+
+.home-plan-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.home-plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 100%;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.home-plan-card .mkt-btn {
+  margin-top: auto;
+}
+
+.home-plan-price {
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.home-plan-unit {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.home-plan-features {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.home-plan-more {
+  align-self: flex-start;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--brand);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.home-seat-chip {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.home-rate-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.home-plan-dots {
+  display: none;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.home-plan-dots button {
+  width: 7px;
+  height: 7px;
+  border: 0;
+  padding: 0;
+  border-radius: 999px;
+  background: #cbd5e1;
+  cursor: pointer;
+}
+
+.home-plan-dots button.is-active {
+  background: var(--brand);
+}
+
+@media (max-width: 767px) {
+  .home-plan-row {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .home-plan-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-plan-card {
+    flex: 0 0 86%;
+    scroll-snap-align: start;
+  }
+
+  .home-plan-dots {
+    display: flex;
+  }
+}

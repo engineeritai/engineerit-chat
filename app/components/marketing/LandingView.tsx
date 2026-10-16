@@ -10,7 +10,7 @@ import { useMessages } from "@/lib/useMessages";
 import { getMarketingContent } from "@/lib/marketing";
 import { disciplineLabel, toolLabel } from "@/lib/labels";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
-import PlanPriceList from "@/app/components/PlanPriceList";
+import HomePlanCards from "@/app/components/marketing/HomePlanCards";
 import PricingBoard from "@/app/components/marketing/PricingBoard";
 import SaudiBusinessBadge from "@/app/components/marketing/SaudiBusinessBadge";
 import AdvisorEcosystem from "@/app/components/AdvisorEcosystem";
@@ -177,14 +177,14 @@ export default function LandingView() {
           ))}
         </div>
         <h3>{content.faq.pricesHeading}</h3>
-        <PlanPriceList showFeatures />
+        <HomePlanCards />
       </section>
 
       <section className="mkt-closing">
         <h2>{content.closing.title}</h2>
         <p>{content.closing.body}</p>
         <div className="mkt-cta-row">
-          <StartChatLink className="mkt-btn mkt-btn-primary mkt-cta-pulse" />
+          <StartChatLink className="mkt-btn mkt-btn-primary" />
           <BuyPlanButton planId="team" interval="month" className="mkt-btn mkt-btn-secondary" />
         </div>
       </section>

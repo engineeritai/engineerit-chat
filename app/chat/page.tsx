@@ -12,7 +12,9 @@ import remarkGfm from "remark-gfm";
 
 import Link from "next/link";
 import MarketingShell from "../components/marketing/MarketingShell";
+import EitMark from "../components/marketing/EitMark";
 import Sidebar from "../components/Sidebar";
+import { DISCIPLINES } from "@/lib/disciplines";
 import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
 import { disciplineLabel, toolLabel } from "@/lib/labels";
@@ -375,8 +377,6 @@ export default function Page() {
   const [isGuest, setIsGuest] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
-  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
-
   const [planReady, setPlanReady] = useState(false);
   const [planId, setPlanId] = useState<PlanId>("assistant");
   const [advisorPlan, setAdvisorPlan] = useState("guest");
@@ -390,7 +390,6 @@ export default function Page() {
   const [showMobileTools, setShowMobileTools] = useState(false);
 
   const [showLanding, setShowLanding] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [micReady, setMicReady] = useState(false);
@@ -398,6 +397,12 @@ export default function Page() {
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const openedThread = useRef(false);
   const homeQuerySent = useRef(false);
+
+  useEffect(() => {
+    const openDrawer = () => setIsSidebarOpenMobile(true);
+    window.addEventListener("engineerit-open-chat-drawer", openDrawer);
+    return () => window.removeEventListener("engineerit-open-chat-drawer", openDrawer);
+  }, []);
 
   const [openShareFor, setOpenShareFor] = useState<string | null>(null);
 
@@ -656,7 +661,6 @@ export default function Page() {
     const userAttachments = attachments;
     setInput("");
     setAttachments([]);
-    setIsAttachMenuOpen(false);
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -780,7 +784,7 @@ export default function Page() {
 
   return (
     <MarketingShell>
-    <div className={"app-shell chat-page" + (sidebarCollapsed ? " is-collapsed" : "")}>
+    <div className="app-shell chat-page">
       <Sidebar
         onRefresh={() => history.refresh()}
         discipline={discipline}
@@ -805,24 +809,7 @@ export default function Page() {
         canShareTeam={canShareTeam}
       />
 
-      <div className="main">
-        <div className="chat-mobile-bar">
-          <button
-            className="chat-side-toggle"
-            onClick={() => {
-              if (window.innerWidth < 1024) setIsSidebarOpenMobile((v) => !v);
-              else setSidebarCollapsed((v) => !v);
-            }}
-            aria-label={sidebarCollapsed ? s.chat.showSidebar : s.chat.hideSidebar}
-            type="button"
-          >
-            <span />
-            <span />
-            <span />
-          </button>
-        </div>
-
-        <div className="conversation">
+      <div className={"main" + (messages.length === 0 ? " is-start" : "")}>
           {history.notice && (
             <p className="history-banner">
               {history.notice === "failed"
@@ -830,6 +817,13 @@ export default function Page() {
                 : historyNoticeText(history.notice, s.chat)}
             </p>
           )}
+          {messages.length === 0 ? (
+            <div className="chat-start">
+              <EitMark size={56} title="eit" />
+              <h1>{s.chat.greeting}</h1>
+            </div>
+          ) : (
+            <div className="conversation">
           {canExportChat && thread?.persisted && messages.length > 0 && (
             <div className="history-export">
               <button type="button" className="msg-action-btn" onClick={() => void history.exportCurrent("pdf")}>
@@ -840,27 +834,7 @@ export default function Page() {
               </button>
             </div>
           )}
-          {messages.length === 0 ? (
-            <div className="empty-hero">
-              <h1>{s.chat.greeting}</h1>
-              <div className="prompt-grid">
-                {[s.chat.promptA, s.chat.promptB, s.chat.promptC, s.chat.promptD].map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    className="prompt-card"
-                    onClick={() => {
-                      setInput(prompt);
-                      composerRef.current?.focus();
-                    }}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            messages.map((m) => {
+            {messages.map((m) => {
               const rtl = isArabicText(m.content);
               const hasAtt = (m.attachments?.length || 0) > 0;
 
@@ -1097,9 +1071,9 @@ export default function Page() {
                   </div>
                 </div>
               );
-            })
+            })}
+            </div>
           )}
-        </div>
 
         <div className="composer">
           <div className="composer-box">
@@ -1131,17 +1105,31 @@ export default function Page() {
                 <button
                   type="button"
                   className="chat-input-icon-btn"
-                  aria-label={s.chat.toolsMenu}
+                  aria-label={s.chat.addAttachments}
                   aria-expanded={toolsOpen}
-                  onClick={() => {
-                    setIsAttachMenuOpen(false);
-                    setToolsOpen((value) => !value);
-                  }}
+                  onClick={() => setToolsOpen((value) => !value)}
                 >
-                  <span>{s.chat.toolsMenu}</span>
+                  <span className="chat-input-plus">+</span>
                 </button>
                 {toolsOpen && (
-                  <div className="tool-popover" role="menu">
+                  <div className="tool-popover plus-menu" role="menu">
+                    <p className="plus-menu-label">{s.chat.discipline}</p>
+                    <select
+                      className="select"
+                      value={discipline}
+                      aria-label={s.chat.discipline}
+                      onChange={(event) => {
+                        setDiscipline(event.target.value);
+                        void history.syncDiscipline(event.target.value);
+                      }}
+                    >
+                      {DISCIPLINES.map((item) => (
+                        <option key={item} value={item}>
+                          {disciplineLabel(locale, item)}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="plus-menu-label">{s.chat.toolsMenu}</p>
                     {ENGINEER_TOOLS.map((tool) => {
                       const enabled = hasAccess(planId, tool.id);
                       return (
@@ -1162,47 +1150,37 @@ export default function Page() {
                         </button>
                       );
                     })}
-                    <Link href="/advisors" onClick={() => setToolsOpen(false)} style={{ display: "block", minHeight: 44, padding: "8px 10px" }}>
+                    <Link href="/advisors" onClick={() => setToolsOpen(false)}>
                       {s.chat.advisorsMenu}
                     </Link>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  className="chat-input-icon-btn"
-                  aria-label={s.chat.addAttachments}
-                  onClick={() => {
-                    setToolsOpen(false);
-                    if (!attachmentsAllowed) {
-                      if (isGuest) openRegisterGate(s.chat.attachLocked);
-                      else openUpgradeGate(s.chat.attachLocked);
-                      return;
-                    }
-                    setIsAttachMenuOpen((v) => !v);
-                  }}
-                >
-                  <span className="chat-input-plus">+</span>
-                </button>
-
-                {isAttachMenuOpen && attachmentsAllowed && (
-                  <div className="attach-menu">
+                    <p className="plus-menu-label">{s.chat.addAttachments}</p>
                     <button
                       type="button"
                       onClick={() => {
-                        setIsAttachMenuOpen(false);
+                        setToolsOpen(false);
+                        if (!attachmentsAllowed) {
+                          if (isGuest) openRegisterGate(s.chat.attachLocked);
+                          else openUpgradeGate(s.chat.attachLocked);
+                          return;
+                        }
                         document.getElementById("image-upload")?.click();
                       }}
                     >
-                      📷 {s.chat.photo}
+                      {s.chat.photo}
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        setIsAttachMenuOpen(false);
+                        setToolsOpen(false);
+                        if (!attachmentsAllowed) {
+                          if (isGuest) openRegisterGate(s.chat.attachLocked);
+                          else openUpgradeGate(s.chat.attachLocked);
+                          return;
+                        }
                         document.getElementById("file-upload")?.click();
                       }}
                     >
-                      📄 {s.chat.document}
+                      {s.chat.document}
                     </button>
                   </div>
                 )}
@@ -1292,6 +1270,25 @@ export default function Page() {
             />
           </div>
         </div>
+
+        {messages.length === 0 ? (
+          <div className="chat-suggestions" role="list">
+            {[s.chat.promptA, s.chat.promptB, s.chat.promptC, s.chat.promptD].map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                className="chat-suggestion"
+                role="listitem"
+                onClick={() => {
+                  setInput(prompt);
+                  composerRef.current?.focus();
+                }}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         {/* Gate modal */}
         {showGate && (

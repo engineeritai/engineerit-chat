@@ -13,20 +13,22 @@ function ShellFrame({ children }: { children: ReactNode }) {
   const { locale, dir } = useLocale();
   const pathname = usePathname() || "/";
   const [drawer, setDrawer] = useState(false);
-  const app =
-    pathname === "/chat" ||
-    pathname.startsWith("/advisors/") ||
-    pathname.startsWith("/checkout");
+  const chat = pathname === "/chat";
+  const app = chat || pathname.startsWith("/advisors/") || pathname.startsWith("/checkout");
 
   return (
-    <div className={"mkt" + (app ? " mkt-app" : "")} dir={dir} lang={locale === "ar" ? "ar" : "en"}>
-      <AppSidebar open={drawer} onClose={() => setDrawer(false)} />
+    <div
+      className={"mkt" + (app ? " mkt-app" : "") + (chat ? " mkt-chat" : "")}
+      dir={dir}
+      lang={locale === "ar" ? "ar" : "en"}
+    >
+      {chat ? null : <AppSidebar open={drawer} onClose={() => setDrawer(false)} />}
       <div className="mkt-column">
         <MarketingHeader onMenu={() => setDrawer(true)} />
         <main className="mkt-main">{children}</main>
         {app ? null : <MarketingFooter />}
       </div>
-      <MobileTabBar />
+      {chat ? null : <MobileTabBar />}
     </div>
   );
 }

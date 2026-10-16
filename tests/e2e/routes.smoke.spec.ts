@@ -123,14 +123,20 @@ test("redirects, sitemap, apple pay file, invoice route", async ({ request }, in
   expect(home).not.toContain('"/chat"');
 });
 
-test("marketing pages stay put for 3s", async ({ page }) => {
-  test.setTimeout(240_000);
-  const paths = ["/", "/how-it-works", "/guide", "/pricing", "/faq", "/advisors", "/register", "/feedback"];
+test("marketing pages stay put for 5s", async ({ page }, info) => {
+  test.skip(info.project.name === "tablet-768", "checked on phone and desktop");
+  test.setTimeout(360_000);
+  const paths = ["/", "/how-it-works", "/guide", "/pricing", "/faq", "/advisors", "/tools", "/register", "/feedback"];
   for (const lang of ["en", "ar"] as const) {
     for (const route of paths) {
       await page.goto(`${route}?lang=${lang}`, { waitUntil: "domcontentloaded" });
-      await page.waitForTimeout(3000);
-      expect(new URL(page.url()).pathname, `${route} ${lang}`).toBe(route);
+      await page.waitForTimeout(5000);
+      expect(new URL(page.url()).pathname, `${route} ${lang} signed out`).toBe(route);
+    }
+    for (const route of paths) {
+      await page.goto(`${route}?lang=${lang}&planPreview=engineer`, { waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(5000);
+      expect(new URL(page.url()).pathname, `${route} ${lang} signed in`).toBe(route);
     }
     await page.goto(`/?lang=${lang}`);
     await page.locator("#how-it-works a[href='/how-it-works']").click();
