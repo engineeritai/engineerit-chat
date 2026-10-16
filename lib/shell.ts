@@ -155,6 +155,7 @@ export type ShellCopy = {
     showSidebar: string;
     moreActions: string;
     prompts: Record<EngineerToolId, string>;
+    advisorPrompt: string;
   };
   auth: {
     signInTitle: string;
@@ -448,7 +449,7 @@ const en: ShellCopy = {
     welcomeBody:
       "A digital platform for engineering intelligence: analysis, document review, and an interactive assistant for drawings and technical work.",
     toolsForPlan: "Engineer tools for your plan",
-    askPlaceholder: "Ask an engineering question…",
+    askPlaceholder: "Ask anything…",
     addAttachments: "Add attachments",
     photo: "Photo",
     document: "Document",
@@ -517,7 +518,7 @@ const en: ShellCopy = {
     shareTeamNeedsLink: "Link this account to a team before sharing.",
     noSearchResults: "No matching chats.",
     sharedReadOnly: "This shared chat is read only.",
-    greeting: "How can I help with your engineering today?",
+    greeting: "How can we engineer your ideas and topics today?",
     promptA: "Review a drawing for clashes and missing notes",
     promptB: "Draft a method statement for a site activity",
     promptC: "Check this specification against the code",
@@ -538,6 +539,7 @@ const en: ShellCopy = {
       value: "Perform a value engineering review.",
       dashboard: "Create a management dashboard summary with indicators, risks, and actions.",
     },
+    advisorPrompt: "Ask an engineering advisor about this topic.",
   },
   auth: {
     signInTitle: "Sign in",
@@ -839,7 +841,7 @@ const ar: ShellCopy = {
     welcomeBody:
       "منصة رقمية للذكاء الهندسي: التحليل، ومراجعة المستندات، ومساعد تفاعلي للرسومات والعمل الفني.",
     toolsForPlan: "أدوات المهندس في باقتك",
-    askPlaceholder: "اسأل سؤالاً هندسياً…",
+    askPlaceholder: "اسأل أي شيء…",
     addAttachments: "إضافة مرفقات",
     photo: "صورة",
     document: "مستند",
@@ -907,7 +909,7 @@ const ar: ShellCopy = {
     shareTeamNeedsLink: "اربط هذا الحساب بفريق قبل المشاركة.",
     noSearchResults: "لا توجد محادثات مطابقة.",
     sharedReadOnly: "هذه المحادثة المشتركة للقراءة فقط.",
-    greeting: "كيف أساعدك في هندستك اليوم؟",
+    greeting: "كيف نهندس أفكارك ومشاريعك اليوم؟",
     promptA: "راجع رسماً بحثاً عن التعارضات والملاحظات الناقصة",
     promptB: "اكتب طريقة تنفيذ لنشاط في الموقع",
     promptC: "تحقق من المواصفة مقابل الكود",
@@ -928,6 +930,7 @@ const ar: ShellCopy = {
       value: "أجرِ مراجعة هندسة قيمية.",
       dashboard: "أعد ملخص لوحة إدارة بالمؤشرات والمخاطر والإجراءات.",
     },
+    advisorPrompt: "اسأل مستشاراً هندسياً عن هذا الموضوع.",
   },
   auth: {
     signInTitle: "دخول",

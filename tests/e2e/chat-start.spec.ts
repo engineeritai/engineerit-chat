@@ -5,7 +5,7 @@ const drawerOrder = ["Home", "New chat", "AI Advisors", "Pricing", "How it works
 test("chat start screen is centered and the drawer lists site nav", async ({ page }, info) => {
   test.skip(info.project.name === "tablet-768", "covered on phone and desktop");
   await page.goto("/chat?lang=en", { waitUntil: "domcontentloaded" });
-  await expect(page.locator(".chat-start h1")).toHaveText("How can I help with your engineering today?");
+  await expect(page.locator(".chat-start h1")).toHaveText("How can we engineer your ideas and topics today?");
   await expect(page.locator(".chat-suggestion")).toHaveCount(4);
   await expect(page.locator(".chat-mobile-bar")).toHaveCount(0);
   await expect(page.locator(".app-side")).toHaveCount(0);
@@ -48,7 +48,7 @@ test("chat start screen is centered and the drawer lists site nav", async ({ pag
 test("arabic chat start uses the arabic greeting", async ({ page }, info) => {
   test.skip(info.project.name !== "phone-390", "checked once");
   await page.goto("/chat?lang=ar", { waitUntil: "domcontentloaded" });
-  await expect(page.locator(".chat-start h1")).toHaveText("كيف أساعدك في هندستك اليوم؟");
+  await expect(page.locator(".chat-start h1")).toHaveText("كيف نهندس أفكارك ومشاريعك اليوم؟");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.locator(".chat-suggestion")).toHaveCount(4);
   await page.locator(".mkt-menu-btn").click();

@@ -9,9 +9,11 @@ import { supabase } from "@/lib/supabaseClient";
 export default function StartChatLink({
   className,
   onClick,
+  label,
 }: {
   className?: string;
   onClick?: () => void;
+  label?: string;
 }) {
   const { locale } = useLocale();
   const content = getMarketingContent(locale);
@@ -33,7 +35,7 @@ export default function StartChatLink({
 
   return (
     <Link className={className || "mkt-btn mkt-btn-primary mkt-cta-pulse"} href="/chat" onClick={onClick}>
-      {signedIn ? content.nav.continueChat : content.nav.startChat}
+      {signedIn ? content.nav.continueChat : label || content.nav.startChat}
     </Link>
   );
 }
