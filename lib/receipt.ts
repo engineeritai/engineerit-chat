@@ -1,4 +1,5 @@
 import { PLAN_LABELS, formatSar, type BillingInterval, type PlanId } from "@/lib/plans";
+import { buildInvoiceDocument } from "@/lib/invoiceDocument";
 import { receiptVatMode, vatFromInclusive } from "@/lib/billingCycle";
 import { renderInvoicePdf } from "@/lib/invoicePdf";
 import { invoiceBccAddress } from "@/lib/invoiceMail";
@@ -11,8 +12,15 @@ export type ReceiptInput = {
   interval: BillingInterval;
   seats?: number | null;
   periodEnd?: string | null;
-  /** User's chosen language. A receipt is entirely in this language. */
+  periodStart?: string | null;
+  /** User's chosen language. English unless that language is Arabic. */
   locale?: ReplyLanguage | null;
+  invoiceNumber?: string | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  paymentMethod?: string | null;
+  paymentId?: string | null;
+  issuedAt?: string | null;
 };
 
 const PLAN_LABELS_AR: Record<PlanId, string> = {
@@ -32,8 +40,24 @@ export function buildReceipt(
   input: ReceiptInput,
   options?: { vatNumber?: string; zatcaFlag?: string }
 ) {
-  const locale: ReplyLanguage =
-    input.locale === "ar" || input.locale === "en" ? input.locale : "en";
+  const locale: ReplyLanguage = input.locale === "ar" ? "ar" : "en";
+  const document = buildInvoiceDocument({
+    plan: input.plan,
+    amountSar: input.amountSar,
+    interval: input.interval,
+    seats: input.seats,
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+    locale,
+    invoiceNumber: input.invoiceNumber,
+    customerName: input.customerName || input.customerEmail,
+    customerEmail: input.customerEmail,
+    paymentMethod: input.paymentMethod,
+    paymentId: input.paymentId,
+    issuedAt: input.issuedAt,
+    vatNumber: options?.vatNumber ?? process.env.VAT_NUMBER,
+    zatcaFlag: options?.zatcaFlag ?? process.env.ZATCA_INVOICES_ENABLED,
+  });
   const planLabel = planName(input.plan, locale);
   const amount = locale === "ar" ? formatSarAr(input.amountSar) : formatSar(input.amountSar);
   const until = formatUntil(input.periodEnd, locale);
@@ -47,10 +71,11 @@ export function buildReceipt(
       ? input.seats
       : null;
 
-  if (locale === "ar") {
-    return renderArabic({ planLabel, amount, interval: input.interval, until, seats, mode, vat });
-  }
-  return renderEnglish({ planLabel, amount, interval: input.interval, until, seats, mode, vat });
+  const receipt =
+    locale === "ar"
+      ? renderArabic({ planLabel, amount, interval: input.interval, until, seats, mode, vat })
+      : renderEnglish({ planLabel, amount, interval: input.interval, until, seats, mode, vat });
+  return { ...receipt, document };
 }
 
 function planName(plan: string, locale: ReplyLanguage) {
@@ -161,7 +186,7 @@ export async function sendReceipt(to: string, input: ReceiptInput) {
   const mailer = getMailer();
   if (!mailer) return false;
   const receipt = buildReceipt({ ...input, locale: input.locale === "ar" ? "ar" : "en" });
-  const pdf = await renderInvoicePdf(receipt.text);
+  const pdf = await renderInvoicePdf(receipt.document);
   const bcc = invoiceBccAddress();
   const sameInbox = bcc.toLowerCase() === to.trim().toLowerCase();
   await mailer.transporter.sendMail({

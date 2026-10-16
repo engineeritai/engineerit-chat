@@ -237,6 +237,9 @@ export type ShellCopy = {
     renewing: string;
     changePlan: string;
     downloadInvoice: string;
+    paymentSuccess: string;
+    invoiceUnavailable: string;
+    goToProfile: string;
     invoices: string;
     noInvoices: string;
     continueChat: string;
@@ -585,6 +588,9 @@ const en: ShellCopy = {
     renewing: "Starting payment…",
     changePlan: "Change plan",
     downloadInvoice: "Download invoice (PDF)",
+    paymentSuccess: "Payment successful",
+    invoiceUnavailable: "Invoice unavailable",
+    goToProfile: "Go to profile",
     invoices: "Invoices",
     noInvoices: "No invoices yet.",
     continueChat: "Continue to chat",
@@ -612,7 +618,7 @@ const en: ShellCopy = {
     walletReminder:
       "Apple Pay, Samsung Pay, and STC Pay are one-time payments. Renew from your profile whenever you like.",
     phonePay: "Pay with your phone",
-    scanToPay: "Scan to pay with Apple Pay, Samsung Pay, STC Pay or mada",
+    scanToPay: "STC Pay or mada on your phone",
     phonePayHint:
       "Scan this code to open this checkout on your phone. The link lasts 15 minutes and opens this payment only.",
     phonePayWaiting: "This page opens the invoice when the phone payment is confirmed.",
@@ -933,6 +939,9 @@ const ar: ShellCopy = {
     renewing: "جارٍ بدء الدفع…",
     changePlan: "تغيير الباقة",
     downloadInvoice: "تنزيل الفاتورة (PDF)",
+    paymentSuccess: "تم الدفع",
+    invoiceUnavailable: "تعذر عرض الفاتورة",
+    goToProfile: "الذهاب إلى الملف",
     invoices: "الفواتير",
     noInvoices: "لا توجد فواتير بعد.",
     continueChat: "المتابعة إلى المحادثة",
@@ -960,7 +969,7 @@ const ar: ShellCopy = {
     walletReminder:
       "Apple Pay وSamsung Pay وSTC Pay دفعات لمرة واحدة. جدّد من ملفك وقتما تشاء.",
     phonePay: "ادفع من جوالك",
-    scanToPay: "امسح للدفع عبر Apple Pay أو Samsung Pay أو STC Pay أو mada",
+    scanToPay: "STC Pay أو مدى من جوالك",
     phonePayHint: "امسح الرمز لفتح هذا الدفع على الجوال. الرابط يعمل 15 دقيقة ولهذا الدفع فقط.",
     phonePayWaiting: "تنتقل هذه الصفحة إلى الفاتورة عند تأكيد الدفع من الجوال.",
     phonePayExpired: "انتهت صلاحية رابط الجوال. افتح الدفع على الكمبيوتر لمسح رمز جديد.",

@@ -38,13 +38,17 @@ import {
 import { readApplePayDomainAssociation } from "../lib/applePayDomain";
 import { signCheckoutHandoff, verifyCheckoutHandoff } from "../lib/checkoutHandoff";
 import {
+  APPLE_PAY_SDK_URL,
   MOYASAR_CARD_NETWORKS,
+  SAMSUNG_PAY_SDK_URL,
   checkoutPaymentMethods,
   isSaveCardRejection,
   isWalletPaymentSource,
   moyasarKeysError,
+  phonePayStartsOpen,
   readMoyasarKeys,
   readSamsungPayServiceId,
+  saveCardStartsChecked,
 } from "../lib/moyasarEnv";
 import { safeNextPath } from "../lib/safeNext";
 import {
@@ -56,7 +60,18 @@ import {
 import { chosenLanguage } from "../lib/replyLanguage";
 import { PDFDocument } from "pdf-lib";
 import { canDownloadInvoice, invoiceBccAddress } from "../lib/invoiceMail";
+import { readFileSync } from "node:fs";
+import fontkit from "@pdf-lib/fontkit";
+import { paymentSuccessPath } from "../lib/checkoutReturn";
+import {
+  buildInvoiceDocument,
+  invoiceLanguage,
+  paymentMethodLabel,
+  usesLogicalArabic,
+} from "../lib/invoiceDocument";
+import { invoicePdfHref } from "../lib/invoiceDownload";
 import { renderInvoicePdf } from "../lib/invoicePdf";
+import { shellCopy } from "../lib/shell";
 import { buildReceipt } from "../lib/receipt";
 import crypto from "node:crypto";
 
@@ -278,7 +293,10 @@ describe("Moyasar confirmation and receipts", () => {
       { vatNumber: "", zatcaFlag: "true" }
     );
     assert.doesNotMatch(receipt.text, /VAT|tax invoice/i);
-    const pdf = Buffer.from(await renderInvoicePdf(receipt.text));
+    assert.equal(receipt.document.locale, "en");
+    assert.match(receipt.document.notes.join("\n"), /VAT as applicable/);
+    assert.equal(usesLogicalArabic(receipt.document), true);
+    const pdf = Buffer.from(await renderInvoicePdf(receipt.document));
     assert.equal(pdf.subarray(0, 5).toString(), "%PDF-");
     const loaded = await PDFDocument.load(pdf);
     assert.ok(loaded.getPageCount() >= 1);
@@ -288,11 +306,31 @@ describe("Moyasar confirmation and receipts", () => {
       { vatNumber: "", zatcaFlag: "" }
     );
     assert.doesNotMatch(arabic.text, /VAT|ضريبة/);
-    const arabicPdf = Buffer.from(await renderInvoicePdf(arabic.text));
+    assert.equal(arabic.document.locale, "ar");
+    assert.equal(arabic.document.title, "فاتورة");
+    assert.match(arabic.document.notes.join("\n"), /ضريبة القيمة المضافة حسب الأنظمة/);
+    assert.equal(usesLogicalArabic(arabic.document), true);
+    const arabicPdf = Buffer.from(await renderInvoicePdf(arabic.document));
     const loadedArabic = await PDFDocument.load(arabicPdf);
     assert.ok(loadedArabic.getPageCount() >= 1);
+    assertFontDraws("assets/fonts/Inter-Regular.ttf", ["Invoice", "SAR 41.00", "info@engineerit.ai"]);
+    assertFontDraws("assets/fonts/NotoSansArabic-Regular.ttf", [
+      "فاتورة",
+      "المهندس المحترف",
+      "ضريبة القيمة المضافة حسب الأنظمة",
+    ]);
   });
 });
+
+function assertFontDraws(path: string, samples: string[]) {
+  const font = fontkit.create(readFileSync(path)) as {
+    layout: (text: string) => { glyphs: { id: number }[] };
+  };
+  for (const sample of samples) {
+    const missing = font.layout(sample).glyphs.filter((glyph) => glyph.id === 0).length;
+    assert.equal(missing, 0, `${path} ${sample}`);
+  }
+}
 
 describe("renewals, cancellation, and seat changes", () => {
   const periodEnd = new Date("2026-11-16T00:00:00.000Z");
@@ -577,5 +615,108 @@ describe("admin and redirects", () => {
       "7b2276657273696f6e223a312c227073704964223a2243423939394539333137363744463341383644424145363131413331323544303133353543373842303636343033393832323336324134413238303246334136222c22637265617465644f6e223a313738373134353634373931307d"
     );
     assert.equal(placeholder.endsWith("\n"), false);
+  });
+});
+
+describe("checkout and invoice regressions", () => {
+  it("keeps Apple Pay on every desktop browser and loads Apple's SDK", () => {
+    assert.equal(APPLE_PAY_SDK_URL, "https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js");
+    assert.match(SAMSUNG_PAY_SDK_URL, /samsungpay_web_sdk\.js$/);
+    assert.deepEqual(checkoutPaymentMethods("samsung-service"), [
+      "applepay",
+      "samsungpay",
+      "stcpay",
+      "creditcard",
+    ]);
+    assert.equal(checkoutPaymentMethods("").includes("applepay"), true);
+    assert.equal(checkoutPaymentMethods("").includes("stcpay"), true);
+    assert.equal(MOYASAR_CARD_NETWORKS[0], "mada");
+    assert.equal(isWalletPaymentSource("applepay"), true);
+    assert.equal(isWalletPaymentSource("creditcard"), false);
+  });
+
+  it("keeps the phone QR collapsed so it does not replace Apple Pay", () => {
+    assert.equal(phonePayStartsOpen(), false);
+    assert.match(shellCopy.en.checkout.scanToPay, /STC Pay or mada/);
+    assert.doesNotMatch(shellCopy.en.checkout.scanToPay, /Apple Pay/);
+    assert.match(shellCopy.ar.checkout.scanToPay, /STC Pay/);
+    assert.match(shellCopy.en.checkout.walletReminder, /Apple Pay, Samsung Pay, and STC Pay/);
+    assert.match(shellCopy.en.checkout.securePay, /Moyasar/);
+    assert.match(shellCopy.en.checkout.cardNotStored, /never stored/);
+    assert.equal(shellCopy.en.checkout.optional, "Optional");
+    assert.equal(saveCardStartsChecked(), false);
+    assert.equal(isSaveCardRejection("Invalid source.save_card"), true);
+  });
+
+  it("returns paid checkouts to the success page and keeps the invoice email BCC", () => {
+    assert.equal(
+      paymentSuccessPath("11111111-1111-4111-8111-111111111111", "signed"),
+      "/payment/success?checkout=11111111-1111-4111-8111-111111111111&pay=signed"
+    );
+    assert.equal(invoiceBccAddress(undefined), "info@engineerit.ai");
+    assert.equal(shellCopy.en.profile.paymentSuccess, "Payment successful");
+    assert.equal(shellCopy.en.profile.goToProfile, "Go to profile");
+    assert.equal(shellCopy.ar.profile.goToProfile, "الذهاب إلى الملف");
+    assert.equal(shellCopy.en.profile.downloadInvoice, "Download invoice (PDF)");
+  });
+
+  it("regenerates profile and success downloads in the UI language, English by default", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    assert.equal(invoiceLanguage(null), "en");
+    assert.equal(invoiceLanguage("en"), "en");
+    assert.equal(invoiceLanguage("ar"), "ar");
+    assert.equal(invoicePdfHref(id), `/api/invoices/${id}/pdf?lang=en`);
+    assert.equal(invoicePdfHref(id, "tok", "ar"), `/api/invoices/${id}/pdf?pay=tok&lang=ar`);
+    assert.doesNotMatch(invoicePdfHref(id, "", "ar"), /storage|supabase|\.pdf$/);
+
+    const english = buildInvoiceDocument({
+      plan: "professional",
+      amountSar: 41,
+      interval: "month",
+      invoiceNumber: "inv_41",
+      customerName: "Nora Ahmed",
+      customerEmail: "nora@example.com",
+      periodStart: "2026-10-16T00:00:00.000Z",
+      periodEnd: "2026-11-16T00:00:00.000Z",
+      paymentMethod: "applepay",
+      paymentId: "pay_123",
+      issuedAt: "2026-10-16T00:00:00.000Z",
+    });
+    assert.equal(english.locale, "en");
+    assert.equal(english.title, "Invoice");
+    assert.equal(paymentMethodLabel("applepay", "en"), "Apple Pay");
+    assert.equal(paymentMethodLabel("creditcard", "en"), "Card (mada, Visa, Mastercard, Amex)");
+    assert.match(english.rows.map((row) => `${row.label}: ${row.value}`).join("\n"), /Apple Pay/);
+    assert.match(english.rows.map((row) => row.value).join("\n"), /pay_123/);
+    assert.match(english.rows.map((row) => row.label).join("\n"), /Period start/);
+    assert.match(english.rows.map((row) => row.label).join("\n"), /Period end/);
+    assert.equal(usesLogicalArabic(english), true);
+
+    const arabic = buildInvoiceDocument({
+      plan: "professional",
+      amountSar: 41,
+      interval: "month",
+      locale: "ar",
+      customerName: "نورة أحمد",
+      paymentMethod: "stcpay",
+    });
+    assert.equal(arabic.locale, "ar");
+    assert.equal(arabic.title, "فاتورة");
+    assert.match(arabic.customerName, /نورة/);
+    assert.equal(paymentMethodLabel("stcpay", "ar"), "STC Pay");
+    assert.equal(usesLogicalArabic(arabic), true);
+  });
+
+  it("still charges a renewal on the period end for the cron", () => {
+    const periodEnd = new Date("2026-11-16T00:00:00.000Z");
+    const decision = decideRenewal({
+      subscriptionId: "sub_1",
+      periodEnd,
+      status: "active",
+      cancelAtPeriodEnd: false,
+      failureCount: 0,
+      now: periodEnd,
+    });
+    assert.equal(decision.action, "charge");
   });
 });

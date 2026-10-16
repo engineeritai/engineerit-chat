@@ -135,8 +135,13 @@ export async function applyRenewalDecision(
           amountSar,
           interval: sub.billing_interval,
           seats: sub.seat_limit,
+          periodStart: now.toISOString(),
           periodEnd: periodEnd.toISOString(),
           locale,
+          customerEmail: sub.customer_email,
+          paymentMethod: "token",
+          paymentId: charge.paymentId || null,
+          issuedAt: now.toISOString(),
         });
       } catch (err) {
         console.error("renewal receipt email failed", err);

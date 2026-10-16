@@ -9,6 +9,8 @@ import PhonePayQr from "../../components/PhonePayQr";
 import { supabase } from "@/lib/supabaseClient";
 import { type PlanId } from "@/lib/plans";
 import { formatMoney, planById } from "@/lib/labels";
+import { paymentSuccessPath } from "@/lib/checkoutReturn";
+import { phonePayStartsOpen, saveCardStartsChecked } from "@/lib/moyasarEnv";
 import { useMessages } from "@/lib/useMessages";
 
 type Checkout = {
@@ -24,17 +26,11 @@ type Checkout = {
 const NETWORKS = ["mada", "Visa", "Mastercard", "Amex", "UnionPay"];
 const NOTICE_KEY = "engineerit_checkout_notice";
 
-function successPath(id: string, pay: string) {
-  const next = new URLSearchParams({ checkout: id });
-  if (pay) next.set("pay", pay);
-  return `/payment/success?${next.toString()}`;
-}
-
 export default function CheckoutPage() {
   const params = useParams<{ id: string }>();
   const { locale, shell: s } = useMessages();
   const [sidebar, setSidebar] = useState(false);
-  const [consent, setConsent] = useState(false);
+  const [consent, setConsent] = useState(saveCardStartsChecked);
   const [saveRejected, setSaveRejected] = useState(false);
   const [checkout, setCheckout] = useState<Checkout | null>(null);
   const [publishableKey, setPublishableKey] = useState("");
@@ -46,6 +42,7 @@ export default function CheckoutPage() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const [showPhonePay, setShowPhonePay] = useState(false);
+  const [phoneOpen, setPhoneOpen] = useState(phonePayStartsOpen);
   const [payToken, setPayToken] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -89,7 +86,7 @@ export default function CheckoutPage() {
         return;
       }
       if (json.checkout?.status === "paid") {
-        window.location.assign(successPath(params.id, pay));
+        window.location.assign(paymentSuccessPath(params.id, pay));
         return;
       }
       setError("");
@@ -117,7 +114,7 @@ export default function CheckoutPage() {
         const res = await fetch(`/api/checkout/moyasar?${qs}`, { headers });
         const json = await res.json().catch(() => ({}));
         if (json.status === "paid") {
-          window.location.assign(successPath(checkout.id, payToken));
+          window.location.assign(paymentSuccessPath(checkout.id, payToken));
         }
       })();
     }, 3000);
@@ -250,37 +247,44 @@ export default function CheckoutPage() {
                   ) : (
                     <p>{s.checkout.missingKey}</p>
                   )}
+                  {showPhonePay && phonePayUrl ? (
+                    <details
+                      className="checkout-phone"
+                      open={phoneOpen}
+                      onToggle={(event) => setPhoneOpen((event.target as HTMLDetailsElement).open)}
+                    >
+                      <summary>
+                        <span className="checkout-phone-title">
+                          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="7" y="2" width="10" height="20" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                            <circle cx="12" cy="18" r="0.8" fill="currentColor" />
+                          </svg>
+                          <span>
+                            <p className="checkout-phone-kicker">{s.checkout.phonePay}</p>
+                            <h2>{s.checkout.scanToPay}</h2>
+                          </span>
+                        </span>
+                      </summary>
+                      <PhonePayQr url={phonePayUrl} alt={s.checkout.scanToPay} />
+                      <p>{s.checkout.phonePayHint}</p>
+                      <p>{s.checkout.phonePayWaiting}</p>
+                      <button
+                        type="button"
+                        className="btn btn-quiet"
+                        onClick={() => {
+                          void navigator.clipboard?.writeText(phonePayUrl).then(() => {
+                            setCopied(true);
+                            window.setTimeout(() => setCopied(false), 2000);
+                          });
+                        }}
+                      >
+                        {copied ? s.checkout.copied : s.checkout.copyLink}
+                      </button>
+                    </details>
+                  ) : null}
                 </>
               )}
             </div>
-            {showPhonePay && phonePayUrl ? (
-              <aside className="checkout-phone">
-                <div className="checkout-phone-title">
-                  <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="7" y="2" width="10" height="20" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
-                    <circle cx="12" cy="18" r="0.8" fill="currentColor" />
-                  </svg>
-                  <div>
-                    <p className="checkout-phone-kicker">{s.checkout.phonePay}</p>
-                    <h2>{s.checkout.scanToPay}</h2>
-                  </div>
-                </div>
-                <PhonePayQr url={phonePayUrl} alt={s.checkout.scanToPay} />
-                <p>{s.checkout.phonePayWaiting}</p>
-                <button
-                  type="button"
-                  className="btn btn-quiet"
-                  onClick={() => {
-                    void navigator.clipboard?.writeText(phonePayUrl).then(() => {
-                      setCopied(true);
-                      window.setTimeout(() => setCopied(false), 2000);
-                    });
-                  }}
-                >
-                  {copied ? s.checkout.copied : s.checkout.copyLink}
-                </button>
-              </aside>
-            ) : null}
           </div>
         </div>
       </div>

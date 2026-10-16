@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import LanguageToggle from "@/app/components/LanguageToggle";
-import { useLocale } from "@/app/components/LocaleProvider";
+import Header from "../../components/Header";
+import NavSidebar from "../../components/NavSidebar";
 import { useMessages } from "@/lib/useMessages";
 import { planById, formatMoney } from "@/lib/labels";
 import { isPlanId, type PlanId } from "@/lib/plans";
@@ -20,9 +20,9 @@ type Invoice = {
 };
 
 export default function PaymentSuccessPage() {
-  const { locale } = useLocale();
-  const { shell: s } = useMessages();
+  const { locale, shell: s } = useMessages();
   const arabic = locale === "ar";
+  const [sidebar, setSidebar] = useState(false);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
@@ -67,8 +67,7 @@ export default function PaymentSuccessPage() {
   const planId: PlanId = invoice && isPlanId(invoice.plan) ? invoice.plan : "assistant";
   const planName = planById(locale, planId).name;
   const amount = invoice ? formatMoney(Number(invoice.amount_sar), locale) : "";
-  const cycle =
-    invoice?.billing_interval === "year" ? s.profile.annual : s.profile.monthly;
+  const cycle = invoice?.billing_interval === "year" ? s.profile.annual : s.profile.monthly;
   const until = invoice?.period_end
     ? new Date(invoice.period_end).toLocaleDateString(arabic ? "ar-SA-u-nu-latn" : "en-GB", {
         day: "2-digit",
@@ -78,70 +77,83 @@ export default function PaymentSuccessPage() {
     : "";
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-4">
-      <div className="max-w-2xl w-full space-y-4">
-        <LanguageToggle />
-        <h1 className="text-3xl font-semibold" style={{ color: error ? "#b91c1c" : "#16a34a" }}>
-          {error ? (arabic ? "تعذر عرض الفاتورة" : "Invoice unavailable") : arabic ? "تم الدفع" : "Payment successful"}
-        </h1>
-        {error ? (
-          <p className="text-sm text-gray-800">{error}</p>
-        ) : invoice ? (
-          <div className="rounded-2xl border border-gray-200 p-4 text-sm text-gray-800 space-y-2">
-            <h2 className="text-lg font-semibold">{s.profile.invoiceHeading}</h2>
-            <p>
-              {s.profile.plan}: <strong>{planName}</strong>
-            </p>
-            <p>
-              {s.profile.cycle}: <strong>{cycle}</strong>
-            </p>
-            <p>
-              {s.profile.amount}: <strong>{amount}</strong>
-            </p>
-            {until ? (
-              <p>
-                {s.profile.nextRenewal}: <strong>{until}</strong>
-              </p>
+    <div className="app-shell" dir={arabic ? "rtl" : "ltr"} lang={arabic ? "ar" : "en"}>
+      <NavSidebar isMobileOpen={sidebar} onCloseMobile={() => setSidebar(false)} />
+      <div className="main">
+        <Header onToggleSidebar={() => setSidebar((v) => !v)} />
+        <div className="page-wrap">
+          <div className="pay-success">
+            <div className={error ? "checkout-error" : "pay-success-banner"} role="status">
+              {error ? null : (
+                <span className="pay-success-mark" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path d="M5 12.5 9.2 17 19 7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              )}
+              <div>
+                <h1>{error ? s.profile.invoiceUnavailable : s.profile.paymentSuccess}</h1>
+                <p>{error || (invoice ? s.profile.paymentConfirmedGo : s.profile.confirmingPayment)}</p>
+              </div>
+            </div>
+
+            {invoice ? (
+              <section className="pay-success-card" aria-label={s.profile.invoiceHeading}>
+                <h2>{s.profile.invoiceHeading}</h2>
+                <dl>
+                  <div>
+                    <dt>{s.profile.plan}</dt>
+                    <dd>{planName}</dd>
+                  </div>
+                  <div>
+                    <dt>{s.profile.cycle}</dt>
+                    <dd>{cycle}</dd>
+                  </div>
+                  <div>
+                    <dt>{s.profile.amount}</dt>
+                    <dd>{amount}</dd>
+                  </div>
+                  {until ? (
+                    <div>
+                      <dt>{s.profile.nextRenewal}</dt>
+                      <dd>{until}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+                <button
+                  type="button"
+                  className="btn pay-success-download"
+                  disabled={downloading}
+                  onClick={() => {
+                    setDownloading(true);
+                    void supabase.auth.getSession().then(async ({ data }) => {
+                      const token = data.session?.access_token || "";
+                      const pay = new URLSearchParams(window.location.search).get("pay") || "";
+                      if (!token && !pay) return;
+                      try {
+                        await downloadInvoicePdf(invoice.id, token, pay, locale);
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : s.profile.paymentFailed);
+                      } finally {
+                        setDownloading(false);
+                      }
+                    });
+                  }}
+                >
+                  {downloading ? s.profile.renewing : s.profile.downloadInvoice}
+                </button>
+              </section>
             ) : null}
-            <button
-              type="button"
-              className="inline-flex items-center justify-center px-4 py-2 rounded-full text-sm font-medium bg-black text-white"
-              disabled={downloading}
-              onClick={() => {
-                setDownloading(true);
-                void supabase.auth.getSession().then(async ({ data }) => {
-                  const token = data.session?.access_token || "";
-                  const pay = new URLSearchParams(window.location.search).get("pay") || "";
-                  if (!token && !pay) return;
-                  try {
-                    await downloadInvoicePdf(invoice.id, token, pay);
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : s.profile.paymentFailed);
-                  } finally {
-                    setDownloading(false);
-                  }
-                });
-              }}
-            >
-              {s.profile.downloadInvoice}
-            </button>
+
+            <div className="pay-success-actions">
+              <a className="btn" href="/chat">
+                {s.profile.continueChat}
+              </a>
+              <a className="btn btn-quiet" href="/profile">
+                {s.profile.goToProfile}
+              </a>
+            </div>
           </div>
-        ) : (
-          <p className="text-sm text-gray-800">{s.profile.confirmingPayment}</p>
-        )}
-        <div className="mt-4 flex items-center gap-3">
-          <a
-            href="/chat"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-transparent text-sm font-medium bg-black text-white hover:opacity-90"
-          >
-            {s.profile.continueChat}
-          </a>
-          <a
-            href="/profile"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-full border border-gray-300 text-sm font-medium text-gray-800 hover:bg-gray-50"
-          >
-            {arabic ? "الذهاب إلى الملف" : "Go to profile"}
-          </a>
         </div>
       </div>
     </div>

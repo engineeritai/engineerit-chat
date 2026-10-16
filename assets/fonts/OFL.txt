@@ -3,8 +3,9 @@ Copyright 2015-2020 Google LLC.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 
-Noto Sans Arabic is used only to embed Arabic and Latin text in chat PDF exports.
-Documents created with the font are not subject to this license.
+Noto Sans Arabic is used to embed Arabic text in chat exports and invoices.
+Inter (latin subset) is used for English invoice text and is also under the SIL Open Font License.
+Documents created with these fonts are not subject to this license.
 
 ---
 

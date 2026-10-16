@@ -3,7 +3,9 @@
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
 import {
+  APPLE_PAY_SDK_URL,
   MOYASAR_CARD_NETWORKS,
+  SAMSUNG_PAY_SDK_URL,
   checkoutPaymentMethods,
   isSaveCardRejection,
 } from "@/lib/moyasarEnv";
@@ -51,7 +53,11 @@ export default function MoyasarCardForm({
   onSaveCardRejected,
   onPaymentError,
 }: Props) {
-  const [ready, setReady] = useState(false);
+  const [appleReady, setAppleReady] = useState(false);
+  const [samsungReady, setSamsungReady] = useState(false);
+  const [moyasarReady, setMoyasarReady] = useState(false);
+  const serviceId = samsungPayServiceId.trim();
+  const ready = moyasarReady && (!wallets || appleReady) && (!wallets || !serviceId || samsungReady);
   const onRejected = useRef(onSaveCardRejected);
   const onFailed = useRef(onPaymentError);
   onRejected.current = onSaveCardRejected;
@@ -63,7 +69,6 @@ export default function MoyasarCardForm({
     if (!moyasar) return;
     const node = document.querySelector(".mysr-form");
     if (node) node.innerHTML = "";
-    const serviceId = samsungPayServiceId.trim();
     const methods = checkoutPaymentMethods(serviceId, wallets);
     let reported = false;
     try {
@@ -136,13 +141,29 @@ export default function MoyasarCardForm({
   return (
     <>
       <link rel="stylesheet" href="https://cdn.moyasar.com/mpf/1.15.0/moyasar.css" />
+      {wallets ? (
+        <Script
+          src={APPLE_PAY_SDK_URL}
+          strategy="afterInteractive"
+          onLoad={() => setAppleReady(true)}
+          onError={() => setAppleReady(true)}
+        />
+      ) : null}
+      {wallets && serviceId ? (
+        <Script
+          src={SAMSUNG_PAY_SDK_URL}
+          strategy="afterInteractive"
+          onLoad={() => setSamsungReady(true)}
+          onError={() => setSamsungReady(true)}
+        />
+      ) : null}
       <Script
         src="https://cdn.moyasar.com/mpf/1.15.0/moyasar.js"
         strategy="afterInteractive"
-        onLoad={() => setReady(true)}
+        onLoad={() => setMoyasarReady(true)}
         onError={() => onFailed.current?.(failureFallback)}
       />
-      <div className="mysr-form" key={attempt} />
+      <div className="mysr-form" data-wallet-methods={wallets ? "applepay samsungpay stcpay" : "card"} key={attempt} />
     </>
   );
 }

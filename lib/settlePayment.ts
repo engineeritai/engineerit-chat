@@ -127,8 +127,15 @@ export async function settleCheckout(
           amountSar: Number(row.amount_sar),
           interval,
           seats: row.seat_limit,
+          periodStart: new Date().toISOString(),
           periodEnd,
           locale: row.locale === "ar" ? "ar" : "en",
+          invoiceNumber: row.invoice_id || row.id,
+          customerName: row.company,
+          customerEmail: row.customer_email,
+          paymentMethod: payment?.source?.type || null,
+          paymentId: payment?.id || row.payment_id || null,
+          issuedAt: new Date().toISOString(),
         });
         if (!sent) {
           await admin

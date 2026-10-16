@@ -801,7 +801,7 @@ export default function ProfilePage() {
                           const token = await bearer();
                           if (!token) return;
                           try {
-                            await downloadInvoicePdf(row.id, token);
+                            await downloadInvoicePdf(row.id, token, "", locale);
                           } catch (err) {
                             setErrorMsg(err instanceof Error ? err.message : s.profile.paymentFailed);
                           }

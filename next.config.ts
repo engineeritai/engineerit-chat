@@ -4,10 +4,30 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   outputFileTracingIncludes: {
     "/api/history/[id]/export": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
-    "/api/invoices/[id]/pdf": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
-    "/api/payments/moyasar/complete": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
-    "/api/payments/moyasar/callback": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
-    "/api/cron/renewals": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
+    "/api/invoices/[id]/pdf": [
+      "./assets/fonts/NotoSansArabic-Regular.ttf",
+      "./assets/fonts/Inter-Regular.ttf",
+      "./assets/fonts/Inter-SemiBold.ttf",
+      "./assets/invoice-logo.png",
+    ],
+    "/api/payments/moyasar/complete": [
+      "./assets/fonts/NotoSansArabic-Regular.ttf",
+      "./assets/fonts/Inter-Regular.ttf",
+      "./assets/fonts/Inter-SemiBold.ttf",
+      "./assets/invoice-logo.png",
+    ],
+    "/api/payments/moyasar/callback": [
+      "./assets/fonts/NotoSansArabic-Regular.ttf",
+      "./assets/fonts/Inter-Regular.ttf",
+      "./assets/fonts/Inter-SemiBold.ttf",
+      "./assets/invoice-logo.png",
+    ],
+    "/api/cron/renewals": [
+      "./assets/fonts/NotoSansArabic-Regular.ttf",
+      "./assets/fonts/Inter-Regular.ttf",
+      "./assets/fonts/Inter-SemiBold.ttf",
+      "./assets/invoice-logo.png",
+    ],
   },
   async headers() {
     return [
