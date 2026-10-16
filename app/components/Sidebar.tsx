@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type React from "react";
 import AdvisorNav from "./AdvisorNav";
+import { DISCIPLINES } from "@/lib/disciplines";
+import { SAUDI_BUSINESS_AUTH_NO, SAUDI_BUSINESS_VERIFY_URL } from "@/lib/trust";
 
 type Props = {
   discipline: string;
@@ -15,24 +17,6 @@ type Props = {
   isMobileOpen: boolean;
   onCloseMobile: () => void;
 };
-
-const DISCIPLINES = [
-  "General",
-  "Civil Engineering",
-  "Mechanical Engineering",
-  "Electrical Engineering",
-  "Chemical Engineering",
-  "Instrumentation",
-  "Process Engineering",
-  "Geotechnical",
-  "Mining Engineering",
-  "Architectural",
-  "Project Engineering",
-  "Value Engineering",
-  "Survey",
-  "Exploration",
-  "HSE / HAZOP",
-];
 
 function openExternal(url: string) {
   if (typeof window === "undefined") return;
@@ -91,7 +75,9 @@ export default function Sidebar({
         <div>
           <h3>Pages</h3>
           <nav className="sidebar-nav">
-            <SidebarLink href="/" label="Chat" currentPath={pathname} />
+            <SidebarLink href="/" label="Home" currentPath={pathname} />
+            <SidebarLink href="/chat" label="Chat" currentPath={pathname} />
+            <SidebarLink href="/pricing" label="Pricing" currentPath={pathname} />
             <SidebarLink
               href="/register"
               label="Registration & Plans"
@@ -176,12 +162,13 @@ export default function Sidebar({
         </div>
 
         <div style={{ marginBottom: 2 }}>
-          © 2025 <span style={{ fontWeight: 500 }}>engineerit.ai</span>. All
-          rights reserved.
+          © {new Date().getFullYear()}{" "}
+          <span style={{ fontWeight: 500 }}>engineerit.ai</span>. All rights
+          reserved.
         </div>
 
         <div>
-          Use of engineerit asas per{" "}
+          Use of engineerit as per{" "}
           <Link href="/legal/terms" className="sidebar-legal-link">
             User Policy &amp; Agreement
           </Link>
@@ -241,11 +228,11 @@ export default function Sidebar({
               Verified Store
             </div>
             <div style={{ color: "#374151" }}>
-              Auth No.: <span style={{ fontWeight: 600 }}>0000204877</span>
+              Auth No.: <span style={{ fontWeight: 600 }}>{SAUDI_BUSINESS_AUTH_NO}</span>
             </div>
 
             <Link
-              href="https://eauthenticate.saudibusiness.gov.sa/inquiry"
+              href={SAUDI_BUSINESS_VERIFY_URL}
               target="_blank"
               className="sidebar-legal-link"
               style={{

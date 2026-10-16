@@ -18,13 +18,14 @@ export default function NavSidebar({ isMobileOpen, onCloseMobile }: Props) {
         <div>
           <h3>Navigation</h3>
           <nav className="sidebar-nav">
-            <SidebarLink href="/" label="Chat" currentPath={pathname} />
+            <SidebarLink href="/" label="Home" currentPath={pathname} />
+            <SidebarLink href="/chat" label="Chat" currentPath={pathname} />
+            <SidebarLink href="/pricing" label="Pricing" currentPath={pathname} />
             <SidebarLink
               href="/register"
               label="Registration & Plans"
               currentPath={pathname}
             />
-            <SidebarLink href="/pricing" label="Pricing" currentPath={pathname} />
             <SidebarLink
               href="/profile"
               label="My Profile"
@@ -60,7 +61,8 @@ export default function NavSidebar({ isMobileOpen, onCloseMobile }: Props) {
           AI Engineering Assistant
         </div>
         <div style={{ marginBottom: 2 }}>
-          © 2025 <span style={{ fontWeight: 500 }}>engineerit.ai</span>. All rights
+          © {new Date().getFullYear()}{" "}
+          <span style={{ fontWeight: 500 }}>engineerit.ai</span>. All rights
           reserved.
         </div>
         <div>

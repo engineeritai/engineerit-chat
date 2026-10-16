@@ -14,7 +14,7 @@ export default function Footer() {
       <p>AI Engineering Assistant</p>
 
       <p style={{ marginTop: "6px" }}>
-        © 2025 engineerit. All rights reserved.
+        © {new Date().getFullYear()} engineerit. All rights reserved.
       </p>
 
       <p style={{ marginTop: "6px" }}>

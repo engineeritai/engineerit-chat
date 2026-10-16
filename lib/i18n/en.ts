@@ -276,7 +276,7 @@ const en: Messages = {
     locked: "Locked preview",
     manageCta: "Manage subscription",
     teamEnterpriseNote:
-      "Team and Enterprise include AI Advisors. Pricing and checkout for those plans are managed on the subscription page.",
+      "Team and Enterprise include AI Advisors when that plan is on the account. This advisor layer does not read team or invoice records.",
     featureListTitle: "Included in this plan",
   },
   plans: {
