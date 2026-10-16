@@ -64,7 +64,7 @@ export const PLAN_LABELS: Record<PlanId, string> = {
   enterprise: "Enterprise",
 };
 
-export const AI_ADVISORS_FEATURE = "AI Advisors (included at launch)";
+export const AI_ADVISORS_FEATURE = "AI Advisors included";
 
 export const PLAN_COLORS: Record<PlanId, string> = {
   assistant: "#2563eb",

@@ -89,7 +89,7 @@ const AR_PLANS: Record<
       "تقدير الموارد والتكلفة ومراجعة الجدول",
       "لوحات المشروع ونظرة على المحفظة",
       "تصدير إلى PDF وورد وباوربوينت",
-      "مستشارو الذكاء الاصطناعي (مشمولون عند الإطلاق)",
+      "مستشارو الذكاء الاصطناعي مشمولون",
     ],
   },
   team: {
@@ -103,7 +103,7 @@ const AR_PLANS: Record<
       "يتجدد تلقائياً حتى الإلغاء",
       "دعوة الزملاء بالبريد",
       "ينتهي الوصول لكل الفريق إذا توقف الاشتراك",
-      "مستشارو الذكاء الاصطناعي (مشمولون عند الإطلاق)",
+      "مستشارو الذكاء الاصطناعي مشمولون",
     ],
   },
   enterprise: {
@@ -115,21 +115,18 @@ const AR_PLANS: Record<
       "10 مقاعد مشمولة",
       "مقعد إضافي 199 ر.س شهرياً",
       "يتجدد تلقائياً حتى الإلغاء",
-      "مستشارو الذكاء الاصطناعي (مشمولون عند الإطلاق)",
+      "مستشارو الذكاء الاصطناعي مشمولون",
     ],
   },
 };
 
-const ADVISORS_FEATURE_AR = "مستشارو الذكاء الاصطناعي (مشمولون عند الإطلاق)";
-
 export function featuresForLocale(locale: Locale, plan: Plan, interval: BillingInterval): string[] {
   if (locale !== "ar") return displayFeatures(plan, interval);
   return AR_PLANS[plan.id].features.map((feature) => {
-    if (feature === "مستشارو الذكاء الاصطناعي (مشمولون عند الإطلاق)") return ADVISORS_FEATURE_AR;
     if ((plan.id === "team" || plan.id === "enterprise") && feature.startsWith("مقعد إضافي")) {
       const amount = (plan.id === "enterprise" ? ENTERPRISE_EXTRA_SEAT_SAR : EXTRA_SEAT_SAR)[interval];
       const period = interval === "year" ? "سنوياً" : "شهرياً";
-      return `مقعد إضافي ${amount.toLocaleString("ar-SA")} ر.س ${period}`;
+      return `مقعد إضافي ${amount.toLocaleString("en-US")} ر.س ${period}`;
     }
     return feature;
   });
@@ -146,13 +143,13 @@ export function toolLabel(locale: Locale, id: EngineerToolId): string {
 }
 
 export function formatMoney(amount: number, locale: Locale): string {
-  if (locale === "ar") return `${amount.toLocaleString("ar-SA")} ر.س`;
+  if (locale === "ar") return `${amount.toLocaleString("en-US")} ر.س`;
   return `SAR ${amount.toLocaleString("en-US")}`;
 }
 
 export function formatUsd(amountSar: number, locale: Locale): string {
   const usd = amountSar / 3.75;
-  const formatted = new Intl.NumberFormat(locale === "ar" ? "ar-SA" : "en-US", {
+  const formatted = new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(usd);

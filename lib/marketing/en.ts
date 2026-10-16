@@ -132,7 +132,7 @@ export const en: MarketingContent = {
   teams: {
     title: "Plans and pricing",
     intro:
-      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing is 10 times the monthly price. Team and Enterprise are bought through Moyasar and renew automatically. Consultant Engineer, Team, and Enterprise include AI Advisors (included at launch).",
+      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing is 10 times the monthly price. Team and Enterprise are bought through Moyasar and renew automatically. Consultant Engineer, Team, and Enterprise include AI Advisors.",
   },
   faq: {
     title: "Questions consultancies ask",
@@ -156,7 +156,7 @@ export const en: MarketingContent = {
       {
         question: "How do Team, Enterprise, and annual billing get paid?",
         answer:
-          "Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise are paid through Moyasar, monthly or annual, and renew automatically until you cancel in billing. Annual price is 10 times the monthly price. Enterprise is SAR 2,500 per month for 10 seats, with an extra seat at SAR 199 per month. Consultant Engineer, Team, and Enterprise include AI Advisors (included at launch).",
+          "Engineer is SAR 190 per year, Professional Engineer SAR 410 per year, and Consultant Engineer SAR 790 per year. Team is SAR 349 per month or SAR 3,490 per year for 5 seats, plus SAR 69 per extra seat. Enterprise is SAR 2,500 per month or SAR 25,000 per year for 10 seats, plus SAR 199 per extra seat. All are paid through Moyasar and renew until you cancel. Consultant Engineer, Team, and Enterprise include AI Advisors.",
       },
       {
         question: "How do I change the interface language?",
@@ -203,7 +203,7 @@ export const en: MarketingContent = {
       "Assistant Engineer, Engineer, Professional Engineer, and Consultant Engineer. Same names, prices, and features as registration.",
     firmTitle: "Team and Enterprise",
     firmIntro:
-      "Team includes 5 seats. Enterprise includes 10 seats at SAR 2,500 per month. Extra seats are charged on the saved card. Both renew automatically and include AI Advisors (included at launch).",
+      "Team is SAR 349 per month or SAR 3,490 per year for 5 seats, plus SAR 69 per extra seat. Enterprise is SAR 2,500 per month or SAR 25,000 per year for 10 seats, plus SAR 199 per extra seat. Extra seats are charged on the saved card. Both renew automatically and include AI Advisors.",
     approx: "approx.",
   },
 };

@@ -179,7 +179,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
                 <div style={{ marginTop: 12 }}>
                   <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
                     {locale === "ar"
-                      ? `مقاعد إضافية (${extraSeatPrice(firmId)[interval].toLocaleString("ar-SA")} ر.س)`
+                      ? `مقاعد إضافية (${extraSeatPrice(firmId)[interval].toLocaleString("en-US")} ر.س)`
                       : `Extra seats (SAR ${extraSeatPrice(firmId)[interval].toLocaleString("en-US")})`}
                     <input
                       className="input"

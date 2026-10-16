@@ -31,7 +31,7 @@ function formatDate(value: string | null | undefined, locale: Locale) {
   if (!value) return "-";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString(locale === "ar" ? "ar-SA" : "en-GB", {
+  return d.toLocaleDateString(locale === "ar" ? "ar-SA-u-nu-latn" : "en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",

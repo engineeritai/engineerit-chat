@@ -14,16 +14,16 @@ export type ReceiptInput = {
 };
 
 const PLAN_LABELS_AR: Record<PlanId, string> = {
-  assistant: "مهندس مساعد",
-  engineer: "مهندس",
-  professional: "مهندس محترف",
-  consultant: "مهندس استشاري",
-  team: "فريق",
-  enterprise: "مؤسسات",
+  assistant: "المهندس المساعد",
+  engineer: "المهندس",
+  professional: "المهندس المحترف",
+  consultant: "المهندس الاستشاري",
+  team: "الفريق",
+  enterprise: "المؤسسات",
 };
 
 function formatSarAr(amount: number) {
-  return `${amount.toLocaleString("ar-SA")} ريال`;
+  return `${amount.toLocaleString("en-US")} ريال`;
 }
 
 export function buildReceipt(
@@ -59,7 +59,7 @@ function planName(plan: string, locale: ReplyLanguage) {
 
 function formatUntil(periodEnd: string | null | undefined, locale: ReplyLanguage) {
   if (!periodEnd) return null;
-  const formatted = new Date(periodEnd).toLocaleDateString(locale === "ar" ? "ar-SA" : "en-GB", {
+  const formatted = new Date(periodEnd).toLocaleDateString(locale === "ar" ? "ar-SA-u-nu-latn" : "en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",

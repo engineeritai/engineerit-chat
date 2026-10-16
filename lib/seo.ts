@@ -1,13 +1,18 @@
 import type { Metadata } from "next";
 import { DISCIPLINES } from "@/lib/disciplines";
 import { ENGINEER_TOOLS } from "@/lib/engineerTools";
-import { PLANS } from "@/lib/plans";
+import { disciplineLabel, localizedPlan, toolLabel } from "@/lib/labels";
 import {
-  ENTERPRISE_PLAN,
-  TEAM_PLAN,
-  assertIndividualPlanPrices,
-  monthlySarFromPlan,
-} from "@/lib/pricingDisplay";
+  ENTERPRISE_EXTRA_SEAT_SAR,
+  ENTERPRISE_INCLUDED_SEATS,
+  EXTRA_SEAT_SAR,
+  PLAN_AMOUNTS_SAR,
+  PLANS,
+  TEAM_INCLUDED_SEATS,
+  type Plan,
+  type SelfServePlanId,
+} from "@/lib/plans";
+import { assertIndividualPlanPrices } from "@/lib/pricingDisplay";
 
 export const SITE_URL = "https://engineerit.ai";
 export const SITE_NAME = "engineerit.ai";
@@ -61,20 +66,58 @@ export function pageMetadata({
   };
 }
 
-export function softwareApplicationJsonLd() {
-  assertIndividualPlanPrices();
+const ARABIC_DESCRIPTION =
+  "engineerit.ai يهندس أي فكرة أو موضوع بمنهج منظم. أرفق الملفات، واختر أداة، واحصل على إجابات منظمة. الباقات المدفوعة تضيف التصدير.";
 
-  const individualOffers = PLANS.filter(
-    (plan) => plan.id !== "team" && plan.id !== "enterprise"
-  ).map((plan) => ({
+function grouped(amount: number) {
+  return amount.toLocaleString("en-US");
+}
+
+function offerFor(plan: Plan, locale: "en" | "ar") {
+  const name = localizedPlan(locale, plan).name;
+  const price = plan.id === "assistant" ? 0 : PLAN_AMOUNTS_SAR[plan.id as SelfServePlanId].month;
+  return {
     "@type": "Offer",
-    name: plan.name,
-    price: String(monthlySarFromPlan(plan)),
+    name,
+    price: String(price),
     priceCurrency: "SAR",
-    description: `${plan.tagline} ${plan.features.join("; ")}`,
+    description: offerDescription(plan, locale),
     url: `${SITE_URL}/pricing`,
     availability: "https://schema.org/InStock",
-  }));
+  };
+}
+
+function offerDescription(plan: Plan, locale: "en" | "ar") {
+  if (plan.id === "assistant") {
+    return locale === "ar" ? "المهندس المساعد مجاني." : "Assistant Engineer is free.";
+  }
+  const amounts = PLAN_AMOUNTS_SAR[plan.id];
+  const month = grouped(amounts.month);
+  const year = grouped(amounts.year);
+  if (plan.id === "team") {
+    return locale === "ar"
+      ? `الفريق ${month} ر.س شهرياً أو ${year} ر.س سنوياً لـ ${TEAM_INCLUDED_SEATS} مقاعد. المقعد الإضافي ${grouped(EXTRA_SEAT_SAR.month)} ر.س شهرياً أو ${grouped(EXTRA_SEAT_SAR.year)} ر.س سنوياً. الشراء عبر Moyasar. مستشارو الذكاء الاصطناعي مشمولون في المهندس الاستشاري والفريق والمؤسسات.`
+      : `Team is SAR ${month} per month or SAR ${year} per year for ${TEAM_INCLUDED_SEATS} seats. Extra seat SAR ${grouped(EXTRA_SEAT_SAR.month)} per month or SAR ${grouped(EXTRA_SEAT_SAR.year)} per year. Bought through Moyasar. AI Advisors are included on Consultant Engineer, Team, and Enterprise.`;
+  }
+  if (plan.id === "enterprise") {
+    return locale === "ar"
+      ? `المؤسسات ${month} ر.س شهرياً أو ${year} ر.س سنوياً لـ ${ENTERPRISE_INCLUDED_SEATS} مقاعد. المقعد الإضافي ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.month)} ر.س شهرياً أو ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.year)} ر.س سنوياً. الشراء عبر Moyasar. مستشارو الذكاء الاصطناعي مشمولون في المهندس الاستشاري والفريق والمؤسسات.`
+      : `Enterprise is SAR ${month} per month or SAR ${year} per year for ${ENTERPRISE_INCLUDED_SEATS} seats. Extra seat SAR ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.month)} per month or SAR ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.year)} per year. Bought through Moyasar. AI Advisors are included on Consultant Engineer, Team, and Enterprise.`;
+  }
+  const advisors =
+    plan.id === "consultant"
+      ? locale === "ar"
+        ? " مستشارو الذكاء الاصطناعي مشمولون في المهندس الاستشاري والفريق والمؤسسات."
+        : " AI Advisors are included on Consultant Engineer, Team, and Enterprise."
+      : "";
+  return locale === "ar"
+    ? `${localizedPlan("ar", plan).name} ${month} ر.س شهرياً أو ${year} ر.س سنوياً. الشراء عبر Moyasar.${advisors}`
+    : `${plan.name} is SAR ${month} per month or SAR ${year} per year. Bought through Moyasar.${advisors}`;
+}
+
+export function softwareApplicationJsonLd(locale: "en" | "ar" = "en") {
+  assertIndividualPlanPrices();
+  const arabic = locale === "ar";
 
   return {
     "@context": "https://schema.org",
@@ -85,32 +128,15 @@ export function softwareApplicationJsonLd() {
     operatingSystem: "Web",
     url: `${SITE_URL}/`,
     image: `${SITE_URL}/og.png`,
-    description: defaultDescription,
-    inLanguage: "en",
+    description: arabic ? ARABIC_DESCRIPTION : defaultDescription,
+    inLanguage: arabic ? "ar" : "en",
     areaServed: ["SA", "AE", "KW", "QA", "BH", "OM"],
-    offers: [
-      ...individualOffers,
-      {
-        "@type": "Offer",
-        name: TEAM_PLAN.name,
-        price: String(TEAM_PLAN.monthlySar),
-        priceCurrency: "SAR",
-        description: `Team plan, SAR ${TEAM_PLAN.monthlySar} per month for ${TEAM_PLAN.includedSeats} seats. Extra seat SAR ${TEAM_PLAN.extraSeatMonthlySar} per month. Annual price is 10 times monthly. Paid through Moyasar. Includes AI Advisors (included at launch).`,
-        url: `${SITE_URL}/pricing`,
-      },
-      {
-        "@type": "Offer",
-        name: ENTERPRISE_PLAN.name,
-        price: String(ENTERPRISE_PLAN.monthlySarFrom),
-        priceCurrency: "SAR",
-        description:
-          "SAR 2,500 per month for 10 seats, SAR 25,000 per year. Extra seat SAR 199 per month. Bought and renewed through Moyasar. Includes AI Advisors (included at launch).",
-        url: `${SITE_URL}/pricing`,
-      },
-    ],
-    featureList: [
-      ...DISCIPLINES,
-      ...ENGINEER_TOOLS.map((tool) => tool.label),
-    ],
+    offers: PLANS.map((plan) => offerFor(plan, locale)),
+    featureList: arabic
+      ? [
+          ...DISCIPLINES.map((name) => disciplineLabel("ar", name)),
+          ...ENGINEER_TOOLS.map((tool) => toolLabel("ar", tool.id)),
+        ]
+      : [...DISCIPLINES, ...ENGINEER_TOOLS.map((tool) => tool.label)],
   };
 }

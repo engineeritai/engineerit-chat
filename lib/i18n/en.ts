@@ -22,9 +22,9 @@ const en: Messages = {
       "Four AI advisors that engineer your project documents with a structured approach. Attach your files, run a one-click playbook, and get an export-ready report with tables, a RAG rating and an executive summary.",
     open: "Open advisor",
     preview: "View locked preview",
-    comingSoonBadge: "Included at launch",
+    comingSoonBadge: "Included on Consultant Engineer, Team, and Enterprise",
     comingSoonBody:
-      "AI Advisors are included at launch on Consultant Engineer, Team, and Enterprise. Preview every playbook and report template below.",
+      "AI Advisors are included on Consultant Engineer, Team, and Enterprise. Preview every playbook and report template below.",
     comingSoonCta: "Preview playbooks",
     nowLiveBadge: "Now live",
     responsibility:
@@ -267,7 +267,7 @@ const en: Messages = {
     close: "Close",
     upgradeRequired: "Upgrade required",
     registerRequired: "Register / Login required",
-    sendLocked: "Playbooks run on Consultant, Team, and Enterprise.",
+    sendLocked: "Playbooks run on Consultant Engineer, Team, and Enterprise.",
     pilotNote:
       "Team includes 5 seats and Enterprise includes 10 seats. Both are bought through Moyasar.",
   },
@@ -281,14 +281,14 @@ const en: Messages = {
       "AI Advisors — PMO, Program Assurance, Operations Readiness, and Decision Support — included on Consultant, Team, and Enterprise",
     availabilityTitle: "AI Advisors by plan",
     availabilityNote:
-      "Consultant Engineer, Team, and Enterprise include every advisor and playbook. Assistant Engineer, Engineer, and Professional Engineer keep a locked preview. AI Advisors are included at launch.",
+      "Consultant Engineer, Team, and Enterprise include every advisor and playbook. Assistant Engineer, Engineer, and Professional Engineer keep a locked preview.",
     planColumn: "Plan",
     accessColumn: "AI Advisors",
     included: "Included",
     locked: "Locked preview",
     manageCta: "Manage subscription",
     teamEnterpriseNote:
-      "Team and Enterprise include all four advisors. AI Advisors are included at launch.",
+      "Team and Enterprise include all four advisors.",
     teamPrice:
       "Team is SAR {monthly} per month for {seats} seats, plus SAR {extra} per extra seat.",
     enterprisePrice:

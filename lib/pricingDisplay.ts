@@ -96,12 +96,12 @@ export function planPriceLabel(
   const quote = quoteSelfServe(planId, interval, extraSeats);
   if (locale === "ar") {
     const period = interval === "year" ? "سنوياً" : "شهرياً";
-    const usd = new Intl.NumberFormat("ar-SA", {
+    const usd = new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(quote.amountSar / SAR_PER_USD);
     return {
-      primary: `${quote.amountSar.toLocaleString("ar-SA")} ر.س ${period}`,
+      primary: `${quote.amountSar.toLocaleString("en-US")} ر.س ${period}`,
       usd: `${usd} دولار`,
       amountSar: quote.amountSar,
     };

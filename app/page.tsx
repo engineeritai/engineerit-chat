@@ -12,10 +12,11 @@ export async function generateMetadata() {
   return pageMetadata({ ...meta, path: "/", locale });
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const locale = await requestLocale();
   return (
     <>
-      <JsonLd data={softwareApplicationJsonLd()} />
+      <JsonLd data={softwareApplicationJsonLd(locale)} />
       <LoggedInChatRedirect />
       <MarketingShell>
         <LandingView />
