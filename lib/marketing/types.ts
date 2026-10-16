@@ -102,6 +102,7 @@ export type MarketingContent = {
     annualExplainer: string;
     usdNote: string;
     vatNote: string;
+    rateNote: string;
     individualTitle: string;
     individualIntro: string;
     firmTitle: string;

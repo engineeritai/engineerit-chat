@@ -13,7 +13,6 @@ import remarkGfm from "remark-gfm";
 import Link from "next/link";
 import MarketingShell from "../components/marketing/MarketingShell";
 import Sidebar from "../components/Sidebar";
-import { ADVISOR_IDS } from "@/lib/advisors";
 import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
 import { disciplineLabel, toolLabel } from "@/lib/labels";
@@ -381,7 +380,7 @@ export default function Page() {
   const [planReady, setPlanReady] = useState(false);
   const [planId, setPlanId] = useState<PlanId>("assistant");
   const [advisorPlan, setAdvisorPlan] = useState("guest");
-  const { locale, m: ui, shell: s } = useMessages();
+  const { locale, shell: s } = useMessages();
   const history = useChatHistory({
     locale,
     discipline,
@@ -857,14 +856,6 @@ export default function Page() {
                   >
                     {prompt}
                   </button>
-                ))}
-              </div>
-              <div className="advisor-slim">
-                <Link href="/advisors">{s.chat.advisorsMenu}</Link>
-                {ADVISOR_IDS.map((id) => (
-                  <Link key={id} href={`/advisors/${id}`}>
-                    {ui.advisors.items[id].name}
-                  </Link>
                 ))}
               </div>
             </div>

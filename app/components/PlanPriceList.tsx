@@ -5,6 +5,7 @@ import { featuresForLocale, localizedPlan } from "@/lib/labels";
 import { getMarketingContent } from "@/lib/marketing";
 import { PLANS, type BillingInterval } from "@/lib/plans";
 import { planPriceLabel } from "@/lib/pricingDisplay";
+import PriceRateNote from "@/app/components/marketing/PriceRateNote";
 
 export default function PlanPriceList({
   interval = "month",
@@ -17,7 +18,8 @@ export default function PlanPriceList({
   const content = getMarketingContent(locale);
 
   return (
-    <ul className="mkt-bullets">
+    <div>
+      <ul className="mkt-bullets">
       {PLANS.map((source) => {
         const plan = localizedPlan(locale, source);
         const month = planPriceLabel(plan.id, "month", 0, locale);
@@ -44,6 +46,8 @@ export default function PlanPriceList({
           </li>
         );
       })}
-    </ul>
+      </ul>
+      <PriceRateNote />
+    </div>
   );
 }

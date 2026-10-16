@@ -15,6 +15,7 @@ import {
 } from "@/lib/plans";
 import { planPriceLabel } from "@/lib/pricingDisplay";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
+import PriceRateNote from "@/app/components/marketing/PriceRateNote";
 
 const ENGINEER_TOOLS = [
   { id: "drawing", label: "Drawing & Diagrams" },
@@ -98,7 +99,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
       </div>
 
       <p style={{ fontSize: 13, color: "#6b7280", marginTop: 0 }}>
-        {content.pricing.annualExplainer} {content.pricing.usdNote}
+        {content.pricing.annualExplainer}
       </p>
 
       {errorMsg && (
@@ -257,6 +258,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
           );
         })}
       </div>
+      <PriceRateNote />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { getMarketingContent, type Locale } from "@/lib/marketing";
 import { featuresForLocale, localizedPlan } from "@/lib/labels";
 import { assertIndividualPlanPrices, planPriceLabel } from "@/lib/pricingDisplay";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
+import PriceRateNote from "@/app/components/marketing/PriceRateNote";
 
 assertIndividualPlanPrices();
 
@@ -47,9 +48,7 @@ export default function PricingBoard() {
             <span className="mkt-pill">{content.pricing.twoMonthsFree}</span>
           </button>
         </div>
-        {content.pricing.vatNote ? <p className="mkt-note">{content.pricing.vatNote}</p> : null}
         <p className="mkt-note">{content.pricing.annualExplainer}</p>
-        <p className="mkt-muted">{content.pricing.usdNote}</p>
       </div>
 
       {errorMsg && (
@@ -92,6 +91,7 @@ export default function PricingBoard() {
           />
         ))}
       </div>
+      <PriceRateNote />
     </div>
   );
 }

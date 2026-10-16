@@ -4,6 +4,7 @@ import { ADVISOR_ACCESS, PRICING_PLAN_IDS, type AdvisorPlanId } from "@/lib/advi
 import { ENTERPRISE_EXTRA_SEAT_SAR, ENTERPRISE_INCLUDED_SEATS } from "@/lib/plans";
 import { ENTERPRISE_PLAN, TEAM_PLAN } from "@/lib/pricingDisplay";
 import { useMessages } from "@/lib/useMessages";
+import PriceRateNote from "@/app/components/marketing/PriceRateNote";
 
 function fill(template: string, values: Record<string, string | number>) {
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
@@ -61,6 +62,7 @@ export default function AdvisorPricingNote() {
           })}
         </tbody>
       </table>
+      <PriceRateNote />
     </div>
   );
 }

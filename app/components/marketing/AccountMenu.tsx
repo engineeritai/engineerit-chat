@@ -1,51 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { planById } from "@/lib/labels";
-import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
-import { PLAN_COLORS, type PlanId } from "@/lib/plans";
-import { resolveEffectivePlan } from "@/lib/effectivePlan";
+import { PLAN_COLORS } from "@/lib/plans";
+import { useAccount } from "@/app/components/marketing/AccountState";
+import UserAvatar from "@/app/components/marketing/UserAvatar";
 
-export default function AccountMenu({ compact = false }: { compact?: boolean }) {
+export default function AccountMenu({ presentation = "photo" }: { presentation?: "photo" | "row" }) {
   const { locale, shell: s, m } = useMessages();
   const router = useRouter();
-  const pathname = usePathname();
+  const account = useAccount();
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState<string | null>(null);
-  const [planId, setPlanId] = useState<PlanId>("assistant");
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    let active = true;
-    const load = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!active) return;
-      if (!user) {
-        setEmail(null);
-        setPlanId("assistant");
-        return;
-      }
-      setEmail(user.email || user.id);
-      setPlanId(await resolveEffectivePlan(supabase, user.id));
+    if (!open) return;
+    const onDoc = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
-    void load();
-    const refresh = () => {
-      void load();
-    };
-    window.addEventListener("focus", refresh);
-    return () => {
-      active = false;
-      window.removeEventListener("focus", refresh);
-    };
-  }, [pathname]);
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
 
-  if (!email) {
+  if (!account.signedIn) {
+    if (presentation === "row") {
+      return (
+        <Link className="app-side-link" href="/login">
+          {s.header.login}
+        </Link>
+      );
+    }
     return (
-      <Link className={compact ? undefined : "mkt-btn mkt-btn-secondary mkt-login"} href="/login">
+      <Link className="mkt-header-login" href="/login">
         {s.header.login}
       </Link>
     );
@@ -55,18 +44,27 @@ export default function AccountMenu({ compact = false }: { compact?: boolean }) 
     setOpen(false);
     router.push(path);
   };
+  const name = account.fullName || account.email || "";
+  const planName = planById(locale, account.planId).name;
 
   return (
-    <div className="mkt-account">
+    <div className={"mkt-account" + (presentation === "row" ? " mkt-account-row" : "")} ref={rootRef}>
       <button
         type="button"
-        className="mkt-account-btn"
-        style={{ backgroundColor: PLAN_COLORS[planId] }}
+        className={presentation === "row" ? "app-account-row" : "mkt-avatar-btn"}
         aria-expanded={open}
         aria-label={s.header.accountMenu}
         onClick={() => setOpen((value) => !value)}
       >
-        {planById(locale, planId).name}
+        <UserAvatar url={account.avatarUrl} name={name} size={32} />
+        {presentation === "row" ? (
+          <span className="app-account-meta">
+            <span className="app-account-name">{account.firstName || name}</span>
+            <span className="app-plan-badge" style={{ background: PLAN_COLORS[account.planId] }}>
+              {planName}
+            </span>
+          </span>
+        ) : null}
       </button>
       {open && (
         <div className="mkt-account-menu" role="menu">
@@ -84,11 +82,9 @@ export default function AccountMenu({ compact = false }: { compact?: boolean }) 
           </button>
           <button
             type="button"
-            onClick={async () => {
+            onClick={() => {
               setOpen(false);
-              await supabase.auth.signOut();
-              setEmail(null);
-              router.push("/");
+              void account.signOut();
             }}
           >
             {s.header.logout}
