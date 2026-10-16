@@ -73,6 +73,7 @@ export async function POST(req: Request) {
           <p><strong>Email:</strong> ${escapeHtml(email)}</p>
           <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
           <p><strong>Seats:</strong> ${seats}</p>
+          <p>Create a Moyasar payment link for this lead from the admin subscriptions page. Access starts after Moyasar confirms payment.</p>
         `,
       });
     } catch (mailErr) {

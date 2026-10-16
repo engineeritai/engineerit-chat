@@ -10,6 +10,14 @@ import {
   quoteSelfServe,
 } from "../lib/plans";
 import { safeNextPath } from "../lib/safeNext";
+import {
+  assessPaidInvoice,
+  extractInvoiceId,
+  verifyMoyasarSecretToken,
+  verifyMoyasarSignature,
+} from "../lib/moyasar";
+import { buildReceipt } from "../lib/receipt";
+import crypto from "node:crypto";
 
 describe("self-serve prices", () => {
   it("keeps individual monthly prices and bills annual at 10×", () => {
@@ -74,6 +82,48 @@ describe("team access", () => {
       pickEffectivePlan("consultant", [{ plan: "team", status: "canceled", current_period_end: future }]),
       "consultant"
     );
+  });
+});
+
+describe("Moyasar confirmation and receipts", () => {
+  it("accepts a paid invoice only when the amount matches", () => {
+    assert.deepEqual(assessPaidInvoice(34900, { status: "paid", amount: 34900 }), { ok: true });
+    assert.equal(assessPaidInvoice(34900, { status: "initiated", amount: 34900 }).ok, false);
+    assert.equal(assessPaidInvoice(34900, { status: "paid", amount: 100 }).reason, "amount_mismatch");
+  });
+
+  it("reads the invoice id from an invoice callback and from a payment webhook", () => {
+    assert.equal(extractInvoiceId({ id: "inv_1", status: "paid", amount: 100 }), "inv_1");
+    assert.equal(
+      extractInvoiceId({ type: "payment_paid", secret_token: "s", data: { id: "pay_1", invoice_id: "inv_9" } }),
+      "inv_9"
+    );
+    assert.equal(extractInvoiceId({ type: "payment_paid", data: { id: "pay_1" } }), null);
+  });
+
+  it("checks the webhook signature and secret token", () => {
+    const raw = JSON.stringify({ id: "inv_1", status: "paid" });
+    const signature = crypto.createHmac("sha256", "whsec").update(raw).digest("hex");
+    assert.equal(verifyMoyasarSignature(raw, signature, "whsec"), true);
+    assert.equal(verifyMoyasarSignature(raw, signature, "other"), false);
+    assert.equal(verifyMoyasarSecretToken("whsec", "whsec"), true);
+    assert.equal(verifyMoyasarSecretToken("nope", "whsec"), false);
+  });
+
+  it("builds a VAT-inclusive receipt with plan, amount, and period", () => {
+    const receipt = buildReceipt({
+      plan: "enterprise",
+      amountSar: 4800,
+      interval: "year",
+      seats: 12,
+      periodEnd: "2027-10-16T00:00:00.000Z",
+    });
+    assert.match(receipt.subject, /Enterprise/);
+    assert.match(receipt.subject, /4,800/);
+    assert.match(receipt.text, /This amount is VAT inclusive/);
+    assert.match(receipt.text, /Period: Annual/);
+    assert.match(receipt.text, /Seats: 12/);
+    assert.match(receipt.html, /VAT inclusive/);
   });
 });
 

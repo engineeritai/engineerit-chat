@@ -87,6 +87,7 @@ export default function ProfilePage() {
           const planParam = params.get("plan");
           const intervalParam = params.get("interval") === "year" ? "year" : "month";
           const extraSeatsParam = Number(params.get("extraSeats") || "0");
+          const checkoutId = params.get("checkout");
 
           const allowedPlans: PlanId[] = [
             "assistant",
@@ -96,7 +97,28 @@ export default function ProfilePage() {
             "team",
           ];
 
-          if (
+          if (status === "paid" && checkoutId) {
+            try {
+              const res = await fetch("/api/payments/moyasar/complete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ checkoutId }),
+              });
+              const json = await res.json().catch(() => null);
+              if (!res.ok) {
+                setErrorMsg(json?.error || "Moyasar has not confirmed this payment yet.");
+              } else if (json?.plan && isPlanId(json.plan)) {
+                subscriptionTierOverride = json.plan;
+                setInfoMsg("Payment confirmed by Moyasar. A receipt is emailed to you.");
+                try {
+                  window.history.replaceState({}, "", window.location.pathname);
+                } catch {}
+              }
+            } catch (err) {
+              console.error("MOYASAR COMPLETE ERROR:", err);
+              setErrorMsg("Could not confirm the payment. Please contact support.");
+            }
+          } else if (
             status === "paid" &&
             planParam &&
             isPlanId(planParam) &&

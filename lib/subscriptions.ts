@@ -39,7 +39,7 @@ export const plans = [
   {
     id: "enterprise",
     name: "Enterprise",
-    description: "From SAR 2,500 / month. Contact sales.",
+    description: "From SAR 2,500 / month. Quoted, then paid with Moyasar.",
     price: 2500,
     active: true,
   },

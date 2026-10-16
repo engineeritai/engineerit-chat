@@ -64,7 +64,8 @@ export default function EnterprisePage() {
           <h1 className="page-title">Contact sales</h1>
           <p className="page-subtitle">
             Enterprise starts from SAR 2,500 / month (SAR 25,000 / year), VAT included.
-            Tell us who to reach and how many seats you need. We will follow up by email.
+            Tell us who to reach and how many seats you need. We email a Moyasar payment
+            link for the quoted amount. The subscription starts after Moyasar confirms payment.
           </p>
 
           <form className="card" onSubmit={handleSubmit} style={{ maxWidth: 560 }}>
@@ -109,7 +110,7 @@ export default function EnterprisePage() {
             {error && <p style={{ color: "#b91c1c", fontSize: 14 }}>{error}</p>}
             {done && (
               <p style={{ color: "#166534", fontSize: 14 }}>
-                Request received. Sales will contact you at the email you entered.
+                Request received. We will email a Moyasar payment link to the address you entered.
               </p>
             )}
 
