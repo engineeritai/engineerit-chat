@@ -1,4 +1,11 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Refund & Cancellation Policy",
+  description: "Refund and cancellation policy for engineerit.ai.",
+  path: "/legal/refund",
+});
 
 export default function RefundPage() {
   return (
