@@ -111,6 +111,31 @@ export type ShellCopy = {
     print: string;
     whatsapp: string;
     closeShare: string;
+    searchHistory: string;
+    rename: string;
+    pin: string;
+    unpin: string;
+    deleteChat: string;
+    deleteConfirm: string;
+    shareTeam: string;
+    unshareTeam: string;
+    shared: string;
+    expiryNote: string;
+    expiryToday: string;
+    upgradeKeep: string;
+    historySignIn: string;
+    historyLoading: string;
+    historyLoadFailed: string;
+    historySaveFailed: string;
+    historyActionFailed: string;
+    exportChatPdf: string;
+    exportChatWord: string;
+    exportChatFailed: string;
+    exportChatLocked: string;
+    shareTeamFailed: string;
+    shareTeamNeedsLink: string;
+    noSearchResults: string;
+    sharedReadOnly: string;
     prompts: Record<EngineerToolId, string>;
   };
   auth: {
@@ -400,6 +425,31 @@ const en: ShellCopy = {
     print: "Print",
     whatsapp: "WhatsApp",
     closeShare: "Close",
+    searchHistory: "Search history",
+    rename: "Rename",
+    pin: "Pin",
+    unpin: "Unpin",
+    deleteChat: "Delete",
+    deleteConfirm: "Delete this chat? This cannot be undone.",
+    shareTeam: "Share with team",
+    unshareTeam: "Stop team sharing",
+    shared: "Shared",
+    expiryNote: "This chat expires in {days} days.",
+    expiryToday: "This chat expires today.",
+    upgradeKeep: "Upgrade to keep it longer",
+    historySignIn: "Sign in to keep chats on every device.",
+    historyLoading: "Loading history…",
+    historyLoadFailed: "Could not load history.",
+    historySaveFailed: "Could not save this chat.",
+    historyActionFailed: "Could not update this chat.",
+    exportChatPdf: "Export chat PDF",
+    exportChatWord: "Export chat Word",
+    exportChatFailed: "Could not export this chat.",
+    exportChatLocked: "Chat export is available on Professional Engineer and above.",
+    shareTeamFailed: "Could not share this chat with the team.",
+    shareTeamNeedsLink: "Link this account to a team before sharing.",
+    noSearchResults: "No matching chats.",
+    sharedReadOnly: "This shared chat is read only.",
     prompts: {
       drawing: "Explain and analyze the attached engineering drawing, including any process flow, piping and instrumentation, or block diagram.",
       design: "Check this engineering design against the relevant codes and standards.",
@@ -703,6 +753,31 @@ const ar: ShellCopy = {
     print: "طباعة",
     whatsapp: "واتساب",
     closeShare: "إغلاق",
+    searchHistory: "بحث في السجل",
+    rename: "إعادة تسمية",
+    pin: "تثبيت",
+    unpin: "إلغاء التثبيت",
+    deleteChat: "حذف",
+    deleteConfirm: "حذف هذه المحادثة؟ لا يمكن التراجع.",
+    shareTeam: "مشاركة مع الفريق",
+    unshareTeam: "إيقاف مشاركة الفريق",
+    shared: "مشتركة",
+    expiryNote: "تنتهي هذه المحادثة بعد {days} يوم.",
+    expiryToday: "تنتهي هذه المحادثة اليوم.",
+    upgradeKeep: "رقِّ الباقة للإبقاء عليها مدة أطول",
+    historySignIn: "سجّل الدخول ليُحفظ السجل على كل الأجهزة.",
+    historyLoading: "جارٍ تحميل السجل…",
+    historyLoadFailed: "تعذر تحميل السجل.",
+    historySaveFailed: "تعذر حفظ هذه المحادثة.",
+    historyActionFailed: "تعذر تحديث هذه المحادثة.",
+    exportChatPdf: "تصدير المحادثة PDF",
+    exportChatWord: "تصدير المحادثة وورد",
+    exportChatFailed: "تعذر تصدير هذه المحادثة.",
+    exportChatLocked: "تصدير المحادثة متاح من باقة المهندس المحترف فما فوق.",
+    shareTeamFailed: "تعذرت مشاركة هذه المحادثة مع الفريق.",
+    shareTeamNeedsLink: "اربط هذا الحساب بفريق قبل المشاركة.",
+    noSearchResults: "لا توجد محادثات مطابقة.",
+    sharedReadOnly: "هذه المحادثة المشتركة للقراءة فقط.",
     prompts: {
       drawing: "اشرح وحلّل الرسم الهندسي المرفق، بما في ذلك مخطط التدفق أو مخطط الأنابيب والأجهزة أو المخطط الصندوقي.",
       design: "راجع هذا التصميم الهندسي مقابل الأكواد والمعايير ذات الصلة.",

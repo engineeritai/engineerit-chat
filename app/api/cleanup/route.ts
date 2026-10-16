@@ -5,6 +5,7 @@ import {
   GENERATED_FILE_TTL_HOURS,
   CHAT_TTL_DAYS,
 } from "@/lib/retention";
+import { purgeExpiredConversations } from "@/lib/historyDb";
 
 export const runtime = "nodejs";
 
@@ -66,7 +67,14 @@ export async function GET() {
 
     await removeStaleIncoming();
 
-    return NextResponse.json({ ok: true });
+    let historyRemoved = 0;
+    try {
+      historyRemoved = await purgeExpiredConversations();
+    } catch (historyErr) {
+      console.error("History cleanup error:", historyErr);
+    }
+
+    return NextResponse.json({ ok: true, historyRemoved });
   } catch (err) {
     console.error("Cleanup error:", err);
     return new NextResponse("Cleanup failed", { status: 500 });

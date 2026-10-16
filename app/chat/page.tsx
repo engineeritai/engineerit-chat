@@ -2,7 +2,6 @@
 
 import React, {
   useEffect,
-  useMemo,
   useState,
   KeyboardEvent,
   ChangeEvent,
@@ -20,32 +19,23 @@ import { useMessages } from "@/lib/useMessages";
 import { disciplineLabel, toolLabel } from "@/lib/labels";
 import { postDocument, postImage, readApiError } from "@/lib/postAttachment";
 import { MAX_UPLOAD_BYTES, UploadError, fileTooLargeMessage } from "@/lib/uploadLimits";
+import { canShareChatWithTeam } from "@/lib/historyRetention";
+import { useChatHistory, type ChatMessage } from "@/lib/useChatHistory";
+import type { HistoryCode } from "@/lib/chatHistoryClient";
 import { featureTier, type FeatureTier, type PlanId } from "@/lib/plans";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
-
-type Role = "user" | "assistant";
 
 type Attachment = {
   id: string;
   name: string;
   type: "image" | "file";
-  url: string; // data URL for images, object URL for files
+  url?: string; // data URL for images, object URL for files. Omitted after reload.
   file?: File;
+  mime?: string;
+  size?: number;
 };
 
-type Message = {
-  id: string;
-  role: Role;
-  content: string;
-  attachments?: Attachment[];
-};
-
-type Thread = {
-  id: string;
-  title: string;
-  discipline: string;
-  messages: Message[];
-};
+type Message = ChatMessage;
 
 function uuid() {
   return Math.random().toString(36).slice(2);
@@ -340,10 +330,33 @@ function setLocalCount(key: string, n: number) {
   } catch {}
 }
 
+function historyNoticeText(
+  code: HistoryCode,
+  copy: {
+    historyLoadFailed: string;
+    historySaveFailed: string;
+    historyActionFailed: string;
+    exportChatFailed: string;
+    exportChatLocked: string;
+    shareTeamFailed: string;
+    shareTeamNeedsLink: string;
+  }
+) {
+  switch (code) {
+    case "export_locked":
+      return copy.exportChatLocked;
+    case "team_unlinked":
+      return copy.shareTeamNeedsLink;
+    case "unauthorized":
+    case "not_found":
+      return copy.historyLoadFailed;
+    default:
+      return copy.historyActionFailed;
+  }
+}
+
 export default function Page() {
   const [discipline, setDiscipline] = useState("General");
-  const [threads, setThreads] = useState<Thread[]>([]);
-  const [currentThreadId, setCurrentThreadId] = useState<string | undefined>();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -357,6 +370,11 @@ export default function Page() {
   const [planId, setPlanId] = useState<PlanId>("assistant");
   const [advisorPlan, setAdvisorPlan] = useState("guest");
   const { locale, m: ui, shell: s } = useMessages();
+  const history = useChatHistory({
+    locale,
+    discipline,
+    draftTitle: s.chat.newConversation,
+  });
 
   const [showMobileTools, setShowMobileTools] = useState(false);
 
@@ -378,6 +396,8 @@ export default function Page() {
   const canExportPdf = tier === "professional" || tier === "consultant";
   const canExportWordPpt = tier === "consultant";
   const canShareBenefits = tier !== "assistant";
+  const canShareTeam = canShareChatWithTeam(planId) && !isGuest;
+  const canExportChat = canExportPdf && !isGuest;
 
   useEffect(() => {
     const loadPlan = async () => {
@@ -429,43 +449,21 @@ export default function Page() {
     setShowLanding(false);
   };
 
-  useEffect(() => {
-    if (!currentThreadId) {
-      const t: Thread = {
-        id: uuid(),
-        title: s.chat.newConversation,
-        discipline,
-        messages: [],
-      };
-      setThreads([t]);
-      setCurrentThreadId(t.id);
-    }
-  }, [currentThreadId, discipline]);
-
-  const thread = useMemo(
-    () => threads.find((t) => t.id === currentThreadId),
-    [threads, currentThreadId]
-  );
-
+  const thread = history.thread;
   const messages: Message[] = thread?.messages ?? [];
 
+  useEffect(() => {
+    if (thread?.discipline) setDiscipline(thread.discipline);
+    // Resume the saved discipline only when the selected chat changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [thread?.id]);
+
   function onNewChat() {
-    const t: Thread = {
-      id: uuid(),
-      title: s.chat.newConversation,
-      discipline,
-      messages: [],
-    };
-    setThreads((prev) => [t, ...prev]);
-    setCurrentThreadId(t.id);
+    history.onNewChat();
   }
 
   function onSelectThread(id: string) {
-    setCurrentThreadId(id);
-  }
-
-  function updateThread(fn: (t: Thread) => Thread) {
-    setThreads((all) => all.map((t) => (t.id === currentThreadId ? fn(t) : t)));
+    history.selectThread(id);
   }
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -610,7 +608,7 @@ export default function Page() {
   }
 
   async function send() {
-    if (!thread || (!input.trim() && attachments.length === 0) || sending) return;
+    if (!thread || !thread.owned || (!input.trim() && attachments.length === 0) || sending) return;
 
     const check = checkDailyLimitOrGate();
     if (!check.ok) return;
@@ -621,20 +619,29 @@ export default function Page() {
     setAttachments([]);
     setIsAttachMenuOpen(false);
 
-    updateThread((t) => ({
-      ...t,
-      title:
-        t.messages.length === 0 ? userText.slice(0, 64) || s.chat.newConversation : t.title,
-      messages: [
-        ...t.messages,
-        {
-          id: uuid(),
-          role: "user",
-          content: userText || s.chat.attachmentOnly,
-          attachments: userAttachments,
-        },
-      ],
-    }));
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: userText || s.chat.attachmentOnly,
+      attachments: userAttachments.map((item) => ({
+        ...item,
+        mime: item.file?.type || item.mime,
+        size: item.file?.size ?? item.size,
+      })),
+    };
+    history.appendLocal(userMessage, userText);
+    const savedUser = history.persistMessages([userMessage]);
+
+    const pushAssistant = async (content: string) => {
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content,
+      };
+      history.appendLocal(assistantMessage);
+      await savedUser;
+      await history.persistMessages([assistantMessage]);
+    };
 
     setSending(true);
 
@@ -644,21 +651,15 @@ export default function Page() {
 
       if (docAttachment) {
         const reply = await analyzeDocument(userText, docAttachment.file!);
-        updateThread((t) => ({
-          ...t,
-          messages: [...t.messages, { id: uuid(), role: "assistant", content: reply }],
-        }));
+        await pushAssistant(reply);
         incrementLocalDailyCount(check.key, check.cur);
       } else if (imgAttachment) {
         const reply = await analyzeImage(userText, imgAttachment.file!);
-        updateThread((t) => ({
-          ...t,
-          messages: [...t.messages, { id: uuid(), role: "assistant", content: reply }],
-        }));
+        await pushAssistant(reply);
         incrementLocalDailyCount(check.key, check.cur);
       } else {
         const payloadMessages = (thread.messages || []).concat({
-          id: "temp",
+          id: userMessage.id,
           role: "user" as const,
           content: userText,
         });
@@ -682,17 +683,7 @@ export default function Page() {
           if (isGuest) openRegisterGate(msg);
           else if (planId === "assistant") openUpgradeGate(msg);
 
-          updateThread((t) => ({
-            ...t,
-            messages: [
-              ...t.messages,
-              {
-                id: uuid(),
-                role: "assistant",
-                content: isGuest ? s.chat.dailyGuestReply : s.chat.dailyPaidReply,
-              },
-            ],
-          }));
+          await pushAssistant(isGuest ? s.chat.dailyGuestReply : s.chat.dailyPaidReply);
           return;
         }
 
@@ -700,13 +691,7 @@ export default function Page() {
 
         const data = (await res.json()) as { reply: string };
 
-        updateThread((t) => ({
-          ...t,
-          messages: [
-            ...t.messages,
-            { id: uuid(), role: "assistant", content: data.reply || "" },
-          ],
-        }));
+        await pushAssistant(data.reply || "");
 
         incrementLocalDailyCount(check.key, check.cur);
       }
@@ -716,13 +701,7 @@ export default function Page() {
         e instanceof UploadError
           ? e.message
           : s.chat.sorry;
-      updateThread((t) => ({
-        ...t,
-        messages: [
-          ...t.messages,
-          { id: uuid(), role: "assistant", content },
-        ],
-      }));
+      await pushAssistant(content);
     } finally {
       setSending(false);
     }
@@ -740,13 +719,25 @@ export default function Page() {
     <div className="app-shell chat-page">
       <Sidebar
         discipline={discipline}
-        onDisciplineChange={setDiscipline}
+        onDisciplineChange={(value) => {
+          setDiscipline(value);
+          void history.syncDiscipline(value);
+        }}
         onNewChat={onNewChat}
-        threads={threads}
-        currentThreadId={currentThreadId}
+        threads={history.threads}
+        currentThreadId={history.currentThreadId}
         onSelectThread={onSelectThread}
         isMobileOpen={isSidebarOpenMobile}
         onCloseMobile={() => setIsSidebarOpenMobile(false)}
+        signedIn={!isGuest}
+        historyQuery={history.query}
+        onHistoryQuery={history.setQuery}
+        historyLoading={history.loading}
+        onRenameThread={(id, title) => void history.renameThread(id, title)}
+        onPinThread={(id, pinned) => void history.pinThread(id, pinned)}
+        onDeleteThread={(id) => void history.deleteThread(id)}
+        onShareThread={(id, shared) => void history.shareThread(id, shared)}
+        canShareTeam={canShareTeam}
       />
 
       <div className="main">
@@ -883,6 +874,23 @@ export default function Page() {
         </div>
 
         <div className="conversation">
+          {history.notice && (
+            <p className="history-banner">
+              {history.notice === "failed"
+                ? s.chat.historySaveFailed
+                : historyNoticeText(history.notice, s.chat)}
+            </p>
+          )}
+          {canExportChat && thread?.persisted && messages.length > 0 && (
+            <div className="history-export">
+              <button type="button" className="msg-action-btn" onClick={() => void history.exportCurrent("pdf")}>
+                {s.chat.exportChatPdf}
+              </button>
+              <button type="button" className="msg-action-btn" onClick={() => void history.exportCurrent("docx")}>
+                {s.chat.exportChatWord}
+              </button>
+            </div>
+          )}
           {messages.length === 0 ? (
             <div className="empty-state">
               <p>{s.chat.empty}</p>
@@ -933,7 +941,7 @@ export default function Page() {
                           >
                             <span>{a.type === "image" ? "🖼️" : "📄"}</span>
 
-                            {a.type === "image" ? (
+                            {a.type === "image" && a.url ? (
                               <a
                                 href={a.url}
                                 target="_blank"
@@ -955,7 +963,7 @@ export default function Page() {
                                   {a.name}
                                 </span>
                               </a>
-                            ) : (
+                            ) : a.url ? (
                               <a
                                 href={a.url}
                                 target="_blank"
@@ -968,6 +976,8 @@ export default function Page() {
                               >
                                 {a.name}
                               </a>
+                            ) : (
+                              <span style={{ fontSize: 12, color: "#111827" }}>{a.name}</span>
                             )}
                           </div>
                         ))}
@@ -1151,6 +1161,7 @@ export default function Page() {
               </div>
             )}
 
+            {thread && !thread.owned && <p className="history-note">{s.chat.sharedReadOnly}</p>}
             <div className="chat-input-row">
               <div className="chat-input-left">
                 <button
@@ -1195,8 +1206,9 @@ export default function Page() {
 
               <textarea
                 className="textarea"
-                placeholder={s.chat.askPlaceholder}
+                placeholder={thread && !thread.owned ? s.chat.sharedReadOnly : s.chat.askPlaceholder}
                 value={input}
+                disabled={Boolean(thread && !thread.owned)}
                 onChange={(e) => {
                   setInput(e.target.value);
                   e.target.style.height = "45px";
@@ -1208,7 +1220,7 @@ export default function Page() {
               <button
                 type="button"
                 className="chat-input-send-btn"
-                disabled={sending || (!input.trim() && attachments.length === 0)}
+                disabled={Boolean(thread && !thread.owned) || sending || (!input.trim() && attachments.length === 0)}
                 onClick={send}
                 aria-label={s.chat.send}
               >

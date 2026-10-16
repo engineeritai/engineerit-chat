@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type React from "react";
+import React, { useState } from "react";
 import AdvisorNav from "./AdvisorNav";
 import LanguageToggle from "./LanguageToggle";
 import { DISCIPLINES } from "@/lib/disciplines";
@@ -10,15 +10,35 @@ import { disciplineLabel } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import { SAUDI_BUSINESS_AUTH_NO, SAUDI_BUSINESS_VERIFY_URL } from "@/lib/trust";
 
+export type HistoryItem = {
+  id: string;
+  title: string;
+  pinned?: boolean;
+  sharedWithTeam?: boolean;
+  owned?: boolean;
+  nearingExpiry?: boolean;
+  expiresInDays?: number | null;
+  persisted?: boolean;
+};
+
 type Props = {
   discipline: string;
   onDisciplineChange: (v: string) => void;
   onNewChat: () => void;
-  threads: { id: string; title: string }[];
+  threads: HistoryItem[];
   currentThreadId?: string;
   onSelectThread: (id: string) => void;
   isMobileOpen: boolean;
   onCloseMobile: () => void;
+  signedIn: boolean;
+  historyQuery: string;
+  onHistoryQuery: (value: string) => void;
+  historyLoading: boolean;
+  onRenameThread: (id: string, title: string) => void;
+  onPinThread: (id: string, pinned: boolean) => void;
+  onDeleteThread: (id: string) => void;
+  onShareThread: (id: string, shared: boolean) => void;
+  canShareTeam: boolean;
 };
 
 function openExternal(url: string) {
@@ -35,9 +55,26 @@ export default function Sidebar({
   onSelectThread,
   isMobileOpen,
   onCloseMobile,
+  signedIn,
+  historyQuery,
+  onHistoryQuery,
+  historyLoading,
+  onRenameThread,
+  onPinThread,
+  onDeleteThread,
+  onShareThread,
+  canShareTeam,
 }: Props) {
   const pathname = usePathname();
   const { locale, shell: s } = useMessages();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const cancelEdit = React.useRef(false);
+  const visibleThreads = signedIn
+    ? threads
+    : threads.filter((thread) =>
+        thread.title.toLowerCase().includes(historyQuery.trim().toLowerCase())
+      );
   const contactLabel = locale === "ar" ? "ملاحظات" : "Feedback";
   const payLabel = locale === "ar" ? "الدفع عبر ميسر" : "Payment processed by Moyasar";
 
@@ -83,42 +120,116 @@ export default function Sidebar({
 
         <div>
           <h3>{s.chat.history}</h3>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              maxHeight: 160,
-              overflowY: "auto",
-              paddingRight: 2,
-            }}
-          >
-            {threads.length === 0 && (
-              <div style={{ fontSize: 13, color: "#6b7280" }}>
-                {s.chat.emptyHistory}
+          <label className="history-search-label" htmlFor="history-search">
+            {s.chat.searchHistory}
+          </label>
+          <input
+            id="history-search"
+            className="history-search"
+            value={historyQuery}
+            onChange={(event) => onHistoryQuery(event.target.value)}
+            placeholder={s.chat.searchHistory}
+            type="search"
+          />
+          {!signedIn && <p className="history-note">{s.chat.historySignIn}</p>}
+          <div className="history-list">
+            {historyLoading && (
+              <div className="history-note">{s.chat.historyLoading}</div>
+            )}
+            {!historyLoading && visibleThreads.length === 0 && (
+              <div className="history-note">
+                {historyQuery.trim() ? s.chat.noSearchResults : s.chat.emptyHistory}
               </div>
             )}
 
-            {threads.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => {
-                  onSelectThread(t.id);
-                  onCloseMobile();
-                }}
-                style={{
-                  textAlign: "left",
-                  border: "1px solid #e5e7eb",
-                  background: currentThreadId === t.id ? "#fff" : "#f9fafb",
-                  borderRadius: 10,
-                  padding: "8px 10px",
-                  fontSize: 14,
-                }}
-                title={t.title}
-              >
-                {t.title}
-              </button>
-            ))}
+            {visibleThreads.map((thread) => {
+              const active = currentThreadId === thread.id;
+              const owned = thread.owned !== false;
+              return (
+                <div key={thread.id} className={active ? "history-item history-item-active" : "history-item"}>
+                  {editingId === thread.id ? (
+                    <input
+                      className="history-search"
+                      value={editingTitle}
+                      aria-label={s.chat.rename}
+                      onChange={(event) => setEditingTitle(event.target.value)}
+                      onBlur={() => {
+                        if (cancelEdit.current) {
+                          cancelEdit.current = false;
+                          return;
+                        }
+                        onRenameThread(thread.id, editingTitle);
+                        setEditingId(null);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") event.currentTarget.blur();
+                        if (event.key === "Escape") {
+                          cancelEdit.current = true;
+                          setEditingTitle(thread.title);
+                          setEditingId(null);
+                          event.currentTarget.blur();
+                        }
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="history-title"
+                      onClick={() => {
+                        onSelectThread(thread.id);
+                        onCloseMobile();
+                      }}
+                      title={thread.title}
+                    >
+                      {thread.pinned ? <span className="history-badge">{s.chat.pin}</span> : null}
+                      <span>{thread.title}</span>
+                      {thread.sharedWithTeam ? <span className="history-badge">{s.chat.shared}</span> : null}
+                    </button>
+                  )}
+                  {thread.nearingExpiry && thread.expiresInDays != null && (
+                    <p className="history-expiry">
+                      {thread.expiresInDays <= 1
+                        ? s.chat.expiryToday
+                        : s.chat.expiryNote.replace("{days}", String(thread.expiresInDays))}{" "}
+                      <Link href="/pricing">{s.chat.upgradeKeep}</Link>
+                    </p>
+                  )}
+                  {owned && (
+                    <div className="history-actions">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingId(thread.id);
+                          setEditingTitle(thread.title);
+                        }}
+                      >
+                        {s.chat.rename}
+                      </button>
+                      <button type="button" onClick={() => onPinThread(thread.id, !thread.pinned)}>
+                        {thread.pinned ? s.chat.unpin : s.chat.pin}
+                      </button>
+                      {signedIn && canShareTeam && thread.persisted !== false && (
+                        <button
+                          type="button"
+                          onClick={() => onShareThread(thread.id, !thread.sharedWithTeam)}
+                        >
+                          {thread.sharedWithTeam ? s.chat.unshareTeam : s.chat.shareTeam}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(s.chat.deleteConfirm)) onDeleteThread(thread.id);
+                        }}
+                      >
+                        {s.chat.deleteChat}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

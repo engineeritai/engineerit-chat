@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
+    "/api/history/[id]/export": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
     "/api/invoices/[id]/pdf": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
     "/api/payments/moyasar/complete": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
     "/api/payments/moyasar/callback": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
