@@ -83,14 +83,17 @@ export async function settleCheckout(
                 payment,
                 billingSubscriptionId: (billing?.id as string | undefined) || null,
               });
-          if (wallet || !savedCardId) {
-            const nowIso = new Date().toISOString();
-            await admin
-              .from("billing_subscriptions")
-              .update({ cancel_at_period_end: true, canceled_at: nowIso, updated_at: nowIso })
-              .eq("user_id", row.user_id)
-              .in("status", ["active", "past_due"]);
-          }
+          const nowIso = new Date().toISOString();
+          const autoRenew = Boolean(savedCardId);
+          await admin
+            .from("billing_subscriptions")
+            .update({
+              cancel_at_period_end: !autoRenew,
+              canceled_at: autoRenew ? null : nowIso,
+              updated_at: nowIso,
+            })
+            .eq("user_id", row.user_id)
+            .in("status", ["active", "past_due"]);
         }
         if (row.lead_id) {
           const { error: leadErr } = await admin

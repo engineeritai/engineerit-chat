@@ -193,7 +193,7 @@ export default function CheckoutPage() {
                     </dl>
                     <p className="checkout-vat-note">{s.checkout.vatNote}</p>
                   </section>
-                  <p className="page-subtitle">{s.checkout.walletReminder}</p>
+                  <p className="checkout-note">{s.checkout.walletReminder}</p>
                   <ul className="checkout-networks" aria-label={s.checkout.networks}>
                     {NETWORKS.map((name) => (
                       <li key={name}>{name}</li>
@@ -208,11 +208,28 @@ export default function CheckoutPage() {
                         setConsent(e.target.checked);
                       }}
                     />
-                    <span>{s.checkout.consent}</span>
+                    <span className="checkout-consent-copy">
+                      <span>{s.checkout.consent}</span>
+                      <span className="checkout-optional">{s.checkout.optional}</span>
+                    </span>
                   </label>
-                  <p className="page-subtitle">
-                    {saveRejected ? s.checkout.saveRejected : consent ? s.checkout.savedCard : s.checkout.payOnce}
+                  <p className="checkout-help">
+                    {saveRejected ? s.checkout.saveRejected : consent ? s.checkout.savedCard : s.checkout.renewManually}
                   </p>
+                  <ul className="checkout-trust">
+                    <li>
+                      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
+                        <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" strokeWidth="2" />
+                      </svg>
+                      {s.checkout.securePay}
+                    </li>
+                    <li>{s.checkout.cancelAnytime}</li>
+                    <li>{s.checkout.cardNotStored}</li>
+                    <li>
+                      <a href="mailto:info@engineerit.ai">info@engineerit.ai</a>
+                    </li>
+                  </ul>
                   {publishableKey && callbackUrl ? (
                     <MoyasarCardForm
                       amountHalalas={Number(checkout.amount_halalas)}

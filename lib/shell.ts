@@ -250,6 +250,11 @@ export type ShellCopy = {
     title: string;
     savedCard: string;
     consent: string;
+    optional: string;
+    renewManually: string;
+    securePay: string;
+    cancelAnytime: string;
+    cardNotStored: string;
     openFailed: string;
     missingKey: string;
     seats: string;
@@ -590,17 +595,21 @@ const en: ShellCopy = {
   },
   checkout: {
     title: "Checkout",
-    savedCard: "The card is saved for automatic renewal until you cancel.",
-    consent:
-      "I agree to save this card with Moyasar and to be charged automatically on each renewal until I cancel in billing.",
+    savedCard: "We'll renew with this card. You can cancel anytime from your profile.",
+    consent: "Save card for automatic renewal (optional)",
+    optional: "Optional",
+    renewManually: "You can renew manually anytime from your profile.",
+    securePay: "Secure payment by Moyasar",
+    cancelAnytime: "Cancel anytime",
+    cardNotStored: "Your card details are never stored on our servers",
     openFailed: "Could not open checkout.",
     missingKey: "The card form is not configured yet.",
     seats: "seats",
     payOnce: "Pay once now. Auto-renew stays off until a card is saved.",
-    saveRejected: "Saving the card is unavailable. Enter the card again to pay once. Auto-renew stays off.",
+    saveRejected: "We could not save the card this time. You can still pay once and renew from your profile.",
     summary: "Order",
     walletReminder:
-      "Apple Pay, Samsung Pay, and STC Pay leave auto-renew off. Renew from your profile before the period ends.",
+      "Apple Pay, Samsung Pay, and STC Pay are one-time payments. Renew from your profile whenever you like.",
     phonePay: "Pay with your phone",
     phonePayHint:
       "Scan this code to open this checkout on your phone. The link lasts 15 minutes and opens this payment only.",
@@ -933,17 +942,21 @@ const ar: ShellCopy = {
   },
   checkout: {
     title: "الدفع",
-    savedCard: "تُحفظ البطاقة للتجديد التلقائي حتى الإلغاء.",
-    consent:
-      "أوافق على حفظ هذه البطاقة لدى Moyasar وعلى الخصم التلقائي في كل تجديد حتى أُلغي ذلك من الفوترة.",
+    savedCard: "سنجدّد بهذه البطاقة. يمكنك الإلغاء في أي وقت من ملفك.",
+    consent: "حفظ البطاقة للتجديد التلقائي (اختياري)",
+    optional: "اختياري",
+    renewManually: "يمكنك التجديد يدويًا في أي وقت من ملفك الشخصي.",
+    securePay: "دفع آمن عبر ميسر",
+    cancelAnytime: "إلغاء في أي وقت",
+    cardNotStored: "لا نحتفظ ببيانات بطاقتك على خوادمنا",
     openFailed: "تعذر فتح صفحة الدفع.",
     missingKey: "نموذج البطاقة غير مُعد بعد.",
     seats: "مقاعد",
     payOnce: "ادفع مرة واحدة الآن. يبقى التجديد التلقائي متوقفاً حتى تُحفظ البطاقة.",
-    saveRejected: "حفظ البطاقة غير متاح. أدخل البطاقة مرة أخرى للدفع مرة واحدة. يبقى التجديد التلقائي متوقفاً.",
+    saveRejected: "تعذر حفظ البطاقة هذه المرة. يمكنك الدفع مرة واحدة والتجديد من ملفك.",
     summary: "الطلب",
     walletReminder:
-      "Apple Pay وSamsung Pay وSTC Pay تُبقي التجديد التلقائي متوقفاً. جدّد من ملفك قبل نهاية المدة.",
+      "Apple Pay وSamsung Pay وSTC Pay دفعات لمرة واحدة. جدّد من ملفك وقتما تشاء.",
     phonePay: "ادفع من جوالك",
     phonePayHint: "امسح الرمز لفتح هذا الدفع على الجوال. الرابط يعمل 15 دقيقة ولهذا الدفع فقط.",
     phonePayWaiting: "تنتقل هذه الصفحة إلى الفاتورة عند تأكيد الدفع من الجوال.",
