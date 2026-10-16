@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { DISCIPLINES } from "@/lib/disciplines";
 import { ENGINEER_TOOLS } from "@/lib/engineerTools";
+import type { Locale } from "@/lib/i18n";
 import { disciplineLabel, localizedPlan, toolLabel } from "@/lib/labels";
+import { metaFor } from "@/lib/pageMeta";
 import {
   ENTERPRISE_EXTRA_SEAT_SAR,
   ENTERPRISE_INCLUDED_SEATS,
@@ -22,6 +24,23 @@ export const defaultTitle =
 
 export const defaultDescription =
   "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Paid plans add exports.";
+
+export function languageAlternates(path: string) {
+  const canonical = path === "/" ? `${SITE_URL}/` : new URL(path, SITE_URL).toString();
+  const withLang = (lang: Locale) => {
+    const url = new URL(path === "/" ? "/" : path, SITE_URL);
+    url.searchParams.set("lang", lang);
+    return url.toString();
+  };
+  return {
+    canonical,
+    languages: {
+      en: withLang("en"),
+      ar: withLang("ar"),
+      "x-default": canonical,
+    },
+  };
+}
 
 export function pageMetadata({
   title,
@@ -44,7 +63,7 @@ export function pageMetadata({
   return {
     title: { absolute: fullTitle },
     description,
-    alternates: { canonical },
+    alternates: languageAlternates(path),
     robots: index
       ? { index: true, follow: true }
       : { index: false, follow: true },
@@ -65,9 +84,6 @@ export function pageMetadata({
     },
   };
 }
-
-const ARABIC_DESCRIPTION =
-  "engineerit.ai يهندس أي فكرة أو موضوع بمنهج منظم. أرفق الملفات، واختر أداة، واحصل على إجابات منظمة. الباقات المدفوعة تضيف التصدير.";
 
 function grouped(amount: number) {
   return amount.toLocaleString("en-US");
@@ -115,7 +131,7 @@ function offerDescription(plan: Plan, locale: "en" | "ar") {
     : `${plan.name} is SAR ${month} per month or SAR ${year} per year. Bought through Moyasar.${advisors}`;
 }
 
-export function softwareApplicationJsonLd(locale: "en" | "ar" = "en") {
+export function softwareApplicationJsonLd(locale: Locale = "en") {
   assertIndividualPlanPrices();
   const arabic = locale === "ar";
 
@@ -124,11 +140,11 @@ export function softwareApplicationJsonLd(locale: "en" | "ar" = "en") {
     "@type": "SoftwareApplication",
     name: SITE_NAME,
     applicationCategory: "BusinessApplication",
-    applicationSubCategory: "Engineering",
-    operatingSystem: "Web",
+    applicationSubCategory: arabic ? "هندسة" : "Engineering",
+    operatingSystem: arabic ? "الويب" : "Web",
     url: `${SITE_URL}/`,
     image: `${SITE_URL}/og.png`,
-    description: arabic ? ARABIC_DESCRIPTION : defaultDescription,
+    description: metaFor(locale, "/").description,
     inLanguage: arabic ? "ar" : "en",
     areaServed: ["SA", "AE", "KW", "QA", "BH", "OM"],
     offers: PLANS.map((plan) => offerFor(plan, locale)),

@@ -39,12 +39,22 @@ const AR_TOOLS: Record<EngineerToolId, string> = {
   dashboard: "لوحات المشروع",
 };
 
+const AR_PLAN_MARK: Record<PlanId, string> = {
+  assistant: "م",
+  engineer: "ه",
+  professional: "ح",
+  consultant: "س",
+  team: "ف",
+  enterprise: "ن",
+};
+
 const AR_PLANS: Record<
   PlanId,
-  { name: string; tagline: string; priceMonthly: string; features: string[] }
+  { name: string; shortName: string; tagline: string; priceMonthly: string; features: string[] }
 > = {
   assistant: {
     name: "المهندس المساعد",
+    shortName: AR_PLAN_MARK.assistant,
     tagline: "للطلاب والمهندسين المبتدئين.",
     priceMonthly: "مجاناً",
     features: [
@@ -55,6 +65,7 @@ const AR_PLANS: Record<
   },
   engineer: {
     name: "المهندس",
+    shortName: AR_PLAN_MARK.engineer,
     tagline: "للمهندسين الممارسين الذين يحتاجون توثيقاً أسرع.",
     priceMonthly: "19 ر.س شهرياً",
     features: [
@@ -67,6 +78,7 @@ const AR_PLANS: Record<
   },
   professional: {
     name: "المهندس المحترف",
+    shortName: AR_PLAN_MARK.professional,
     tagline: "لكبار المهندسين وقادة التصميم.",
     priceMonthly: "41 ر.س شهرياً",
     features: [
@@ -75,11 +87,12 @@ const AR_PLANS: Record<
       "تحليل قوالب خطة الفحص وقوائم الجودة",
       "مراجعة جداول الكميات وحصرها",
       "نسخ ومشاركة المخرجات الهندسية",
-      "تصدير إلى PDF",
+      "تصدير إلى بي دي إف",
     ],
   },
   consultant: {
     name: "المهندس الاستشاري",
+    shortName: AR_PLAN_MARK.consultant,
     tagline: "للاستشاريين والمكاتب التي تدير مشاريع كاملة.",
     priceMonthly: "99 ر.س شهرياً",
     features: [
@@ -88,12 +101,13 @@ const AR_PLANS: Record<
       "خطوط الهندسة القيمية",
       "تقدير الموارد والتكلفة ومراجعة الجدول",
       "لوحات المشروع ونظرة على المحفظة",
-      "تصدير إلى PDF وورد وباوربوينت",
+      "تصدير إلى بي دي إف وورد وباوربوينت",
       "مستشار إدارة المشاريع مشمول",
     ],
   },
   team: {
     name: "الفريق",
+    shortName: AR_PLAN_MARK.team,
     tagline: "وصول بمستوى المهندس الاستشاري لمكتب، على اشتراك واحد.",
     priceMonthly: "499 ر.س شهرياً",
     features: [
@@ -108,6 +122,7 @@ const AR_PLANS: Record<
   },
   enterprise: {
     name: "المؤسسات",
+    shortName: AR_PLAN_MARK.enterprise,
     tagline: "وصول بمستوى المهندس الاستشاري لمكتب أكبر، على اشتراك واحد.",
     priceMonthly: "3,900 ر.س شهرياً",
     features: [
@@ -159,7 +174,7 @@ export function formatUsd(amountSar: number, locale: Locale): string {
 export function localizedPlan(locale: Locale, plan: Plan): Plan {
   if (locale !== "ar") return plan;
   const copy = AR_PLANS[plan.id];
-  return { ...plan, ...copy, priceYearly: "" };
+  return { ...plan, ...copy, shortName: copy.shortName, priceYearly: "" };
 }
 
 export function planById(locale: Locale, id: PlanId): Plan {

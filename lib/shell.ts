@@ -13,6 +13,8 @@ export type ShellCopy = {
     feedback: string;
     terms: string;
     team: string;
+    advisors: string;
+    faq: string;
   };
   footer: {
     blurb: string;
@@ -267,6 +269,8 @@ const en: ShellCopy = {
     feedback: "Feedback and complaints",
     terms: "User policy and agreement",
     team: "Team",
+    advisors: "AI Advisors",
+    faq: "Questions",
   },
   footer: {
     blurb: "AI engineering assistant",
@@ -541,6 +545,8 @@ const ar: ShellCopy = {
     feedback: "الملاحظات والشكاوى",
     terms: "سياسة الاستخدام والاتفاق",
     team: "الفريق",
+    advisors: "مستشارو الذكاء الاصطناعي",
+    faq: "الأسئلة الشائعة",
   },
   footer: {
     blurb: "مساعد هندسي بالذكاء الاصطناعي",
@@ -612,7 +618,7 @@ const ar: ShellCopy = {
     dailyPaidReply: "بلغت الحد اليومي. يرجى الترقية للمتابعة.",
     sorry: "عذراً، حدث خطأ. حاول مرة أخرى.",
     copyFailed: "تعذر النسخ في هذا المتصفح.",
-    pdfFailed: "تعذر تصدير PDF. حاول مرة أخرى.",
+    pdfFailed: "تعذر تصدير بي دي إف. حاول مرة أخرى.",
     wordFailed: "تعذر تصدير وورد. حاول مرة أخرى.",
     pptFailed: "تعذر تصدير باوربوينت. حاول مرة أخرى.",
     newConversation: "محادثة جديدة",
@@ -620,7 +626,7 @@ const ar: ShellCopy = {
     analyzeImage: "حلّل هذه الصورة الهندسية.",
     analyzeDocument: "استخرج هذا المستند ولخّصه.",
     imageFailed: "تعذر تحليل الصورة. حاول مرة أخرى أو استخدم صورة أصغر.",
-    documentFailed: "تعذرت معالجة المستند. حاول مرة أخرى، أو حوّله إلى PDF أو نص ثم أعد رفعه.",
+    documentFailed: "تعذرت معالجة المستند. حاول مرة أخرى، أو حوّله إلى بي دي إف أو نص ثم أعد رفعه.",
     registerTitle: "التسجيل أو الدخول",
     upgradeTitle: "الترقية مطلوبة",
     registerBody: "سجّل أو ادخل للمتابعة.",
@@ -629,7 +635,7 @@ const ar: ShellCopy = {
     upgrade: "ترقية",
     copy: "نسخ",
     share: "مشاركة",
-    exportPdf: "تصدير PDF",
+    exportPdf: "تصدير بي دي إف",
     exportWord: "تصدير وورد",
     exportPpt: "تصدير باوربوينت",
     toolsLabel: "أدوات المهندس:",
@@ -638,7 +644,7 @@ const ar: ShellCopy = {
     ai: "الذكاء",
     registerActions: "سجّل للنسخ والمشاركة وإرفاق الملفات",
     upgradeActions: "رقِّ باقتك للنسخ والمشاركة وإرفاق الملفات",
-    saveHtml: "حفظ HTML",
+    saveHtml: "حفظ الصفحة",
     print: "طباعة",
     whatsapp: "واتساب",
     closeShare: "إغلاق",
@@ -701,7 +707,7 @@ const ar: ShellCopy = {
     title: "الملف والاشتراك",
     loading: "جارٍ تحميل الملف…",
     chooseFile: "اختيار ملف",
-    avatarHint: "JPG أو PNG أو GIF. الحد 5 ميجابايت.",
+    avatarHint: "صورة حتى 5 ميجابايت.",
     fullName: "الاسم الكامل",
     fullNamePlaceholder: "اسمك الكامل",
     email: "البريد",

@@ -11,7 +11,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import Link from "next/link";
-import Header from "../components/Header";
+import MarketingShell from "../components/marketing/MarketingShell";
 import Sidebar from "../components/Sidebar";
 import AdvisorBar from "../components/AdvisorBar";
 import AdvisorEcosystem from "../components/AdvisorEcosystem";
@@ -736,6 +736,7 @@ export default function Page() {
   }
 
   return (
+    <MarketingShell>
     <div className="app-shell chat-page">
       <Sidebar
         discipline={discipline}
@@ -749,7 +750,18 @@ export default function Page() {
       />
 
       <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
+        <div className="chat-mobile-bar">
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setIsSidebarOpenMobile((v) => !v)}
+            aria-label={s.header.openMenu}
+            type="button"
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
 
         {showLanding && (
           <div
@@ -1274,5 +1286,6 @@ export default function Page() {
         )}
       </div>
     </div>
+    </MarketingShell>
   );
 }

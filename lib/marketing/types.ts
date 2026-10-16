@@ -18,7 +18,9 @@ export type MarketingContent = {
     tools: string;
     how: string;
     teams: string;
+    advisors: string;
     pricing: string;
+    faq: string;
     login: string;
     openChat: string;
   };

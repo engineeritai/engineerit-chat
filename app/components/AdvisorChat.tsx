@@ -335,7 +335,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     <div className="advisor-chat" dir={dir}>
       <div className="advisor-chat-intro">
         <div className="advisor-breadcrumb">
-          <Link href="/">engineerit AI</Link>
+          <Link href="/">{m.advisors.ecosystemAi}</Link>
           <span aria-hidden="true">›</span>
           <Link href="/advisors">{m.advisors.sectionTitle}</Link>
           <span aria-hidden="true">›</span>
