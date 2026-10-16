@@ -255,6 +255,18 @@ export type ShellCopy = {
     seats: string;
     payOnce: string;
     saveRejected: string;
+    summary: string;
+    walletReminder: string;
+    phonePay: string;
+    phonePayHint: string;
+    phonePayWaiting: string;
+    phonePayExpired: string;
+    phonePayInvalid: string;
+    retry: string;
+    paymentFailed: string;
+    copyLink: string;
+    copied: string;
+    networks: string;
   };
   subscription: {
     title: string;
@@ -585,6 +597,20 @@ const en: ShellCopy = {
     seats: "seats",
     payOnce: "Pay once now. Auto-renew stays off until a card is saved.",
     saveRejected: "Saving the card is unavailable. Enter the card again to pay once. Auto-renew stays off.",
+    summary: "Order",
+    walletReminder:
+      "Apple Pay, Samsung Pay, and STC Pay leave auto-renew off. Renew from your profile before the period ends.",
+    phonePay: "Pay with your phone",
+    phonePayHint:
+      "Scan this code to open this checkout on your phone. The link lasts 15 minutes and opens this payment only.",
+    phonePayWaiting: "This page opens the invoice when the phone payment is confirmed.",
+    phonePayExpired: "This phone link has expired. Open checkout on your computer and scan a new code.",
+    phonePayInvalid: "This phone link is not valid. Open checkout on your computer and scan a new code.",
+    retry: "Try again",
+    paymentFailed: "The payment did not go through. Check the details and try again.",
+    copyLink: "Copy phone link",
+    copied: "Link copied",
+    networks: "Cards",
   },
   subscription: {
     title: "Plans and subscription",
@@ -913,6 +939,19 @@ const ar: ShellCopy = {
     seats: "مقاعد",
     payOnce: "ادفع مرة واحدة الآن. يبقى التجديد التلقائي متوقفاً حتى تُحفظ البطاقة.",
     saveRejected: "حفظ البطاقة غير متاح. أدخل البطاقة مرة أخرى للدفع مرة واحدة. يبقى التجديد التلقائي متوقفاً.",
+    summary: "الطلب",
+    walletReminder:
+      "Apple Pay وSamsung Pay وSTC Pay تُبقي التجديد التلقائي متوقفاً. جدّد من ملفك قبل نهاية المدة.",
+    phonePay: "ادفع من جوالك",
+    phonePayHint: "امسح الرمز لفتح هذا الدفع على الجوال. الرابط يعمل 15 دقيقة ولهذا الدفع فقط.",
+    phonePayWaiting: "تنتقل هذه الصفحة إلى الفاتورة عند تأكيد الدفع من الجوال.",
+    phonePayExpired: "انتهت صلاحية رابط الجوال. افتح الدفع على الكمبيوتر لمسح رمز جديد.",
+    phonePayInvalid: "رابط الجوال غير صالح. افتح الدفع على الكمبيوتر وامسح رمزاً جديداً.",
+    retry: "حاول مرة أخرى",
+    paymentFailed: "لم يتم الدفع. راجع البيانات وحاول مرة أخرى.",
+    copyLink: "نسخ رابط الجوال",
+    copied: "تم نسخ الرابط",
+    networks: "البطاقات",
   },
   subscription: {
     title: "الباقات والاشتراك",

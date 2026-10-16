@@ -1,7 +1,8 @@
-export async function downloadInvoicePdf(id: string, token: string) {
-  const res = await fetch(`/api/invoices/${id}/pdf`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function downloadInvoicePdf(id: string, token: string, payToken = "") {
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const qs = payToken ? `?pay=${encodeURIComponent(payToken)}` : "";
+  const res = await fetch(`/api/invoices/${id}/pdf${qs}`, { headers });
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
     throw new Error(json.error || "Could not download the invoice.");

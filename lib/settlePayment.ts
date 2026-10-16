@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { nextPeriodEnd } from "@/lib/billingCycle";
 import { periodDays, type BillingInterval } from "@/lib/plans";
 import { saveCardFromPayment } from "@/lib/billingAccount";
+import { isWalletPaymentSource } from "@/lib/moyasarEnv";
 import {
   assessPaidInvoice,
   fetchMoyasarInvoice,
@@ -74,12 +75,15 @@ export async function settleCheckout(
             .eq("user_id", row.user_id)
             .in("status", ["active", "past_due"])
             .maybeSingle();
-          const savedCardId = await saveCardFromPayment(admin, {
-            userId: row.user_id,
-            payment,
-            billingSubscriptionId: (billing?.id as string | undefined) || null,
-          });
-          if (!savedCardId) {
+          const wallet = isWalletPaymentSource(payment.source?.type);
+          const savedCardId = wallet
+            ? null
+            : await saveCardFromPayment(admin, {
+                userId: row.user_id,
+                payment,
+                billingSubscriptionId: (billing?.id as string | undefined) || null,
+              });
+          if (wallet || !savedCardId) {
             const nowIso = new Date().toISOString();
             await admin
               .from("billing_subscriptions")

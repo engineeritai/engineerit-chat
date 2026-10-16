@@ -13,6 +13,31 @@ export function moyasarKeysError(missing: string[]) {
   return `Missing ${missing.join(" and ")} on the server.`;
 }
 
+/** Samsung Pay stays off the form until the merchant service id is set. */
+export function readSamsungPayServiceId(env: Record<string, string | undefined> = process.env) {
+  return (env["NEXT_PUBLIC_MOYASAR_SAMSUNG_PAY_SERVICE_ID"] || "").trim();
+}
+
+/** Mada first, then the other networks Moyasar accepts for a Saudi merchant. */
+export const MOYASAR_CARD_NETWORKS = ["mada", "visa", "mastercard", "amex", "unionpay"] as const;
+
+/**
+ * Wallets are listed before the card so supported devices show them first.
+ * Samsung Pay is omitted when the service id is empty.
+ */
+export function checkoutPaymentMethods(samsungServiceId: string, wallets = true) {
+  if (!wallets) return ["creditcard"];
+  const methods = ["applepay"];
+  if (samsungServiceId.trim()) methods.push("samsungpay");
+  methods.push("stcpay", "creditcard");
+  return methods;
+}
+
+/** Apple Pay, Samsung Pay, and STC Pay cannot be stored for automatic renewal. */
+export function isWalletPaymentSource(type: string | null | undefined) {
+  return type === "applepay" || type === "samsungpay" || type === "stcpay";
+}
+
 /** Moyasar rejects save_card when tokenization is not enabled for the merchant. */
 export function isSaveCardRejection(error: unknown) {
   const text =

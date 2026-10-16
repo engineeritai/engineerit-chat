@@ -30,6 +30,7 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const checkout = params.get("checkout") || "";
+    const pay = params.get("pay") || "";
     if (!/^[0-9a-f-]{36}$/i.test(checkout)) {
       setError(s.profile.paymentMissing);
       return;
@@ -38,13 +39,14 @@ export default function PaymentSuccessPage() {
     void (async () => {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
-      if (!token) {
+      if (!token && !pay) {
         window.location.href = `/login?next=${encodeURIComponent(`/payment/success?checkout=${checkout}`)}`;
         return;
       }
-      const res = await fetch(`/api/invoices/${checkout}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const qs = pay ? `?pay=${encodeURIComponent(pay)}` : "";
+      const res = await fetch(`/api/invoices/${checkout}${qs}`, { headers });
       const json = await res.json().catch(() => ({}));
       if (cancelled) return;
       if (!res.ok || !json.invoice) {
@@ -108,10 +110,11 @@ export default function PaymentSuccessPage() {
               onClick={() => {
                 setDownloading(true);
                 void supabase.auth.getSession().then(async ({ data }) => {
-                  const token = data.session?.access_token;
-                  if (!token) return;
+                  const token = data.session?.access_token || "";
+                  const pay = new URLSearchParams(window.location.search).get("pay") || "";
+                  if (!token && !pay) return;
                   try {
-                    await downloadInvoicePdf(invoice.id, token);
+                    await downloadInvoicePdf(invoice.id, token, pay);
                   } catch (err) {
                     setError(err instanceof Error ? err.message : s.profile.paymentFailed);
                   } finally {

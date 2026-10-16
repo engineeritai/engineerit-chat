@@ -318,6 +318,148 @@ body {
   margin-bottom: 16px;
 }
 
+.checkout-layout {
+  max-width: 480px;
+}
+
+.checkout-summary {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin: 12px 0 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.checkout-summary h2,
+.checkout-phone h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.checkout-summary dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.checkout-summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.checkout-summary dt {
+  color: #6b7280;
+}
+
+.checkout-summary dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: end;
+}
+
+.checkout-amount {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.checkout-networks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px;
+}
+
+.checkout-networks li {
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.checkout-networks li:first-child {
+  background: #111827;
+  color: #ffffff;
+  border-color: #111827;
+}
+
+.checkout-consent {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.checkout-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 12px 0;
+  display: grid;
+  gap: 8px;
+}
+
+.checkout-error .btn,
+.checkout-phone .btn {
+  min-height: 44px;
+  justify-self: start;
+}
+
+.btn-quiet {
+  background: #ffffff;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+.checkout-phone {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 14px;
+  margin-top: 8px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.checkout-phone p {
+  font-size: 13px;
+  color: #4b5563;
+  margin: 0;
+}
+
+.checkout-phone img {
+  width: 220px;
+  height: 220px;
+}
+
+.mysr-form {
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (min-width: 900px) {
+  .checkout-layout {
+    max-width: 880px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .checkout-phone {
+    margin-top: 52px;
+  }
+}
+
 /* Card container */
 .card {
   border-radius: 16px;

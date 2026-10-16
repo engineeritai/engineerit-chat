@@ -1,0 +1,2 @@
+Replace this file with the Apple Pay domain association file from the Apple Developer portal for engineerit.ai.
+The same body can be set as APPLE_PAY_DOMAIN_ASSOCIATION so the live site serves it without another file commit.

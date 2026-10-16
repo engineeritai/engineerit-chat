@@ -16,6 +16,16 @@ const nextConfig: NextConfig = {
       { source: "/enterprise", destination: "/pricing", statusCode: 301 },
     ];
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/.well-known/apple-developer-merchantid-domain-association",
+          destination: "/api/apple-pay/domain-association",
+        },
+      ],
+    };
+  },
 };
 
 export default nextConfig;
