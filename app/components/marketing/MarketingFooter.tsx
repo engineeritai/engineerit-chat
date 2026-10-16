@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Wordmark from "@/app/components/marketing/Wordmark";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { getMarketingContent } from "@/lib/marketing";
 
@@ -12,10 +13,7 @@ export default function MarketingFooter() {
     <footer className="mkt-footer">
       <div className="mkt-footer-line">
         <span className="brand" aria-hidden="true">
-          <span className="word">
-            <span className="engineer">engineer</span>
-            <span className="it">it</span>
-          </span>
+          <Wordmark decorative />
         </span>
         <span>© {year} engineerit.ai</span>
         <nav aria-label={content.footer.policyLink}>

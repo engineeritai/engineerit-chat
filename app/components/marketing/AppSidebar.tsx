@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PlanSummary } from "@/app/components/marketing/AccountMenu";
 import { useAccount } from "@/app/components/marketing/AccountState";
+import Wordmark from "@/app/components/marketing/Wordmark";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { getMarketingContent } from "@/lib/marketing";
 import { useMessages } from "@/lib/useMessages";
@@ -81,11 +82,8 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
         }}
       >
         <Link href="/" className="app-side-brand" onClick={onClose}>
-          <span className="brand" aria-hidden="true">
-            <span className="word">
-              <span className="engineer">engineer</span>
-              <span className="it">it</span>
-            </span>
+          <span className="brand">
+            <Wordmark />
           </span>
           <span className="app-side-home">{shell.nav.home}</span>
         </Link>

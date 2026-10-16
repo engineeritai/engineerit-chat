@@ -15,6 +15,7 @@ import HomePlanCards from "@/app/components/marketing/HomePlanCards";
 import PricingBoard from "@/app/components/marketing/PricingBoard";
 import AdvisorEcosystem from "@/app/components/AdvisorEcosystem";
 import StartChatLink from "@/app/components/marketing/StartChatLink";
+import BrandArabic from "@/app/components/marketing/BrandArabic";
 
 export default function LandingView() {
   const { locale } = useLocale();
@@ -35,8 +36,17 @@ export default function LandingView() {
         <div>
           <p className="mkt-kicker">{content.hero.kicker}</p>
           <h1 id="hero-title" className="brand-headline">
-            <span className="brand-accent">{content.hero.showcase.accent}</span>
-            {content.hero.showcase.after}
+            {locale === "ar" ? (
+              <>
+                <BrandArabic />
+                {content.hero.showcase.after}
+              </>
+            ) : (
+              <span className="headline-en">
+                <img className="headline-wordmark" src="/wordmark.svg" alt="engineer it" width={817} height={176} />
+                <span className="headline-rest">{content.hero.showcase.after}</span>
+              </span>
+            )}
           </h1>
           <p className="mkt-lead">{content.hero.lead}</p>
           <form

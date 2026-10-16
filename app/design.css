@@ -1406,12 +1406,24 @@ svg {
 
 .eit-chat {
   display: none;
-  flex: 0 0 36px;
-  width: 36px;
-  height: 36px;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
+  line-height: 0;
+  background: var(--brand);
+}
+
+.eit-plate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #e6e8ee;
   line-height: 0;
 }
 
@@ -2246,11 +2258,138 @@ body.acct-open .mkt-header {
   line-height: 1.08;
 }
 
-.brand-accent {
-  background-image: linear-gradient(100deg, #1a56ff 0%, #5b8cff 52%, #0e7490 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
+.headline-en {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: 0.22em;
+  max-width: 100%;
+}
+
+.headline-wordmark {
+  height: 1.15em;
+  width: auto;
+  max-width: min(100%, 16em);
+  min-width: 0;
+  margin-bottom: -0.02em;
+}
+
+.headline-rest {
+  color: var(--ink);
+}
+
+.brand-ar {
+  white-space: nowrap;
+}
+
+.brand-ar-solid {
+  color: #0d60e4;
+}
+
+.brand-ar-hollow {
   color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.045em #0d60e4;
+}
+
+.mkt-btn-primary .brand-ar-solid {
+  color: #fff;
+  -webkit-text-fill-color: #fff;
+  -webkit-text-stroke: 0;
+}
+
+.mkt-btn-primary .brand-ar-hollow {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.045em #fff;
+}
+
+.plus-menu button.tool-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-row-label {
+  flex: 1;
+  min-width: 0;
+  text-align: start;
+}
+
+.tool-row.is-locked .tool-glyph,
+.tool-row.is-locked .tool-row-label,
+.advisor-card.is-locked h2 {
+  opacity: 0.5;
+}
+
+.tool-row-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  opacity: 1;
+}
+
+.tool-glyph {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  color: var(--brand);
+}
+
+.advisor-card h2 .tool-glyph {
+  vertical-align: -3px;
+  margin-inline-end: 6px;
+}
+
+.tool-lock {
+  display: block;
+  color: var(--muted);
+}
+
+.tool-plan-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tool-tile-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tool-tile-head h2 {
+  margin: 0;
+}
+
+.unlock-sheet {
+  width: min(340px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.unlock-sheet-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.unlock-sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .chat-showcase {
@@ -2412,7 +2551,7 @@ body.acct-open .mkt-header {
 }
 
 .chat-showcase-cta {
-  min-height: 52px;
+  min-height: 64px;
   padding: 0 18px;
   font-size: 17px;
   gap: 10px;

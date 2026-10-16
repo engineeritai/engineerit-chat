@@ -4,6 +4,7 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import LanguageToggle from "./LanguageToggle";
+import Wordmark from "@/app/components/marketing/Wordmark";
 import { planById } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import { supabase } from "@/lib/supabaseClient";
@@ -346,11 +347,8 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           <span />
         </button>
 
-        <div className="brand" aria-label="engineerit">
-          <span className="word">
-            <span className="engineer">engineer</span>
-            <span className="it">it</span>
-          </span>
+        <div className="brand" aria-label="engineer it">
+          <Wordmark decorative />
         </div>
       </div>
 

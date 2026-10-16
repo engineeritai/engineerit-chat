@@ -81,6 +81,8 @@ export type ShellCopy = {
     send: string;
     attachLocked: string;
     toolLocked: string;
+    unlockWith: string;
+    perMonth: string;
     dailyGuest: string;
     dailyPaid: string;
     dailyGuestReply: string;
@@ -456,6 +458,8 @@ const en: ShellCopy = {
     send: "Send message",
     attachLocked: "Subscribe to attach photos or documents.",
     toolLocked: "This tool requires a higher subscription plan.",
+    unlockWith: "Unlock with",
+    perMonth: "/month",
     dailyGuest: "Daily limit reached. Please register or log in.",
     dailyPaid: "Daily limit reached. Please upgrade.",
     dailyGuestReply: "Daily limit reached. Please register or log in to continue using engineerit.ai.",
@@ -848,6 +852,8 @@ const ar: ShellCopy = {
     send: "إرسال",
     attachLocked: "اشترك لإرفاق الصور أو المستندات.",
     toolLocked: "هذه الأداة تتطلب باقة أعلى.",
+    unlockWith: "افتحها مع",
+    perMonth: "/شهر",
     dailyGuest: "بلغت الحد اليومي. سجّل أو ادخل.",
     dailyPaid: "بلغت الحد اليومي. يرجى الترقية.",
     dailyGuestReply: "بلغت الحد اليومي. سجّل أو ادخل لمتابعة استخدام engineerit.ai.",

@@ -23,7 +23,7 @@ export const defaultTitle =
   "engineerit.ai | AI assistant for engineering consultancies";
 
 export const defaultDescription =
-  "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Paid plans add exports.";
+  "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Your subscription unlocks unlimited chats, engineering tools and AI Advisors.";
 
 export function languageAlternates(path: string) {
   const canonical = path === "/" ? `${SITE_URL}/` : new URL(path, SITE_URL).toString();

@@ -11,6 +11,7 @@ type Props = {
   interval: BillingInterval;
   extraSeats?: number;
   verb?: "buy" | "upgrade";
+  label?: string;
   className?: string;
   style?: React.CSSProperties;
   onError?: (message: string) => void;
@@ -27,13 +28,14 @@ export default function BuyPlanButton({
   interval,
   extraSeats = 0,
   verb = "buy",
+  label: labelOverride,
   className,
   style,
   onError,
 }: Props) {
   const { locale } = useLocale();
   const [busy, setBusy] = useState(false);
-  const label = buyLabel(planId, verb, locale);
+  const label = labelOverride ?? buyLabel(planId, verb, locale);
   const failed = locale === "ar" ? "تعذر بدء الدفع. حاول مرة أخرى." : "Could not start payment. Please try again.";
   const processing = locale === "ar" ? "جارٍ المعالجة..." : "Processing...";
 

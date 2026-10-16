@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AccountMenu from "@/app/components/marketing/AccountMenu";
 import EitMark from "@/app/components/marketing/EitMark";
+import Wordmark from "@/app/components/marketing/Wordmark";
 import LanguageToggle from "@/app/components/LanguageToggle";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { useMessages } from "@/lib/useMessages";
@@ -37,10 +38,7 @@ export default function MarketingHeader({ onMenu }: { onMenu: () => void }) {
           <span />
         </button>
         <Link href="/" className="mkt-header-brand brand" aria-label={shell.nav.home}>
-          <span className="word">
-            <span className="engineer">engineer</span>
-            <span className="it">it</span>
-          </span>
+          <Wordmark decorative />
         </Link>
         <nav className="mkt-nav" aria-label={content.nav.primary}>
           <Link href="/" className={pathname === "/" ? "mkt-nav-active" : undefined}>
@@ -53,7 +51,7 @@ export default function MarketingHeader({ onMenu }: { onMenu: () => void }) {
         <div className="mkt-header-spacer" />
         {onChat ? null : (
           <Link className="eit-chat" href="/chat" aria-label={chatLabel} title={chatLabel}>
-            <EitMark size={36} />
+            <EitMark size={28} tone="inverse" title="eit" />
           </Link>
         )}
         <LanguageToggle compact className="mkt-header-lang" />

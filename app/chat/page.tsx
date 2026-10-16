@@ -13,6 +13,9 @@ import remarkGfm from "remark-gfm";
 import Link from "next/link";
 import MarketingShell from "../components/marketing/MarketingShell";
 import EitMark from "../components/marketing/EitMark";
+import { localPlanPreview } from "../components/marketing/AccountState";
+import ToolGlyph, { ToolLockIcon } from "../components/ToolGlyph";
+import ToolUnlockSheet from "../components/ToolUnlockSheet";
 import Sidebar from "../components/Sidebar";
 import { DISCIPLINES } from "@/lib/disciplines";
 import { supabase } from "@/lib/supabaseClient";
@@ -23,7 +26,9 @@ import { MAX_UPLOAD_BYTES, UploadError, fileTooLargeMessage } from "@/lib/upload
 import { canShareChatWithTeam } from "@/lib/historyRetention";
 import { useChatHistory, type ChatMessage } from "@/lib/useChatHistory";
 import type { HistoryCode } from "@/lib/chatHistoryClient";
-import { featureTier, type FeatureTier, type PlanId } from "@/lib/plans";
+import { ENGINEER_TOOLS, type EngineerToolId } from "@/lib/engineerTools";
+import { featureTier, HEADER_PLAN_ABBREV, PLAN_THEME, type PlanId, type SelfServePlanId } from "@/lib/plans";
+import { hasToolAccess, toolRequiredPlan } from "@/lib/toolAccess";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
 
 type Attachment = {
@@ -40,41 +45,6 @@ type Message = ChatMessage;
 
 function uuid() {
   return Math.random().toString(36).slice(2);
-}
-
-/* ============================
-   Engineer tools configuration
-   ============================ */
-
-const ENGINEER_TOOLS = [
-  { id: "drawing", label: "Drawing & Diagrams" },
-  { id: "design", label: "Design & Code Check" },
-  { id: "itp", label: "ITP & QA/QC" },
-  { id: "boq", label: "BOQ & Quantities" },
-  { id: "schedule", label: "Schedule & Resources" },
-  { id: "value", label: "Value Engineering" },
-  { id: "dashboard", label: "Project Dashboards" },
-] as const;
-
-type ToolId = (typeof ENGINEER_TOOLS)[number]["id"];
-
-const TOOL_ACCESS: Record<FeatureTier, ToolId[]> = {
-  assistant: [],
-  engineer: ["drawing", "design"],
-  professional: ["drawing", "design", "itp", "boq"],
-  consultant: [
-    "drawing",
-    "design",
-    "itp",
-    "boq",
-    "schedule",
-    "value",
-    "dashboard",
-  ],
-};
-
-function hasAccess(planId: PlanId, toolId: ToolId) {
-  return TOOL_ACCESS[featureTier(planId)]?.includes(toolId);
 }
 
 type SpeechRec = {
@@ -409,6 +379,7 @@ export default function Page() {
 
   // Gate modal (Register / Upgrade)
   const [showGate, setShowGate] = useState(false);
+  const [unlockPlan, setUnlockPlan] = useState<SelfServePlanId | null>(null);
   const [gateMode, setGateMode] = useState<"register" | "upgrade">("register");
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
@@ -426,6 +397,13 @@ export default function Page() {
 
   useEffect(() => {
     const loadPlan = async () => {
+      const preview = localPlanPreview();
+      if (preview) {
+        setPlanId(preview.plan);
+        setIsGuest(false);
+        setAdvisorPlan(preview.plan);
+        return;
+      }
       try {
         const {
           data: { user },
@@ -625,7 +603,7 @@ export default function Page() {
     rec.start();
   }
 
-  const handleEngineerToolClick = (toolId: ToolId) => {
+  const handleEngineerToolClick = (toolId: EngineerToolId) => {
     switch (toolId) {
       case "drawing":
       case "design":
@@ -807,16 +785,21 @@ export default function Page() {
   }, [planReady, history.loading, thread?.id, thread?.owned, thread?.messages.length, sending]);
 
   useEffect(() => {
-    if (toolApplied.current) return;
+    if (!planReady || toolApplied.current) return;
     const params = new URLSearchParams(window.location.search);
     const tool = params.get("tool")?.trim();
     if (!tool) return;
-    const prompt =
-      tool === "advisors"
-        ? s.chat.advisorPrompt
-        : ENGINEER_TOOLS.some((item) => item.id === tool)
-          ? s.chat.prompts[tool as ToolId]
-          : "";
+    const engineerTool = ENGINEER_TOOLS.find((item) => item.id === tool);
+    if (tool !== "advisors" && !engineerTool) return;
+    if (!isGuest && engineerTool && !hasToolAccess(planId, engineerTool.id)) {
+      toolApplied.current = true;
+      setUnlockPlan(toolRequiredPlan(engineerTool.id));
+      params.delete("tool");
+      const rest = params.toString();
+      window.history.replaceState(null, "", rest ? `${window.location.pathname}?${rest}` : window.location.pathname);
+      return;
+    }
+    const prompt = tool === "advisors" ? s.chat.advisorPrompt : s.chat.prompts[tool as EngineerToolId];
     if (!prompt) return;
     toolApplied.current = true;
     setInput((prev) => (prev ? `${prev}\n\n${prompt}` : prompt));
@@ -824,7 +807,7 @@ export default function Page() {
     const rest = params.toString();
     window.history.replaceState(null, "", rest ? `${window.location.pathname}?${rest}` : window.location.pathname);
     requestAnimationFrame(() => composerRef.current?.focus());
-  }, [s.chat.advisorPrompt, s.chat.prompts]);
+  }, [planReady, planId, isGuest, s.chat.advisorPrompt, s.chat.prompts]);
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -870,7 +853,7 @@ export default function Page() {
           )}
           {messages.length === 0 ? (
             <div className="chat-start">
-              <EitMark size={56} title="eit" />
+              <EitMark size={72} title="eit" />
               <h1>{s.chat.greeting}</h1>
             </div>
           ) : (
@@ -1182,22 +1165,36 @@ export default function Page() {
                     </select>
                     <p className="plus-menu-label">{s.chat.toolsMenu}</p>
                     {ENGINEER_TOOLS.map((tool) => {
-                      const enabled = hasAccess(planId, tool.id);
+                      const enabled = hasToolAccess(planId, tool.id);
+                      const required = toolRequiredPlan(tool.id);
+                      const theme = PLAN_THEME[required];
                       return (
                         <button
                           key={tool.id}
                           type="button"
+                          className={"tool-row" + (enabled ? "" : " is-locked")}
                           onClick={() => {
                             setToolsOpen(false);
                             if (!enabled) {
-                              openUpgradeGate(s.chat.toolLocked);
+                              setUnlockPlan(required);
                               return;
                             }
                             handleEngineerToolClick(tool.id);
                           }}
                         >
-                          {enabled ? "" : "· "}
-                          {toolLabel(locale, tool.id)}
+                          <ToolGlyph id={tool.id} />
+                          <span className="tool-row-label">{toolLabel(locale, tool.id)}</span>
+                          {enabled ? null : (
+                            <span className="tool-row-meta">
+                              <ToolLockIcon />
+                              <span
+                                className="tool-plan-pill"
+                                style={{ background: theme.soft, color: theme.accent }}
+                              >
+                                {HEADER_PLAN_ABBREV[required]}
+                              </span>
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -1344,6 +1341,8 @@ export default function Page() {
             ))}
           </div>
         ) : null}
+
+        {unlockPlan ? <ToolUnlockSheet planId={unlockPlan} onClose={() => setUnlockPlan(null)} /> : null}
 
         {/* Gate modal */}
         {showGate && (
