@@ -1,6 +1,7 @@
 "use client";
 
-import { PRICING_PLAN_IDS, planIncludesAdvisors, type AdvisorPlanId } from "@/lib/advisors";
+import { ADVISOR_ACCESS, PRICING_PLAN_IDS, type AdvisorPlanId } from "@/lib/advisors";
+import { ENTERPRISE_EXTRA_SEAT_SAR, ENTERPRISE_INCLUDED_SEATS } from "@/lib/plans";
 import { ENTERPRISE_PLAN, TEAM_PLAN } from "@/lib/pricingDisplay";
 import { useMessages } from "@/lib/useMessages";
 
@@ -20,7 +21,11 @@ export default function AdvisorPricingNote() {
       });
     }
     if (planId === "enterprise") {
-      return fill(m.pricing.enterprisePrice, { from: ENTERPRISE_PLAN.monthlySarFrom.toLocaleString("en-US") });
+      return fill(m.pricing.enterprisePrice, {
+        monthly: ENTERPRISE_PLAN.monthlySarFrom.toLocaleString("en-US"),
+        seats: ENTERPRISE_INCLUDED_SEATS,
+        extra: ENTERPRISE_EXTRA_SEAT_SAR.month,
+      });
     }
     return null;
   };
@@ -29,8 +34,6 @@ export default function AdvisorPricingNote() {
     <div className="advisor-table-wrap">
       <h2>{m.pricing.availabilityTitle}</h2>
       <p>{m.pricing.availabilityNote}</p>
-      <p>{m.pricing.advisorsIncluded}</p>
-      <p>{m.pricing.teamEnterpriseNote}</p>
       <table className="advisor-table">
         <thead>
           <tr>
@@ -40,15 +43,19 @@ export default function AdvisorPricingNote() {
         </thead>
         <tbody>
           {PRICING_PLAN_IDS.map((planId) => {
-            const included = planIncludesAdvisors(planId);
+            const advisors = ADVISOR_ACCESS[planId];
             const price = priceNote(planId);
+            const access =
+              advisors.length > 0
+                ? advisors.map((id) => m.advisors.items[id].name).join(" · ")
+                : m.pricing.locked;
             return (
               <tr key={planId}>
                 <td>
                   {m.plans[planId as Exclude<typeof planId, "guest">]}
                   {price ? <div className="advisor-plan-price">{price}</div> : null}
                 </td>
-                <td>{included ? m.pricing.included : m.pricing.locked}</td>
+                <td>{access}</td>
               </tr>
             );
           })}

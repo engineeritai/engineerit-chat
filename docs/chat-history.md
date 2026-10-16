@@ -12,6 +12,7 @@ Guests still get one temporary chat in the page. It is not written to the databa
    - `supabase/migrations/20261016140000_moyasar_invoices.sql`
    - `supabase/migrations/20261016160000_recurring_billing.sql`
    - `supabase/migrations/20261016180000_advisor_tiers_and_legacy_price.sql`
+   - `supabase/migrations/20261016210000_profile_subscription_fields.sql` (invoice language only; it does not touch chat history)
 
    Then run:
 
@@ -31,7 +32,7 @@ Guests still get one temporary chat in the page. It is not written to the databa
 
 5. Team sharing uses the team created by billing. A Team or Enterprise user can share after they own that team (`teams.owner_id`) or have an active `team_members` row (`user_id` set and `status = 'active'`). Checkout creates those rows. Do not insert a second teams table from this migration.
 
-6. The billing deploy schedules `GET /api/cron/renewals`. This branch schedules `GET /api/cron/history-cleanup`. When both land, `vercel.json` needs both cron entries.
+6. `vercel.json` schedules both `GET /api/cron/renewals` (02:15 UTC) and `GET /api/cron/history-cleanup` (03:00 UTC). Keep both entries.
 
 ## Tables
 

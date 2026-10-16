@@ -1,7 +1,27 @@
 export type UiLocale = "en" | "ar";
+export type ReplyLanguage = UiLocale;
+
+const ARABIC = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
 
 export function uiLocale(value: unknown): UiLocale {
   return value === "ar" ? "ar" : "en";
+}
+
+/** The language of the user's own text. Arabic if it contains Arabic letters, otherwise English. */
+export function chosenLanguage(text: string | null | undefined): ReplyLanguage {
+  return ARABIC.test(text || "") ? "ar" : "en";
+}
+
+/**
+ * Whole-reply language. The interface language is the default.
+ * A latest message written in the other language switches the entire reply.
+ */
+export function replyLanguage(locale: unknown, latestMessage?: string | null): UiLocale {
+  const ui = uiLocale(locale);
+  const text = (latestMessage || "").trim();
+  if (!text) return ui;
+  const written = chosenLanguage(text);
+  return written === ui ? ui : written;
 }
 
 /** Default reply language is the selected interface language. */

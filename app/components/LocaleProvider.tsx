@@ -25,6 +25,11 @@ export function LocaleProvider({
   const pathname = usePathname();
 
   useEffect(() => {
+    const query = new URLSearchParams(window.location.search).get("lang");
+    if (isLocale(query)) {
+      if (query !== locale) setLocaleState(query);
+      return;
+    }
     const stored = readStoredLocale();
     if (stored && stored !== locale) setLocaleState(stored);
     // Only reconcile storage on the first client load.

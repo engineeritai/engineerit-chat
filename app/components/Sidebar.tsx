@@ -75,6 +75,8 @@ export default function Sidebar({
     : threads.filter((thread) =>
         thread.title.toLowerCase().includes(historyQuery.trim().toLowerCase())
       );
+  const contactLabel = locale === "ar" ? "ملاحظات" : "Feedback";
+  const payLabel = locale === "ar" ? "الدفع عبر ميسر" : "Payment processed by Moyasar";
 
   const content = (
     <aside
@@ -112,19 +114,6 @@ export default function Sidebar({
               </option>
             ))}
           </select>
-        </div>
-
-        <div>
-          <h3>{s.nav.pages}</h3>
-          <nav className="sidebar-nav">
-            <SidebarLink href="/" label={s.nav.home} currentPath={pathname} />
-            <SidebarLink href="/chat" label={s.nav.chat} currentPath={pathname} />
-            <SidebarLink href="/pricing" label={s.nav.pricing} currentPath={pathname} />
-            <SidebarLink href="/register" label={s.nav.register} currentPath={pathname} />
-            <SidebarLink href="/profile" label={s.nav.profile} currentPath={pathname} />
-            <SidebarLink href="/feedback" label={s.nav.feedback} currentPath={pathname} />
-            <SidebarLink href="/legal/terms" label={s.nav.terms} currentPath={pathname} />
-          </nav>
         </div>
 
         <AdvisorNav currentPath={pathname} />
@@ -256,23 +245,6 @@ export default function Sidebar({
           flexShrink: 0,
         }}
       >
-        <div style={{ fontWeight: 600, color: "#111827", marginBottom: 4 }}>
-          {s.footer.blurb}
-        </div>
-
-        <div style={{ marginBottom: 2 }}>
-          © {new Date().getFullYear()}{" "}
-          <span style={{ fontWeight: 500 }}>engineerit.ai</span>. {s.footer.rights}
-        </div>
-
-        <div>
-          {s.footer.policyLead}{" "}
-          <Link href="/legal/terms" className="sidebar-legal-link">
-            {s.footer.policyLink}
-          </Link>
-          .
-        </div>
-
         <div
           style={{
             marginTop: 10,
@@ -427,8 +399,8 @@ export default function Sidebar({
           <button
             type="button"
             onClick={() => openExternal("https://moyasar.com")}
-            title="Payment processed and controlled by Moyasar"
-            aria-label="Moyasar"
+            title={payLabel}
+            aria-label={payLabel}
             style={iconButtonStyle}
           >
             <img
@@ -441,8 +413,8 @@ export default function Sidebar({
           <button
             type="button"
             onClick={() => openExternal("https://engineerit.ai/feedback")}
-            title="Contact us"
-            aria-label="Contact us"
+            title={contactLabel}
+            aria-label={contactLabel}
             style={iconButtonStyle}
           >
             <img src="/favicon.ico" alt="eit" style={iconImageStyle} />
@@ -467,26 +439,6 @@ export default function Sidebar({
         </div>
       )}
     </>
-  );
-}
-
-function SidebarLink({
-  href,
-  label,
-  currentPath,
-}: {
-  href: string;
-  label: string;
-  currentPath: string | null;
-}) {
-  const active =
-    currentPath === href ||
-    (href !== "/" && currentPath && currentPath.startsWith(href));
-
-  return (
-    <Link href={href} className={`sidebar-link ${active ? "sidebar-link-active" : ""}`}>
-      {label}
-    </Link>
   );
 }
 

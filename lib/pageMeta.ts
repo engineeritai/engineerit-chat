@@ -9,10 +9,15 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       description:
         "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Paid plans add exports.",
     },
+    "/faq": {
+      title: "Questions | engineerit.ai",
+      description:
+        "Answers for engineering consultancies: trying the chat, standards, Moyasar billing, language, and company verification.",
+    },
     "/pricing": {
       title: "Pricing | engineerit.ai",
       description:
-        "Prices include VAT. Assistant Engineer is free. Engineer is SAR 19 per month, Professional Engineer SAR 41 per month, Consultant Engineer SAR 79 per month. Team is SAR 349 per month for 5 seats. Enterprise starts from SAR 2,500 per month.",
+        "Assistant Engineer is free. Engineer is SAR 19 per month, Professional Engineer SAR 41 per month, Consultant Engineer SAR 99 per month. Team is SAR 499 per month for 5 seats. Enterprise is SAR 3,900 per month for 10 seats.",
     },
     "/chat": {
       title: "Chat | engineerit.ai",
@@ -22,7 +27,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/advisors": {
       title: "AI Advisors | engineerit.ai",
       description:
-        "PMO, including procurement and supply chain, Program Assurance, Operations Readiness, and Decision Support. One-click playbooks turn uploaded files into export-ready reports.",
+        "The PMO Advisor is included on Consultant Engineer. Program Assurance is included on Team. Operations Readiness and Decision Support are included on Enterprise.",
     },
     "/login": {
       title: "Login | engineerit.ai",
@@ -30,7 +35,8 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     },
     "/register": {
       title: "Register | engineerit.ai",
-      description: "Create an engineerit.ai account and choose Assistant, Engineer, Professional, or Consultant.",
+      description:
+        "Create an engineerit.ai account. Plans are Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise.",
     },
     "/profile": {
       title: "Profile | engineerit.ai",
@@ -83,10 +89,15 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       description:
         "engineerit.ai يهندس أي فكرة أو موضوع بمنهج منظم. أرفق ملفاتك، واختر أداة، واحصل على إجابات منظمة. الباقات المدفوعة تضيف التصدير.",
     },
+    "/faq": {
+      title: "الأسئلة الشائعة | engineerit.ai",
+      description:
+        "إجابات للمكاتب الهندسية: تجربة المحادثة، والمعايير، وفوترة Moyasar، واللغة، وتوثيق الشركة.",
+    },
     "/pricing": {
       title: "الأسعار | engineerit.ai",
       description:
-        "الأسعار شاملة الضريبة. المهندس المساعد مجاني. المهندس 19 ر.س شهرياً، والمهندس المحترف 41 ر.س، والمهندس الاستشاري 79 ر.س. الفريق 349 ر.س شهرياً لخمسة مقاعد. المؤسسات من 2500 ر.س شهرياً.",
+        "المهندس المساعد مجاني. المهندس 19 ر.س شهرياً، والمهندس المحترف 41 ر.س، والمهندس الاستشاري 99 ر.س. الفريق 499 ر.س شهرياً لخمسة مقاعد. المؤسسات 3,900 ر.س شهرياً لعشرة مقاعد.",
     },
     "/chat": {
       title: "المحادثة | engineerit.ai",
@@ -95,7 +106,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/advisors": {
       title: "مستشارو الذكاء الاصطناعي | engineerit.ai",
       description:
-        "إدارة المشاريع بما فيها المشتريات وسلسلة الإمداد، وضمان البرنامج، وجاهزية التشغيل، ودعم القرار. كتيبات بنقرة واحدة تحوّل الملفات إلى تقارير جاهزة للتصدير.",
+        "مستشار إدارة المشاريع مشمول في المهندس الاستشاري. ضمان البرنامج مشمول في الفريق. جاهزية التشغيل ودعم القرار مشمولان في المؤسسات.",
     },
     "/login": {
       title: "دخول | engineerit.ai",
@@ -103,7 +114,8 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     },
     "/register": {
       title: "تسجيل | engineerit.ai",
-      description: "أنشئ حساب engineerit.ai واختر المهندس المساعد أو المهندس أو المحترف أو الاستشاري.",
+      description:
+        "أنشئ حساب engineerit.ai. الباقات هي المهندس المساعد والمهندس والمهندس المحترف والمهندس الاستشاري والفريق والمؤسسات.",
     },
     "/profile": {
       title: "الملف | engineerit.ai",

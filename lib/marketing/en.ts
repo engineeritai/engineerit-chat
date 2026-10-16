@@ -11,7 +11,9 @@ export const en: MarketingContent = {
     tools: "Tools",
     how: "How it works",
     teams: "For teams",
+    advisors: "AI Advisors",
     pricing: "Pricing",
+    faq: "Questions",
     login: "Login",
     openChat: "Open chat",
   },
@@ -22,7 +24,7 @@ export const en: MarketingContent = {
       "Attach files, pick a tool, and get structured answers. Paid plans add exports.",
     primaryCta: "Open chat",
     secondaryCta: "View pricing",
-    tertiaryCta: "Request a team pilot",
+    tertiaryCta: "Subscribe",
     panelTitle: "Chat is one click away",
     panelBody:
       "Attach a file, pick a tool, and get a structured answer. Paid plans add exports.",
@@ -30,14 +32,14 @@ export const en: MarketingContent = {
   trust: {
     kicker: "Verified store",
     title: "Listed with the Saudi Business Center",
-    body: "engineerit.ai publishes the same verification details already shown in the product.",
+    body: "engineerit.ai is registered with the Saudi Business Center. Confirm the number below on the official site.",
     authLabel: "Auth No.",
     verify: "Verify via Saudi Business Center",
   },
   disciplines: {
     title: "Disciplines your consultancy already staffs",
     intro:
-      "The chat assistant uses the same discipline list as the product. Choose one before you ask so the answer stays inside that field.",
+      "Choose the discipline your question belongs to so the answer stays in that field.",
     summaries: {
       General:
         "Cross-discipline questions when the work does not sit in a single department.",
@@ -72,7 +74,7 @@ export const en: MarketingContent = {
   tools: {
     title: "Seven engineer tools",
     intro:
-      "Each tool inserts a starting brief in the chat. Which tools you can run depends on the individual plan, the same way it does in the app.",
+      "Each tool starts a brief in the chat. Your plan decides which tools you can run.",
     summaries: {
       drawing:
         "Explain and analyze an engineering drawing, PFD, P&ID, or block diagram.",
@@ -130,30 +132,9 @@ export const en: MarketingContent = {
     ],
   },
   teams: {
-    title: "For teams and consultancies",
+    title: "Plans and pricing",
     intro:
-      "Individual plans are for one person. A team pilot is for a firm that wants shared projects, an admin, and seats for the people doing the work. Nothing here is charged in the app.",
-    consultantTier: "Consultant-tier features for {seats} seats",
-    teamBullet:
-      "Team is {teamMonthly} per month for {seats} seats. An extra seat is {extraMonthly} per month, with shared projects and an admin.",
-    enterpriseBullet:
-      "Enterprise starts from {enterpriseMonthly} per month and includes SSO, priority support, and custom standards.",
-    annualBullet:
-      "Annual billing is ten times the monthly price, which is two months free. Ask for it in the pilot request.",
-    regionBullet:
-      "Aimed at consultancies working in Saudi Arabia and the wider GCC, in the disciplines and standards those projects use.",
-    cta: "Request a team pilot",
-    formTitle: "Request a team pilot",
-    formNote:
-      "This form opens an email to us. It does not create an account or start a payment.",
-    name: "Name",
-    email: "Work email",
-    company: "Company",
-    message: "What do you want to try?",
-    messagePlaceholder: "Disciplines, team size, and the kind of projects you deliver.",
-    submit: "Request a team pilot",
-    opened: "Your email app should open with this request.",
-    mailtoFallback: "Or email us directly",
+      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing is 10 times the monthly price. Team and Enterprise are bought through Moyasar and renew automatically. Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes all four advisors.",
   },
   faq: {
     title: "Questions consultancies ask",
@@ -165,7 +146,7 @@ export const en: MarketingContent = {
           "Yes. Open chat is available without an account. Guests receive one reply a day. The free Assistant Engineer plan includes three replies a day. Engineer, Professional Engineer, and Consultant Engineer are not capped by that daily limit.",
       },
       {
-        question: "Does a team pilot replace our engineers?",
+        question: "Does Team replace our engineers?",
         answer:
           "No. engineerit.ai assists the people in your firm. A qualified engineer remains responsible for the design and for what is issued to a client.",
       },
@@ -177,7 +158,7 @@ export const en: MarketingContent = {
       {
         question: "How do Team, Enterprise, and annual billing get paid?",
         answer:
-          "Individual monthly plans stay on the prices shown at registration and are paid in the app. Team, Enterprise, and annual billing are arranged by email for now. Use Request a team pilot or contact us. They are not sent to the card checkout.",
+          "Engineer is SAR 190 per year, Professional Engineer SAR 410 per year, and Consultant Engineer SAR 990 per year. Team is SAR 499 per month or SAR 4,990 per year for 5 seats, plus SAR 89 per extra seat. Enterprise is SAR 3,900 per month or SAR 39,000 per year for 10 seats, plus SAR 299 per extra seat. All are paid through Moyasar and renew until you cancel. Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
       },
       {
         question: "How do I change the interface language?",
@@ -187,15 +168,16 @@ export const en: MarketingContent = {
       {
         question: "Where is the company verification?",
         answer:
-          "The Saudi Business Center auth number on this page is the same one shown inside the product. Use the verification link to check it on the official inquiry site.",
+          "Our Saudi Business Center registration number is on this page. Use the verification link to confirm it on the official site.",
       },
     ],
+    pricesHeading: "Plan prices and features",
   },
   closing: {
-    title: "Start with a question, or ask for a pilot",
-    body: "Engineers can open the chat now. Consultancies can request a team pilot and we will reply by email.",
+    title: "Start with a question, or buy a plan",
+    body: "Engineers can open the chat now. Paid plans, Team, and Enterprise are bought through Moyasar and renew automatically.",
     primaryCta: "Open chat",
-    secondaryCta: "Request a team pilot",
+    secondaryCta: "Subscribe",
   },
   footer: {
     blurb: "AI engineering assistant for consultancies, engineers, and students.",
@@ -210,39 +192,20 @@ export const en: MarketingContent = {
   pricing: {
     title: "Plans and pricing",
     intro:
-      "Individual plans use the same names and monthly prices as registration. Team, Enterprise, and annual billing are quoted here and arranged with us.",
+      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise. Monthly and annual prices match registration and billing.",
     monthly: "Monthly",
     annual: "Annual",
     twoMonthsFree: "2 months free",
     annualExplainer:
-      "Annual price is 10 times the monthly price. Team, Enterprise, and annual plans are not charged in the app — the button opens an email.",
+      "Annual price is 10 times the monthly price (2 months free). Paid plans open Moyasar checkout and renew automatically until you cancel.",
     usdNote: "US dollar amounts are approximate, at SAR 3.75 per USD 1.",
-    vatNote: "Prices include VAT.",
+    vatNote: "",
     individualTitle: "Individual plans",
-    individualIntro: "Same plans and monthly prices as registration.",
+    individualIntro:
+      "Assistant Engineer, Engineer, Professional Engineer, and Consultant Engineer. Same names, prices, and features as registration.",
     firmTitle: "Team and Enterprise",
-    firmIntro: "For consultancies. Contact us to start. No checkout in the app.",
-    perMonth: "/ month",
-    perYear: "/ year",
-    from: "From",
-    free: "Free",
+    firmIntro:
+      "Team is SAR 499 per month or SAR 4,990 per year for 5 seats, plus SAR 89 per extra seat, and includes PMO and Program Assurance. Enterprise is SAR 3,900 per month or SAR 39,000 per year for 10 seats, plus SAR 299 per extra seat, and includes PMO, Program Assurance, Operations Readiness, and Decision Support. Extra seats are charged on the saved card. Both renew automatically.",
     approx: "approx.",
-    forSeats: "For {seats} seats",
-    extraSeat: "Extra seat",
-    startFree: "Start free",
-    createAccount: "Create account",
-    requestAnnual: "Request annual billing",
-    requestPilot: "Request a team pilot",
-    contactUs: "Contact us",
-    consultantTier: "Consultant-tier features for {seats} seats",
-    sharedProjects: "Shared projects",
-    admin: "Admin for the team",
-    sso: "SSO",
-    prioritySupport: "Priority support",
-    customStandards: "Custom standards",
-    contactScope: "Scope agreed when you contact us",
-    featuresTitle: "Included",
-    notInApp: "Not charged in the app.",
-    seeChat: "Open chat",
   },
 };

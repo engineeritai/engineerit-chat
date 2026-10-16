@@ -4,8 +4,9 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import { LocaleProvider } from "@/app/components/LocaleProvider";
+import { metaFor } from "@/lib/pageMeta";
 import { requestLocale } from "@/lib/requestLocale";
-import { SITE_NAME, SITE_URL, defaultDescription, defaultTitle } from "@/lib/seo";
+import { SITE_NAME, SITE_URL, languageAlternates } from "@/lib/seo";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -13,28 +14,31 @@ const poppins = Poppins({
   display: "swap",
 });
 
-export const metadata: Metadata = {
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await requestLocale();
+  const meta = metaFor(locale, "/");
+  return {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: defaultTitle,
+    default: meta.title,
     template: "%s | engineerit.ai",
   },
-  description: defaultDescription,
+  description: meta.description,
   applicationName: SITE_NAME,
-  alternates: { canonical: "/" },
+  alternates: languageAlternates("/"),
   openGraph: {
-    title: defaultTitle,
-    description: defaultDescription,
+    title: meta.title,
+    description: meta.description,
     url: SITE_URL,
     siteName: SITE_NAME,
     images: [{ url: "/og.png", alt: SITE_NAME }],
     type: "website",
-    locale: "en_US",
+    locale: locale === "ar" ? "ar_SA" : "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: defaultTitle,
-    description: defaultDescription,
+    title: meta.title,
+    description: meta.description,
     images: ["/og.png"],
   },
   icons: {
@@ -46,7 +50,8 @@ export const metadata: Metadata = {
     apple: "/favicon.png",
   },
   robots: { index: true, follow: true },
-};
+  };
+}
 
 export default async function RootLayout({
   children,

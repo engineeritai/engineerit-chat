@@ -1,13 +1,20 @@
 import type { Metadata } from "next";
 import { DISCIPLINES } from "@/lib/disciplines";
 import { ENGINEER_TOOLS } from "@/lib/engineerTools";
-import { PLANS } from "@/lib/plans";
+import type { Locale } from "@/lib/i18n";
+import { disciplineLabel, localizedPlan, toolLabel } from "@/lib/labels";
+import { metaFor } from "@/lib/pageMeta";
 import {
-  ENTERPRISE_PLAN,
-  TEAM_PLAN,
-  assertIndividualPlanPrices,
-  monthlySarFromPlan,
-} from "@/lib/pricingDisplay";
+  ENTERPRISE_EXTRA_SEAT_SAR,
+  ENTERPRISE_INCLUDED_SEATS,
+  EXTRA_SEAT_SAR,
+  PLAN_AMOUNTS_SAR,
+  PLANS,
+  TEAM_INCLUDED_SEATS,
+  type Plan,
+  type SelfServePlanId,
+} from "@/lib/plans";
+import { assertIndividualPlanPrices } from "@/lib/pricingDisplay";
 
 export const SITE_URL = "https://engineerit.ai";
 export const SITE_NAME = "engineerit.ai";
@@ -17,6 +24,23 @@ export const defaultTitle =
 
 export const defaultDescription =
   "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Paid plans add exports.";
+
+export function languageAlternates(path: string) {
+  const canonical = path === "/" ? `${SITE_URL}/` : new URL(path, SITE_URL).toString();
+  const withLang = (lang: Locale) => {
+    const url = new URL(path === "/" ? "/" : path, SITE_URL);
+    url.searchParams.set("lang", lang);
+    return url.toString();
+  };
+  return {
+    canonical,
+    languages: {
+      en: withLang("en"),
+      ar: withLang("ar"),
+      "x-default": canonical,
+    },
+  };
+}
 
 export function pageMetadata({
   title,
@@ -39,7 +63,7 @@ export function pageMetadata({
   return {
     title: { absolute: fullTitle },
     description,
-    alternates: { canonical },
+    alternates: languageAlternates(path),
     robots: index
       ? { index: true, follow: true }
       : { index: false, follow: true },
@@ -61,54 +85,74 @@ export function pageMetadata({
   };
 }
 
-export function softwareApplicationJsonLd() {
-  assertIndividualPlanPrices();
+function grouped(amount: number) {
+  return amount.toLocaleString("en-US");
+}
 
-  const individualOffers = PLANS.map((plan) => ({
+function offerFor(plan: Plan, locale: "en" | "ar") {
+  const name = localizedPlan(locale, plan).name;
+  const price = plan.id === "assistant" ? 0 : PLAN_AMOUNTS_SAR[plan.id as SelfServePlanId].month;
+  return {
     "@type": "Offer",
-    name: plan.name,
-    price: String(monthlySarFromPlan(plan)),
+    name,
+    price: String(price),
     priceCurrency: "SAR",
-    description: plan.tagline,
+    description: offerDescription(plan, locale),
     url: `${SITE_URL}/pricing`,
     availability: "https://schema.org/InStock",
-  }));
+  };
+}
+
+function offerDescription(plan: Plan, locale: "en" | "ar") {
+  if (plan.id === "assistant") {
+    return locale === "ar" ? "المهندس المساعد مجاني." : "Assistant Engineer is free.";
+  }
+  const amounts = PLAN_AMOUNTS_SAR[plan.id];
+  const month = grouped(amounts.month);
+  const year = grouped(amounts.year);
+  if (plan.id === "team") {
+    return locale === "ar"
+      ? `الفريق ${month} ر.س شهرياً أو ${year} ر.س سنوياً لـ ${TEAM_INCLUDED_SEATS} مقاعد. المقعد الإضافي ${grouped(EXTRA_SEAT_SAR.month)} ر.س شهرياً أو ${grouped(EXTRA_SEAT_SAR.year)} ر.س سنوياً. الشراء عبر Moyasar. الفريق يشمل مستشار إدارة المشاريع ومستشار ضمان البرنامج.`
+      : `Team is SAR ${month} per month or SAR ${year} per year for ${TEAM_INCLUDED_SEATS} seats. Extra seat SAR ${grouped(EXTRA_SEAT_SAR.month)} per month or SAR ${grouped(EXTRA_SEAT_SAR.year)} per year. Bought through Moyasar. Team includes the PMO Advisor and Program Assurance.`;
+  }
+  if (plan.id === "enterprise") {
+    return locale === "ar"
+      ? `المؤسسات ${month} ر.س شهرياً أو ${year} ر.س سنوياً لـ ${ENTERPRISE_INCLUDED_SEATS} مقاعد. المقعد الإضافي ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.month)} ر.س شهرياً أو ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.year)} ر.س سنوياً. الشراء عبر Moyasar. المؤسسات تشمل مستشار إدارة المشاريع وضمان البرنامج وجاهزية التشغيل ودعم القرار.`
+      : `Enterprise is SAR ${month} per month or SAR ${year} per year for ${ENTERPRISE_INCLUDED_SEATS} seats. Extra seat SAR ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.month)} per month or SAR ${grouped(ENTERPRISE_EXTRA_SEAT_SAR.year)} per year. Bought through Moyasar. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.`;
+  }
+  const advisors =
+    plan.id === "consultant"
+      ? locale === "ar"
+        ? " المهندس الاستشاري يشمل مستشار إدارة المشاريع."
+        : " Consultant Engineer includes the PMO Advisor."
+      : "";
+  return locale === "ar"
+    ? `${localizedPlan("ar", plan).name} ${month} ر.س شهرياً أو ${year} ر.س سنوياً. الشراء عبر Moyasar.${advisors}`
+    : `${plan.name} is SAR ${month} per month or SAR ${year} per year. Bought through Moyasar.${advisors}`;
+}
+
+export function softwareApplicationJsonLd(locale: Locale = "en") {
+  assertIndividualPlanPrices();
+  const arabic = locale === "ar";
 
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: SITE_NAME,
     applicationCategory: "BusinessApplication",
-    applicationSubCategory: "Engineering",
-    operatingSystem: "Web",
+    applicationSubCategory: arabic ? "هندسة" : "Engineering",
+    operatingSystem: arabic ? "الويب" : "Web",
     url: `${SITE_URL}/`,
     image: `${SITE_URL}/og.png`,
-    description: defaultDescription,
-    inLanguage: "en",
+    description: metaFor(locale, "/").description,
+    inLanguage: arabic ? "ar" : "en",
     areaServed: ["SA", "AE", "KW", "QA", "BH", "OM"],
-    offers: [
-      ...individualOffers,
-      {
-        "@type": "Offer",
-        name: TEAM_PLAN.name,
-        price: String(TEAM_PLAN.monthlySar),
-        priceCurrency: "SAR",
-        description: `Team plan with Consultant-tier features for ${TEAM_PLAN.includedSeats} seats. Extra seat SAR ${TEAM_PLAN.extraSeatMonthlySar} per month. Shared projects and admin. Prices include VAT. Arranged by contact, not charged in the app.`,
-        url: `${SITE_URL}/pricing`,
-      },
-      {
-        "@type": "Offer",
-        name: ENTERPRISE_PLAN.name,
-        price: String(ENTERPRISE_PLAN.monthlySarFrom),
-        priceCurrency: "SAR",
-        description:
-          "From SAR 2,500 per month. SSO, priority support, and custom standards. Contact us.",
-        url: `${SITE_URL}/pricing`,
-      },
-    ],
-    featureList: [
-      ...DISCIPLINES,
-      ...ENGINEER_TOOLS.map((tool) => tool.label),
-    ],
+    offers: PLANS.map((plan) => offerFor(plan, locale)),
+    featureList: arabic
+      ? [
+          ...DISCIPLINES.map((name) => disciplineLabel("ar", name)),
+          ...ENGINEER_TOOLS.map((tool) => toolLabel("ar", tool.id)),
+        ]
+      : [...DISCIPLINES, ...ENGINEER_TOOLS.map((tool) => tool.label)],
   };
 }

@@ -1,28 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import Header from "../../components/Header";
-import NavSidebar from "../../components/NavSidebar";
+import MarketingShell from "../../components/marketing/MarketingShell";
 import AdvisorChat from "../../components/AdvisorChat";
 import { isAdvisorId } from "@/lib/advisors";
 import { useMessages } from "@/lib/useMessages";
 
 export default function AdvisorModePage() {
-  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
   const params = useParams<{ slug: string }>();
-  const { m, dir } = useMessages();
+  const { m } = useMessages();
   const slug = params?.slug;
 
   return (
-    <div className="app-shell advisor-mode-page" dir={dir}>
-      <NavSidebar
-        isMobileOpen={isSidebarOpenMobile}
-        onCloseMobile={() => setIsSidebarOpenMobile(false)}
-      />
-      <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
+    <MarketingShell>
+      <div className="advisor-mode-page">
         {isAdvisorId(slug) ? (
           <AdvisorChat advisorId={slug} />
         ) : (
@@ -34,6 +26,6 @@ export default function AdvisorModePage() {
           </div>
         )}
       </div>
-    </div>
+    </MarketingShell>
   );
 }

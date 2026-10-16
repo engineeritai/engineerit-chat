@@ -10,7 +10,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import Link from "next/link";
-import Header from "../components/Header";
+import MarketingShell from "../components/marketing/MarketingShell";
 import Sidebar from "../components/Sidebar";
 import AdvisorBar from "../components/AdvisorBar";
 import AdvisorEcosystem from "../components/AdvisorEcosystem";
@@ -19,14 +19,11 @@ import { useMessages } from "@/lib/useMessages";
 import { disciplineLabel, toolLabel } from "@/lib/labels";
 import { postDocument, postImage, readApiError } from "@/lib/postAttachment";
 import { MAX_UPLOAD_BYTES, UploadError, fileTooLargeMessage } from "@/lib/uploadLimits";
-import {
-  canExportChatHistory,
-  canShareChatWithTeam,
-  normalizeSubscriptionTier,
-  type SubscriptionTier,
-} from "@/lib/historyRetention";
+import { canShareChatWithTeam } from "@/lib/historyRetention";
 import { useChatHistory, type ChatMessage } from "@/lib/useChatHistory";
 import type { HistoryCode } from "@/lib/chatHistoryClient";
+import { featureTier, type FeatureTier, type PlanId } from "@/lib/plans";
+import { resolveEffectivePlan } from "@/lib/effectivePlan";
 
 type Attachment = {
   id: string;
@@ -39,14 +36,6 @@ type Attachment = {
 };
 
 type Message = ChatMessage;
-
-type PlanId = "assistant" | "engineer" | "professional" | "consultant";
-type AccountPlan = SubscriptionTier;
-
-function toolsFor(plan: AccountPlan): PlanId {
-  if (plan === "team" || plan === "enterprise") return "consultant";
-  return plan;
-}
 
 function uuid() {
   return Math.random().toString(36).slice(2);
@@ -68,7 +57,7 @@ const ENGINEER_TOOLS = [
 
 type ToolId = (typeof ENGINEER_TOOLS)[number]["id"];
 
-const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
+const TOOL_ACCESS: Record<FeatureTier, ToolId[]> = {
   assistant: [],
   engineer: ["drawing", "design"],
   professional: ["drawing", "design", "itp", "boq"],
@@ -83,8 +72,8 @@ const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
   ],
 };
 
-function hasAccess(planId: AccountPlan, toolId: ToolId) {
-  return TOOL_ACCESS[toolsFor(planId)]?.includes(toolId);
+function hasAccess(planId: PlanId, toolId: ToolId) {
+  return TOOL_ACCESS[featureTier(planId)]?.includes(toolId);
 }
 
 /* ============================
@@ -378,7 +367,7 @@ export default function Page() {
 
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
 
-  const [planId, setPlanId] = useState<AccountPlan>("assistant");
+  const [planId, setPlanId] = useState<PlanId>("assistant");
   const [advisorPlan, setAdvisorPlan] = useState("guest");
   const { locale, m: ui, shell: s } = useMessages();
   const history = useChatHistory({
@@ -399,14 +388,14 @@ export default function Page() {
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
-  const isPaidPlan =
-    planId === "engineer" || planId === "professional" || planId === "consultant";
+  const tier = featureTier(planId);
+  const isPaidPlan = tier !== "assistant";
 
   const attachmentsAllowed = isPaidPlan && !isGuest;
 
-  const canExportPdf = canExportChatHistory(planId);
-  const canExportWordPpt = planId === "consultant" || planId === "team" || planId === "enterprise";
-  const canShareBenefits = planId === "engineer" || canExportPdf;
+  const canExportPdf = tier === "professional" || tier === "consultant";
+  const canExportWordPpt = tier === "consultant";
+  const canShareBenefits = tier !== "assistant";
   const canShareTeam = canShareChatWithTeam(planId) && !isGuest;
   const canExportChat = canExportPdf && !isGuest;
 
@@ -427,21 +416,9 @@ export default function Page() {
 
         setIsGuest(false);
         setUserId(user.id);
-
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("subscription_tier")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (!error && profile?.subscription_tier) {
-          const rawTier = String(profile.subscription_tier);
-          setAdvisorPlan(rawTier);
-          setPlanId(normalizeSubscriptionTier(rawTier));
-        } else {
-          setPlanId("assistant");
-          setAdvisorPlan("assistant");
-        }
+        const effective = await resolveEffectivePlan(supabase, user.id);
+        setPlanId(effective);
+        setAdvisorPlan(effective);
       } catch (err) {
         console.error(err);
         setPlanId("assistant");
@@ -738,6 +715,7 @@ export default function Page() {
   }
 
   return (
+    <MarketingShell>
     <div className="app-shell chat-page">
       <Sidebar
         discipline={discipline}
@@ -763,7 +741,18 @@ export default function Page() {
       />
 
       <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
+        <div className="chat-mobile-bar">
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setIsSidebarOpenMobile((v) => !v)}
+            aria-label={s.header.openMenu}
+            type="button"
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
 
         {showLanding && (
           <div
@@ -1291,7 +1280,7 @@ export default function Page() {
                 <div className="gate-body">
                   <div className="gate-text">{s.chat.upgradeBody}</div>
                   <div className="gate-actions">
-                    <a className="gate-btn gate-btn-primary" href="/subscription">
+                    <a className="gate-btn gate-btn-primary" href="/pricing">
                       {s.chat.upgrade}
                     </a>
                     <button
@@ -1309,5 +1298,6 @@ export default function Page() {
         )}
       </div>
     </div>
+    </MarketingShell>
   );
 }

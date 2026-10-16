@@ -8,8 +8,10 @@ import {
   exportCapabilities,
   getAdvisor,
   hasAdvisorAccess,
+  unlockPlanForAdvisor,
   type AdvisorId,
 } from "@/lib/advisors";
+import BuyPlanButton from "@/app/components/BuyPlanButton";
 import { advisorsAreLive, advisorsNowLive } from "@/lib/advisorLaunch";
 import { getAccessToken } from "@/lib/accessToken";
 import { getPlaybook, groupedPlaybooks, playbooksFor, playbookTemplate } from "@/lib/playbooks";
@@ -87,7 +89,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
   const filename = `engineerit-${advisorId}${selected ? `-${selected.id}` : ""}`;
 
   function openGate(notice?: string) {
-    setGateNotice(notice || (isGuest ? m.gating.lockedBody : m.gating.sendLocked));
+    setGateNotice(notice || m.advisors.includedOn[advisorId]);
     setShowGate(true);
   }
 
@@ -333,7 +335,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     <div className="advisor-chat" dir={dir}>
       <div className="advisor-chat-intro">
         <div className="advisor-breadcrumb">
-          <Link href="/">engineerit AI</Link>
+          <Link href="/">{m.advisors.ecosystemAi}</Link>
           <span aria-hidden="true">›</span>
           <Link href="/advisors">{m.advisors.sectionTitle}</Link>
           <span aria-hidden="true">›</span>
@@ -365,19 +367,16 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         {showLocked && (
           <div className="advisor-lock-banner">
             <div>
-              <div className="advisor-lock-title">{m.gating.lockedTitle}</div>
-              <p>{m.gating.lockedBody}</p>
+              <div className="advisor-lock-title">{m.advisors.includedOn[advisorId]}</div>
+              <p>{copy.summary}</p>
             </div>
             <div className="gate-actions">
-              {isGuest ? (
-                <a className="gate-btn gate-btn-primary" href="/register">
-                  {m.gating.registerCta}
-                </a>
-              ) : (
-                <a className="gate-btn gate-btn-primary" href="/subscription">
-                  {m.gating.upgradeCta}
-                </a>
-              )}
+              <BuyPlanButton
+                planId={unlockPlanForAdvisor(advisorId)}
+                interval="month"
+                verb="upgrade"
+                className="gate-btn gate-btn-primary"
+              />
               <a className="gate-btn" href="/pricing">
                 {m.gating.compareCta}
               </a>
@@ -391,10 +390,12 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
           <div>
             <h2 className="section-heading">{m.advisors.capabilitiesTitle}</h2>
             <ul className="advisor-capabilities">
-              {copy.capabilities.map((item) => (
+              {(showLocked ? copy.capabilities.slice(0, 2) : copy.capabilities).map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
+            {showLocked ? null : (
+            <>
             <h2 className="section-heading">{m.advisors.playbooksTitle}</h2>
             <p className="advisor-playbook-hint">{m.advisors.playbookHint}</p>
             {groupedPlaybooks(advisor.id).map((group) => (
@@ -439,7 +440,10 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                 </div>
               </div>
             ))}
+            </>
+            )}
           </div>
+          {showLocked ? null : (
           <details className="advisor-template" open>
             <summary>
               {m.advisors.outputTemplate}
@@ -447,6 +451,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
             </summary>
             <pre>{template.trim()}</pre>
           </details>
+          )}
         </div>
         <p className="advisor-responsibility">{m.advisors.responsibility}</p>
       </div>
@@ -718,6 +723,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         isGuest={isGuest}
         m={m}
         notice={gateNotice}
+        planId={unlockPlanForAdvisor(advisorId)}
         onClose={() => setShowGate(false)}
       />
     </div>

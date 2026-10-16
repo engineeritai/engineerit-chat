@@ -18,7 +18,9 @@ export type MarketingContent = {
     tools: string;
     how: string;
     teams: string;
+    advisors: string;
     pricing: string;
+    faq: string;
     login: string;
     openChat: string;
   };
@@ -63,27 +65,12 @@ export type MarketingContent = {
   teams: {
     title: string;
     intro: string;
-    teamBullet: string;
-    consultantTier: string;
-    enterpriseBullet: string;
-    annualBullet: string;
-    regionBullet: string;
-    cta: string;
-    formTitle: string;
-    formNote: string;
-    name: string;
-    email: string;
-    company: string;
-    message: string;
-    messagePlaceholder: string;
-    submit: string;
-    opened: string;
-    mailtoFallback: string;
   };
   faq: {
     title: string;
     intro: string;
     items: { question: string; answer: string }[];
+    pricesHeading: string;
   };
   closing: {
     title: string;
@@ -114,27 +101,6 @@ export type MarketingContent = {
     individualIntro: string;
     firmTitle: string;
     firmIntro: string;
-    perMonth: string;
-    perYear: string;
-    from: string;
-    free: string;
     approx: string;
-    forSeats: string;
-    extraSeat: string;
-    startFree: string;
-    createAccount: string;
-    requestAnnual: string;
-    requestPilot: string;
-    contactUs: string;
-    consultantTier: string;
-    sharedProjects: string;
-    admin: string;
-    sso: string;
-    prioritySupport: string;
-    customStandards: string;
-    contactScope: string;
-    featuresTitle: string;
-    notInApp: string;
-    seeChat: string;
   };
 };

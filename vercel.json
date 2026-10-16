@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/renewals",
+      "schedule": "15 2 * * *"
+    },
+    {
       "path": "/api/cron/history-cleanup",
       "schedule": "0 3 * * *"
     }
