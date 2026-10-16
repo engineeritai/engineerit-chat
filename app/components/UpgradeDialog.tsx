@@ -19,9 +19,10 @@ export default function UpgradeDialog({ open, isGuest, m, notice, onClose }: Pro
         <div className="gate-title">
           {isGuest ? m.gating.registerRequired : m.gating.upgradeRequired}
         </div>
-        {notice && <div className="gate-note">{notice}</div>}
         <div className="gate-body">
-          <div className="gate-text">{isGuest ? m.gating.lockedBody : m.gating.sendLocked}</div>
+          <div className="gate-text">
+            {notice || (isGuest ? m.gating.lockedBody : m.gating.sendLocked)}
+          </div>
           <div className="gate-actions">
             {isGuest ? (
               <>

@@ -406,6 +406,26 @@ export const PLAYBOOKS: readonly Playbook[] = [
   ),
   pack(
     "assurance",
+    "delivery-audit",
+    "Delivery Audit Report",
+    `
+| ID | Area (project / technical / quality / compliance) | Finding | Requirement in the file | Evidence of execution | Severity | Recommendation | Owner | Due | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
+- Delivery audit opinion (execution only):
+- This report does not cover capital governance, financial or strategy alignment, or board-level investment findings:
+`,
+    "تقرير تدقيق التسليم",
+    `
+| المعرف | المجال (مشروع / فني / جودة / امتثال) | الملاحظة | المتطلب في الملف | دليل التنفيذ | الشدة | التوصية | المالك | الاستحقاق | RAG |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
+- رأي تدقيق التسليم (التنفيذ فقط):
+- هذا التقرير لا يغطي حوكمة رأس المال أو المواءمة المالية أو الاستراتيجية أو ملاحظات الاستثمار على مستوى المجلس:
+`
+  ),
+  pack(
+    "assurance",
     "schedule-health",
     "Schedule Health",
     `
@@ -750,22 +770,24 @@ export const PLAYBOOKS: readonly Playbook[] = [
   ),
   pack(
     "decision",
-    "audit",
-    "Audit",
+    "governance-audit",
+    "Governance and Investment Audit",
     `
-| ID | Finding | Area (CAPEX / OPEX / governance / strategy / controls) | Severity | Recommendation | Owner | Due | RAG |
+| ID | Finding | Area (capital governance / financial / strategy alignment / board) | Severity | Recommendation | Owner | Due | RAG |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 
-- Audit opinion:
-- Findings that should condition the investment decision:
+- Governance and investment audit opinion:
+- Board-level findings that should condition the capital decision:
+- This audit does not cover project, technical, quality, or compliance audits of execution:
 `,
-    "التدقيق",
+    "تدقيق الحوكمة والاستثمار",
     `
-| المعرف | الملاحظة | المجال (رأسمالي / تشغيلي / حوكمة / استراتيجية / ضوابط) | الشدة | التوصية | المالك | الاستحقاق | RAG |
+| المعرف | الملاحظة | المجال (حوكمة رأس المال / مالي / مواءمة استراتيجية / مجلس) | الشدة | التوصية | المالك | الاستحقاق | RAG |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 
-- رأي التدقيق:
-- ملاحظات يجب أن تشرط قرار الاستثمار:
+- رأي تدقيق الحوكمة والاستثمار:
+- ملاحظات على مستوى المجلس يجب أن تشرط القرار الرأسمالي:
+- هذا التدقيق لا يغطي تدقيق المشروع أو الفني أو الجودة أو الامتثال للتنفيذ:
 `
   ),
   pack(
@@ -1173,13 +1195,14 @@ const PLAYBOOK_ORDER: Partial<Record<AdvisorId, readonly string[]>> = {
     "osbl",
     "stage-gate",
     "assurance-review",
+    "delivery-audit",
     "schedule-health",
     "cost-health",
     "risk-health",
     "quality-health",
   ],
   operations: ["testing", "handover", "commissioning", "startup", "punch", "alignment", "om"],
-  decision: ["capital-assessment", "capex-opex", "strategy", "audit", "options", "mcda", "brief"],
+  decision: ["capital-assessment", "capex-opex", "strategy", "governance-audit", "options", "mcda", "brief"],
 };
 
 for (const [advisorId, order] of Object.entries(PLAYBOOK_ORDER)) {

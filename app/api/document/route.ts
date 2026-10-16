@@ -174,7 +174,6 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File | null;
     const questionField = formData.get("question");
     const advisorField = formData.get("advisorId");
-    const planField = formData.get("planId");
     const localeField = formData.get("locale");
     const playbookField = formData.get("playbookId");
 
@@ -183,9 +182,9 @@ export async function POST(req: NextRequest) {
         ? questionField
         : "Summarize this engineering document (Arabic + English) with headings, bullet points, important numbers/dates, and key recommendations.";
 
-    const advisorGate = gateAdvisor({
+    const advisorGate = await gateAdvisor({
+      request: req,
       advisorId: typeof advisorField === "string" ? advisorField : "",
-      planId: typeof planField === "string" ? planField : "",
       locale: typeof localeField === "string" ? localeField : "",
       playbookId: typeof playbookField === "string" ? playbookField : "",
     });

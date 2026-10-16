@@ -7,8 +7,9 @@ import type { Locale } from "@/lib/i18n";
  * Change `ADVISOR_ACCESS` to move advisors between tiers. Do not encode
  * the rule as "consultant and above" in the UI.
  *
- * Included: Consultant, Team, Enterprise.
- * Locked preview: guest, Free (assistant), Engineer, Professional.
+ * Included: Consultant, Team, Enterprise, and pilot or trial accounts
+ * (those tiers alias to Consultant).
+ * Locked preview: guest, Assistant Engineer, Engineer, Professional.
  */
 /** Display order everywhere: PMO, Program Assurance, Operations Readiness, Decision Support. */
 export const ADVISOR_IDS = ["pmo", "assurance", "operations", "decision"] as const;
@@ -65,6 +66,10 @@ const PLAN_ALIASES: Record<string, AdvisorPlanId> = {
   professional_engineer: "professional",
   consultant: "consultant",
   consultant_engineer: "consultant",
+  /** Signed pilot and trial accounts receive Consultant advisor access. */
+  pilot: "consultant",
+  trial: "consultant",
+  free_trial: "consultant",
   team: "team",
   enterprise: "enterprise",
   guest: "guest",
@@ -188,6 +193,10 @@ const ASSURANCE_TEMPLATE_EN = `# Program Assurance Report
 ## 6. Assurance opinion
 - Overall RAG:
 - Conditions to proceed:
+
+## 7. Delivery audit of execution
+| ID | Area (project / technical / quality / compliance) | Finding | Requirement in the file | Severity | RAG |
+| --- | --- | --- | --- | --- | --- |
 `;
 
 const ASSURANCE_TEMPLATE_AR = `# تقرير ضمان البرنامج
@@ -217,6 +226,10 @@ const ASSURANCE_TEMPLATE_AR = `# تقرير ضمان البرنامج
 ## 6. رأي الضمان
 - RAG الإجمالي:
 - شروط المتابعة:
+
+## 7. تدقيق تسليم التنفيذ
+| المعرف | المجال (مشروع / فني / جودة / امتثال) | الملاحظة | المتطلب في الملف | الشدة | RAG |
+| --- | --- | --- | --- | --- | --- |
 `;
 
 const DECISION_TEMPLATE_EN = `# Executive Decision Brief
@@ -250,9 +263,9 @@ const DECISION_TEMPLATE_EN = `# Executive Decision Brief
 | Decision | Strategy objective | Governance forum | Alignment | RAG |
 | --- | --- | --- | --- | --- |
 
-## 6. Audit
-| ID | Finding | Severity | Owner | Due | RAG |
-| --- | --- | --- | --- | --- | --- |
+## 6. Governance and investment audit
+| ID | Finding | Area (capital governance / financial / strategy alignment / board) | Severity | Owner | Due | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
 
 ## 7. Recommendation
 - Preferred option:
@@ -294,9 +307,9 @@ const DECISION_TEMPLATE_AR = `# مذكرة قرار تنفيذية
 | القرار | الهدف الاستراتيجي | منتدى الحوكمة | المواءمة | RAG |
 | --- | --- | --- | --- | --- |
 
-## 6. التدقيق
-| المعرف | الملاحظة | الشدة | المالك | الاستحقاق | RAG |
-| --- | --- | --- | --- | --- | --- |
+## 6. تدقيق الحوكمة والاستثمار
+| المعرف | الملاحظة | المجال (حوكمة رأس المال / مالي / مواءمة استراتيجية / مجلس) | الشدة | المالك | الاستحقاق | RAG |
+| --- | --- | --- | --- | --- | --- | --- |
 
 ## 7. التوصية
 - الخيار المفضل:

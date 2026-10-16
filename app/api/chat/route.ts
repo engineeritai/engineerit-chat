@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
     playbookId?: string;
   };
 
-  const advisorGate = gateAdvisor({ advisorId, planId, locale, playbookId });
+  const advisorGate = await gateAdvisor({ request: req, advisorId, locale, playbookId });
   if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
 
   // Enforce daily limit per IP

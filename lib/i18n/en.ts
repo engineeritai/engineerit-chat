@@ -6,22 +6,29 @@ const en: Messages = {
   advisors: {
     sectionTitle: "AI Advisors",
     ecosystem: "engineerit AI › AI Advisors",
-    ecosystemTitle: "Ecosystem",
+    ecosystemTitle: "How it fits",
     ecosystemTagline: "From Strategy to Assured Delivery",
     ecosystemAi: "engineerit AI",
     ecosystemAdvisors: "AI Advisors",
     ecosystemTracks: "PMO, Program Assurance, Operations Readiness, Decision Support",
     ecosystemOutcomesLabel: "Outcomes",
     ecosystemOutcomes:
-      "Capital project assessments, charters, cost and schedule, vendor evaluation, TBE, IKTVA, interface registers, execution health, stage-gate reviews, commissioning, start-up and regularisation, handover dossiers, and executive decision briefs.",
+      "35 one-click playbooks: charters, status reports, gate reviews, delivery audits, decision briefs, TBEs, long-lead trackers, and more.",
     ecosystemOutcomesShort:
-      "Capital assessments, execution health, handover, and decision briefs.",
+      "35 one-click playbooks, from charters to decision briefs.",
     landingNav: "All advisors",
     landingTitle: "AI Advisors",
     landingSubtitle:
-      "A layer above chat and engineer tools. Each advisor runs one-click playbooks that turn uploaded files into an export-ready report: tables, a RAG rating, and an executive summary.",
+      "Four AI advisors that engineer your project documents with a structured approach. Attach your files, run a one-click playbook, and get an export-ready report with tables, a RAG rating and an executive summary.",
     open: "Open advisor",
     preview: "View locked preview",
+    comingSoonBadge: "Coming soon",
+    comingSoonBody:
+      "Playbooks open when AI Advisors go live. Preview every playbook and report template below.",
+    comingSoonCta: "Preview playbooks",
+    nowLiveBadge: "Now live",
+    responsibility:
+      "Advisors draft and structure. They check against the requirements in your files and don't certify or approve. Your team signs off.",
     lockedBadge: "Locked",
     includedBadge: "Included",
     outputTemplate: "Report template",
@@ -31,7 +38,7 @@ const en: Messages = {
     backToAdvisors: "All AI Advisors",
     layerNote: "engineerit AI › AI Advisors ›",
     homeWelcome:
-      "AI Advisors sit above chat and engineer tools: PMO, Program Assurance, Operations Readiness, and Decision Support. One-click playbooks turn uploaded files into export-ready reports.",
+      "Four AI advisors engineer your project documents: PMO, Program Assurance, Operations Readiness, and Decision Support. Attach your files and run a one-click playbook.",
     homeCta: "Explore AI Advisors",
     notFound: "That advisor does not exist.",
     capabilitiesTitle: "What this advisor prepares",
@@ -111,11 +118,12 @@ const en: Messages = {
         flowLabel: "Program Assurance",
         track: "Assurance",
         summary:
-          "Program oversight across projects, including outside-battery-limit interfaces: utilities, demand, stakeholders, and external dependencies. Interface register, stakeholder map, OSBL dependency tracker, stage-gate and assurance reviews, and Execution Health checks for schedule, cost, risk, and quality.",
+          "Program oversight across projects, including outside-battery-limit interfaces: utilities, demand, stakeholders, and external dependencies. Interface register, stakeholder map, OSBL dependency tracker, stage-gate and assurance reviews, a Delivery Audit Report for execution, and Execution Health checks for schedule, cost, risk, and quality.",
         capabilities: [
           "Interface register for utilities, demand, stakeholders, and external dependencies",
           "Stakeholder map and OSBL dependency tracker",
           "Stage-gate and assurance reviews across the program",
+          "Delivery Audit Report: project, technical, quality, and compliance audits of execution",
           "Execution Health: schedule, cost, risk, and quality RAG across projects",
         ],
         playbooks: {
@@ -138,6 +146,10 @@ const en: Messages = {
           "assurance-review": {
             name: "Assurance Review",
             outcome: "Cross-project assurance opinion with conditions.",
+          },
+          "delivery-audit": {
+            name: "Delivery Audit Report",
+            outcome: "Project, technical, quality, and compliance audit of execution.",
           },
           "schedule-health": {
             name: "Schedule Health",
@@ -210,7 +222,7 @@ const en: Messages = {
           "Capital Projects Assessment: feasibility, funding, and a stage-gate go or no-go",
           "CAPEX and OPEX evaluation from source figures",
           "Alignment with strategy and governance",
-          "Audits, investment and options analysis, MCDA, and executive briefs",
+          "Governance and Investment Audit, options analysis, MCDA, and executive briefs",
         ],
         playbooks: {
           "capital-assessment": {
@@ -225,9 +237,9 @@ const en: Messages = {
             name: "Strategy & Governance Alignment",
             outcome: "Fit to strategy and the forum that must approve.",
           },
-          audit: {
-            name: "Audit",
-            outcome: "Findings that condition the investment decision.",
+          "governance-audit": {
+            name: "Governance & Investment Audit",
+            outcome: "Capital governance, financial and strategy alignment, and board-level findings.",
           },
           options: {
             name: "Investment & Options Analysis",
@@ -246,9 +258,9 @@ const en: Messages = {
     },
   },
   gating: {
-    lockedTitle: "AI Advisors are locked on this plan",
-    lockedBody:
-      "PMO, Program Assurance, Operations Readiness, and Decision Support are included on Consultant, Team, and Enterprise. You can preview the playbooks and report templates here.",
+    lockedTitle:
+      "Included from Consultant (SAR 79/mo incl. VAT), Team and Enterprise",
+    lockedBody: "Preview every playbook and report template below.",
     upgradeCta: "Upgrade",
     compareCta: "Compare plans",
     registerCta: "Register",
@@ -256,31 +268,35 @@ const en: Messages = {
     close: "Close",
     upgradeRequired: "Upgrade required",
     registerRequired: "Register / Login required",
-    sendLocked:
-      "Upgrade to Consultant, Team, or Enterprise to run playbooks and attach files.",
+    sendLocked: "Playbooks run on Consultant, Team, and Enterprise.",
+    pilotNote:
+      "Leading a team? The free 2-week pilot (5 seats, no card) includes all four advisors.",
   },
   pricing: {
     title: "Plans and AI Advisors",
     subtitle:
-      "Feature lists for each plan. AI Advisors are a separate layer from engineer tools and are included on Consultant, Team, and Enterprise.",
+      "PMO, Program Assurance, Operations Readiness, and Decision Support are included on Consultant, Team, and Enterprise.",
     advisorsIncluded:
       "AI Advisors: PMO, Program Assurance, Operations Readiness, and Decision Support",
     advisorsLocked:
-      "AI Advisors (locked): PMO, Program Assurance, Operations Readiness, and Decision Support — included on Consultant, Team, and Enterprise",
+      "AI Advisors — PMO, Program Assurance, Operations Readiness, and Decision Support — included on Consultant, Team, and Enterprise",
     availabilityTitle: "AI Advisors by plan",
     availabilityNote:
-      "Access is config-driven. Consultant, Team, and Enterprise include every advisor and playbook. Free, Engineer, and Professional keep a locked preview.",
+      "Consultant, Team, and Enterprise include every advisor and playbook. Assistant Engineer, Engineer, and Professional keep a locked preview. Prices include VAT.",
     planColumn: "Plan",
     accessColumn: "AI Advisors",
     included: "Included",
     locked: "Locked preview",
     manageCta: "Manage subscription",
     teamEnterpriseNote:
-      "Team and Enterprise include AI Advisors when that plan is on the account. This advisor layer does not read team or invoice records.",
+      "Team and Enterprise include all four advisors. Prices below include VAT.",
+    teamPrice:
+      "Team is SAR {monthly} / month for {seats} seats (+SAR {extra} per extra seat), incl. VAT.",
+    enterprisePrice: "Enterprise is from SAR {from} / month, incl. VAT.",
     featureListTitle: "Included in this plan",
   },
   plans: {
-    assistant: "Free (Assistant)",
+    assistant: "Assistant Engineer (free)",
     engineer: "Engineer",
     professional: "Professional",
     consultant: "Consultant",

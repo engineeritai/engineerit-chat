@@ -10,6 +10,8 @@ import {
   hasAdvisorAccess,
   type AdvisorId,
 } from "@/lib/advisors";
+import { advisorsAreLive, advisorsNowLive } from "@/lib/advisorLaunch";
+import { getAccessToken } from "@/lib/accessToken";
 import { getPlaybook, groupedPlaybooks, playbooksFor, playbookTemplate } from "@/lib/playbooks";
 import {
   copyAsHtml,
@@ -55,8 +57,12 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
   const { locale, m, dir } = useMessages();
   const { ready, isGuest, userId, tier } = useSubscriptionTier();
   const copy = m.advisors.items[advisorId];
-  const unlocked = ready && !!advisor && hasAdvisorAccess(tier, advisorId, isGuest);
-  const showLocked = ready && !unlocked;
+  const live = advisorsAreLive();
+  const nowLive = advisorsNowLive();
+  const entitled = ready && !!advisor && hasAdvisorAccess(tier, advisorId, isGuest);
+  const unlocked = live && entitled;
+  const showLocked = live && ready && !entitled;
+  const showPilot = live && ready && (isGuest || !entitled);
   const exports = exportCapabilities(tier, isGuest);
   const playbooks = advisor ? playbooksFor(advisor.id) : [];
 
@@ -126,17 +132,24 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     e.target.value = "";
   };
 
+  async function authHeaders(extra?: HeadersInit): Promise<Headers> {
+    const headers = new Headers(extra);
+    const token = await getAccessToken();
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    return headers;
+  }
+
   async function analyzeImage(question: string, imageFile: File, playbookId: string): Promise<string> {
     const formData = new FormData();
     formData.append("file", imageFile, imageFile.name);
     formData.append("question", question || "Analyze this project image.");
     formData.append("advisorId", advisorId);
-    formData.append("planId", isGuest ? "guest" : tier);
     formData.append("locale", locale);
     if (playbookId) formData.append("playbookId", playbookId);
-    const res = await fetch("/api/image", { method: "POST", body: formData });
+    const res = await fetch("/api/image", { method: "POST", body: formData, headers: await authHeaders() });
     if (res.status === 403) {
-      openGate();
+      const data = await res.json().catch(() => null);
+      openGate(data?.code === "coming_soon" ? m.advisors.comingSoonBody : undefined);
       throw new Error("locked");
     }
     if (!res.ok) throw new Error(await res.text());
@@ -149,12 +162,16 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     formData.append("file", docFile, docFile.name);
     formData.append("question", question || "Review this project file.");
     formData.append("advisorId", advisorId);
-    formData.append("planId", isGuest ? "guest" : tier);
     formData.append("locale", locale);
     if (playbookId) formData.append("playbookId", playbookId);
-    const res = await fetch("/api/document", { method: "POST", body: formData });
+    const res = await fetch("/api/document", {
+      method: "POST",
+      body: formData,
+      headers: await authHeaders(),
+    });
     if (res.status === 403) {
-      openGate();
+      const data = await res.json().catch(() => null);
+      openGate(data?.code === "coming_soon" ? m.advisors.comingSoonBody : undefined);
       throw new Error("locked");
     }
     if (!res.ok) throw new Error(await res.text());
@@ -164,6 +181,10 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
 
   async function submit(text: string, playbookId: string) {
     if (sendingRef.current || !ready) return;
+    if (!live) {
+      openGate(m.advisors.comingSoonBody);
+      return;
+    }
     if (!unlocked) {
       openGate();
       return;
@@ -205,7 +226,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
       } else {
         const res = await fetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: await authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             discipline: copy.name,
             messages: history.concat({
@@ -222,7 +243,8 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         });
 
         if (res.status === 403) {
-          openGate();
+          const data = await res.json().catch(() => null);
+          openGate(data?.code === "coming_soon" ? m.advisors.comingSoonBody : undefined);
           return;
         }
         if (res.status === 429) {
@@ -277,13 +299,26 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         </div>
         <div className="advisor-chat-heading">
           <h1 className="page-title">{copy.name}</h1>
-          {ready && (
+          {!live && (
+            <span className="advisor-badge advisor-badge-soon">{m.advisors.comingSoonBadge}</span>
+          )}
+          {nowLive && (
+            <span className="advisor-badge advisor-badge-on">{m.advisors.nowLiveBadge}</span>
+          )}
+          {ready && live && (
             <span className={unlocked ? "advisor-badge advisor-badge-on" : "advisor-badge"}>
               {unlocked ? m.advisors.includedBadge : m.advisors.lockedBadge}
             </span>
           )}
         </div>
         <p className="page-subtitle">{copy.summary}</p>
+
+        {!live && (
+          <div className="advisor-launch-banner">
+            <span className="advisor-badge advisor-badge-soon">{m.advisors.comingSoonBadge}</span>
+            <p>{m.advisors.comingSoonBody}</p>
+          </div>
+        )}
 
         {showLocked && (
           <div className="advisor-lock-banner">
@@ -307,6 +342,8 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
             </div>
           </div>
         )}
+
+        {showPilot && <p className="advisor-pilot">{m.gating.pilotNote}</p>}
 
         <div className="advisor-split">
           <div>
@@ -338,6 +375,10 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                         disabled={sending}
                         onClick={() => {
                           setActivePlaybook(playbook.id);
+                          if (!live) {
+                            openGate(m.advisors.comingSoonBody);
+                            return;
+                          }
                           if (!unlocked) {
                             openGate();
                             return;
@@ -365,12 +406,19 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
             <pre>{template.trim()}</pre>
           </details>
         </div>
+        <p className="advisor-responsibility">{m.advisors.responsibility}</p>
       </div>
 
       <div className="conversation advisor-conversation">
         {messages.length === 0 ? (
           <div className="empty-state">
-            <p>{showLocked ? m.gating.lockedBody : m.advisors.emptyState}</p>
+            <p>
+              {!live
+                ? m.advisors.comingSoonBody
+                : showLocked
+                  ? m.gating.lockedBody
+                  : m.advisors.emptyState}
+            </p>
           </div>
         ) : (
           messages.map((message) => {
@@ -572,7 +620,11 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
             <textarea
               className="textarea"
               placeholder={
-                showLocked ? m.gating.sendLocked : m.advisors.askPlaceholder
+                !live
+                  ? m.advisors.comingSoonBody
+                  : showLocked
+                    ? m.gating.sendLocked
+                    : m.advisors.askPlaceholder
               }
               value={input}
               disabled={!unlocked}

@@ -32,6 +32,11 @@ export type Messages = {
     landingSubtitle: string;
     open: string;
     preview: string;
+    comingSoonBadge: string;
+    comingSoonBody: string;
+    comingSoonCta: string;
+    nowLiveBadge: string;
+    responsibility: string;
     lockedBadge: string;
     includedBadge: string;
     outputTemplate: string;
@@ -71,6 +76,7 @@ export type Messages = {
     upgradeRequired: string;
     registerRequired: string;
     sendLocked: string;
+    pilotNote: string;
   };
   pricing: {
     title: string;
@@ -85,6 +91,8 @@ export type Messages = {
     locked: string;
     manageCta: string;
     teamEnterpriseNote: string;
+    teamPrice: string;
+    enterprisePrice: string;
     featureListTitle: string;
   };
   plans: {

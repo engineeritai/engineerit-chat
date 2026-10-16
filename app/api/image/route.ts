@@ -13,13 +13,12 @@ export async function POST(req: Request) {
       (formData.get("question") as string) ||
       "Describe this engineering image in detail and extract useful technical information.";
     const advisorField = formData.get("advisorId");
-    const planField = formData.get("planId");
     const localeField = formData.get("locale");
     const playbookField = formData.get("playbookId");
 
-    const advisorGate = gateAdvisor({
+    const advisorGate = await gateAdvisor({
+      request: req,
       advisorId: typeof advisorField === "string" ? advisorField : "",
-      planId: typeof planField === "string" ? planField : "",
       locale: typeof localeField === "string" ? localeField : "",
       playbookId: typeof playbookField === "string" ? playbookField : "",
     });
