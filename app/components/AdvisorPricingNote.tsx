@@ -20,7 +20,11 @@ export default function AdvisorPricingNote() {
       });
     }
     if (planId === "enterprise") {
-      return fill(m.pricing.enterprisePrice, { from: ENTERPRISE_PLAN.monthlySarFrom.toLocaleString("en-US") });
+      return fill(m.pricing.enterprisePrice, {
+        monthly: ENTERPRISE_PLAN.monthlySarFrom.toLocaleString("en-US"),
+        seats: 10,
+        extra: 199,
+      });
     }
     return null;
   };

@@ -1,7 +1,15 @@
 import type { Locale } from "@/lib/i18n";
 import { DISCIPLINES, type Discipline } from "@/lib/disciplines";
 import { ENGINEER_TOOLS, type EngineerToolId } from "@/lib/engineerTools";
-import { PLANS, type Plan, type PlanId } from "@/lib/plans";
+import {
+  ENTERPRISE_EXTRA_SEAT_SAR,
+  EXTRA_SEAT_SAR,
+  PLANS,
+  type BillingInterval,
+  type Plan,
+  type PlanId,
+} from "@/lib/plans";
+import { displayFeatures } from "@/lib/pricingDisplay";
 
 const AR_DISCIPLINES: Record<Discipline, string> = {
   General: "عام",
@@ -36,7 +44,7 @@ const AR_PLANS: Record<
   { name: string; tagline: string; priceMonthly: string; features: string[] }
 > = {
   assistant: {
-    name: "مهندس مساعد",
+    name: "المهندس المساعد",
     tagline: "للطلاب والمهندسين المبتدئين.",
     priceMonthly: "مجاناً",
     features: [
@@ -46,7 +54,7 @@ const AR_PLANS: Record<
     ],
   },
   engineer: {
-    name: "مهندس",
+    name: "المهندس",
     tagline: "للمهندسين الممارسين الذين يحتاجون توثيقاً أسرع.",
     priceMonthly: "19 ر.س شهرياً",
     features: [
@@ -58,7 +66,7 @@ const AR_PLANS: Record<
     ],
   },
   professional: {
-    name: "مهندس محترف",
+    name: "المهندس المحترف",
     tagline: "لكبار المهندسين وقادة التصميم.",
     priceMonthly: "41 ر.س شهرياً",
     features: [
@@ -71,7 +79,7 @@ const AR_PLANS: Record<
     ],
   },
   consultant: {
-    name: "مهندس استشاري",
+    name: "المهندس الاستشاري",
     tagline: "للاستشاريين والمكاتب التي تدير مشاريع كاملة.",
     priceMonthly: "79 ر.س شهرياً",
     features: [
@@ -81,22 +89,25 @@ const AR_PLANS: Record<
       "تقدير الموارد والتكلفة ومراجعة الجدول",
       "لوحات المشروع ونظرة على المحفظة",
       "تصدير إلى PDF وورد وباوربوينت",
+      "مستشارو الذكاء الاصطناعي (مشمولون عند الإطلاق)",
     ],
   },
   team: {
-    name: "فريق",
+    name: "الفريق",
     tagline: "وصول بمستوى المهندس الاستشاري لمكتب، على اشتراك واحد.",
     priceMonthly: "349 ر.س شهرياً",
     features: [
       "كل ما في باقة المهندس الاستشاري",
       "5 مقاعد مشمولة",
       "مقعد إضافي 69 ر.س شهرياً",
+      "يتجدد تلقائياً حتى الإلغاء",
       "دعوة الزملاء بالبريد",
       "ينتهي الوصول لكل الفريق إذا توقف الاشتراك",
+      "مستشارو الذكاء الاصطناعي (مشمولون عند الإطلاق)",
     ],
   },
   enterprise: {
-    name: "مؤسسات",
+    name: "المؤسسات",
     tagline: "وصول بمستوى المهندس الاستشاري لمكتب أكبر، على اشتراك واحد.",
     priceMonthly: "2,500 ر.س شهرياً",
     features: [
@@ -104,9 +115,25 @@ const AR_PLANS: Record<
       "10 مقاعد مشمولة",
       "مقعد إضافي 199 ر.س شهرياً",
       "يتجدد تلقائياً حتى الإلغاء",
+      "مستشارو الذكاء الاصطناعي (مشمولون عند الإطلاق)",
     ],
   },
 };
+
+const ADVISORS_FEATURE_AR = "مستشارو الذكاء الاصطناعي (مشمولون عند الإطلاق)";
+
+export function featuresForLocale(locale: Locale, plan: Plan, interval: BillingInterval): string[] {
+  if (locale !== "ar") return displayFeatures(plan, interval);
+  return AR_PLANS[plan.id].features.map((feature) => {
+    if (feature === "مستشارو الذكاء الاصطناعي (مشمولون عند الإطلاق)") return ADVISORS_FEATURE_AR;
+    if ((plan.id === "team" || plan.id === "enterprise") && feature.startsWith("مقعد إضافي")) {
+      const amount = (plan.id === "enterprise" ? ENTERPRISE_EXTRA_SEAT_SAR : EXTRA_SEAT_SAR)[interval];
+      const period = interval === "year" ? "سنوياً" : "شهرياً";
+      return `مقعد إضافي ${amount.toLocaleString("ar-SA")} ر.س ${period}`;
+    }
+    return feature;
+  });
+}
 
 export function disciplineLabel(locale: Locale, name: string): string {
   if (locale === "ar" && name in AR_DISCIPLINES) return AR_DISCIPLINES[name as Discipline];

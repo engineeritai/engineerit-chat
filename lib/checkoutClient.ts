@@ -67,7 +67,8 @@ export async function startMoyasarCheckout(
     body: JSON.stringify({
       planId: pending.planId,
       interval: pending.interval,
-      extraSeats: pending.planId === "team" ? pending.extraSeats : 0,
+      extraSeats:
+        pending.planId === "team" || pending.planId === "enterprise" ? pending.extraSeats : 0,
     }),
   });
   const json = await res.json().catch(() => ({ error: "Could not start payment." }));

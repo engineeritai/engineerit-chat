@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { PLANS, type BillingInterval } from "@/lib/plans";
 import { getMarketingContent, type Locale } from "@/lib/marketing";
-import { localizedPlan } from "@/lib/labels";
-import { assertIndividualPlanPrices, displayFeatures, planPriceLabel } from "@/lib/pricingDisplay";
+import { featuresForLocale, localizedPlan } from "@/lib/labels";
+import { assertIndividualPlanPrices, planPriceLabel } from "@/lib/pricingDisplay";
 import BuyPlanButton, { ResumeCheckout } from "@/app/components/BuyPlanButton";
 
 assertIndividualPlanPrices();
@@ -111,8 +111,8 @@ function PlanCard({
   const content = getMarketingContent(locale);
   const source = PLANS.find((item) => item.id === planId)!;
   const plan = localizedPlan(locale, source);
-  const price = planPriceLabel(plan.id, interval, extraSeats);
-  const features = locale === "ar" ? plan.features : displayFeatures(source, interval);
+  const price = planPriceLabel(plan.id, interval, extraSeats, locale);
+  const features = featuresForLocale(locale, source, interval);
 
   return (
     <article id={plan.id} className={plan.id === "team" ? "mkt-card mkt-plan mkt-plan-team" : "mkt-card mkt-plan"}>

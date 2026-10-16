@@ -68,6 +68,7 @@ export type MarketingContent = {
     title: string;
     intro: string;
     items: { question: string; answer: string }[];
+    pricesHeading: string;
   };
   closing: {
     title: string;

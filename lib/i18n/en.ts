@@ -22,9 +22,9 @@ const en: Messages = {
       "Four AI advisors that engineer your project documents with a structured approach. Attach your files, run a one-click playbook, and get an export-ready report with tables, a RAG rating and an executive summary.",
     open: "Open advisor",
     preview: "View locked preview",
-    comingSoonBadge: "Coming soon",
+    comingSoonBadge: "Included at launch",
     comingSoonBody:
-      "Playbooks open when AI Advisors go live. Preview every playbook and report template below.",
+      "AI Advisors are included at launch on Consultant Engineer, Team, and Enterprise. Preview every playbook and report template below.",
     comingSoonCta: "Preview playbooks",
     nowLiveBadge: "Now live",
     responsibility:
@@ -258,8 +258,7 @@ const en: Messages = {
     },
   },
   gating: {
-    lockedTitle:
-      "Included from Consultant (SAR 79/mo incl. VAT), Team and Enterprise",
+    lockedTitle: "Included on Consultant Engineer, Team, and Enterprise",
     lockedBody: "Preview every playbook and report template below.",
     upgradeCta: "Upgrade",
     compareCta: "Compare plans",
@@ -270,7 +269,7 @@ const en: Messages = {
     registerRequired: "Register / Login required",
     sendLocked: "Playbooks run on Consultant, Team, and Enterprise.",
     pilotNote:
-      "Leading a team? The free 2-week pilot (5 seats, no card) includes all four advisors.",
+      "Team includes 5 seats and Enterprise includes 10 seats. Both are bought through Moyasar.",
   },
   pricing: {
     title: "Plans and AI Advisors",
@@ -282,24 +281,25 @@ const en: Messages = {
       "AI Advisors — PMO, Program Assurance, Operations Readiness, and Decision Support — included on Consultant, Team, and Enterprise",
     availabilityTitle: "AI Advisors by plan",
     availabilityNote:
-      "Consultant, Team, and Enterprise include every advisor and playbook. Assistant Engineer, Engineer, and Professional keep a locked preview. Prices include VAT.",
+      "Consultant Engineer, Team, and Enterprise include every advisor and playbook. Assistant Engineer, Engineer, and Professional Engineer keep a locked preview. AI Advisors are included at launch.",
     planColumn: "Plan",
     accessColumn: "AI Advisors",
     included: "Included",
     locked: "Locked preview",
     manageCta: "Manage subscription",
     teamEnterpriseNote:
-      "Team and Enterprise include all four advisors. Prices below include VAT.",
+      "Team and Enterprise include all four advisors. AI Advisors are included at launch.",
     teamPrice:
-      "Team is SAR {monthly} / month for {seats} seats (+SAR {extra} per extra seat), incl. VAT.",
-    enterprisePrice: "Enterprise is from SAR {from} / month, incl. VAT.",
+      "Team is SAR {monthly} per month for {seats} seats, plus SAR {extra} per extra seat.",
+    enterprisePrice:
+      "Enterprise is SAR {monthly} per month for {seats} seats, plus SAR {extra} per extra seat.",
     featureListTitle: "Included in this plan",
   },
   plans: {
-    assistant: "Assistant Engineer (free)",
+    assistant: "Assistant Engineer",
     engineer: "Engineer",
-    professional: "Professional",
-    consultant: "Consultant",
+    professional: "Professional Engineer",
+    consultant: "Consultant Engineer",
     team: "Team",
     enterprise: "Enterprise",
   },

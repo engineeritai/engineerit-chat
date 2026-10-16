@@ -30,7 +30,8 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     },
     "/register": {
       title: "Register | engineerit.ai",
-      description: "Create an engineerit.ai account and choose Assistant, Engineer, Professional, or Consultant.",
+      description:
+        "Create an engineerit.ai account. Plans are Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise.",
     },
     "/profile": {
       title: "Profile | engineerit.ai",
@@ -103,7 +104,8 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     },
     "/register": {
       title: "تسجيل | engineerit.ai",
-      description: "أنشئ حساب engineerit.ai واختر المهندس المساعد أو المهندس أو المحترف أو الاستشاري.",
+      description:
+        "أنشئ حساب engineerit.ai. الباقات هي المهندس المساعد والمهندس والمهندس المحترف والمهندس الاستشاري والفريق والمؤسسات.",
     },
     "/profile": {
       title: "الملف | engineerit.ai",

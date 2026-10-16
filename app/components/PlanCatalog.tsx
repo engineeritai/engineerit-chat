@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { useMessages } from "@/lib/useMessages";
+import { featuresForLocale, localizedPlan, toolLabel } from "@/lib/labels";
+import { getMarketingContent } from "@/lib/marketing";
 import {
   PLANS,
   PLAN_COLORS,
   extraSeatPrice,
   featureTier,
-  formatSar,
   includedSeats,
   quoteSelfServe,
   type BillingInterval,
 } from "@/lib/plans";
-import { displayFeatures, planPriceLabel } from "@/lib/pricingDisplay";
+import { planPriceLabel } from "@/lib/pricingDisplay";
 import BuyPlanButton, { ResumeCheckout } from "@/app/components/BuyPlanButton";
 
 const ENGINEER_TOOLS = [
@@ -39,6 +41,8 @@ type Props = {
 };
 
 export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) {
+  const { locale, shell: s } = useMessages();
+  const content = getMarketingContent(locale);
   const [interval, setInterval] = useState<BillingInterval>("month");
   const [extraSeats, setExtraSeats] = useState({ team: 0, enterprise: 0 });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -60,7 +64,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
         </h2>
         <div
           role="group"
-          aria-label="Billing period"
+          aria-label={`${content.pricing.monthly}. ${content.pricing.annual}`}
           style={{
             display: "inline-flex",
             border: "1px solid #e5e7eb",
@@ -86,7 +90,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
                   cursor: "pointer",
                 }}
               >
-                {value === "month" ? "Monthly" : "Annual · 10× monthly"}
+                {value === "month" ? content.pricing.monthly : `${content.pricing.annual} · ${content.pricing.twoMonthsFree}`}
               </button>
             );
           })}
@@ -95,8 +99,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
 
       <ResumeCheckout onError={setErrorMsg} />
       <p style={{ fontSize: 13, color: "#6b7280", marginTop: 0 }}>
-        Annual price is 10 times the monthly price (2 months free).
-        US dollar amounts are approximate, at SAR 3.75 per USD 1.
+        {content.pricing.annualExplainer} {content.pricing.usdNote}
       </p>
 
       {errorMsg && (
@@ -110,15 +113,16 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
           gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
         }}
       >
-        {PLANS.map((plan) => {
+        {PLANS.map((source) => {
+          const plan = localizedPlan(locale, source);
           const color = PLAN_COLORS[plan.id];
           const tier = featureTier(plan.id);
           const tools = TOOL_ACCESS[tier];
           const firmId = plan.id === "team" || plan.id === "enterprise" ? plan.id : null;
           const planExtra = firmId ? extraSeats[firmId] : 0;
-          const price = planPriceLabel(plan.id, interval, planExtra);
+          const price = planPriceLabel(plan.id, interval, planExtra, locale);
           const seatQuote = firmId ? quoteSelfServe(firmId, interval, planExtra) : null;
-          const features = displayFeatures(plan, interval);
+          const features = featuresForLocale(locale, source, interval);
 
           return (
             <div
@@ -159,7 +163,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
               <div style={{ fontSize: 18, fontWeight: 800, color, marginBottom: 4 }}>{price.primary}</div>
               {price.usd && (
                 <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 8 }}>
-                  approx. {price.usd}
+                  {content.pricing.approx} {price.usd}
                 </div>
               )}
 
@@ -174,7 +178,9 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
               {firmId && seatQuote && (
                 <div style={{ marginTop: 12 }}>
                   <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
-                    Extra seats ({formatSar(extraSeatPrice(firmId)[interval], interval)} each)
+                    {locale === "ar"
+                      ? `مقاعد إضافية (${extraSeatPrice(firmId)[interval].toLocaleString("ar-SA")} ر.س)`
+                      : `Extra seats (SAR ${extraSeatPrice(firmId)[interval].toLocaleString("en-US")})`}
                     <input
                       className="input"
                       type="number"
@@ -190,14 +196,16 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
                     />
                   </label>
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
-                    {includedSeats(firmId)} included + {seatQuote.extraSeats} extra = {seatQuote.seatLimit} seats.
+                    {locale === "ar"
+                      ? `${includedSeats(firmId)} مشمولة + ${seatQuote.extraSeats} إضافية = ${seatQuote.seatLimit} مقاعد.`
+                      : `${includedSeats(firmId)} included + ${seatQuote.extraSeats} extra = ${seatQuote.seatLimit} seats.`}
                   </div>
                 </div>
               )}
 
               <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #e5e7eb" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", marginBottom: 6 }}>
-                  Engineer tools in this plan
+                  {s.auth.toolsInPlan}
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {ENGINEER_TOOLS.map((tool) => {
@@ -214,7 +222,8 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
                           background: enabled ? `${color}10` : "#f9fafb",
                         }}
                       >
-                        {enabled ? "Yes" : "Locked"} {tool.label}
+                        {enabled ? (locale === "ar" ? "نعم" : "Yes") : locale === "ar" ? "مقفل" : "Locked"}{" "}
+                        {toolLabel(locale, tool.id)}
                       </span>
                     );
                   })}

@@ -87,12 +87,25 @@ export function formatUsdApprox(sar: number) {
 export function planPriceLabel(
   planId: PlanId,
   interval: BillingInterval,
-  extraSeats = 0
+  extraSeats = 0,
+  locale: "en" | "ar" = "en"
 ): { primary: string; usd: string | null; amountSar: number } {
   if (planId === "assistant") {
-    return { primary: "Free", usd: null, amountSar: 0 };
+    return { primary: locale === "ar" ? "مجاناً" : "Free", usd: null, amountSar: 0 };
   }
   const quote = quoteSelfServe(planId, interval, extraSeats);
+  if (locale === "ar") {
+    const period = interval === "year" ? "سنوياً" : "شهرياً";
+    const usd = new Intl.NumberFormat("ar-SA", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(quote.amountSar / SAR_PER_USD);
+    return {
+      primary: `${quote.amountSar.toLocaleString("ar-SA")} ر.س ${period}`,
+      usd: `${usd} دولار`,
+      amountSar: quote.amountSar,
+    };
+  }
   return {
     primary: formatPlanSar(quote.amountSar, interval),
     usd: formatUsdApprox(quote.amountSar),

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLocale } from "@/app/components/LocaleProvider";
 import { isSelfServePlan, type BillingInterval, type PlanId } from "@/lib/plans";
 import {
   clearPendingCheckout,
@@ -20,11 +21,22 @@ type Props = {
   onError?: (message: string) => void;
 };
 
-export function buyLabel(planId: PlanId, verb: "buy" | "upgrade" = "buy") {
-  if (planId === "assistant") return "Start free";
-  if (planId === "enterprise") return verb === "upgrade" ? "Upgrade to Enterprise" : "Buy Enterprise";
-  if (planId === "team") return verb === "upgrade" ? "Upgrade to Team" : "Buy Team";
-  return verb === "upgrade" ? "Upgrade" : "Buy";
+export function buyLabel(planId: PlanId, verb: "buy" | "upgrade" = "buy", locale: "en" | "ar" = "en") {
+  const ar = locale === "ar";
+  if (planId === "assistant") return ar ? "ابدأ مجاناً" : "Start free";
+  if (planId === "enterprise") {
+    return verb === "upgrade"
+      ? ar
+        ? "الترقية إلى المؤسسات"
+        : "Upgrade to Enterprise"
+      : ar
+        ? "اشترِ المؤسسات"
+        : "Buy Enterprise";
+  }
+  if (planId === "team") {
+    return verb === "upgrade" ? (ar ? "الترقية إلى الفريق" : "Upgrade to Team") : ar ? "اشترِ الفريق" : "Buy Team";
+  }
+  return verb === "upgrade" ? (ar ? "ترقية" : "Upgrade") : ar ? "اشترِ" : "Buy";
 }
 
 export function ResumeCheckout({ onError }: { onError?: (message: string) => void }) {
@@ -57,8 +69,11 @@ export default function BuyPlanButton({
   onError,
 }: Props) {
   const router = useRouter();
+  const { locale } = useLocale();
   const [busy, setBusy] = useState(false);
-  const label = buyLabel(planId, verb);
+  const label = buyLabel(planId, verb, locale);
+  const failed = locale === "ar" ? "تعذر بدء الدفع. حاول مرة أخرى." : "Could not start payment. Please try again.";
+  const processing = locale === "ar" ? "جارٍ المعالجة..." : "Processing...";
 
   if (planId === "assistant") {
     return (
@@ -82,7 +97,7 @@ export default function BuyPlanButton({
       onError?.(result.error);
     } catch (err) {
       console.error(err);
-      onError?.("Could not start payment. Please try again.");
+      onError?.(failed);
     } finally {
       setBusy(false);
     }
@@ -90,7 +105,7 @@ export default function BuyPlanButton({
 
   return (
     <button type="button" className={className} style={style} onClick={onClick} disabled={busy}>
-      {busy ? "Processing..." : label}
+      {busy ? processing : label}
     </button>
   );
 }

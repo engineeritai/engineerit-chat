@@ -330,8 +330,8 @@ export default function Sidebar({
           <button
             type="button"
             onClick={() => openExternal("https://engineerit.ai/feedback")}
-            title="Contact us"
-            aria-label="Contact us"
+            title={locale === "ar" ? "ملاحظات" : "Feedback"}
+            aria-label={locale === "ar" ? "ملاحظات" : "Feedback"}
             style={iconButtonStyle}
           >
             <img src="/favicon.ico" alt="eit" style={iconImageStyle} />

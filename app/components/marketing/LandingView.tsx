@@ -8,6 +8,7 @@ import { useMessages } from "@/lib/useMessages";
 import { getMarketingContent } from "@/lib/marketing";
 import { disciplineLabel, toolLabel } from "@/lib/labels";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
+import PlanPriceList from "@/app/components/PlanPriceList";
 import PricingBoard from "@/app/components/marketing/PricingBoard";
 import SaudiBusinessBadge from "@/app/components/marketing/SaudiBusinessBadge";
 import AdvisorEcosystem from "@/app/components/AdvisorEcosystem";
@@ -128,7 +129,7 @@ export default function LandingView() {
             </details>
           ))}
         </div>
-        <h3>Plan prices and features</h3>
+        <h3>{content.faq.pricesHeading}</h3>
         <PlanPriceList showFeatures />
       </section>
 

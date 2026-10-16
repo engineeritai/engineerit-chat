@@ -38,9 +38,7 @@ export default function MarketingFooter() {
           {" · "}
           <Link href="/legal/refund">{content.footer.refunds}</Link>
           {" · "}
-          <a href={`mailto:${CONTACT_EMAIL}`}>
-            {content.footer.contact} {CONTACT_EMAIL}
-          </a>
+          <span>{CONTACT_EMAIL}</span>
         </p>
       </div>
     </footer>

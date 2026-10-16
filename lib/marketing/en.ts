@@ -132,7 +132,7 @@ export const en: MarketingContent = {
   teams: {
     title: "Plans and pricing",
     intro:
-      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing is 10 times the monthly price. Team and Enterprise are bought through Moyasar and renew automatically. Consultant Engineer, Team, and Enterprise include AI Advisors (coming soon).",
+      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing is 10 times the monthly price. Team and Enterprise are bought through Moyasar and renew automatically. Consultant Engineer, Team, and Enterprise include AI Advisors (included at launch).",
   },
   faq: {
     title: "Questions consultancies ask",
@@ -156,7 +156,7 @@ export const en: MarketingContent = {
       {
         question: "How do Team, Enterprise, and annual billing get paid?",
         answer:
-          "Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise are paid through Moyasar, monthly or annual, and renew automatically until you cancel in billing. Annual price is 10 times the monthly price. Enterprise is SAR 2,500 per month for 10 seats, with an extra seat at SAR 199 per month. Consultant Engineer, Team, and Enterprise include AI Advisors (coming soon).",
+          "Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise are paid through Moyasar, monthly or annual, and renew automatically until you cancel in billing. Annual price is 10 times the monthly price. Enterprise is SAR 2,500 per month for 10 seats, with an extra seat at SAR 199 per month. Consultant Engineer, Team, and Enterprise include AI Advisors (included at launch).",
       },
       {
         question: "How do I change the interface language?",
@@ -169,6 +169,7 @@ export const en: MarketingContent = {
           "The Saudi Business Center auth number on this page is the same one shown inside the product. Use the verification link to check it on the official inquiry site.",
       },
     ],
+    pricesHeading: "Plan prices and features",
   },
   closing: {
     title: "Start with a question, or buy a plan",
@@ -202,7 +203,7 @@ export const en: MarketingContent = {
       "Assistant Engineer, Engineer, Professional Engineer, and Consultant Engineer. Same names, prices, and features as registration.",
     firmTitle: "Team and Enterprise",
     firmIntro:
-      "Team includes 5 seats. Enterprise includes 10 seats at SAR 2,500 per month. Extra seats are charged on the saved card. Both renew automatically and include AI Advisors (coming soon).",
+      "Team includes 5 seats. Enterprise includes 10 seats at SAR 2,500 per month. Extra seats are charged on the saved card. Both renew automatically and include AI Advisors (included at launch).",
     approx: "approx.",
   },
 };

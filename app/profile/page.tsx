@@ -345,8 +345,9 @@ export default function ProfilePage() {
   const currentPlanLabel = planById(locale, currentPlanId).name;
   const catalogSource = PLANS.find((plan) => plan.id === currentPlanId) ?? PLANS[0];
   const catalogPlan = localizedPlan(locale, catalogSource);
-  const catalogMonth = planPriceLabel(currentPlanId, "month");
-  const catalogYear = planPriceLabel(currentPlanId, "year");
+  const catalogMonth = planPriceLabel(currentPlanId, "month", 0, locale);
+  const catalogYear = planPriceLabel(currentPlanId, "year", 0, locale);
+  const approx = locale === "ar" ? "تقريباً" : "approx.";
   const teamLapsed =
     (storedPlan === "team" || storedPlan === "enterprise") && currentPlan === "assistant";
 
@@ -560,9 +561,9 @@ export default function ProfilePage() {
 
             <p style={{ fontSize: 14, color: "#374151", marginBottom: 8 }}>
               {catalogMonth.primary}
-              {catalogMonth.usd ? ` (approx. ${catalogMonth.usd})` : ""}
+              {catalogMonth.usd ? ` (${approx} ${catalogMonth.usd})` : ""}
               {catalogYear.amountSar > 0
-                ? ` · ${catalogYear.primary} (approx. ${catalogYear.usd})`
+                ? ` · ${catalogYear.primary} (${approx} ${catalogYear.usd})`
                 : ""}
             </p>
             <ul style={{ margin: "0 0 12px", paddingLeft: 18, fontSize: 14, color: "#374151" }}>
@@ -577,7 +578,7 @@ export default function ProfilePage() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               <Link href="/account/billing">
                 <button className="btn" type="button" style={{ marginTop: 16 }}>
-                  Billing, card, and cancellation
+                  {s.profile.billingLink}
                 </button>
               </Link>
               <Link href="/subscription">

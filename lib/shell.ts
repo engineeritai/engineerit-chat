@@ -173,6 +173,7 @@ export type ShellCopy = {
     noBilling: string;
     billingNote: string;
     manage: string;
+    billingLink: string;
     manageTeam: string;
     teamLapsed: string;
     activity: string;
@@ -444,6 +445,7 @@ const en: ShellCopy = {
     noBilling: "No billing data found yet for this plan.",
     billingNote: "Plan changes are handled by engineerit.ai billing. Manage or upgrade from the subscription page.",
     manage: "Manage or upgrade subscription",
+    billingLink: "Billing, card, and cancellation",
     manageTeam: "Manage team seats",
     teamLapsed:
       "The team subscription has ended, so Consultant-tier access for this team is paused for every seat.",
@@ -715,6 +717,7 @@ const ar: ShellCopy = {
     noBilling: "لا توجد بيانات فوترة لهذه الباقة بعد.",
     billingNote: "تغيير الباقة يتم عبر فوترة engineerit.ai. أدر الباقة أو رقّها من صفحة الاشتراك.",
     manage: "إدارة الاشتراك أو ترقيته",
+    billingLink: "الفوترة والبطاقة والإلغاء",
     manageTeam: "إدارة مقاعد الفريق",
     teamLapsed: "انتهى اشتراك الفريق، وتوقف وصول المستوى الاستشاري لكل المقاعد.",
     activity: "النشاط",

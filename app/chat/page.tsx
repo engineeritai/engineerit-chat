@@ -20,7 +20,7 @@ import { useMessages } from "@/lib/useMessages";
 import { disciplineLabel, toolLabel } from "@/lib/labels";
 import { postDocument, postImage, readApiError } from "@/lib/postAttachment";
 import { MAX_UPLOAD_BYTES, UploadError, fileTooLargeMessage } from "@/lib/uploadLimits";
-import { featureTier, type PlanId } from "@/lib/plans";
+import { featureTier, type FeatureTier, type PlanId } from "@/lib/plans";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
 
 type Role = "user" | "assistant";
