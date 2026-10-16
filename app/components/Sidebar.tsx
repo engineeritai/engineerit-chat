@@ -1,10 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import React, { useState } from "react";
-import AdvisorNav from "./AdvisorNav";
-import LanguageToggle from "./LanguageToggle";
+import React, { useRef, useState } from "react";
 import { DISCIPLINES } from "@/lib/disciplines";
 import { disciplineLabel } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
@@ -39,6 +36,7 @@ type Props = {
   onDeleteThread: (id: string) => void;
   onShareThread: (id: string, shared: boolean) => void;
   canShareTeam: boolean;
+  onRefresh?: () => void;
 };
 
 function openExternal(url: string) {
@@ -64,11 +62,14 @@ export default function Sidebar({
   onDeleteThread,
   onShareThread,
   canShareTeam,
+  onRefresh,
 }: Props) {
-  const pathname = usePathname();
   const { locale, shell: s } = useMessages();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [pull, setPull] = useState(0);
+  const pullStart = useRef<number | null>(null);
   const cancelEdit = React.useRef(false);
   const visibleThreads = signedIn
     ? threads
@@ -96,7 +97,6 @@ export default function Sidebar({
           paddingRight: 6,
         }}
       >
-        <LanguageToggle className="lang-toggle-block" />
         <button className="btn w-full mb-3" onClick={onNewChat}>
           {s.chat.newChat}
         </button>
@@ -106,6 +106,7 @@ export default function Sidebar({
           <select
             className="select"
             value={discipline}
+            aria-label={s.chat.discipline}
             onChange={(e) => onDisciplineChange(e.target.value)}
           >
             {DISCIPLINES.map((d) => (
@@ -116,9 +117,28 @@ export default function Sidebar({
           </select>
         </div>
 
-        <AdvisorNav currentPath={pathname} />
+        <Link href="/advisors" className="sidebar-link">
+          {s.chat.advisorsMenu}
+        </Link>
 
-        <div>
+        <div
+          onTouchStart={(event) => {
+            pullStart.current = event.touches[0]?.clientY ?? null;
+          }}
+          onTouchMove={(event) => {
+            if (pullStart.current == null) return;
+            const delta = (event.touches[0]?.clientY ?? pullStart.current) - pullStart.current;
+            if (delta > 0) setPull(Math.min(72, delta));
+          }}
+          onTouchEnd={() => {
+            if (pull > 48) onRefresh?.();
+            setPull(0);
+            pullStart.current = null;
+          }}
+        >
+          <p className={"pull-hint" + (pull > 24 ? " is-ready" : "")}>
+            {pull > 48 ? s.chat.historyLoading : ""}
+          </p>
           <h3>{s.chat.history}</h3>
           <label className="history-search-label" htmlFor="history-search">
             {s.chat.searchHistory}
@@ -196,36 +216,60 @@ export default function Sidebar({
                     </p>
                   )}
                   {owned && (
-                    <div className="history-actions">
+                    <>
                       <button
                         type="button"
-                        onClick={() => {
-                          setEditingId(thread.id);
-                          setEditingTitle(thread.title);
-                        }}
+                        className="history-more"
+                        aria-label={s.chat.moreActions}
+                        aria-expanded={menuId === thread.id}
+                        onClick={() => setMenuId((current) => (current === thread.id ? null : thread.id))}
                       >
-                        {s.chat.rename}
+                        ⋯
                       </button>
-                      <button type="button" onClick={() => onPinThread(thread.id, !thread.pinned)}>
-                        {thread.pinned ? s.chat.unpin : s.chat.pin}
-                      </button>
-                      {signedIn && canShareTeam && thread.persisted !== false && (
-                        <button
-                          type="button"
-                          onClick={() => onShareThread(thread.id, !thread.sharedWithTeam)}
-                        >
-                          {thread.sharedWithTeam ? s.chat.unshareTeam : s.chat.shareTeam}
-                        </button>
+                      {menuId === thread.id && (
+                        <div className="history-menu" role="menu">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingId(thread.id);
+                              setEditingTitle(thread.title);
+                              setMenuId(null);
+                            }}
+                          >
+                            {s.chat.rename}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onPinThread(thread.id, !thread.pinned);
+                              setMenuId(null);
+                            }}
+                          >
+                            {thread.pinned ? s.chat.unpin : s.chat.pin}
+                          </button>
+                          {signedIn && canShareTeam && thread.persisted !== false && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onShareThread(thread.id, !thread.sharedWithTeam);
+                                setMenuId(null);
+                              }}
+                            >
+                              {thread.sharedWithTeam ? s.chat.unshareTeam : s.chat.shareTeam}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMenuId(null);
+                              if (window.confirm(s.chat.deleteConfirm)) onDeleteThread(thread.id);
+                            }}
+                          >
+                            {s.chat.deleteChat}
+                          </button>
+                        </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm(s.chat.deleteConfirm)) onDeleteThread(thread.id);
-                        }}
-                      >
-                        {s.chat.deleteChat}
-                      </button>
-                    </div>
+                    </>
                   )}
                 </div>
               );

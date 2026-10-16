@@ -23,12 +23,17 @@ export type MarketingContent = {
     faq: string;
     login: string;
     openChat: string;
+    startChat: string;
+    continueChat: string;
   };
   hero: {
     kicker: string;
     h1: string;
     lead: string;
     primaryCta: string;
+    askPlaceholder: string;
+    askSend: string;
+    chips: readonly [string, string, string, string];
     secondaryCta: string;
     tertiaryCta: string;
     panelTitle: string;

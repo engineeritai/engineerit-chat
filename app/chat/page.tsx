@@ -2,6 +2,7 @@
 
 import React, {
   useEffect,
+  useRef,
   useState,
   KeyboardEvent,
   ChangeEvent,
@@ -12,8 +13,7 @@ import remarkGfm from "remark-gfm";
 import Link from "next/link";
 import MarketingShell from "../components/marketing/MarketingShell";
 import Sidebar from "../components/Sidebar";
-import AdvisorBar from "../components/AdvisorBar";
-import AdvisorEcosystem from "../components/AdvisorEcosystem";
+import { ADVISOR_IDS } from "@/lib/advisors";
 import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
 import { disciplineLabel, toolLabel } from "@/lib/labels";
@@ -75,6 +75,17 @@ const TOOL_ACCESS: Record<FeatureTier, ToolId[]> = {
 function hasAccess(planId: PlanId, toolId: ToolId) {
   return TOOL_ACCESS[featureTier(planId)]?.includes(toolId);
 }
+
+type SpeechRec = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
 
 /* ============================
    Helpers: RTL + Export/Share
@@ -367,6 +378,7 @@ export default function Page() {
 
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
 
+  const [planReady, setPlanReady] = useState(false);
   const [planId, setPlanId] = useState<PlanId>("assistant");
   const [advisorPlan, setAdvisorPlan] = useState("guest");
   const { locale, m: ui, shell: s } = useMessages();
@@ -379,6 +391,14 @@ export default function Page() {
   const [showMobileTools, setShowMobileTools] = useState(false);
 
   const [showLanding, setShowLanding] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [micReady, setMicReady] = useState(false);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
+  const openedThread = useRef(false);
+  const homeQuerySent = useRef(false);
 
   const [openShareFor, setOpenShareFor] = useState<string | null>(null);
 
@@ -428,8 +448,25 @@ export default function Page() {
       }
     };
 
-    void loadPlan();
+    void loadPlan().finally(() => setPlanReady(true));
   }, []);
+
+  useEffect(() => {
+    const speech = window as Window & {
+      SpeechRecognition?: new () => SpeechRec;
+      webkitSpeechRecognition?: new () => SpeechRec;
+    };
+    setMicReady(Boolean(speech.SpeechRecognition || speech.webkitSpeechRecognition));
+  }, []);
+
+  useEffect(() => {
+    if (openedThread.current) return;
+    const id = new URLSearchParams(window.location.search).get("c");
+    if (!id) return;
+    if (!history.threads.some((item) => item.id === id)) return;
+    history.selectThread(id);
+    openedThread.current = true;
+  }, [history]);
 
   useEffect(() => {
     try {
@@ -607,13 +644,16 @@ export default function Page() {
     setLocalCount(key, cur + 1);
   }
 
-  async function send() {
-    if (!thread || !thread.owned || (!input.trim() && attachments.length === 0) || sending) return;
+  async function send(preset?: string) {
+    const userText = (preset ?? input).trim();
+    if (!thread || !thread.owned || (!userText && attachments.length === 0) || sending) return false;
 
     const check = checkDailyLimitOrGate();
-    if (!check.ok) return;
+    if (!check.ok) {
+      if (preset) setInput(preset);
+      return false;
+    }
 
-    const userText = input.trim();
     const userAttachments = attachments;
     setInput("");
     setAttachments([]);
@@ -705,7 +745,32 @@ export default function Page() {
     } finally {
       setSending(false);
     }
+    return true;
   }
+
+  useEffect(() => {
+    if (!planReady || history.loading || homeQuerySent.current || sending) return;
+    if (!thread?.owned) return;
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q")?.trim();
+    if (!q) return;
+    if (thread.messages.length > 0) {
+      history.onNewChat();
+      return;
+    }
+    homeQuerySent.current = true;
+    void send(q).then((started) => {
+      if (!started) {
+        homeQuerySent.current = false;
+        return;
+      }
+      params.delete("q");
+      const rest = params.toString();
+      window.history.replaceState(null, "", rest ? `${window.location.pathname}?${rest}` : window.location.pathname);
+    });
+    // Send the landing question once the plan and an empty thread are ready.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planReady, history.loading, thread?.id, thread?.owned, thread?.messages.length, sending]);
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -716,8 +781,9 @@ export default function Page() {
 
   return (
     <MarketingShell>
-    <div className="app-shell chat-page">
+    <div className={"app-shell chat-page" + (sidebarCollapsed ? " is-collapsed" : "")}>
       <Sidebar
+        onRefresh={() => history.refresh()}
         discipline={discipline}
         onDisciplineChange={(value) => {
           setDiscipline(value);
@@ -743,134 +809,18 @@ export default function Page() {
       <div className="main">
         <div className="chat-mobile-bar">
           <button
-            className="mobile-menu-btn"
-            onClick={() => setIsSidebarOpenMobile((v) => !v)}
-            aria-label={s.header.openMenu}
-            type="button"
-          >
-            <span />
-            <span />
-            <span />
-          </button>
-        </div>
-
-        {showLanding && (
-          <div
-            className="card"
-            style={{
-              margin: "12px 16px 4px 16px",
-              padding: "12px 14px",
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "flex-start",
-              gap: 8,
+            className="chat-side-toggle"
+            onClick={() => {
+              if (window.innerWidth < 1024) setIsSidebarOpenMobile((v) => !v);
+              else setSidebarCollapsed((v) => !v);
             }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
-                {s.chat.welcomeTitle}
-              </div>
-              <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>
-                {s.chat.welcomeBody}
-              </div>
-              <div style={{ marginTop: 8, fontSize: 12, color: "#374151", lineHeight: 1.4 }}>
-                {ui.advisors.homeWelcome}{" "}
-                <Link href="/advisors" className="link">
-                  {ui.advisors.homeCta}
-                </Link>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleCloseLanding}
-              aria-label={s.chat.close}
-              style={{
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                fontSize: 14,
-                padding: "2px 6px",
-                color: "#6b7280",
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        <div className="chat-mode-stack">
-          <AdvisorEcosystem compact />
-          <AdvisorBar planId={advisorPlan} isGuest={isGuest} />
-
-        <div className="engineer-tools">
-          <span className="engineer-tools-label">{s.chat.toolsLabel}</span>
-          <div className="engineer-tools-row">
-            {ENGINEER_TOOLS.map((tool) => {
-              const enabled = hasAccess(planId, tool.id);
-              return (
-                <button
-                  key={tool.id}
-                  type="button"
-                  className={
-                    "engineer-tools-btn" + (enabled ? "" : " engineer-tools-btn-locked")
-                  }
-                  disabled={!enabled}
-                  onClick={() => enabled && handleEngineerToolClick(tool.id)}
-                >
-                  {!enabled && <span className="tool-lock">🔒</span>}
-                  <span>{toolLabel(locale, tool.id)}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="engineer-tools-mobile">
-          <button
+            aria-label={sidebarCollapsed ? s.chat.showSidebar : s.chat.hideSidebar}
             type="button"
-            className="engineer-tools-mobile-toggle"
-            onClick={() => setShowMobileTools((v) => !v)}
           >
-            <span>{s.chat.toolsForPlan}</span>
-            <span style={{ fontSize: 12 }}>{showMobileTools ? "▲" : "▼"}</span>
+            <span />
+            <span />
+            <span />
           </button>
-
-          {showMobileTools && (
-            <div className="engineer-tools-mobile-panel">
-              <div className="engineer-tools-mobile-list">
-                {ENGINEER_TOOLS.map((tool) => {
-                  const enabled = hasAccess(planId, tool.id);
-                  return (
-                    <button
-                      key={tool.id}
-                      type="button"
-                      className={
-                        "engineer-tools-mobile-item" +
-                        (enabled ? "" : " engineer-tools-mobile-item-locked")
-                      }
-                      disabled={!enabled}
-                      onClick={() => {
-                        if (!enabled) {
-                          openUpgradeGate(s.chat.toolLocked);
-                          return;
-                        }
-                        handleEngineerToolClick(tool.id);
-                        setShowMobileTools(false);
-                      }}
-                    >
-                      <div>
-                        {enabled ? "✅" : "🔒"} <span>{toolLabel(locale, tool.id)}</span>
-                      </div>
-                      {!enabled && (
-                        <span className="engineer-tools-mobile-plan-hint">{s.chat.upgrade}</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
         </div>
 
         <div className="conversation">
@@ -892,8 +842,31 @@ export default function Page() {
             </div>
           )}
           {messages.length === 0 ? (
-            <div className="empty-state">
-              <p>{s.chat.empty}</p>
+            <div className="empty-hero">
+              <h1>{s.chat.greeting}</h1>
+              <div className="prompt-grid">
+                {[s.chat.promptA, s.chat.promptB, s.chat.promptC, s.chat.promptD].map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    className="prompt-card"
+                    onClick={() => {
+                      setInput(prompt);
+                      composerRef.current?.focus();
+                    }}
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+              <div className="advisor-slim">
+                <Link href="/advisors">{s.chat.advisorsMenu}</Link>
+                {ADVISOR_IDS.map((id) => (
+                  <Link key={id} href={`/advisors/${id}`}>
+                    {ui.advisors.items[id].name}
+                  </Link>
+                ))}
+              </div>
             </div>
           ) : (
             messages.map((m) => {
@@ -1163,12 +1136,52 @@ export default function Page() {
 
             {thread && !thread.owned && <p className="history-note">{s.chat.sharedReadOnly}</p>}
             <div className="chat-input-row">
-              <div className="chat-input-left">
+              <div className="chat-input-left" style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  className="chat-input-icon-btn"
+                  aria-label={s.chat.toolsMenu}
+                  aria-expanded={toolsOpen}
+                  onClick={() => {
+                    setIsAttachMenuOpen(false);
+                    setToolsOpen((value) => !value);
+                  }}
+                >
+                  <span>{s.chat.toolsMenu}</span>
+                </button>
+                {toolsOpen && (
+                  <div className="tool-popover" role="menu">
+                    {ENGINEER_TOOLS.map((tool) => {
+                      const enabled = hasAccess(planId, tool.id);
+                      return (
+                        <button
+                          key={tool.id}
+                          type="button"
+                          onClick={() => {
+                            setToolsOpen(false);
+                            if (!enabled) {
+                              openUpgradeGate(s.chat.toolLocked);
+                              return;
+                            }
+                            handleEngineerToolClick(tool.id);
+                          }}
+                        >
+                          {enabled ? "" : "· "}
+                          {toolLabel(locale, tool.id)}
+                        </button>
+                      );
+                    })}
+                    <Link href="/advisors" onClick={() => setToolsOpen(false)} style={{ display: "block", minHeight: 44, padding: "8px 10px" }}>
+                      {s.chat.advisorsMenu}
+                    </Link>
+                  </div>
+                )}
                 <button
                   type="button"
                   className="chat-input-icon-btn"
                   aria-label={s.chat.addAttachments}
                   onClick={() => {
+                    setToolsOpen(false);
                     if (!attachmentsAllowed) {
                       if (isGuest) openRegisterGate(s.chat.attachLocked);
                       else openUpgradeGate(s.chat.attachLocked);
@@ -1205,23 +1218,65 @@ export default function Page() {
               </div>
 
               <textarea
+                ref={composerRef}
                 className="textarea"
                 placeholder={thread && !thread.owned ? s.chat.sharedReadOnly : s.chat.askPlaceholder}
                 value={input}
                 disabled={Boolean(thread && !thread.owned)}
+                rows={1}
                 onChange={(e) => {
                   setInput(e.target.value);
-                  e.target.style.height = "45px";
-                  e.target.style.height = e.target.scrollHeight + "px";
+                  e.target.style.height = "44px";
+                  e.target.style.height = Math.min(e.target.scrollHeight, 180) + "px";
                 }}
                 onKeyDown={onKeyDown}
               />
+
+              {micReady && (
+                <button
+                  type="button"
+                  className={"mic-btn" + (listening ? " is-live" : "")}
+                  aria-label={listening ? s.chat.listening : s.chat.dictate}
+                  aria-pressed={listening}
+                  onClick={() => {
+                    const speech = window as Window & {
+                      SpeechRecognition?: new () => SpeechRec;
+                      webkitSpeechRecognition?: new () => SpeechRec;
+                    };
+                    const Ctor = speech.SpeechRecognition || speech.webkitSpeechRecognition;
+                    if (!Ctor) return;
+                    if (listening) {
+                      recognitionRef.current?.stop();
+                      setListening(false);
+                      return;
+                    }
+                    const rec = new Ctor();
+                    rec.lang = locale === "ar" ? "ar-SA" : "en-US";
+                    rec.continuous = false;
+                    rec.interimResults = true;
+                    rec.onresult = (event) => {
+                      const text = Array.from(event.results)
+                        .map((row) => row[0]?.transcript || "")
+                        .join(" ")
+                        .trim();
+                      if (text) setInput(text);
+                    };
+                    rec.onerror = () => setListening(false);
+                    rec.onend = () => setListening(false);
+                    recognitionRef.current = rec;
+                    setListening(true);
+                    rec.start();
+                  }}
+                >
+                  {listening ? "●" : "🎤"}
+                </button>
+              )}
 
               <button
                 type="button"
                 className="chat-input-send-btn"
                 disabled={Boolean(thread && !thread.owned) || sending || (!input.trim() && attachments.length === 0)}
-                onClick={send}
+                onClick={() => void send()}
                 aria-label={s.chat.send}
               >
                 ➤
@@ -1261,10 +1316,26 @@ export default function Page() {
                 <div className="gate-body">
                   <div className="gate-text">{s.chat.registerBody}</div>
                   <div className="gate-actions">
-                    <a className="gate-btn" href="/login">
+                    <a
+                      className="gate-btn"
+                      href="/login"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        const next = window.location.pathname + window.location.search;
+                        window.location.assign(`/login?next=${encodeURIComponent(next)}`);
+                      }}
+                    >
                       {s.header.login}
                     </a>
-                    <a className="gate-btn gate-btn-primary" href="/register">
+                    <a
+                      className="gate-btn gate-btn-primary"
+                      href="/register"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        const next = window.location.pathname + window.location.search;
+                        window.location.assign(`/register?next=${encodeURIComponent(next)}`);
+                      }}
+                    >
                       {s.header.register}
                     </a>
                     <button

@@ -15,14 +15,24 @@ export const en: MarketingContent = {
     pricing: "Pricing",
     faq: "Questions",
     login: "Login",
-    openChat: "Open chat",
+    openChat: "Start chatting",
+    startChat: "Start chatting",
+    continueChat: "Continue to chat",
   },
   hero: {
     kicker: "Saudi Arabia and the GCC",
     h1: "engineerit.ai engineers any idea, topic or subject with a structured approach",
     lead:
       "Attach files, pick a tool, and get structured answers. Paid plans add exports.",
-    primaryCta: "Open chat",
+    primaryCta: "Start chatting",
+    askPlaceholder: "Ask an engineering question…",
+    askSend: "Send",
+    chips: [
+      "Review a drawing for clashes",
+      "Draft a method statement",
+      "Check a specification",
+      "Summarize report risks",
+    ],
     secondaryCta: "View pricing",
     tertiaryCta: "Subscribe",
     panelTitle: "Chat is one click away",
@@ -176,7 +186,7 @@ export const en: MarketingContent = {
   closing: {
     title: "Start with a question, or buy a plan",
     body: "Engineers can open the chat now. Paid plans, Team, and Enterprise are bought through Moyasar and renew automatically.",
-    primaryCta: "Open chat",
+    primaryCta: "Start chatting",
     secondaryCta: "Subscribe",
   },
   footer: {

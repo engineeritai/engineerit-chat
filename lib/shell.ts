@@ -136,6 +136,18 @@ export type ShellCopy = {
     shareTeamNeedsLink: string;
     noSearchResults: string;
     sharedReadOnly: string;
+    greeting: string;
+    promptA: string;
+    promptB: string;
+    promptC: string;
+    promptD: string;
+    dictate: string;
+    listening: string;
+    toolsMenu: string;
+    advisorsMenu: string;
+    hideSidebar: string;
+    showSidebar: string;
+    moreActions: string;
     prompts: Record<EngineerToolId, string>;
   };
   auth: {
@@ -248,6 +260,23 @@ export type ShellCopy = {
     confirmingPayment: string;
     paymentConfirmedGo: string;
     cardRequired: string;
+    tabOverview: string;
+    tabBilling: string;
+    tabTopics: string;
+    jobTitle: string;
+    company: string;
+    phone: string;
+    country: string;
+    discipline: string;
+    cropTitle: string;
+    cropApply: string;
+    cropCancel: string;
+    topicsEmpty: string;
+    filesEmpty: string;
+    openTopic: string;
+    fileSize: string;
+    photo: string;
+    initials: string;
   };
   checkout: {
     title: string;
@@ -474,6 +503,18 @@ const en: ShellCopy = {
     shareTeamNeedsLink: "Link this account to a team before sharing.",
     noSearchResults: "No matching chats.",
     sharedReadOnly: "This shared chat is read only.",
+    greeting: "What should we engineer?",
+    promptA: "Review a drawing for clashes and missing notes",
+    promptB: "Draft a method statement for a site activity",
+    promptC: "Check this specification against the code",
+    promptD: "Summarize the risks in a technical report",
+    dictate: "Dictate",
+    listening: "Listening",
+    toolsMenu: "Tools",
+    advisorsMenu: "Advisors",
+    hideSidebar: "Hide sidebar",
+    showSidebar: "Show sidebar",
+    moreActions: "Chat actions",
     prompts: {
       drawing: "Explain and analyze the attached engineering drawing, including any process flow, piping and instrumentation, or block diagram.",
       design: "Check this engineering design against the relevant codes and standards.",
@@ -599,6 +640,23 @@ const en: ShellCopy = {
     confirmingPayment: "Confirming the payment…",
     paymentConfirmedGo: "Payment confirmed. Your invoice is ready.",
     cardRequired: "Save a card with Moyasar before auto-renew can be turned on.",
+    tabOverview: "Overview",
+    tabBilling: "Subscription history",
+    tabTopics: "Topics and files",
+    jobTitle: "Title",
+    company: "Company",
+    phone: "Phone",
+    country: "Country",
+    discipline: "Discipline",
+    cropTitle: "Crop photo",
+    cropApply: "Use photo",
+    cropCancel: "Cancel",
+    topicsEmpty: "No conversations yet.",
+    filesEmpty: "No uploaded files yet.",
+    openTopic: "Open",
+    fileSize: "Size",
+    photo: "Photo",
+    initials: "Initials",
   },
   checkout: {
     title: "Checkout",
@@ -827,6 +885,18 @@ const ar: ShellCopy = {
     shareTeamNeedsLink: "اربط هذا الحساب بفريق قبل المشاركة.",
     noSearchResults: "لا توجد محادثات مطابقة.",
     sharedReadOnly: "هذه المحادثة المشتركة للقراءة فقط.",
+    greeting: "ماذا نهندس اليوم؟",
+    promptA: "راجع رسماً بحثاً عن التعارضات والملاحظات الناقصة",
+    promptB: "اكتب طريقة تنفيذ لنشاط في الموقع",
+    promptC: "تحقق من المواصفة مقابل الكود",
+    promptD: "لخّص المخاطر في تقرير فني",
+    dictate: "إملاء",
+    listening: "جارٍ الاستماع",
+    toolsMenu: "الأدوات",
+    advisorsMenu: "المستشارون",
+    hideSidebar: "إخفاء الشريط",
+    showSidebar: "إظهار الشريط",
+    moreActions: "إجراءات المحادثة",
     prompts: {
       drawing: "اشرح وحلّل الرسم الهندسي المرفق، بما في ذلك مخطط التدفق أو مخطط الأنابيب والأجهزة أو المخطط الصندوقي.",
       design: "راجع هذا التصميم الهندسي مقابل الأكواد والمعايير ذات الصلة.",
@@ -950,6 +1020,23 @@ const ar: ShellCopy = {
     confirmingPayment: "جارٍ تأكيد الدفع…",
     paymentConfirmedGo: "تم تأكيد الدفع. الفاتورة جاهزة.",
     cardRequired: "احفظ بطاقة عبر Moyasar قبل تفعيل التجديد التلقائي.",
+    tabOverview: "نظرة عامة",
+    tabBilling: "سجل الاشتراك",
+    tabTopics: "المواضيع والملفات",
+    jobTitle: "المسمى",
+    company: "الشركة",
+    phone: "الهاتف",
+    country: "الدولة",
+    discipline: "التخصص",
+    cropTitle: "قص الصورة",
+    cropApply: "استخدام الصورة",
+    cropCancel: "إلغاء",
+    topicsEmpty: "لا توجد محادثات بعد.",
+    filesEmpty: "لا توجد ملفات مرفوعة بعد.",
+    openTopic: "فتح",
+    fileSize: "الحجم",
+    photo: "الصورة",
+    initials: "الأحرف",
   },
   checkout: {
     title: "الدفع",

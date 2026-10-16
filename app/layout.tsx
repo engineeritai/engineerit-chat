@@ -1,55 +1,83 @@
 // app/layout.tsx
 
 import "./globals.css";
-import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import "./design.css";
+import type { Metadata, Viewport } from "next";
+import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
 import { LocaleProvider } from "@/app/components/LocaleProvider";
+import KeyboardInset from "@/app/components/KeyboardInset";
+import PwaRegister from "@/app/components/PwaRegister";
 import { metaFor } from "@/lib/pageMeta";
 import { requestLocale } from "@/lib/requestLocale";
 import { SITE_NAME, SITE_URL, languageAlternates } from "@/lib/seo";
 
-const poppins = Poppins({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
+  variable: "--font-inter",
 });
+
+const plexArabic = IBM_Plex_Sans_Arabic({
+  subsets: ["arabic"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-arabic",
+});
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#ffffff",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await requestLocale();
   const meta = metaFor(locale, "/");
   return {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: meta.title,
-    template: "%s | engineerit.ai",
-  },
-  description: meta.description,
-  applicationName: SITE_NAME,
-  alternates: languageAlternates("/"),
-  openGraph: {
-    title: meta.title,
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: meta.title,
+      template: "%s | engineerit.ai",
+    },
     description: meta.description,
-    url: SITE_URL,
-    siteName: SITE_NAME,
-    images: [{ url: "/og.png", alt: SITE_NAME }],
-    type: "website",
-    locale: locale === "ar" ? "ar_SA" : "en_US",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: meta.title,
-    description: meta.description,
-    images: ["/og.png"],
-  },
-  icons: {
-    icon: [
-      { url: "/favicon.png", type: "image/png" },
-      { url: "/favicon.ico" },
-    ],
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
-  },
-  robots: { index: true, follow: true },
+    applicationName: SITE_NAME,
+    alternates: languageAlternates("/"),
+    openGraph: {
+      title: meta.title,
+      description: meta.description,
+      url: SITE_URL,
+      siteName: SITE_NAME,
+      images: [{ url: "/og.png", alt: SITE_NAME }],
+      type: "website",
+      locale: locale === "ar" ? "ar_SA" : "en_US",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: meta.title,
+      description: meta.description,
+      images: ["/og.png"],
+    },
+    icons: {
+      icon: [
+        { url: "/favicon.png", type: "image/png" },
+        { url: "/favicon.ico" },
+      ],
+      shortcut: "/favicon.png",
+      apple: "/apple-touch-icon.png",
+    },
+    appleWebApp: {
+      capable: true,
+      title: "engineerit",
+      statusBarStyle: "default",
+      startupImage: [
+        { url: "/splash-se.png", media: "(device-width: 375px) and (device-height: 667px)" },
+        { url: "/splash-phone.png", media: "(device-width: 390px) and (device-height: 844px)" },
+        { url: "/splash-max.png", media: "(device-width: 430px) and (device-height: 932px)" },
+      ],
+    },
+    robots: { index: true, follow: true },
   };
 }
 
@@ -62,7 +90,9 @@ export default async function RootLayout({
   return (
     <html lang={locale === "ar" ? "ar" : "en"} dir={locale === "ar" ? "rtl" : "ltr"}>
       <head>
-        {/* HubSpot tracking. Public site id, already used in production. */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <script
           type="text/javascript"
           id="hs-script-loader"
@@ -72,8 +102,10 @@ export default async function RootLayout({
         />
       </head>
 
-      <body className={`${poppins.className} bg-gray-50 text-gray-900`}>
+      <body className={`${inter.variable} ${plexArabic.variable}`}>
         <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
+        <KeyboardInset />
+        <PwaRegister />
       </body>
     </html>
   );

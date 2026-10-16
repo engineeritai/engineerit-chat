@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Header from "../components/Header";
-import NavSidebar from "../components/NavSidebar";
+import MarketingShell from "../components/marketing/MarketingShell";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
@@ -11,8 +10,6 @@ import { safeNextPath } from "@/lib/safeNext";
 
 export default function LoginPage() {
   const { shell: s } = useMessages();
-  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,15 +73,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="app-shell">
-      <NavSidebar
-        isMobileOpen={isSidebarOpenMobile}
-        onCloseMobile={() => setIsSidebarOpenMobile(false)}
-      />
-
-      <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
-
+    <MarketingShell>
         <div className="page-wrap">
           <h1 className="page-title">{s.auth.signInTitle}</h1>
           <p className="page-subtitle">{s.auth.signInLead}</p>
@@ -163,7 +152,6 @@ export default function LoginPage() {
             </p>
           </form>
         </div>
-      </div>
-    </div>
+    </MarketingShell>
   );
 }

@@ -4,38 +4,50 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import AccountMenu from "@/app/components/marketing/AccountMenu";
+import StartChatLink from "@/app/components/marketing/StartChatLink";
 import LanguageToggle from "@/app/components/LanguageToggle";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { getMarketingContent } from "@/lib/marketing";
+
+const ANCHORS = [
+  ["disciplines", "disciplines"],
+  ["tools", "tools"],
+  ["how-it-works", "how"],
+  ["teams", "teams"],
+] as const;
 
 export default function MarketingHeader() {
   const { locale } = useLocale();
   const content = getMarketingContent(locale);
   const pathname = usePathname() || "/";
   const [open, setOpen] = useState(false);
-  const onHome = pathname === "/";
+  const onChat = pathname === "/chat";
 
   const links = [
-    {
-      href: onHome ? "#disciplines" : "/#disciplines",
-      label: content.nav.disciplines,
+    ...ANCHORS.map(([id, key]) => ({
+      href: `/#${id}`,
+      hash: id,
+      label: content.nav[key],
       active: false,
-    },
-    { href: onHome ? "#tools" : "/#tools", label: content.nav.tools, active: false },
-    {
-      href: onHome ? "#how-it-works" : "/#how-it-works",
-      label: content.nav.how,
-      active: false,
-    },
+    })),
     {
       href: "/advisors",
+      hash: "",
       label: content.nav.advisors,
       active: pathname === "/advisors" || pathname.startsWith("/advisors/"),
     },
-    { href: onHome ? "#teams" : "/#teams", label: content.nav.teams, active: false },
-    { href: "/pricing", label: content.nav.pricing, active: pathname === "/pricing" },
-    { href: "/faq", label: content.nav.faq, active: pathname === "/faq" },
+    { href: "/pricing", hash: "", label: content.nav.pricing, active: pathname === "/pricing" },
+    { href: "/faq", hash: "", label: content.nav.faq, active: pathname === "/faq" },
   ];
+
+  function onNavClick(event: React.MouseEvent<HTMLAnchorElement>, href: string, hash: string) {
+    setOpen(false);
+    if (!hash || pathname !== "/") return;
+    event.preventDefault();
+    const next = `${window.location.pathname}${window.location.search}#${hash}`;
+    window.history.pushState(null, "", next);
+    document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <header className="mkt-header">
@@ -47,23 +59,28 @@ export default function MarketingHeader() {
           </span>
         </Link>
 
-        <nav className="mkt-nav" aria-label={content.nav.primary}>
-          {links.map((link) => (
-            <Link key={link.href + link.label} href={link.href} className={link.active ? "mkt-nav-active" : undefined}>
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        {!onChat && (
+          <nav className="mkt-nav" aria-label={content.nav.primary}>
+            {links.map((link) => (
+              <Link
+                key={link.href + link.label}
+                href={link.href}
+                className={link.active ? "mkt-nav-active" : undefined}
+                onClick={(event) => onNavClick(event, link.href, link.hash)}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        )}
 
         <div className="mkt-actions">
-          <LanguageToggle />
+          <LanguageToggle compact />
           <AccountMenu />
-          <Link className="mkt-btn mkt-btn-primary" href="/chat">
-            {content.nav.openChat}
-          </Link>
+          {!onChat && <StartChatLink className="mkt-btn mkt-btn-primary mkt-open-chat mkt-cta-pulse" />}
           <button
             type="button"
-            className="mkt-menu-btn"
+            className={"mkt-menu-btn" + (onChat ? " mkt-menu-btn-show" : "")}
             aria-expanded={open}
             aria-label={content.nav.menu}
             onClick={() => setOpen((value) => !value)}
@@ -79,14 +96,20 @@ export default function MarketingHeader() {
         <nav className="mkt-nav-mobile" aria-label={content.nav.primary}>
           <LanguageToggle className="lang-toggle-block" />
           {links.map((link) => (
-            <Link key={link.href + link.label} href={link.href} onClick={() => setOpen(false)}>
+            <Link
+              key={"m-" + link.href + link.label}
+              href={link.href}
+              onClick={(event) => onNavClick(event, link.href, link.hash)}
+            >
               {link.label}
             </Link>
           ))}
-          <AccountMenu compact />
-          <Link href="/chat" onClick={() => setOpen(false)}>
-            {content.nav.openChat}
+          <Link href="/profile" onClick={() => setOpen(false)}>
+            {content.nav.login}
           </Link>
+          {!onChat && (
+            <StartChatLink className="mkt-btn mkt-btn-primary mkt-cta-pulse" onClick={() => setOpen(false)} />
+          )}
         </nav>
       )}
     </header>
