@@ -1729,9 +1729,19 @@ body.acct-open .mkt-header {
     line-height: 1.1;
   }
 
-  .mkt-tabbar .eit-mark {
+  .mkt-tabbar .eit-mark,
+  .mkt-tabbar .tab-icon {
+    display: block;
     height: 22px;
+    flex: 0 0 22px;
+  }
+
+  .mkt-tabbar .eit-mark {
     width: auto;
+  }
+
+  .mkt-tabbar .tab-icon {
+    width: 22px;
   }
 }
 
