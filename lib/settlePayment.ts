@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { nextPeriodEnd } from "@/lib/billingCycle";
 import { periodDays, type BillingInterval } from "@/lib/plans";
 import { saveCardFromPayment } from "@/lib/billingAccount";
+import { isWalletPaymentSource } from "@/lib/moyasarEnv";
 import {
   assessPaidInvoice,
   fetchMoyasarInvoice,
@@ -74,19 +75,25 @@ export async function settleCheckout(
             .eq("user_id", row.user_id)
             .in("status", ["active", "past_due"])
             .maybeSingle();
-          const savedCardId = await saveCardFromPayment(admin, {
-            userId: row.user_id,
-            payment,
-            billingSubscriptionId: (billing?.id as string | undefined) || null,
-          });
-          if (!savedCardId) {
-            const nowIso = new Date().toISOString();
-            await admin
-              .from("billing_subscriptions")
-              .update({ cancel_at_period_end: true, canceled_at: nowIso, updated_at: nowIso })
-              .eq("user_id", row.user_id)
-              .in("status", ["active", "past_due"]);
-          }
+          const wallet = isWalletPaymentSource(payment.source?.type);
+          const savedCardId = wallet
+            ? null
+            : await saveCardFromPayment(admin, {
+                userId: row.user_id,
+                payment,
+                billingSubscriptionId: (billing?.id as string | undefined) || null,
+              });
+          const nowIso = new Date().toISOString();
+          const autoRenew = Boolean(savedCardId);
+          await admin
+            .from("billing_subscriptions")
+            .update({
+              cancel_at_period_end: !autoRenew,
+              canceled_at: autoRenew ? null : nowIso,
+              updated_at: nowIso,
+            })
+            .eq("user_id", row.user_id)
+            .in("status", ["active", "past_due"]);
         }
         if (row.lead_id) {
           const { error: leadErr } = await admin

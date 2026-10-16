@@ -29,6 +29,14 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         {
+          source: "/.well-known/apple-developer-merchantid-domain-association",
+          destination: "/api/apple-pay/domain-association",
+        },
+        {
+          source: "/.well-known/apple-developer-merchantid-domain-association/",
+          destination: "/api/apple-pay/domain-association",
+        },
+        {
           source: "/.well-known/:path*/",
           destination: "/.well-known/:path*",
         },

@@ -18,6 +18,27 @@ function ReturnInner() {
   useEffect(() => {
     const checkout = params.get("checkout") || "";
     const paymentId = params.get("id") || "";
+    const pay = params.get("pay") || "";
+    const status = (params.get("status") || "").toLowerCase();
+    const backToCheckout = () => {
+      const notice = params.get("message") || s.checkout.paymentFailed;
+      try {
+        sessionStorage.setItem("engineerit_checkout_notice", notice.slice(0, 300));
+      } catch {
+        /* The checkout page still shows the generic retry message. */
+      }
+      const next = new URLSearchParams({ retry: "1" });
+      if (pay) next.set("pay", pay);
+      router.replace(`/checkout/${checkout}?${next.toString()}`);
+    };
+    if (!/^[0-9a-f-]{36}$/i.test(checkout)) {
+      router.replace("/pricing?payment=failed");
+      return;
+    }
+    if (status && status !== "paid") {
+      backToCheckout();
+      return;
+    }
     let cancelled = false;
     void (async () => {
       const res = await fetch("/api/payments/moyasar/complete", {
@@ -27,16 +48,18 @@ function ReturnInner() {
       });
       if (cancelled) return;
       if (!res.ok) {
-        router.replace("/pricing?payment=failed");
+        backToCheckout();
         return;
       }
       setMessage(s.profile.paymentConfirmedGo);
-      router.replace(`/payment/success?checkout=${encodeURIComponent(checkout)}`);
+      const next = new URLSearchParams({ checkout });
+      if (pay) next.set("pay", pay);
+      router.replace(`/payment/success?${next.toString()}`);
     })();
     return () => {
       cancelled = true;
     };
-  }, [params, router, s.profile.paymentConfirmedGo]);
+  }, [params, router, s.checkout.paymentFailed, s.profile.paymentConfirmedGo]);
 
   return <p>{message}</p>;
 }

@@ -35,7 +35,17 @@ import {
   formatUsdApprox,
   planPriceLabel,
 } from "../lib/pricingDisplay";
-import { isSaveCardRejection, moyasarKeysError, readMoyasarKeys } from "../lib/moyasarEnv";
+import { readApplePayDomainAssociation } from "../lib/applePayDomain";
+import { signCheckoutHandoff, verifyCheckoutHandoff } from "../lib/checkoutHandoff";
+import {
+  MOYASAR_CARD_NETWORKS,
+  checkoutPaymentMethods,
+  isSaveCardRejection,
+  isWalletPaymentSource,
+  moyasarKeysError,
+  readMoyasarKeys,
+  readSamsungPayServiceId,
+} from "../lib/moyasarEnv";
 import { safeNextPath } from "../lib/safeNext";
 import {
   assessPaidInvoice,
@@ -515,5 +525,57 @@ describe("admin and redirects", () => {
     assert.equal(isSaveCardRejection("Tokenization is not enabled"), true);
     assert.equal(isSaveCardRejection({ message: "Invalid source.save_card" }), true);
     assert.equal(isSaveCardRejection("Insufficient funds"), false);
+  });
+
+  it("offers Moyasar wallets before the card and keeps Samsung Pay hidden without a service id", () => {
+    assert.deepEqual(MOYASAR_CARD_NETWORKS, ["mada", "visa", "mastercard", "amex", "unionpay"]);
+    assert.deepEqual(checkoutPaymentMethods(""), ["applepay", "stcpay", "creditcard"]);
+    assert.deepEqual(checkoutPaymentMethods("samsung-service"), [
+      "applepay",
+      "samsungpay",
+      "stcpay",
+      "creditcard",
+    ]);
+    assert.deepEqual(checkoutPaymentMethods("samsung-service", false), ["creditcard"]);
+    assert.equal(readSamsungPayServiceId({ NEXT_PUBLIC_MOYASAR_SAMSUNG_PAY_SERVICE_ID: " svc " }), "svc");
+    assert.equal(readSamsungPayServiceId({}), "");
+    assert.equal(isWalletPaymentSource("applepay"), true);
+    assert.equal(isWalletPaymentSource("samsungpay"), true);
+    assert.equal(isWalletPaymentSource("stcpay"), true);
+    assert.equal(isWalletPaymentSource("creditcard"), false);
+    assert.equal(isWalletPaymentSource(undefined), false);
+  });
+
+  it("signs a 15-minute phone link for one checkout", () => {
+    const env = { MOYASAR_SECRET_KEY: "test-secret" };
+    const id = "11111111-1111-4111-8111-111111111111";
+    const other = "22222222-2222-4222-8222-222222222222";
+    const now = 1_700_000_000_000;
+    const signed = signCheckoutHandoff(id, now, env);
+    assert.ok(signed);
+    assert.equal(verifyCheckoutHandoff(signed.token, id, now + 60_000, env).ok, true);
+    const mismatch = verifyCheckoutHandoff(signed.token, other, now + 60_000, env);
+    const expired = verifyCheckoutHandoff(signed.token, id, now + 16 * 60 * 1000, env);
+    const tampered = verifyCheckoutHandoff(`${signed.token}x`, id, now, env);
+    const missing = verifyCheckoutHandoff("", id, now, env);
+    assert.equal(mismatch.ok, false);
+    assert.equal(expired.ok, false);
+    assert.equal(tampered.ok, false);
+    assert.equal(missing.ok, false);
+    if (!mismatch.ok) assert.equal(mismatch.reason, "mismatch");
+    if (!expired.ok) assert.equal(expired.reason, "expired");
+    if (!tampered.ok) assert.equal(tampered.reason, "invalid");
+    if (!missing.ok) assert.equal(missing.reason, "missing");
+  });
+
+  it("serves the Apple Pay domain file from the environment or the placeholder", async () => {
+    const fromEnv = await readApplePayDomainAssociation({ APPLE_PAY_DOMAIN_ASSOCIATION: "APPLE-FILE" });
+    assert.equal(fromEnv, "APPLE-FILE");
+    const placeholder = await readApplePayDomainAssociation({});
+    assert.equal(
+      placeholder,
+      "7b2276657273696f6e223a312c227073704964223a2243423939394539333137363744463341383644424145363131413331323544303133353543373842303636343033393832323336324134413238303246334136222c22637265617465644f6e223a313738373134353634373931307d"
+    );
+    assert.equal(placeholder.endsWith("\n"), false);
   });
 });

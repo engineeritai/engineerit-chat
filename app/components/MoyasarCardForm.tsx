@@ -2,7 +2,11 @@
 
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
-import { isSaveCardRejection } from "@/lib/moyasarEnv";
+import {
+  MOYASAR_CARD_NETWORKS,
+  checkoutPaymentMethods,
+  isSaveCardRejection,
+} from "@/lib/moyasarEnv";
 
 type Props = {
   amountHalalas: number;
@@ -11,8 +15,25 @@ type Props = {
   publishableKey: string;
   metadata: Record<string, string>;
   saveCard: boolean;
+  locale?: "en" | "ar";
+  wallets?: boolean;
+  samsungPayServiceId?: string;
+  orderNumber?: string;
+  attempt?: number;
+  failureFallback?: string;
   onSaveCardRejected?: () => void;
+  onPaymentError?: (message: string) => void;
 };
+
+function errorText(error: unknown) {
+  if (typeof error === "string") return error;
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return "";
+}
 
 export default function MoyasarCardForm({
   amountHalalas,
@@ -21,11 +42,20 @@ export default function MoyasarCardForm({
   publishableKey,
   metadata,
   saveCard,
+  locale = "en",
+  wallets = false,
+  samsungPayServiceId = "",
+  orderNumber = "",
+  attempt = 0,
+  failureFallback = "",
   onSaveCardRejected,
+  onPaymentError,
 }: Props) {
   const [ready, setReady] = useState(false);
   const onRejected = useRef(onSaveCardRejected);
+  const onFailed = useRef(onPaymentError);
   onRejected.current = onSaveCardRejected;
+  onFailed.current = onPaymentError;
 
   useEffect(() => {
     if (!ready || !publishableKey) return;
@@ -33,25 +63,75 @@ export default function MoyasarCardForm({
     if (!moyasar) return;
     const node = document.querySelector(".mysr-form");
     if (node) node.innerHTML = "";
+    const serviceId = samsungPayServiceId.trim();
+    const methods = checkoutPaymentMethods(serviceId, wallets);
     let reported = false;
-    moyasar.init({
-      element: ".mysr-form",
-      amount: amountHalalas,
-      currency: "SAR",
-      description,
-      publishable_api_key: publishableKey,
-      callback_url: callbackUrl,
-      supported_networks: ["mada", "visa", "mastercard", "amex"],
-      methods: ["creditcard"],
-      metadata,
-      ...(saveCard ? { credit_card: { save_card: true } } : {}),
-      on_failure: (error: unknown) => {
-        if (!saveCard || reported || !isSaveCardRejection(error)) return;
-        reported = true;
-        onRejected.current?.();
-      },
-    });
-  }, [ready, amountHalalas, description, callbackUrl, publishableKey, metadata, saveCard]);
+    try {
+      moyasar.init({
+        element: ".mysr-form",
+        amount: amountHalalas,
+        currency: "SAR",
+        description,
+        publishable_api_key: publishableKey,
+        callback_url: callbackUrl,
+        supported_networks: [...MOYASAR_CARD_NETWORKS],
+        methods,
+        metadata,
+        language: locale,
+        fixed_width: false,
+        ...(wallets
+          ? {
+              apple_pay: {
+                country: "SA",
+                label: "engineerit.ai",
+                validate_merchant_url: "https://api.moyasar.com/v1/applepay/initiate",
+              },
+            }
+          : {}),
+        ...(wallets && serviceId
+          ? {
+              samsung_pay: {
+                service_id: serviceId,
+                order_number: orderNumber || metadata.checkout_id || "engineerit",
+                country: "SA",
+                label: "engineerit.ai",
+                environment: "PRODUCTION",
+              },
+            }
+          : {}),
+        ...(saveCard ? { credit_card: { save_card: true } } : {}),
+        on_failure: (error: unknown) => {
+          if (saveCard && !reported && isSaveCardRejection(error)) {
+            reported = true;
+            onRejected.current?.();
+            return;
+          }
+          onFailed.current?.(errorText(error) || failureFallback);
+        },
+      });
+    } catch (error) {
+      onFailed.current?.(errorText(error) || failureFallback);
+    }
+    const noticeTimer = window.setTimeout(() => {
+      const notice = document.querySelector(".mysr-form-configNotice")?.textContent?.trim();
+      if (notice) onFailed.current?.(notice);
+    }, 0);
+    return () => window.clearTimeout(noticeTimer);
+  }, [
+    ready,
+    amountHalalas,
+    description,
+    callbackUrl,
+    publishableKey,
+    metadata,
+    saveCard,
+    locale,
+    wallets,
+    samsungPayServiceId,
+    orderNumber,
+    attempt,
+    failureFallback,
+  ]);
 
   return (
     <>
@@ -60,8 +140,9 @@ export default function MoyasarCardForm({
         src="https://cdn.moyasar.com/mpf/1.15.0/moyasar.js"
         strategy="afterInteractive"
         onLoad={() => setReady(true)}
+        onError={() => onFailed.current?.(failureFallback)}
       />
-      <div className="mysr-form" />
+      <div className="mysr-form" key={attempt} />
     </>
   );
 }

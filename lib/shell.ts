@@ -250,11 +250,30 @@ export type ShellCopy = {
     title: string;
     savedCard: string;
     consent: string;
+    optional: string;
+    renewManually: string;
+    securePay: string;
+    cancelAnytime: string;
+    cardNotStored: string;
     openFailed: string;
     missingKey: string;
     seats: string;
     payOnce: string;
     saveRejected: string;
+    summary: string;
+    walletReminder: string;
+    phonePay: string;
+    scanToPay: string;
+    phonePayHint: string;
+    phonePayWaiting: string;
+    phonePayExpired: string;
+    phonePayInvalid: string;
+    retry: string;
+    paymentFailed: string;
+    copyLink: string;
+    copied: string;
+    networks: string;
+    vatNote: string;
   };
   subscription: {
     title: string;
@@ -577,14 +596,34 @@ const en: ShellCopy = {
   },
   checkout: {
     title: "Checkout",
-    savedCard: "The card is saved for automatic renewal until you cancel.",
-    consent:
-      "I agree to save this card with Moyasar and to be charged automatically on each renewal until I cancel in billing.",
+    savedCard: "We'll renew with this card. You can cancel anytime from your profile.",
+    consent: "Save card for automatic renewal (optional)",
+    optional: "Optional",
+    renewManually: "You can renew manually anytime from your profile.",
+    securePay: "Secure payment by Moyasar",
+    cancelAnytime: "Cancel anytime",
+    cardNotStored: "Your card details are never stored on our servers",
     openFailed: "Could not open checkout.",
     missingKey: "The card form is not configured yet.",
     seats: "seats",
     payOnce: "Pay once now. Auto-renew stays off until a card is saved.",
-    saveRejected: "Saving the card is unavailable. Enter the card again to pay once. Auto-renew stays off.",
+    saveRejected: "We could not save the card this time. You can still pay once and renew from your profile.",
+    summary: "Order",
+    walletReminder:
+      "Apple Pay, Samsung Pay, and STC Pay are one-time payments. Renew from your profile whenever you like.",
+    phonePay: "Pay with your phone",
+    scanToPay: "Scan to pay with Apple Pay, Samsung Pay, STC Pay or mada",
+    phonePayHint:
+      "Scan this code to open this checkout on your phone. The link lasts 15 minutes and opens this payment only.",
+    phonePayWaiting: "This page opens the invoice when the phone payment is confirmed.",
+    phonePayExpired: "This phone link has expired. Open checkout on your computer and scan a new code.",
+    phonePayInvalid: "This phone link is not valid. Open checkout on your computer and scan a new code.",
+    retry: "Try again",
+    paymentFailed: "The payment did not go through. Check the details and try again.",
+    copyLink: "Copy phone link",
+    copied: "Link copied",
+    networks: "Cards",
+    vatNote: "VAT as applicable",
   },
   subscription: {
     title: "Plans and subscription",
@@ -905,14 +944,33 @@ const ar: ShellCopy = {
   },
   checkout: {
     title: "الدفع",
-    savedCard: "تُحفظ البطاقة للتجديد التلقائي حتى الإلغاء.",
-    consent:
-      "أوافق على حفظ هذه البطاقة لدى Moyasar وعلى الخصم التلقائي في كل تجديد حتى أُلغي ذلك من الفوترة.",
+    savedCard: "سنجدّد بهذه البطاقة. يمكنك الإلغاء في أي وقت من ملفك.",
+    consent: "حفظ البطاقة للتجديد التلقائي (اختياري)",
+    optional: "اختياري",
+    renewManually: "يمكنك التجديد يدويًا في أي وقت من ملفك الشخصي.",
+    securePay: "دفع آمن عبر ميسر",
+    cancelAnytime: "إلغاء في أي وقت",
+    cardNotStored: "لا نحتفظ ببيانات بطاقتك على خوادمنا",
     openFailed: "تعذر فتح صفحة الدفع.",
     missingKey: "نموذج البطاقة غير مُعد بعد.",
     seats: "مقاعد",
     payOnce: "ادفع مرة واحدة الآن. يبقى التجديد التلقائي متوقفاً حتى تُحفظ البطاقة.",
-    saveRejected: "حفظ البطاقة غير متاح. أدخل البطاقة مرة أخرى للدفع مرة واحدة. يبقى التجديد التلقائي متوقفاً.",
+    saveRejected: "تعذر حفظ البطاقة هذه المرة. يمكنك الدفع مرة واحدة والتجديد من ملفك.",
+    summary: "الطلب",
+    walletReminder:
+      "Apple Pay وSamsung Pay وSTC Pay دفعات لمرة واحدة. جدّد من ملفك وقتما تشاء.",
+    phonePay: "ادفع من جوالك",
+    scanToPay: "امسح للدفع عبر Apple Pay أو Samsung Pay أو STC Pay أو mada",
+    phonePayHint: "امسح الرمز لفتح هذا الدفع على الجوال. الرابط يعمل 15 دقيقة ولهذا الدفع فقط.",
+    phonePayWaiting: "تنتقل هذه الصفحة إلى الفاتورة عند تأكيد الدفع من الجوال.",
+    phonePayExpired: "انتهت صلاحية رابط الجوال. افتح الدفع على الكمبيوتر لمسح رمز جديد.",
+    phonePayInvalid: "رابط الجوال غير صالح. افتح الدفع على الكمبيوتر وامسح رمزاً جديداً.",
+    retry: "حاول مرة أخرى",
+    paymentFailed: "لم يتم الدفع. راجع البيانات وحاول مرة أخرى.",
+    copyLink: "نسخ رابط الجوال",
+    copied: "تم نسخ الرابط",
+    networks: "البطاقات",
+    vatNote: "ضريبة القيمة المضافة حسب الأنظمة",
   },
   subscription: {
     title: "الباقات والاشتراك",

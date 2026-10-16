@@ -9,7 +9,8 @@ import {
   quoteSelfServe,
   type SelfServePlanId,
 } from "@/lib/plans";
-import { moyasarKeysError, readMoyasarKeys } from "@/lib/moyasarEnv";
+import { signCheckoutHandoff, verifyCheckoutHandoff } from "@/lib/checkoutHandoff";
+import { moyasarKeysError, readMoyasarKeys, readSamsungPayServiceId } from "@/lib/moyasarEnv";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
 
 export const runtime = "nodejs";
@@ -26,8 +27,15 @@ export async function GET(req: NextRequest) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
     return NextResponse.json({ error: "Missing checkout." }, { status: 400 });
   }
+  const pay = req.nextUrl.searchParams.get("pay") || "";
+  const handoff = pay ? verifyCheckoutHandoff(pay, id) : null;
   const user = await getUserFromRequest(req);
-  if (!user) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  if (!user && (!handoff || !handoff.ok)) {
+    return NextResponse.json(
+      { error: "Sign in required.", reason: handoff?.reason || "missing" },
+      { status: 401 }
+    );
+  }
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
     .from("moyasar_invoices")
@@ -35,16 +43,39 @@ export async function GET(req: NextRequest) {
     .eq("id", id)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data || data.user_id !== user.id) {
+  const owner = Boolean(user && data && data.user_id === user.id);
+  const phone = Boolean(handoff?.ok && data);
+  if (!data || (!owner && !phone)) {
     return NextResponse.json({ error: "Checkout not found." }, { status: 404 });
+  }
+  if (req.nextUrl.searchParams.get("watch") === "1") {
+    return NextResponse.json({ status: data.status });
   }
   const base = getAppBaseUrl(req);
   const keys = readMoyasarKeys();
+  const callback = new URL(`${base}/checkout/return`);
+  callback.searchParams.set("checkout", id);
+  if (pay && handoff?.ok) callback.searchParams.set("pay", pay);
+  const signed = owner ? signCheckoutHandoff(id) : null;
+  const phonePay = signed ? new URL(`${base}/checkout/${id}`) : null;
+  if (phonePay && signed) phonePay.searchParams.set("pay", signed.token);
   return NextResponse.json({
-    checkout: data,
+    checkout: {
+      id: data.id,
+      plan: data.plan,
+      billing_interval: data.billing_interval,
+      amount_sar: data.amount_sar,
+      amount_halalas: data.amount_halalas,
+      seat_limit: data.seat_limit,
+      extra_seats: data.extra_seats,
+      status: data.status,
+    },
     publishableKey: keys.publishable,
-    callbackUrl: `${base}/checkout/return?checkout=${id}`,
+    callbackUrl: callback.toString(),
     description: `engineerit.ai ${data.plan} plan`,
+    samsungPayServiceId: readSamsungPayServiceId(),
+    phonePayUrl: phonePay ? phonePay.toString() : "",
+    phonePayExpiresAt: signed?.expiresAt || "",
   });
 }
 
