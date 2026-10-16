@@ -143,8 +143,13 @@ test("desktop chat mark is the eit bubble and is hidden on /chat", async ({ page
   await page.goto("/?lang=en", { waitUntil: "domcontentloaded" });
   const mark = page.locator(".eit-chat");
   await expect(mark).toBeVisible();
-  await expect(mark).toHaveAttribute("aria-label", "Chat");
-  await expect(mark.locator("svg title")).toHaveText("eit");
+  await expect(mark).toHaveAttribute("aria-label", "Open chat");
+  await expect(mark).toHaveAttribute("title", "Open chat");
+  await expect(mark.locator("svg title")).toHaveText("Open chat");
+  await page.goto("/?lang=ar", { waitUntil: "domcontentloaded" });
+  const arMark = page.locator(".eit-chat");
+  await expect(arMark).toHaveAttribute("aria-label", "افتح المحادثة");
+  await expect(arMark).toHaveAttribute("title", "افتح المحادثة");
   await page.goto("/chat?lang=en", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".eit-chat")).toHaveCount(0);
 });

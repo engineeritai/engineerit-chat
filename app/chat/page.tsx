@@ -15,6 +15,7 @@ import MarketingShell from "../components/marketing/MarketingShell";
 import EitMark from "../components/marketing/EitMark";
 import { localPlanPreview } from "../components/marketing/AccountState";
 import ToolGlyph, { ToolLockIcon } from "../components/ToolGlyph";
+import AdvisorGlyph, { AdvisorsMenuGlyph } from "../components/AdvisorGlyph";
 import ToolUnlockSheet from "../components/ToolUnlockSheet";
 import Sidebar from "../components/Sidebar";
 import { DISCIPLINES } from "@/lib/disciplines";
@@ -27,6 +28,7 @@ import { canShareChatWithTeam } from "@/lib/historyRetention";
 import { useChatHistory, type ChatMessage } from "@/lib/useChatHistory";
 import type { HistoryCode } from "@/lib/chatHistoryClient";
 import { ENGINEER_TOOLS, type EngineerToolId } from "@/lib/engineerTools";
+import { ADVISOR_IDS, hasAdvisorAccess, unlockPlanForAdvisor, type AdvisorId } from "@/lib/advisors";
 import { trackProduct } from "@/lib/attribution";
 import { featureTier, HEADER_PLAN_ABBREV, PLAN_THEME, type PlanId, type SelfServePlanId } from "@/lib/plans";
 import { hasToolAccess, toolRequiredPlan } from "@/lib/toolAccess";
@@ -351,7 +353,7 @@ export default function Page() {
   const [planReady, setPlanReady] = useState(false);
   const [planId, setPlanId] = useState<PlanId>("assistant");
   const [advisorPlan, setAdvisorPlan] = useState("guest");
-  const { locale, shell: s } = useMessages();
+  const { locale, shell: s, m } = useMessages();
   const history = useChatHistory({
     locale,
     discipline,
@@ -362,6 +364,8 @@ export default function Page() {
 
   const [showLanding, setShowLanding] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [advisorsOpen, setAdvisorsOpen] = useState(false);
+  const [activeAdvisor, setActiveAdvisor] = useState<AdvisorId | null>(null);
   const [listening, setListening] = useState(false);
   const [micReady, setMicReady] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -538,6 +542,7 @@ export default function Page() {
       file: imageFile,
       question: question || s.chat.analyzeImage,
       locale,
+      advisorId: activeAdvisor || undefined,
     });
     if (!res.ok) {
       const failure = await readApiError(res);
@@ -556,6 +561,7 @@ export default function Page() {
       file: docFile,
       question: question || s.chat.analyzeDocument,
       locale,
+      advisorId: activeAdvisor || undefined,
     });
     if (!res.ok) {
       const failure = await readApiError(res);
@@ -667,6 +673,10 @@ export default function Page() {
       if (preset) setInput(preset);
       return false;
     }
+    if (activeAdvisor && !hasAdvisorAccess(planId, activeAdvisor, isGuest)) {
+      setUnlockPlan(unlockPlanForAdvisor(activeAdvisor));
+      return false;
+    }
 
     const starting = !thread.messages.some((message) => message.role === "user");
     if (starting) trackProduct("chat_started", { plan: isGuest ? "guest" : planId });
@@ -729,6 +739,7 @@ export default function Page() {
             messages: payloadMessages,
             planId: isGuest ? "guest" : planId,
             userId: userId,
+            ...(activeAdvisor ? { advisorId: activeAdvisor } : {}),
           }),
         });
 
@@ -1138,6 +1149,15 @@ export default function Page() {
             )}
 
             {thread && !thread.owned && <p className="history-note">{s.chat.sharedReadOnly}</p>}
+            {activeAdvisor ? (
+              <div className="advisor-mode-chip">
+                <AdvisorGlyph id={activeAdvisor} />
+                <span>{m.advisors.items[activeAdvisor].flowLabel}</span>
+                <button type="button" aria-label={s.chat.removeAdvisor} onClick={() => setActiveAdvisor(null)}>
+                  ✕
+                </button>
+              </div>
+            ) : null}
             <div className="chat-input-row">
               <div className="chat-input-left" style={{ position: "relative" }}>
                 <button
@@ -1145,7 +1165,10 @@ export default function Page() {
                   className="chat-input-icon-btn"
                   aria-label={s.chat.addAttachments}
                   aria-expanded={toolsOpen}
-                  onClick={() => setToolsOpen((value) => !value)}
+                  onClick={() => {
+                    setToolsOpen((value) => !value);
+                    setAdvisorsOpen(false);
+                  }}
                 >
                   <span className="chat-input-plus">+</span>
                 </button>
@@ -1202,9 +1225,60 @@ export default function Page() {
                         </button>
                       );
                     })}
-                    <Link href="/advisors" onClick={() => setToolsOpen(false)}>
-                      {s.chat.advisorsMenu}
-                    </Link>
+                    <button
+                      type="button"
+                      className="tool-row"
+                      aria-expanded={advisorsOpen}
+                      onClick={() => setAdvisorsOpen((open) => !open)}
+                    >
+                      <AdvisorsMenuGlyph />
+                      <span className="tool-row-label">{s.chat.advisorsMenu}</span>
+                      <span className="advisor-menu-chevron" aria-hidden="true">
+                        {advisorsOpen ? "▴" : "▾"}
+                      </span>
+                    </button>
+                    {advisorsOpen ? (
+                      <div className="advisor-menu-sub">
+                        {ADVISOR_IDS.map((id) => {
+                          const enabled = hasAdvisorAccess(planId, id, isGuest);
+                          const required = unlockPlanForAdvisor(id);
+                          const theme = PLAN_THEME[required];
+                          return (
+                            <button
+                              key={id}
+                              type="button"
+                              className={"tool-row" + (enabled ? "" : " is-locked")}
+                              onClick={() => {
+                                setToolsOpen(false);
+                                setAdvisorsOpen(false);
+                                if (!enabled) {
+                                  setUnlockPlan(required);
+                                  return;
+                                }
+                                setActiveAdvisor(id);
+                              }}
+                            >
+                              <AdvisorGlyph id={id} />
+                              <span className="tool-row-label">{m.advisors.items[id].flowLabel}</span>
+                              {enabled ? null : (
+                                <span className="tool-row-meta">
+                                  <ToolLockIcon />
+                                  <span
+                                    className="tool-plan-pill"
+                                    style={{ background: theme.soft, color: theme.accent }}
+                                  >
+                                    {HEADER_PLAN_ABBREV[required]}
+                                  </span>
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                        <Link className="advisor-menu-all" href="/advisors" onClick={() => setToolsOpen(false)}>
+                          {s.chat.viewAllAdvisors}
+                        </Link>
+                      </div>
+                    ) : null}
                     <p className="plus-menu-label">{s.chat.addAttachments}</p>
                     <button
                       type="button"

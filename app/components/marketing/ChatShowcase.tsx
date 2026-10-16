@@ -141,7 +141,7 @@ export default function ChatShowcase() {
       </div>
       <div className="chat-showcase-actions">
         <Link className="mkt-btn mkt-btn-primary chat-showcase-cta" href="/chat">
-          <EitMark size={40} tone="inverse" title="eit" />
+          <EitMark size={28} tone="inverse" title="eit" />
           {show.cta}
         </Link>
         <Link className="mkt-btn mkt-btn-secondary" href="/pricing">

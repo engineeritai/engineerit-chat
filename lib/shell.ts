@@ -7,6 +7,7 @@ export type ShellCopy = {
     pages: string;
     home: string;
     chat: string;
+    openChat: string;
     pricing: string;
     register: string;
     profile: string;
@@ -153,6 +154,8 @@ export type ShellCopy = {
     listening: string;
     toolsMenu: string;
     advisorsMenu: string;
+    viewAllAdvisors: string;
+    removeAdvisor: string;
     hideSidebar: string;
     showSidebar: string;
     moreActions: string;
@@ -379,6 +382,7 @@ const en: ShellCopy = {
     pages: "Pages",
     home: "Home",
     chat: "Chat",
+    openChat: "Open chat",
     pricing: "Pricing",
     register: "Registration and plans",
     profile: "My profile",
@@ -531,6 +535,8 @@ const en: ShellCopy = {
     listening: "Listening",
     toolsMenu: "Tools",
     advisorsMenu: "Advisors",
+    viewAllAdvisors: "View all advisors",
+    removeAdvisor: "Remove advisor",
     hideSidebar: "Hide sidebar",
     showSidebar: "Show sidebar",
     moreActions: "Chat actions",
@@ -773,6 +779,7 @@ const ar: ShellCopy = {
     pages: "الصفحات",
     home: "الرئيسية",
     chat: "المحادثة",
+    openChat: "افتح المحادثة",
     pricing: "الأسعار",
     register: "التسجيل والباقات",
     profile: "ملفي",
@@ -924,6 +931,8 @@ const ar: ShellCopy = {
     listening: "جارٍ الاستماع",
     toolsMenu: "الأدوات",
     advisorsMenu: "المستشارون",
+    viewAllAdvisors: "عرض كل المستشارين",
+    removeAdvisor: "إزالة المستشار",
     hideSidebar: "إخفاء الشريط",
     showSidebar: "إظهار الشريط",
     moreActions: "إجراءات المحادثة",
