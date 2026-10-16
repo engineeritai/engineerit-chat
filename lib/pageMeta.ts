@@ -14,6 +14,21 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       description:
         "Answers for engineering consultancies: trying the chat, standards, Moyasar billing, language, and company verification.",
     },
+    "/how-it-works": {
+      title: "How it works | engineerit.ai",
+      description:
+        "How engineerit.ai works: sign up, pick a discipline, ask or upload a file, use tools, run an advisor playbook, export, and manage billing.",
+    },
+    "/guide": {
+      title: "User guide | engineerit.ai",
+      description:
+        "Step-by-step guide to engineerit.ai: sign up, discipline, questions and uploads, tools, AI Advisors, export, and plans.",
+    },
+    "/tools": {
+      title: "Tools | engineerit.ai",
+      description:
+        "Seven engineer tools: drawings, design checks, inspection plans, quantities, schedules, value engineering, and dashboards.",
+    },
     "/pricing": {
       title: "Pricing | engineerit.ai",
       description:
@@ -93,6 +108,21 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       title: "الأسئلة الشائعة | engineerit.ai",
       description:
         "إجابات للمكاتب الهندسية: تجربة المحادثة، والمعايير، وفوترة Moyasar، واللغة، وتوثيق الشركة.",
+    },
+    "/how-it-works": {
+      title: "كيف يعمل | engineerit.ai",
+      description:
+        "كيف يعمل engineerit.ai: التسجيل، اختيار التخصص، السؤال أو إرفاق ملف، الأدوات، أدلة المستشارين، التصدير، والفوترة.",
+    },
+    "/guide": {
+      title: "دليل الاستخدام | engineerit.ai",
+      description:
+        "دليل استخدام engineerit.ai خطوة بخطوة: التسجيل، التخصص، السؤال والملفات، الأدوات، المستشارون، التصدير، والباقات.",
+    },
+    "/tools": {
+      title: "الأدوات | engineerit.ai",
+      description:
+        "سبع أدوات هندسية: الرسومات، مراجعة التصميم، خطط الفحص، الكميات، الجداول، هندسة القيمة، ولوحات المتابعة.",
     },
     "/pricing": {
       title: "الأسعار | engineerit.ai",

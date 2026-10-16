@@ -102,6 +102,7 @@ export function useChatHistory(opts: { locale: Locale; discipline: string; draft
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState<HistoryCode | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const threadsRef = useRef<ChatThread[]>([]);
   const currentIdRef = useRef<string | undefined>(undefined);
@@ -210,7 +211,7 @@ export function useChatHistory(opts: { locale: Locale; discipline: string; draft
       cancel = true;
       window.clearTimeout(handle);
     };
-  }, [ready, userId, query]);
+  }, [ready, userId, query, reloadKey]);
 
   const pendingLoadId =
     threads.find((thread) => thread.id === currentThreadId && thread.persisted && !thread.messagesLoaded)?.id ??
@@ -445,6 +446,7 @@ export function useChatHistory(opts: { locale: Locale; discipline: string; draft
     loading,
     query,
     setQuery,
+    refresh: () => setReloadKey((value) => value + 1),
     notice,
     clearNotice: () => setNotice(null),
     appendLocal,

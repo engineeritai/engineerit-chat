@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Header from "../components/Header";
-import NavSidebar from "../components/NavSidebar";
+import Link from "next/link";
+import MarketingShell from "../components/marketing/MarketingShell";
 import { useMessages } from "@/lib/useMessages";
 
 type BotMessage = {
@@ -23,8 +23,6 @@ export default function FeedbackPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(
     "idle"
   );
-
-  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
   const [botOpen, setBotOpen] = useState(false);
   const [botInput, setBotInput] = useState("");
@@ -101,17 +99,16 @@ export default function FeedbackPage() {
   }
 
   return (
-    <div className="app-shell">
-      <NavSidebar
-        isMobileOpen={isSidebarOpenMobile}
-        onCloseMobile={() => setIsSidebarOpenMobile(false)}
-      />
-
-      <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
-
+    <MarketingShell>
         <div className="page-wrap">
-          <h1 className="page-title">{s.feedback.title}</h1>
+          <div className="advisor-breadcrumb">
+            <Link href="/">{s.nav.home}</Link>
+            <span aria-hidden="true">›</span>
+            <span>{s.feedback.title}</span>
+          </div>
+          <div className="advisor-title-row">
+            <h1 className="page-title">{s.feedback.title}</h1>
+          </div>
           <p className="page-subtitle">{s.feedback.lead}</p>
 
           <form className="card" onSubmit={handleSubmit}>
@@ -256,7 +253,6 @@ export default function FeedbackPage() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </MarketingShell>
   );
 }

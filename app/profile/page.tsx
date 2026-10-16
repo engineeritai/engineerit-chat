@@ -2,20 +2,58 @@
 
 import React, { useEffect, useState, ChangeEvent } from "react";
 import MarketingShell from "../components/marketing/MarketingShell";
+import { useAccount } from "../components/marketing/AccountState";
 import { supabase } from "../../lib/supabaseClient";
 import Link from "next/link";
 import { localizedPlan, planById, formatMoney } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
-import { PLANS, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
+import { PLANS, PLAN_THEME, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
 import { displayFeatures, formatSar, formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
+import { SarText } from "@/app/components/RiyalAmount";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
 import { downloadInvoicePdf } from "@/lib/invoiceDownload";
+import AvatarCropper from "@/app/components/AvatarCropper";
+import { DISCIPLINES } from "@/lib/disciplines";
+import { disciplineLabel } from "@/lib/labels";
 
 type ProfileRow = {
   full_name: string | null;
   avatar_url: string | null;
   subscription_tier: string | null;
+  job_title?: string | null;
+  company?: string | null;
+  phone?: string | null;
+  country?: string | null;
+  discipline?: string | null;
+};
+
+type TopicRow = {
+  id: string;
+  title: string;
+  discipline: string | null;
+  updated_at: string | null;
+};
+
+type FileRow = {
+  id: string;
+  conversationId: string;
+  name: string;
+  size: number | null;
+  createdAt: string | null;
+};
+
+type PlanHistoryRow = {
+  id: string;
+  plan: string;
+  billing_interval: string;
+  amount_sar: number;
+  status: string;
+  current_period_start?: string | null;
+  current_period_end?: string | null;
+  paid_at?: string | null;
+  created_at?: string | null;
+  period_end?: string | null;
 };
 
 type BillingView = {
@@ -47,6 +85,35 @@ type SubscriptionRow = {
   end_date: string | null;
 };
 
+function ThemedPlanShell({
+  fallbackPlanId,
+  fallbackStart,
+  fallbackEnd,
+  children,
+}: {
+  fallbackPlanId: PlanId;
+  fallbackStart: string | null;
+  fallbackEnd: string | null;
+  children: (shown: {
+    planId: PlanId;
+    theme: (typeof PLAN_THEME)[PlanId];
+    start: string | null;
+    end: string | null;
+    label: string;
+  }) => React.ReactNode;
+}) {
+  const account = useAccount();
+  const { locale } = useMessages();
+  const planId = account.ready && account.signedIn ? account.planId : fallbackPlanId;
+  return children({
+    planId,
+    theme: PLAN_THEME[planId],
+    start: account.ready && account.signedIn ? account.periodStart : fallbackStart,
+    end: account.ready && account.signedIn ? account.periodEnd : fallbackEnd,
+    label: planById(locale, planId).name,
+  });
+}
+
 function formatDate(value: string | null | undefined, locale: Locale) {
   if (!value) return "-";
   const d = new Date(value);
@@ -60,9 +127,27 @@ function formatDate(value: string | null | undefined, locale: Locale) {
 
 export default function ProfilePage() {
   const { locale, shell: s } = useMessages();
+  const [photoBroken, setPhotoBroken] = useState(false);
 
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [fullName, setFullName] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [company, setCompany] = useState("");
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("");
+  const [discipline, setDiscipline] = useState("General");
+  const [tab, setTab] = useState<"overview" | "billing" | "topics">("overview");
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    if (requested === "billing" || requested === "topics" || requested === "overview") {
+      setTab(requested);
+    }
+  }, []);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [topics, setTopics] = useState<TopicRow[]>([]);
+  const [files, setFiles] = useState<FileRow[]>([]);
+  const [planHistory, setPlanHistory] = useState<PlanHistoryRow[]>([]);
   const [email, setEmail] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -152,16 +237,39 @@ export default function ProfilePage() {
 
         const { data, error } = await supabase
           .from("profiles")
-          .select("full_name, avatar_url, subscription_tier")
+          .select("full_name, avatar_url, subscription_tier, job_title, company, phone, country, discipline")
           .eq("id", user.id)
           .maybeSingle();
 
-        if (!error && data) {
-          if (data.full_name) initialFullName = data.full_name;
-          if (data.avatar_url) avatarUrl = data.avatar_url;
-          if (data.subscription_tier) subscriptionTier = data.subscription_tier;
-        } else if (error) {
-          console.error("PROFILE SELECT ERROR:", error);
+        let row: {
+          full_name?: string | null;
+          avatar_url?: string | null;
+          subscription_tier?: string | null;
+          job_title?: string | null;
+          company?: string | null;
+          phone?: string | null;
+          country?: string | null;
+          discipline?: string | null;
+        } | null = data;
+        if (error) {
+          const fallback = await supabase
+            .from("profiles")
+            .select("full_name, avatar_url, subscription_tier")
+            .eq("id", user.id)
+            .maybeSingle();
+          row = fallback.data as typeof row;
+          if (fallback.error) console.error("PROFILE SELECT ERROR:", fallback.error);
+        }
+
+        if (row) {
+          if (row.full_name) initialFullName = row.full_name;
+          if (row.avatar_url) avatarUrl = row.avatar_url;
+          if (row.subscription_tier) subscriptionTier = row.subscription_tier;
+          setJobTitle(row.job_title || "");
+          setCompany(row.company || "");
+          setPhone(row.phone || "");
+          setCountry(row.country || "");
+          if (row.discipline) setDiscipline(row.discipline);
         }
 
         if (subscriptionTierOverride) subscriptionTier = subscriptionTierOverride;
@@ -255,6 +363,17 @@ export default function ProfilePage() {
           const invoiceJson = await invoiceRes.json().catch(() => ({}));
           if (invoiceRes.ok && Array.isArray(invoiceJson.invoices)) {
             setInvoices(invoiceJson.invoices as InvoiceRow[]);
+          }
+          const libraryRes = await fetch("/api/profile/library", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const library = await libraryRes.json().catch(() => ({}));
+          if (libraryRes.ok) {
+            setTopics(Array.isArray(library.conversations) ? library.conversations : []);
+            setFiles(Array.isArray(library.files) ? library.files : []);
+            const subs = Array.isArray(library.subscriptions) ? library.subscriptions : [];
+            const inv = Array.isArray(library.invoices) ? library.invoices : [];
+            setPlanHistory([...subs, ...inv]);
           }
         }
 
@@ -361,7 +480,14 @@ export default function ProfilePage() {
 
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName })
+        .update({
+          full_name: fullName,
+          job_title: jobTitle,
+          company,
+          phone,
+          country,
+          discipline,
+        })
         .eq("id", user.id);
 
       if (error) {
@@ -385,10 +511,19 @@ export default function ProfilePage() {
     }
   }
 
-  async function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
+  function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") setCropSrc(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
 
+  async function saveCroppedAvatar(blob: Blob) {
+    setCropSrc(null);
     try {
       setSavingAvatar(true);
       setErrorMsg(null);
@@ -404,16 +539,16 @@ export default function ProfilePage() {
         return;
       }
 
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const filePath = `${user.id}/${Date.now()}.${ext}`;
+      const filePath = `${user.id}/${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, blob, { upsert: true, contentType: "image/jpeg" });
 
       if (uploadError) {
-        console.error("AVATAR UPLOAD ERROR:", uploadError);
-        setErrorMsg(s.profile.photoFailed);
+        const message = (uploadError.message || "").toLowerCase();
+        const missing = message.includes("bucket") || message.includes("not found");
+        setErrorMsg(missing ? s.profile.photoUnavailable : s.profile.photoFailed);
         return;
       }
 
@@ -443,7 +578,6 @@ export default function ProfilePage() {
       setErrorMsg(s.profile.photoFailed);
     } finally {
       setSavingAvatar(false);
-      e.target.value = "";
     }
   }
 
@@ -452,10 +586,7 @@ export default function ProfilePage() {
   const currentPlanId: PlanId = isPlanId(currentPlan) ? currentPlan : "assistant";
   const currentPlanLabel = planById(locale, currentPlanId).name;
   const catalogSource = PLANS.find((plan) => plan.id === currentPlanId) ?? PLANS[0];
-  const catalogPlan = localizedPlan(locale, catalogSource);
   const legacyPrice = consultantLegacy && currentPlanId === "consultant";
-  const catalogMonth = planPriceLabel(currentPlanId, "month", 0, locale, legacyPrice);
-  const catalogYear = planPriceLabel(currentPlanId, "year", 0, locale, legacyPrice);
   const approx = locale === "ar" ? "تقريباً" : "approx.";
   const teamLapsed =
     (storedPlan === "team" || storedPlan === "enterprise") && currentPlan === "assistant";
@@ -463,7 +594,27 @@ export default function ProfilePage() {
   return (
     <MarketingShell>
         <div className="page-wrap">
-          <h1 className="page-title">{s.profile.title}</h1>
+          <div className="profile-hero">
+            <div className="profile-photo">
+              {profile?.avatar_url && !photoBroken ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profile.avatar_url} alt={s.profile.photo} onError={() => setPhotoBroken(true)} />
+              ) : (
+                <span>{(fullName.trim()[0] || "E").toLocaleUpperCase(locale === "ar" ? "ar" : "en")}</span>
+              )}
+            </div>
+            <div>
+              <h1 className="page-title" style={{ marginBottom: 4 }}>{fullName || s.profile.title}</h1>
+              <p className="page-subtitle" style={{ marginBottom: 0 }}>
+                {[jobTitle, disciplineLabel(locale, discipline), company, country].filter(Boolean).join(" · ") || currentPlanLabel}
+              </p>
+            </div>
+          </div>
+          <div className="profile-tabs" role="tablist">
+            <button type="button" className={tab === "overview" ? "is-active" : ""} onClick={() => setTab("overview")}>{s.profile.tabOverview}</button>
+            <button type="button" className={tab === "billing" ? "is-active" : ""} onClick={() => setTab("billing")}>{s.profile.tabBilling}</button>
+            <button type="button" className={tab === "topics" ? "is-active" : ""} onClick={() => setTab("topics")}>{s.profile.tabTopics}</button>
+          </div>
 
           {errorMsg && (
             <div
@@ -499,8 +650,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Profile card */}
-          {loading ? (
+          {tab === "overview" && (loading ? (
             <p>{s.profile.loading}</p>
           ) : (
             <div className="card">
@@ -527,12 +677,13 @@ export default function ProfilePage() {
                     color: "#111827",
                   }}
                 >
-                  {profile?.avatar_url ? (
+                  {profile?.avatar_url && !photoBroken ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={profile.avatar_url}
                       alt={s.header.profileAlt}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={() => setPhotoBroken(true)}
                     />
                   ) : (
                     (fullName?.trim()[0] || (locale === "ar" ? "م" : "E")).toLocaleUpperCase(
@@ -570,6 +721,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              <div className="form-grid two">
               <div className="form-row">
                 <label>
                   {s.profile.fullName}
@@ -583,6 +735,40 @@ export default function ProfilePage() {
                 </label>
               </div>
 
+              <div className="form-row">
+                <label>
+                  {s.profile.jobTitle}
+                  <input className="input" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+                </label>
+              </div>
+              <div className="form-row">
+                <label>
+                  {s.profile.company}
+                  <input className="input" value={company} onChange={(e) => setCompany(e.target.value)} />
+                </label>
+              </div>
+              <div className="form-row">
+                <label>
+                  {s.profile.phone}
+                  <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </label>
+              </div>
+              <div className="form-row">
+                <label>
+                  {s.profile.country}
+                  <input className="input" value={country} onChange={(e) => setCountry(e.target.value)} />
+                </label>
+              </div>
+              <div className="form-row">
+                <label>
+                  {s.profile.discipline}
+                  <select className="select" value={discipline} onChange={(e) => setDiscipline(e.target.value)}>
+                    {DISCIPLINES.map((name) => (
+                      <option key={name} value={name}>{disciplineLabel(locale, name)}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               {email && (
                 <div className="form-row">
                   <label>
@@ -591,6 +777,7 @@ export default function ProfilePage() {
                   </label>
                 </div>
               )}
+              </div>
 
               <button
                 className="btn"
@@ -601,21 +788,34 @@ export default function ProfilePage() {
                 {savingName ? s.profile.saving : s.profile.save}
               </button>
             </div>
-          )}
+          ))}
 
-          {/* Subscription card */}
-          <div className="card" style={{ marginTop: 24 }}>
-            <h2 className="card-title">{s.profile.subscription}</h2>
+          {tab === "overview" && (
+          <ThemedPlanShell
+            fallbackPlanId={currentPlanId}
+            fallbackStart={billing?.current_period_start ?? null}
+            fallbackEnd={billing?.current_period_end ?? null}
+          >
+          {(shown) => {
+            const shownSource = PLANS.find((plan) => plan.id === shown.planId) ?? catalogSource;
+            const shownPlan = localizedPlan(locale, shownSource);
+            const shownLegacy = legacyPrice && shown.planId === "consultant";
+            const shownMonth = planPriceLabel(shown.planId, "month", 0, locale, shownLegacy);
+            const shownYear = planPriceLabel(shown.planId, "year", 0, locale, shownLegacy);
+            return (
+          <div className="plan-premium card" style={{ marginTop: 24, background: shown.theme.soft, borderColor: shown.theme.accent }}>
+            <span className="plan-ribbon" style={{ background: shown.theme.accent }}>{s.profile.yourPlan}</span>
+            <h2 className="card-title" style={{ color: shown.theme.ink }}>{shown.label}</h2>
 
             <p style={{ marginBottom: 12, fontSize: 15 }}>
-              {s.profile.currentPlan}: <strong>{currentPlanLabel}</strong>
+              {s.profile.currentPlan}: <strong>{shown.label}</strong>
             </p>
 
             {teamLapsed ? (
               <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
                 {s.profile.teamLapsed}
               </p>
-            ) : currentPlan === "assistant" ? (
+            ) : shown.planId === "assistant" ? (
               <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
                 {s.profile.freeBody}
               </p>
@@ -625,7 +825,7 @@ export default function ProfilePage() {
                   {s.profile.status}: <strong>{billing.status}</strong>
                 </div>
                 <div>
-                  {s.profile.price}: <strong>{formatMoney(Number(billing.amount_sar), locale)}</strong>
+                  {s.profile.price}: <strong><SarText>{formatMoney(Number(billing.amount_sar), locale)}</SarText></strong>
                 </div>
                 <div>
                   {s.profile.cycle}:{" "}
@@ -661,11 +861,15 @@ export default function ProfilePage() {
                     <div>
                       {s.profile.price}:{" "}
                       <strong>
-                        {activeSub.currency === "SAR"
-                          ? locale === "ar"
-                            ? formatMoney(activeSub.price, "ar")
-                            : `${formatSar(activeSub.price)} (approx. ${formatUsdApprox(activeSub.price)})`
-                          : `${activeSub.price} ${activeSub.currency}`}
+                        {activeSub.currency === "SAR" ? (
+                          <SarText>
+                            {locale === "ar"
+                              ? formatMoney(activeSub.price, "ar")
+                              : `${formatSar(activeSub.price)} (approx. ${formatUsdApprox(activeSub.price)})`}
+                          </SarText>
+                        ) : (
+                          `${activeSub.price} ${activeSub.currency}`
+                        )}
                       </strong>
                     </div>
                   )}
@@ -679,6 +883,15 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
+            ) : shown.start || shown.end ? (
+              <div style={{ fontSize: 14, color: "#374151", marginBottom: 10, lineHeight: 1.7 }}>
+                <div>
+                  {s.profile.startDate}: <strong>{formatDate(shown.start, locale)}</strong>
+                </div>
+                <div>
+                  {s.profile.endDate}: <strong>{formatDate(shown.end, locale)}</strong>
+                </div>
+              </div>
             ) : (
               <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 10 }}>
                 {s.profile.noBilling}
@@ -686,15 +899,21 @@ export default function ProfilePage() {
             )}
 
             <p style={{ fontSize: 14, color: "#374151", marginBottom: 8 }}>
-              {catalogMonth.primary}
-              {catalogMonth.usd ? ` (${approx} ${catalogMonth.usd})` : ""}
-              {catalogYear.amountSar > 0
-                ? ` · ${catalogYear.primary} (${approx} ${catalogYear.usd})`
-                : ""}
+              <SarText>{shownMonth.primary}</SarText>
+              {shownMonth.usd ? ` (${approx} ${shownMonth.usd})` : ""}
+              {shownYear.amountSar > 0 ? (
+                <>
+                  {" · "}
+                  <SarText>{shownYear.primary}</SarText>
+                  {` (${approx} ${shownYear.usd})`}
+                </>
+              ) : null}
             </p>
             <ul style={{ margin: "0 0 12px", paddingLeft: 18, fontSize: 14, color: "#374151" }}>
-              {(locale === "ar" ? catalogPlan.features : displayFeatures(catalogSource, "month")).map((feature) => (
-                <li key={feature}>{feature}</li>
+              {(locale === "ar" ? shownPlan.features : displayFeatures(shownSource, "month")).map((feature) => (
+                <li key={feature}>
+                  <SarText>{feature}</SarText>
+                </li>
               ))}
             </ul>
             <p style={{ fontSize: 14, color: "#6b7280" }}>
@@ -745,8 +964,12 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+            );
+          }}
+          </ThemedPlanShell>
+          )}
 
-          {/* Activity card */}
+          {tab === "overview" && (
           <div className="card" style={{ marginTop: 24 }}>
             <h2 className="card-title">{s.profile.activity}</h2>
             <ul
@@ -770,8 +993,10 @@ export default function ProfilePage() {
               </li>
             </ul>
           </div>
+          )}
 
-          {/* Billing history */}
+          {tab === "billing" && (
+          <>
           <div className="card" style={{ marginTop: 24 }}>
             <h2 className="card-title">{s.profile.invoices}</h2>
 
@@ -790,7 +1015,9 @@ export default function ProfilePage() {
                     }}
                   >
                     <span>{planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}</span>
-                    <span>{formatMoney(Number(row.amount_sar), locale)}</span>
+                    <span>
+                      <SarText>{formatMoney(Number(row.amount_sar), locale)}</SarText>
+                    </span>
                     <span>{row.billing_interval === "year" ? s.profile.annual : s.profile.monthly}</span>
                     <span>{formatDate(row.paid_at, locale)}</span>
                     <button
@@ -855,9 +1082,13 @@ export default function ProfilePage() {
                     <span>
                       {row.price !== null && row.currency
                         ? row.currency === "SAR"
-                          ? locale === "ar"
-                            ? formatMoney(row.price, "ar")
-                            : `${formatSar(row.price)} (approx. ${formatUsdApprox(row.price)})`
+                          ? (
+                            <SarText>
+                              {locale === "ar"
+                                ? formatMoney(row.price, "ar")
+                                : `${formatSar(row.price)} (approx. ${formatUsdApprox(row.price)})`}
+                            </SarText>
+                          )
                           : `${row.price} ${row.currency}`
                         : "-"}
                     </span>
@@ -872,6 +1103,121 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+          <div className="card" style={{ marginTop: 16 }}>
+            <h2 className="card-title">{s.profile.history}</h2>
+            {planHistory.length === 0 ? (
+              <p className="page-subtitle">{s.profile.noPayments}</p>
+            ) : (
+              <div className="profile-table-wrap">
+                <table className="profile-table">
+                  <thead>
+                    <tr>
+                      <th>{s.profile.plan}</th>
+                      <th>{s.profile.amount}</th>
+                      <th>{s.profile.status}</th>
+                      <th>{s.profile.date}</th>
+                      <th>{s.profile.invoices}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {planHistory.map((row) => (
+                      <tr key={row.id}>
+                        <td>{planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}</td>
+                        <td>
+                          <SarText>{formatMoney(Number(row.amount_sar), locale)}</SarText>
+                        </td>
+                        <td>{row.status}</td>
+                        <td>{formatDate(row.paid_at || row.current_period_start || row.created_at, locale)}</td>
+                        <td>
+                          {row.paid_at ? (
+                            <button
+                              className="btn"
+                              type="button"
+                              onClick={() => {
+                                void (async () => {
+                                  const token = await bearer();
+                                  if (!token) return;
+                                  try {
+                                    await downloadInvoicePdf(row.id, token);
+                                  } catch (err) {
+                                    setErrorMsg(err instanceof Error ? err.message : s.profile.paymentFailed);
+                                  }
+                                })();
+                              }}
+                            >
+                              {s.profile.downloadInvoice}
+                            </button>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          </>
+          )}
+
+          {tab === "topics" && (
+            <>
+              <div className="card">
+                <h2 className="card-title">{s.profile.chats}</h2>
+                {topics.length === 0 ? (
+                  <p className="page-subtitle">{s.profile.topicsEmpty}</p>
+                ) : (
+                  <div className="profile-table-wrap">
+                    <table className="profile-table">
+                      <tbody>
+                        {topics.map((topic) => (
+                          <tr key={topic.id}>
+                            <td>{topic.title || s.chat.newConversation}</td>
+                            <td>{topic.discipline ? disciplineLabel(locale, topic.discipline) : "—"}</td>
+                            <td>{formatDate(topic.updated_at, locale)}</td>
+                            <td><Link href={`/chat?c=${topic.id}`}>{s.profile.openTopic}</Link></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              <div className="card" style={{ marginTop: 16 }}>
+                <h2 className="card-title">{s.profile.documents}</h2>
+                {files.length === 0 ? (
+                  <p className="page-subtitle">{s.profile.filesEmpty}</p>
+                ) : (
+                  <div className="profile-table-wrap">
+                    <table className="profile-table">
+                      <tbody>
+                        {files.map((file) => (
+                          <tr key={file.id}>
+                            <td>{file.name}</td>
+                            <td>{file.size != null ? `${Math.ceil(file.size / 1024)} KB` : "—"}</td>
+                            <td>{formatDate(file.createdAt, locale)}</td>
+                            <td><Link href={`/chat?c=${file.conversationId}`}>{s.profile.openTopic}</Link></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {cropSrc && (
+            <AvatarCropper
+              src={cropSrc}
+              title={s.profile.cropTitle}
+              applyLabel={s.profile.cropApply}
+              cancelLabel={s.profile.cropCancel}
+              onCancel={() => setCropSrc(null)}
+              onApply={(blob) => void saveCroppedAvatar(blob)}
+            />
+          )}
         </div>
     </MarketingShell>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { DISCIPLINES } from "@/lib/disciplines";
 import { ENGINEER_TOOLS } from "@/lib/engineerTools";
 import { useLocale } from "@/app/components/LocaleProvider";
@@ -8,15 +10,24 @@ import { useMessages } from "@/lib/useMessages";
 import { getMarketingContent } from "@/lib/marketing";
 import { disciplineLabel, toolLabel } from "@/lib/labels";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
-import PlanPriceList from "@/app/components/PlanPriceList";
+import HomePlanCards from "@/app/components/marketing/HomePlanCards";
 import PricingBoard from "@/app/components/marketing/PricingBoard";
 import SaudiBusinessBadge from "@/app/components/marketing/SaudiBusinessBadge";
 import AdvisorEcosystem from "@/app/components/AdvisorEcosystem";
+import StartChatLink from "@/app/components/marketing/StartChatLink";
 
 export default function LandingView() {
   const { locale } = useLocale();
   const { m } = useMessages();
   const content = getMarketingContent(locale);
+  const router = useRouter();
+  const [draft, setDraft] = useState("");
+
+  function ask(text: string) {
+    const q = text.trim();
+    if (!q) return;
+    router.push(`/chat?q=${encodeURIComponent(q)}`);
+  }
 
   return (
     <>
@@ -25,10 +36,40 @@ export default function LandingView() {
           <p className="mkt-kicker">{content.hero.kicker}</p>
           <h1>{content.hero.h1}</h1>
           <p className="mkt-lead">{content.hero.lead}</p>
+          <form
+            className="hero-composer"
+            onSubmit={(event) => {
+              event.preventDefault();
+              ask(draft);
+            }}
+          >
+            <textarea
+              className="hero-composer-input"
+              rows={1}
+              value={draft}
+              placeholder={content.hero.askPlaceholder}
+              aria-label={content.hero.askPlaceholder}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  ask(draft);
+                }
+              }}
+            />
+            <button className="chat-input-send-btn" type="submit" aria-label={content.hero.askSend} disabled={!draft.trim()}>
+              ➤
+            </button>
+          </form>
+          <div className="hero-chips">
+            {content.hero.chips.map((chip) => (
+              <button key={chip} type="button" className="hero-chip" onClick={() => ask(chip)}>
+                {chip}
+              </button>
+            ))}
+          </div>
           <div className="mkt-cta-row">
-            <Link className="mkt-btn mkt-btn-primary" href="/chat">
-              {content.hero.primaryCta}
-            </Link>
+            <StartChatLink className="mkt-btn mkt-btn-primary mkt-cta-pulse" />
             <Link className="mkt-btn mkt-btn-secondary" href="/pricing">
               {content.hero.secondaryCta}
             </Link>
@@ -44,9 +85,7 @@ export default function LandingView() {
               <li key={tool.id}>{toolLabel(locale, tool.id)}</li>
             ))}
           </ul>
-          <Link className="mkt-btn mkt-btn-primary" href="/chat">
-            {content.nav.openChat}
-          </Link>
+          <StartChatLink className="mkt-btn mkt-btn-primary" />
           <SaudiBusinessBadge />
         </div>
       </section>
@@ -97,6 +136,14 @@ export default function LandingView() {
             </li>
           ))}
         </ol>
+        <div className="mkt-cta-row">
+          <Link className="mkt-btn mkt-btn-secondary" href="/how-it-works">
+            {content.how.openPage}
+          </Link>
+          <Link className="mkt-btn mkt-btn-ghost" href="/guide">
+            {content.how.openGuide}
+          </Link>
+        </div>
       </section>
 
       <section className="mkt-section">
@@ -130,16 +177,14 @@ export default function LandingView() {
           ))}
         </div>
         <h3>{content.faq.pricesHeading}</h3>
-        <PlanPriceList showFeatures />
+        <HomePlanCards />
       </section>
 
       <section className="mkt-closing">
         <h2>{content.closing.title}</h2>
         <p>{content.closing.body}</p>
         <div className="mkt-cta-row">
-          <Link className="mkt-btn mkt-btn-primary" href="/chat">
-            {content.closing.primaryCta}
-          </Link>
+          <StartChatLink className="mkt-btn mkt-btn-primary" />
           <BuyPlanButton planId="team" interval="month" className="mkt-btn mkt-btn-secondary" />
         </div>
       </section>

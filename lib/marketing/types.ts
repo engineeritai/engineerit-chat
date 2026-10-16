@@ -17,18 +17,24 @@ export type MarketingContent = {
     disciplines: string;
     tools: string;
     how: string;
+    guide: string;
     teams: string;
     advisors: string;
     pricing: string;
     faq: string;
     login: string;
     openChat: string;
+    startChat: string;
+    continueChat: string;
   };
   hero: {
     kicker: string;
     h1: string;
     lead: string;
     primaryCta: string;
+    askPlaceholder: string;
+    askSend: string;
+    chips: readonly [string, string, string, string];
     secondaryCta: string;
     tertiaryCta: string;
     panelTitle: string;
@@ -56,6 +62,8 @@ export type MarketingContent = {
     title: string;
     intro: string;
     steps: { title: string; body: string }[];
+    openPage: string;
+    openGuide: string;
   };
   audiences: {
     title: string;
@@ -97,6 +105,7 @@ export type MarketingContent = {
     annualExplainer: string;
     usdNote: string;
     vatNote: string;
+    rateNote: string;
     individualTitle: string;
     individualIntro: string;
     firmTitle: string;

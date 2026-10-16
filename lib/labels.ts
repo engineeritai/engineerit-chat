@@ -10,6 +10,7 @@ import {
   type PlanId,
 } from "@/lib/plans";
 import { displayFeatures } from "@/lib/pricingDisplay";
+import { RIYAL, riyalAmount } from "@/lib/riyal";
 
 const AR_DISCIPLINES: Record<Discipline, string> = {
   General: "عام",
@@ -67,7 +68,7 @@ const AR_PLANS: Record<
     name: "المهندس",
     shortName: AR_PLAN_MARK.engineer,
     tagline: "للمهندسين الممارسين الذين يحتاجون توثيقاً أسرع.",
-    priceMonthly: "19 ر.س شهرياً",
+    priceMonthly: `${RIYAL} 19 شهرياً`,
     features: [
       "كل ما في باقة المهندس المساعد",
       "تحليل مستندات وورد وإكسل وباوربوينت",
@@ -80,7 +81,7 @@ const AR_PLANS: Record<
     name: "المهندس المحترف",
     shortName: AR_PLAN_MARK.professional,
     tagline: "لكبار المهندسين وقادة التصميم.",
-    priceMonthly: "41 ر.س شهرياً",
+    priceMonthly: `${RIYAL} 41 شهرياً`,
     features: [
       "كل ما في باقة المهندس",
       "تصاميم ومعادلات وصيغ وفحوصات تصميم متقدمة",
@@ -94,7 +95,7 @@ const AR_PLANS: Record<
     name: "المهندس الاستشاري",
     shortName: AR_PLAN_MARK.consultant,
     tagline: "للاستشاريين والمكاتب التي تدير مشاريع كاملة.",
-    priceMonthly: "99 ر.س شهرياً",
+    priceMonthly: `${RIYAL} 99 شهرياً`,
     features: [
       "كل ما في باقة المهندس المحترف",
       "تحليل قوائم المعدات وجداول الكميات",
@@ -109,11 +110,11 @@ const AR_PLANS: Record<
     name: "الفريق",
     shortName: AR_PLAN_MARK.team,
     tagline: "وصول بمستوى المهندس الاستشاري لمكتب، على اشتراك واحد.",
-    priceMonthly: "499 ر.س شهرياً",
+    priceMonthly: `${RIYAL} 499 شهرياً`,
     features: [
       "كل ما في باقة المهندس الاستشاري",
       "5 مقاعد مشمولة",
-      "مقعد إضافي 89 ر.س شهرياً",
+      `مقعد إضافي ${RIYAL} 89 شهرياً`,
       "يتجدد تلقائياً حتى الإلغاء",
       "دعوة الزملاء بالبريد",
       "ينتهي الوصول لكل الفريق إذا توقف الاشتراك",
@@ -124,11 +125,11 @@ const AR_PLANS: Record<
     name: "المؤسسات",
     shortName: AR_PLAN_MARK.enterprise,
     tagline: "وصول بمستوى المهندس الاستشاري لمكتب أكبر، على اشتراك واحد.",
-    priceMonthly: "3,900 ر.س شهرياً",
+    priceMonthly: `${RIYAL} 3,900 شهرياً`,
     features: [
       "كل ما في باقة المهندس الاستشاري",
       "10 مقاعد مشمولة",
-      "مقعد إضافي 299 ر.س شهرياً",
+      `مقعد إضافي ${RIYAL} 299 شهرياً`,
       "يتجدد تلقائياً حتى الإلغاء",
       "إدارة المشاريع وضمان البرنامج وجاهزية التشغيل ودعم القرار مشمولة",
     ],
@@ -141,7 +142,7 @@ export function featuresForLocale(locale: Locale, plan: Plan, interval: BillingI
     if ((plan.id === "team" || plan.id === "enterprise") && feature.startsWith("مقعد إضافي")) {
       const amount = (plan.id === "enterprise" ? ENTERPRISE_EXTRA_SEAT_SAR : EXTRA_SEAT_SAR)[interval];
       const period = interval === "year" ? "سنوياً" : "شهرياً";
-      return `مقعد إضافي ${amount.toLocaleString("en-US")} ر.س ${period}`;
+      return `مقعد إضافي ${riyalAmount(amount.toLocaleString("en-US"))} ${period}`;
     }
     return feature;
   });
@@ -157,9 +158,8 @@ export function toolLabel(locale: Locale, id: EngineerToolId): string {
   return ENGINEER_TOOLS.find((tool) => tool.id === id)?.label ?? id;
 }
 
-export function formatMoney(amount: number, locale: Locale): string {
-  if (locale === "ar") return `${amount.toLocaleString("en-US")} ر.س`;
-  return `SAR ${amount.toLocaleString("en-US")}`;
+export function formatMoney(amount: number, _locale: Locale): string {
+  return riyalAmount(amount.toLocaleString("en-US"));
 }
 
 export function formatUsd(amountSar: number, locale: Locale): string {

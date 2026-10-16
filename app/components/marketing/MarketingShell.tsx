@@ -1,18 +1,42 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { useLocale } from "@/app/components/LocaleProvider";
+import { AccountState } from "@/app/components/marketing/AccountState";
+import AppSidebar from "@/app/components/marketing/AppSidebar";
 import MarketingFooter from "@/app/components/marketing/MarketingFooter";
 import MarketingHeader from "@/app/components/marketing/MarketingHeader";
+import MobileTabBar from "@/app/components/MobileTabBar";
 
-export default function MarketingShell({ children }: { children: ReactNode }) {
+function ShellFrame({ children }: { children: ReactNode }) {
   const { locale, dir } = useLocale();
+  const pathname = usePathname() || "/";
+  const [drawer, setDrawer] = useState(false);
+  const chat = pathname === "/chat";
+  const app = chat || pathname.startsWith("/advisors/") || pathname.startsWith("/checkout");
 
   return (
-    <div className="mkt" dir={dir} lang={locale === "ar" ? "ar" : "en"}>
-      <MarketingHeader />
-      <main>{children}</main>
-      <MarketingFooter />
+    <div
+      className={"mkt" + (app ? " mkt-app" : "") + (chat ? " mkt-chat" : "")}
+      dir={dir}
+      lang={locale === "ar" ? "ar" : "en"}
+    >
+      {chat ? null : <AppSidebar open={drawer} onClose={() => setDrawer(false)} />}
+      <div className="mkt-column">
+        <MarketingHeader onMenu={() => setDrawer(true)} />
+        <main className="mkt-main">{children}</main>
+        {app ? null : <MarketingFooter />}
+      </div>
+      {chat ? null : <MobileTabBar />}
     </div>
+  );
+}
+
+export default function MarketingShell({ children }: { children: ReactNode }) {
+  return (
+    <AccountState>
+      <ShellFrame>{children}</ShellFrame>
+    </AccountState>
   );
 }

@@ -5,6 +5,8 @@ import { featuresForLocale, localizedPlan } from "@/lib/labels";
 import { getMarketingContent } from "@/lib/marketing";
 import { PLANS, type BillingInterval } from "@/lib/plans";
 import { planPriceLabel } from "@/lib/pricingDisplay";
+import PriceRateNote from "@/app/components/marketing/PriceRateNote";
+import { SarText } from "@/app/components/RiyalAmount";
 
 export default function PlanPriceList({
   interval = "month",
@@ -17,7 +19,8 @@ export default function PlanPriceList({
   const content = getMarketingContent(locale);
 
   return (
-    <ul className="mkt-bullets">
+    <div>
+      <ul className="mkt-bullets">
       {PLANS.map((source) => {
         const plan = localizedPlan(locale, source);
         const month = planPriceLabel(plan.id, "month", 0, locale);
@@ -27,9 +30,17 @@ export default function PlanPriceList({
           <li key={plan.id}>
             <strong>{plan.name}</strong>
             {": "}
-            {month.primary}
+            <SarText>{month.primary}</SarText>
             {month.usd ? ` (${content.pricing.approx} ${month.usd})` : ""}
-            {year.amountSar > 0 ? ` · ${year.primary} (${content.pricing.approx} ${year.usd})` : ""}
+            {year.amountSar > 0 ? (
+              <>
+                {" · "}
+                <SarText>{year.primary}</SarText>
+                {` (${content.pricing.approx} ${year.usd})`}
+              </>
+            ) : (
+              ""
+            )}
             {showFeatures && (
               <ul>
                 {featuresForLocale(
@@ -37,13 +48,17 @@ export default function PlanPriceList({
                   source,
                   shown.amountSar > 0 && interval === "year" ? "year" : "month"
                 ).map((feature) => (
-                  <li key={feature}>{feature}</li>
+                  <li key={feature}>
+                    <SarText>{feature}</SarText>
+                  </li>
                 ))}
               </ul>
             )}
           </li>
         );
       })}
-    </ul>
+      </ul>
+      <PriceRateNote />
+    </div>
   );
 }

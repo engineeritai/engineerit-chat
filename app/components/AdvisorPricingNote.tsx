@@ -4,6 +4,8 @@ import { ADVISOR_ACCESS, PRICING_PLAN_IDS, type AdvisorPlanId } from "@/lib/advi
 import { ENTERPRISE_EXTRA_SEAT_SAR, ENTERPRISE_INCLUDED_SEATS } from "@/lib/plans";
 import { ENTERPRISE_PLAN, TEAM_PLAN } from "@/lib/pricingDisplay";
 import { useMessages } from "@/lib/useMessages";
+import PriceRateNote from "@/app/components/marketing/PriceRateNote";
+import { SarText } from "@/app/components/RiyalAmount";
 
 function fill(template: string, values: Record<string, string | number>) {
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
@@ -53,7 +55,11 @@ export default function AdvisorPricingNote() {
               <tr key={planId}>
                 <td>
                   {m.plans[planId as Exclude<typeof planId, "guest">]}
-                  {price ? <div className="advisor-plan-price">{price}</div> : null}
+                  {price ? (
+                    <div className="advisor-plan-price">
+                      <SarText>{price}</SarText>
+                    </div>
+                  ) : null}
                 </td>
                 <td>{access}</td>
               </tr>
@@ -61,6 +67,7 @@ export default function AdvisorPricingNote() {
           })}
         </tbody>
       </table>
+      <PriceRateNote />
     </div>
   );
 }

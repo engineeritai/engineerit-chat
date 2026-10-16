@@ -1,5 +1,6 @@
 import { receiptVatMode, vatFromInclusive } from "@/lib/billingCycle";
 import { PLAN_LABELS, formatSar, type BillingInterval, type PlanId } from "@/lib/plans";
+import { RIYAL } from "@/lib/riyal";
 
 export type InvoiceLocale = "en" | "ar";
 
@@ -159,9 +160,9 @@ function formatAmount(amount: number) {
   return amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-/** Number, then a space, then the riyal sign. The PDF draws this left to right. */
+/** Riyal sign, then a space, then the number. The PDF draws the sign from the official paths. */
 export function formatArabicAmount(amount: number) {
-  return `${formatAmount(amount)} ر.س`;
+  return `${RIYAL} ${formatAmount(amount)}`;
 }
 
 function formatWhen(value: string | null | undefined) {

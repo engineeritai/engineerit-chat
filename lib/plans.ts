@@ -1,5 +1,7 @@
 // lib/plans.ts
 
+import { RIYAL, riyalAmount } from "@/lib/riyal";
+
 export type PlanId =
   | "assistant"
   | "engineer"
@@ -76,14 +78,50 @@ export const ADVISOR_FEATURE_BY_PLAN = {
   enterprise: "PMO, Program Assurance, Operations Readiness, and Decision Support included",
 } as const;
 
-export const PLAN_COLORS: Record<PlanId, string> = {
-  assistant: "#2563eb",
-  engineer: "#f97316",
-  professional: "#0f766e",
-  consultant: "#7c3aed",
-  team: "#0e7490",
-  enterprise: "#111827",
+/** Shared plan colour tokens. Accent is the pill; soft is a wash behind cards. */
+export const PLAN_THEME: Record<PlanId, { accent: string; soft: string; ink: string }> = {
+  assistant: { accent: "#5c6b82", soft: "#f3f5f8", ink: "#243044" },
+  engineer: { accent: "#c47b2b", soft: "#fbf6ef", ink: "#6a3e0c" },
+  professional: { accent: "#1f7a72", soft: "#f1f8f7", ink: "#0d4f4a" },
+  consultant: { accent: "#5b4db8", soft: "#f5f4fb", ink: "#32286e" },
+  team: { accent: "#0e7490", soft: "#f2f8fa", ink: "#0a4d60" },
+  enterprise: { accent: "#1c2430", soft: "#f4f5f7", ink: "#111418" },
 };
+
+export const PLAN_COLORS: Record<PlanId, string> = {
+  assistant: PLAN_THEME.assistant.accent,
+  engineer: PLAN_THEME.engineer.accent,
+  professional: PLAN_THEME.professional.accent,
+  consultant: PLAN_THEME.consultant.accent,
+  team: PLAN_THEME.team.accent,
+  enterprise: PLAN_THEME.enterprise.accent,
+};
+
+export const PLAN_BADGE: Record<PlanId, { en: string; ar: string }> = {
+  assistant: { en: "Free", ar: "مجاني" },
+  engineer: { en: "Eng", ar: "مهن" },
+  professional: { en: "Pro", ar: "مح" },
+  consultant: { en: "Cons", ar: "است" },
+  team: { en: "Team", ar: "فريق" },
+  enterprise: { en: "Ent", ar: "مؤس" },
+};
+
+/**
+ * Header-only labels. Identical in every language and every plan slot so the
+ * bar never grows with "Professional Engineer" or "المهندس الاستشاري".
+ */
+export const HEADER_PLAN_ABBREV: Record<PlanId, string> = {
+  assistant: "Free",
+  engineer: "Eng",
+  professional: "Pro",
+  consultant: "Cons",
+  team: "Team",
+  enterprise: "Ent",
+};
+
+export function planBadge(planId: PlanId, locale: "en" | "ar") {
+  return PLAN_BADGE[planId][locale];
+}
 
 export function isPlanId(value: string | null | undefined): value is PlanId {
   return (
@@ -130,10 +168,12 @@ export function periodDays(interval: BillingInterval) {
 }
 
 export function formatSar(amount: number, interval?: BillingInterval) {
-  const formatted = amount.toLocaleString("en-US");
-  if (!interval) return `SAR ${formatted}`;
-  return `SAR ${formatted} / ${interval === "year" ? "year" : "month"}`;
+  const formatted = riyalAmount(amount.toLocaleString("en-US"));
+  if (!interval) return formatted;
+  return `${formatted} / ${interval === "year" ? "year" : "month"}`;
 }
+
+export { RIYAL };
 
 export type PriceQuote = {
   planId: SelfServePlanId;

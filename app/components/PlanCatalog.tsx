@@ -15,6 +15,8 @@ import {
 } from "@/lib/plans";
 import { planPriceLabel } from "@/lib/pricingDisplay";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
+import PriceRateNote from "@/app/components/marketing/PriceRateNote";
+import { SarText } from "@/app/components/RiyalAmount";
 
 const ENGINEER_TOOLS = [
   { id: "drawing", label: "Drawing & Diagrams" },
@@ -98,7 +100,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
       </div>
 
       <p style={{ fontSize: 13, color: "#6b7280", marginTop: 0 }}>
-        {content.pricing.annualExplainer} {content.pricing.usdNote}
+        {content.pricing.annualExplainer}
       </p>
 
       {errorMsg && (
@@ -159,7 +161,9 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
                 </div>
               </div>
 
-              <div style={{ fontSize: 18, fontWeight: 800, color, marginBottom: 4 }}>{price.primary}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color, marginBottom: 4 }}>
+                <SarText>{price.primary}</SarText>
+              </div>
               {price.usd && (
                 <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 8 }}>
                   {content.pricing.approx} {price.usd}
@@ -169,7 +173,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
               <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "#374151", lineHeight: 1.45 }}>
                 {features.map((feature) => (
                   <li key={feature} style={{ marginBottom: 4 }}>
-                    {feature}
+                    <SarText>{feature}</SarText>
                   </li>
                 ))}
               </ul>
@@ -177,9 +181,11 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
               {firmId && seatQuote && (
                 <div style={{ marginTop: 12 }}>
                   <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
-                    {locale === "ar"
-                      ? `مقاعد إضافية (${extraSeatPrice(firmId)[interval].toLocaleString("en-US")} ر.س)`
-                      : `Extra seats (SAR ${extraSeatPrice(firmId)[interval].toLocaleString("en-US")})`}
+                    <SarText>
+                      {locale === "ar"
+                        ? `مقاعد إضافية (${extraSeatPrice(firmId)[interval].toLocaleString("en-US")} ر.س)`
+                        : `Extra seats (SAR ${extraSeatPrice(firmId)[interval].toLocaleString("en-US")})`}
+                    </SarText>
                     <input
                       className="input"
                       type="number"
@@ -257,6 +263,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
           );
         })}
       </div>
+      <PriceRateNote />
     </div>
   );
 }

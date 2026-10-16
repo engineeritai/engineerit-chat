@@ -3317,9 +3317,9 @@ button.advisor-card-link {
     grid-template-columns: 1fr;
   }
 
-.advisor-chat-intro {
-  padding: 12px 16px 4px;
-}
+  .advisor-chat-intro {
+    padding: 12px 16px 4px;
+  }
 }
 
 .history-search-label {

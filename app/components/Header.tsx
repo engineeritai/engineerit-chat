@@ -7,7 +7,7 @@ import LanguageToggle from "./LanguageToggle";
 import { planById } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import { supabase } from "@/lib/supabaseClient";
-import { PLAN_COLORS, PLAN_LABELS, type PlanId } from "@/lib/plans";
+import { HEADER_PLAN_ABBREV, PLAN_COLORS, type PlanId } from "@/lib/plans";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
 
 type HeaderProps = {
@@ -365,7 +365,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           position: "relative",
         }}
       >
-        <LanguageToggle />
+        <LanguageToggle compact />
         {/* NOT LOGGED IN */}
         {!isLoggedIn && (
           <>
@@ -647,16 +647,15 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         {isLoggedIn && (
           <>
             <span
+              className="plan-badge plan-badge-fixed"
+              title={planName(planId)}
+              translate="no"
               style={{
                 backgroundColor: PLAN_COLORS[planId],
                 color: "white",
-                padding: "4px 10px",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 600,
               }}
             >
-              {planName(planId)}
+              {HEADER_PLAN_ABBREV[planId]}
             </span>
 
             <button
@@ -666,19 +665,21 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                 setIsLoginOpen(false);
               }}
               style={{
-                width: 36,
-                height: 24,
+                width: 32,
+                height: 32,
                 borderRadius: "9999px",
                 backgroundColor: avatarUrl ? "transparent" : "#cfd0d4ff",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontWeight: 600,
+                fontWeight: 500,
                 fontSize: 13,
                 color: "#374151",
                 border: "none",
                 cursor: "pointer",
                 overflow: "hidden",
+                boxShadow: `0 0 0 2px ${PLAN_COLORS[planId]}`,
+                flex: "0 0 32px",
               }}
               aria-label={s.header.accountMenu}
             >

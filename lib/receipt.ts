@@ -1,4 +1,5 @@
 import { PLAN_LABELS, formatSar, type BillingInterval, type PlanId } from "@/lib/plans";
+import { riyalAmount } from "@/lib/riyal";
 import { buildInvoiceDocument } from "@/lib/invoiceDocument";
 import { receiptVatMode, vatFromInclusive } from "@/lib/billingCycle";
 import { renderInvoicePdf } from "@/lib/invoicePdf";
@@ -33,7 +34,7 @@ const PLAN_LABELS_AR: Record<PlanId, string> = {
 };
 
 function formatSarAr(amount: number) {
-  return `${amount.toLocaleString("en-US")} ريال`;
+  return riyalAmount(amount.toLocaleString("en-US"));
 }
 
 export function buildReceipt(
