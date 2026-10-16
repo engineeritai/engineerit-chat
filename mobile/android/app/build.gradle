@@ -1,12 +1,32 @@
 apply plugin: 'com.android.application'
 
 def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+if (keystorePath != null) {
+    keystorePath = keystorePath.trim()
+}
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
-def hasReleaseKeystore = keystorePath || keystorePropertiesFile.exists()
+// Release signing is applied only when a keystore is actually available.
+// GitHub Actions sets ANDROID_KEYSTORE_PATH after decoding ANDROID_KEYSTORE_BASE64.
+// An empty secret must stay unsigned so bundleRelease still emits an AAB.
+def releaseStoreFile = null
+def releaseStorePassword = null
+def releaseKeyAlias = null
+def releaseKeyPassword = null
+if (keystorePath) {
+    releaseStoreFile = keystorePath
+    releaseStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+    releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+    releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+} else if (keystorePropertiesFile.exists() && keystoreProperties.getProperty("storeFile")) {
+    releaseStoreFile = keystoreProperties.getProperty("storeFile")
+    releaseStorePassword = keystoreProperties.getProperty("storePassword")
+    releaseKeyAlias = keystoreProperties.getProperty("keyAlias")
+    releaseKeyPassword = keystoreProperties.getProperty("keyPassword")
+}
 
 android {
     namespace = "ai.engineerit.app"
@@ -24,25 +44,20 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    signingConfigs {
-        release {
-            if (keystorePath) {
-                storeFile file(keystorePath)
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-            } else if (keystorePropertiesFile.exists()) {
-                storeFile file(keystoreProperties['storeFile'])
-                storePassword keystoreProperties['storePassword']
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
+    if (releaseStoreFile) {
+        signingConfigs {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
             }
         }
     }
     buildTypes {
         release {
             minifyEnabled false
-            if (hasReleaseKeystore) {
+            if (releaseStoreFile) {
                 signingConfig signingConfigs.release
             }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
