@@ -7,7 +7,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/": {
       title: "engineerit.ai | AI engineering assistant for GCC consultancies",
       description:
-        "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Paid plans add exports.",
+        "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Your subscription unlocks unlimited chats, engineering tools and AI Advisors.",
     },
     "/faq": {
       title: "Questions | engineerit.ai",
@@ -102,7 +102,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/": {
       title: "engineerit.ai | مساعد هندسي بالذكاء الاصطناعي لمكاتب الخليج",
       description:
-        "engineerit.ai يهندس أي فكرة أو موضوع بمنهج منظم. أرفق ملفاتك، واختر أداة، واحصل على إجابات منظمة. الباقات المدفوعة تضيف التصدير.",
+        "engineerit.ai يهندس أي فكرة أو موضوع بمنهج منظم. أرفق ملفاتك، واختر أداة، واحصل على إجابات منظمة. اشتراكك يفعّل المحادثات غير المحدودة والأدوات الهندسية ومستشاري الذكاء الاصطناعي.",
     },
     "/faq": {
       title: "الأسئلة الشائعة | engineerit.ai",

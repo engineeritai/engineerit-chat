@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import React, { useRef, useState } from "react";
 import { PlanSummary } from "@/app/components/marketing/AccountMenu";
 import { useAccount } from "@/app/components/marketing/AccountState";
+import Wordmark from "@/app/components/marketing/Wordmark";
 import { getMarketingContent } from "@/lib/marketing";
 import { useMessages } from "@/lib/useMessages";
 
@@ -85,10 +86,7 @@ export default function Sidebar({
     <aside className="sidebar-inner chat-side">
       <div className="chat-side-top">
         <Link href="/" className="chat-side-brand brand" aria-label={s.nav.home} onClick={onCloseMobile}>
-          <span className="word">
-            <span className="engineer">engineer</span>
-            <span className="it">it</span>
-          </span>
+          <Wordmark decorative />
         </Link>
         <Link href="/" className="chat-side-row" onClick={onCloseMobile}>
           {s.nav.home}

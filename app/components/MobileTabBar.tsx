@@ -35,7 +35,7 @@ export default function MobileTabBar() {
             aria-current={active ? "page" : undefined}
             aria-label={label}
           >
-            {tab.id === "chat" ? <EitMark size={28} /> : null}
+            {tab.id === "chat" ? <EitMark size={28} title="eit" /> : null}
             <span>{label}</span>
           </Link>
         );
