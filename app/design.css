@@ -1721,10 +1721,17 @@ body.acct-open .mkt-header {
 @media (max-width: 1023px) {
   .mkt-tabbar a {
     flex-direction: column;
-    gap: 1px;
+    justify-content: flex-end;
+    gap: 2px;
+    padding-bottom: 6px;
     font-size: 11px;
     font-weight: 500;
     line-height: 1.1;
+  }
+
+  .mkt-tabbar .eit-mark {
+    height: 22px;
+    width: auto;
   }
 }
 
@@ -1843,6 +1850,38 @@ body.acct-open .mkt-header {
 .mkt-footer-line .word {
   font-size: 15px;
   font-weight: 500;
+}
+
+.mkt-footer-trust {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.mkt-footer-registered {
+  white-space: nowrap;
+}
+
+.mkt-footer-trust a {
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mkt-footer-trust a:hover {
+  color: var(--ink);
+}
+
+@media (min-width: 1280px) {
+  .mkt-footer-line {
+    flex-wrap: nowrap;
+  }
 }
 
 @media (max-width: 1023px) {
@@ -2249,6 +2288,22 @@ body.acct-open .mkt-header {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.mkt-hero .mkt-lead {
+  max-width: 42em;
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .mkt-hero .mkt-lead {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+}
+
 .mkt h1.brand-headline,
 .brand-headline {
   margin: 0;
@@ -2278,30 +2333,9 @@ body.acct-open .mkt-header {
   color: var(--ink);
 }
 
-.brand-ar {
-  white-space: nowrap;
-}
-
-.brand-ar-solid {
+.headline-ar {
   color: #0d60e4;
-}
-
-.brand-ar-hollow {
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 0.045em #0d60e4;
-}
-
-.mkt-btn-primary .brand-ar-solid {
-  color: #fff;
-  -webkit-text-fill-color: #fff;
-  -webkit-text-stroke: 0;
-}
-
-.mkt-btn-primary .brand-ar-hollow {
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 0.045em #fff;
+  white-space: nowrap;
 }
 
 .plus-menu button.tool-row {
