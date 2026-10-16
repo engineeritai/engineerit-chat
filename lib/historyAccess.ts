@@ -52,14 +52,26 @@ export async function loadHistoryAccount(userId: string): Promise<HistoryAccount
     if (isUuid(teamId)) teamIds.add(teamId);
   }
 
-  const members = await supabaseAdmin
+  const activeMembers = await supabaseAdmin
     .from("team_members")
     .select("team_id")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq("status", "active");
+  const members = activeMembers.error
+    ? await supabaseAdmin.from("team_members").select("team_id").eq("user_id", userId)
+    : activeMembers;
 
   if (!members.error && members.data) {
     for (const row of members.data) {
       const teamId = row.team_id ? String(row.team_id) : "";
+      if (isUuid(teamId)) teamIds.add(teamId);
+    }
+  }
+
+  const ownedTeams = await supabaseAdmin.from("teams").select("id").eq("owner_id", userId);
+  if (!ownedTeams.error && ownedTeams.data) {
+    for (const row of ownedTeams.data) {
+      const teamId = row.id ? String(row.id) : "";
       if (isUuid(teamId)) teamIds.add(teamId);
     }
   }

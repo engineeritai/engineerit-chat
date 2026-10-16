@@ -6,11 +6,18 @@ Guests still get one temporary chat in the page. It is not written to the databa
 
 ## One-time setup
 
-1. Open the Supabase SQL editor for this project and run:
+1. Apply the billing migrations first. They create `public.teams` and `public.team_members`:
 
-   `supabase/migrations/20261016120000_conversations_and_messages.sql`
+   - `supabase/migrations/20261016120000_teams_and_enterprise.sql`
+   - `supabase/migrations/20261016140000_moyasar_invoices.sql`
+   - `supabase/migrations/20261016160000_recurring_billing.sql`
+   - `supabase/migrations/20261016180000_advisor_tiers_and_legacy_price.sql`
 
-   The script is safe to re-run. It expects `public.profiles` to already exist, with `profiles.id` equal to `auth.users.id` and a `subscription_tier` column.
+   Then run:
+
+   `supabase/migrations/20261016200000_conversations_and_messages.sql`
+
+   The history script is safe to re-run. It expects `public.profiles` to already exist, with `profiles.id` equal to `auth.users.id` and a `subscription_tier` column. It does not create `teams` or `team_members` and does not replace their policies. `conversations.team_id` is a foreign key only when `public.teams` already exists (`to_regclass('public.teams')`). Sharing queries `team_members` and `teams.owner_id` only when those tables exist.
 
 2. In the Vercel project, set `CRON_SECRET` to a long random value. Vercel Cron sends it as `Authorization: Bearer <CRON_SECRET>` to `GET /api/cron/history-cleanup` every day at 03:00 UTC (`vercel.json`). The route rejects the call when the secret is missing or wrong.
 
@@ -22,21 +29,9 @@ Guests still get one temporary chat in the page. It is not written to the databa
 
 4. The existing `/api/cleanup` job also deletes expired conversations. Keep using it if something already calls it. The protected cron is the one that should run daily.
 
-5. Team sharing needs a team link. A Team or Enterprise user can share only after the account is attached to a team, either by `profiles.team_id` or by a `team_members` row:
+5. Team sharing uses the team created by billing. A Team or Enterprise user can share after they own that team (`teams.owner_id`) or have an active `team_members` row (`user_id` set and `status = 'active'`). Checkout creates those rows. Do not insert a second teams table from this migration.
 
-   ```sql
-   insert into public.teams (id, name)
-   values ('00000000-0000-4000-8000-000000000001', 'Example team');
-
-   insert into public.team_members (team_id, user_id)
-   values ('00000000-0000-4000-8000-000000000001', '<auth user uuid>');
-
-   update public.profiles
-   set team_id = '00000000-0000-4000-8000-000000000001'
-   where id = '<auth user uuid>';
-   ```
-
-   Use one real team id. Both links are optional; either one is enough. Do not grant browser clients insert rights on `teams` or `team_members`. Membership stays a server-side step.
+6. The billing deploy schedules `GET /api/cron/renewals`. This branch schedules `GET /api/cron/history-cleanup`. When both land, `vercel.json` needs both cron entries.
 
 ## Tables
 
@@ -51,7 +46,7 @@ Deleting a conversation deletes its messages (`ON DELETE CASCADE`).
 Row level security is enabled:
 
 - A user can read, create, update, and delete only their own conversations.
-- A user can read a teammate's conversation only when `shared_with_team` is true and `team_id` is one of their teams.
+- A user can read a teammate's conversation only when `shared_with_team` is true and `team_id` is a team they own (`teams.owner_id`) or belong to as an active member.
 - Only the owner can insert messages.
 - Sharing is allowed only when `profiles.subscription_tier` is `team` or `enterprise` and the team id is theirs.
 - `purge_expired_conversations()` is executable by `service_role` only.

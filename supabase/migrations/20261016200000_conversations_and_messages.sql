@@ -1,4 +1,9 @@
 -- Chat history for the signed-in user.
+-- Run this after the billing migrations, which already create public.teams
+-- and public.team_members (20261016120000 through 20261016180000).
+-- This script does not create or alter those tables or their policies.
+-- A conversation.team_id foreign key is added only when public.teams exists.
+--
 -- Conversations and messages are keyed by auth.users.id.
 -- Row level security: a user reads and writes only their own rows,
 -- plus conversations a teammate explicitly shared with a shared team.
@@ -15,39 +20,6 @@
 
 create extension if not exists pgcrypto;
 
-create table if not exists public.teams (
-  id uuid primary key default gen_random_uuid(),
-  name text not null default '',
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.team_members (
-  team_id uuid not null references public.teams (id) on delete cascade,
-  user_id uuid not null references auth.users (id) on delete cascade,
-  created_at timestamptz not null default now(),
-  primary key (team_id, user_id)
-);
-
-create index if not exists team_members_user_idx on public.team_members (user_id);
-
-alter table public.profiles
-  add column if not exists team_id uuid;
-
-do $$
-begin
-  if not exists (
-    select 1
-    from pg_constraint
-    where conname = 'profiles_team_id_fkey'
-  ) then
-    alter table public.profiles
-      add constraint profiles_team_id_fkey
-      foreign key (team_id) references public.teams (id) on delete set null;
-  end if;
-exception
-  when duplicate_object then null;
-end $$;
-
 create table if not exists public.conversations (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
@@ -55,11 +27,24 @@ create table if not exists public.conversations (
   discipline text,
   pinned boolean not null default false,
   shared_with_team boolean not null default false,
-  team_id uuid references public.teams (id) on delete set null,
+  team_id uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   expires_at timestamptz
 );
+
+do $$
+begin
+  if to_regclass('public.teams') is not null
+     and not exists (
+       select 1 from pg_constraint where conname = 'conversations_team_id_fkey'
+     )
+  then
+    alter table public.conversations
+      add constraint conversations_team_id_fkey
+      foreign key (team_id) references public.teams (id) on delete set null;
+  end if;
+end $$;
 
 create index if not exists conversations_user_updated_idx
   on public.conversations (user_id, pinned desc, updated_at desc);
@@ -87,29 +72,75 @@ create index if not exists messages_conversation_created_idx
 
 create index if not exists messages_user_idx on public.messages (user_id);
 
-alter table public.teams enable row level security;
-alter table public.team_members enable row level security;
 alter table public.conversations enable row level security;
 alter table public.messages enable row level security;
 
+-- Team ids for the caller. Queries run only when the billing tables
+-- (or an optional profiles.team_id column) are present.
 create or replace function public.current_team_ids()
 returns setof uuid
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
 as $$
-  select tm.team_id
-  from public.team_members tm
-  where tm.user_id = auth.uid()
-  union
-  select p.team_id
-  from public.profiles p
-  where p.id = auth.uid()
-    and p.team_id is not null
+begin
+  if to_regclass('public.team_members') is not null then
+    if exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'team_members'
+        and column_name = 'status'
+    ) then
+      return query execute $q$
+        select tm.team_id
+        from public.team_members tm
+        where tm.user_id = auth.uid()
+          and tm.status = 'active'
+      $q$;
+    else
+      return query execute $q$
+        select tm.team_id
+        from public.team_members tm
+        where tm.user_id = auth.uid()
+      $q$;
+    end if;
+  end if;
+
+  if to_regclass('public.teams') is not null and exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'teams'
+      and column_name = 'owner_id'
+  ) then
+    return query execute $q$
+      select t.id
+      from public.teams t
+      where t.owner_id = auth.uid()
+    $q$;
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'profiles'
+      and column_name = 'team_id'
+  ) then
+    return query execute $q$
+      select p.team_id
+      from public.profiles p
+      where p.id = auth.uid()
+        and p.team_id is not null
+    $q$;
+  end if;
+end;
 $$;
 
 revoke all on function public.current_team_ids() from public;
+revoke all on function public.current_team_ids() from anon;
 grant execute on function public.current_team_ids() to authenticated;
 
 drop policy if exists conversations_select_own on public.conversations;
@@ -232,24 +263,8 @@ create policy messages_delete_own
     )
   );
 
-drop policy if exists teams_select_member on public.teams;
-create policy teams_select_member
-  on public.teams
-  for select
-  to authenticated
-  using (id in (select public.current_team_ids()));
-
-drop policy if exists team_members_select_same_team on public.team_members;
-create policy team_members_select_same_team
-  on public.team_members
-  for select
-  to authenticated
-  using (team_id in (select public.current_team_ids()));
-
 grant select, insert, update, delete on public.conversations to authenticated;
 grant select, insert, delete on public.messages to authenticated;
-grant select on public.teams to authenticated;
-grant select on public.team_members to authenticated;
 
 -- Recompute expires_at from the owner's current plan, then delete expired chats.
 -- Messages disappear with the conversation (ON DELETE CASCADE).
