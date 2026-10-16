@@ -3,12 +3,20 @@ import { describe, it } from "node:test";
 import { isAdminEmail } from "../lib/admin";
 import { pickEffectivePlan, teamGrantsAccess } from "../lib/effectivePlan";
 import {
+  AI_ADVISORS_FEATURE,
   ENTERPRISE_FROM_SAR,
   EXTRA_SEAT_SAR,
+  PLANS,
   PLAN_AMOUNTS_SAR,
   featureTier,
   quoteSelfServe,
 } from "../lib/plans";
+import {
+  assertIndividualPlanPrices,
+  displayFeatures,
+  formatUsdApprox,
+  planPriceLabel,
+} from "../lib/pricingDisplay";
 import { safeNextPath } from "../lib/safeNext";
 import {
   assessPaidInvoice,
@@ -45,6 +53,33 @@ describe("self-serve prices", () => {
   it("lists Enterprise from SAR 2,500 / month, 10× annually", () => {
     assert.equal(ENTERPRISE_FROM_SAR.month, 2500);
     assert.equal(ENTERPRISE_FROM_SAR.year, 25000);
+  });
+
+  it("shows the same names, SAR prices, USD, features, and annual prices", () => {
+    assertIndividualPlanPrices();
+    assert.equal(formatUsdApprox(19), "USD 5.07");
+    assert.equal(formatUsdApprox(349), "USD 93.07");
+    assert.equal(formatUsdApprox(2500), "USD 666.67");
+    assert.equal(planPriceLabel("consultant", "year").amountSar, 790);
+    assert.equal(planPriceLabel("consultant", "year").primary, "SAR 790 / year");
+    assert.equal(planPriceLabel("team", "year", 1).amountSar, 3490 + 690);
+    assert.equal(planPriceLabel("enterprise", "year").primary, "From SAR 25,000 / year");
+
+    for (const id of ["consultant", "team", "enterprise"] as const) {
+      const plan = PLANS.find((item) => item.id === id);
+      assert.ok(plan);
+      assert.ok(plan.features.length > 0);
+      assert.ok(plan.features.includes(AI_ADVISORS_FEATURE));
+      assert.equal(displayFeatures(plan, "month").includes(AI_ADVISORS_FEATURE), true);
+    }
+
+    const consultant = PLANS.find((item) => item.id === "consultant");
+    assert.ok(consultant);
+    assert.ok(consultant.features.includes("Equipment list & BOQ analysis"));
+    assert.equal(
+      consultant.features.some((feature) => /bank transfer|mailto|not charged/i.test(feature)),
+      false
+    );
   });
 });
 

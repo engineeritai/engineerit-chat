@@ -64,12 +64,14 @@ export function pageMetadata({
 export function softwareApplicationJsonLd() {
   assertIndividualPlanPrices();
 
-  const individualOffers = PLANS.map((plan) => ({
+  const individualOffers = PLANS.filter(
+    (plan) => plan.id !== "team" && plan.id !== "enterprise"
+  ).map((plan) => ({
     "@type": "Offer",
     name: plan.name,
     price: String(monthlySarFromPlan(plan)),
     priceCurrency: "SAR",
-    description: plan.tagline,
+    description: `${plan.tagline} ${plan.features.join("; ")}`,
     url: `${SITE_URL}/pricing`,
     availability: "https://schema.org/InStock",
   }));
@@ -93,7 +95,7 @@ export function softwareApplicationJsonLd() {
         name: TEAM_PLAN.name,
         price: String(TEAM_PLAN.monthlySar),
         priceCurrency: "SAR",
-        description: `Team plan with Consultant-tier features for ${TEAM_PLAN.includedSeats} seats. Extra seat SAR ${TEAM_PLAN.extraSeatMonthlySar} per month. Shared projects and admin. Prices include VAT. Arranged by contact, not charged in the app.`,
+        description: `Team plan, SAR ${TEAM_PLAN.monthlySar} per month for ${TEAM_PLAN.includedSeats} seats. Extra seat SAR ${TEAM_PLAN.extraSeatMonthlySar} per month. Annual price is 10 times monthly. Paid through Moyasar. Includes AI Advisors (coming soon). Prices include VAT.`,
         url: `${SITE_URL}/pricing`,
       },
       {
@@ -102,7 +104,7 @@ export function softwareApplicationJsonLd() {
         price: String(ENTERPRISE_PLAN.monthlySarFrom),
         priceCurrency: "SAR",
         description:
-          "From SAR 2,500 per month. SSO, priority support, and custom standards. Contact us.",
+          "From SAR 2,500 per month, SAR 25,000 per year. Paid with a Moyasar invoice. Includes AI Advisors (coming soon). Prices include VAT.",
         url: `${SITE_URL}/pricing`,
       },
     ],

@@ -1,9 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
 import {
   EXTRA_SEAT_SAR,
   PLANS,
@@ -13,9 +10,9 @@ import {
   formatSar,
   quoteSelfServe,
   type BillingInterval,
-  type PlanId,
-  type SelfServePlanId,
 } from "@/lib/plans";
+import { displayFeatures, planPriceLabel } from "@/lib/pricingDisplay";
+import BuyPlanButton, { ResumeCheckout } from "@/app/components/BuyPlanButton";
 
 const ENGINEER_TOOLS = [
   { id: "drawing", label: "Drawing & Diagrams" },
@@ -38,55 +35,13 @@ const TOOL_ACCESS: Record<"assistant" | "engineer" | "professional" | "consultan
 
 type Props = {
   heading?: string;
+  verb?: "buy" | "upgrade";
 };
 
-export default function PlanCatalog({ heading = "Plans" }: Props) {
-  const router = useRouter();
+export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) {
   const [interval, setInterval] = useState<BillingInterval>("month");
   const [extraSeats, setExtraSeats] = useState(0);
-  const [busyPlan, setBusyPlan] = useState<PlanId | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  async function startCheckout(planId: SelfServePlanId) {
-    setErrorMsg(null);
-    const { data: authData } = await supabase.auth.getUser();
-    if (!authData.user) {
-      setErrorMsg("Create an account and sign in before subscribing.");
-      if (window.location.pathname !== "/register") {
-        router.push("/login?next=/pricing");
-      }
-      return;
-    }
-
-    setBusyPlan(planId);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      const res = await fetch("/api/checkout/moyasar", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          planId,
-          interval,
-          extraSeats: planId === "team" ? extraSeats : 0,
-        }),
-      });
-      const json = await res.json().catch(() => ({ error: "Could not start payment." }));
-      if (!res.ok || !json.url) {
-        setErrorMsg(json.error || "Could not start payment. Please try again.");
-        return;
-      }
-      window.location.href = json.url as string;
-    } catch (err) {
-      console.error(err);
-      setErrorMsg("Could not start payment. Please try again.");
-    } finally {
-      setBusyPlan(null);
-    }
-  }
 
   const teamQuote = quoteSelfServe("team", interval, extraSeats);
 
@@ -140,8 +95,10 @@ export default function PlanCatalog({ heading = "Plans" }: Props) {
         </div>
       </div>
 
+      <ResumeCheckout onError={setErrorMsg} />
       <p style={{ fontSize: 13, color: "#6b7280", marginTop: 0 }}>
-        Annual billing is 10× the monthly price. Team and Enterprise prices include VAT.
+        Annual price is 10 times the monthly price (2 months free). Prices include VAT.
+        US dollar amounts are approximate, at SAR 3.75 per USD 1.
       </p>
 
       {errorMsg && (
@@ -159,12 +116,8 @@ export default function PlanCatalog({ heading = "Plans" }: Props) {
           const color = PLAN_COLORS[plan.id];
           const tier = featureTier(plan.id);
           const tools = TOOL_ACCESS[tier];
-          const price =
-            plan.id === "team"
-              ? formatSar(teamQuote.amountSar, interval)
-              : interval === "year"
-                ? plan.priceYearly
-                : plan.priceMonthly;
+          const price = planPriceLabel(plan.id, interval, plan.id === "team" ? extraSeats : 0);
+          const features = displayFeatures(plan, interval);
 
           return (
             <div
@@ -202,23 +155,19 @@ export default function PlanCatalog({ heading = "Plans" }: Props) {
                 </div>
               </div>
 
-              <div style={{ fontSize: 18, fontWeight: 800, color, marginBottom: 8 }}>{price}</div>
-              {(plan.id === "team" || plan.id === "enterprise") && (
-                <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>VAT included</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color, marginBottom: 4 }}>{price.primary}</div>
+              {price.usd && (
+                <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 8 }}>
+                  approx. {price.usd}
+                </div>
               )}
 
               <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "#374151", lineHeight: 1.45 }}>
-                {plan.features.map((feature) => {
-                  const line =
-                    plan.id === "team" && feature.startsWith("Extra seat")
-                      ? `Extra seat ${formatSar(EXTRA_SEAT_SAR[interval], interval)}`
-                      : feature;
-                  return (
-                    <li key={feature} style={{ marginBottom: 4 }}>
-                      {line}
-                    </li>
-                  );
-                })}
+                {features.map((feature) => (
+                  <li key={feature} style={{ marginBottom: 4 }}>
+                    {feature}
+                  </li>
+                ))}
               </ul>
 
               {plan.id === "team" && (
@@ -267,56 +216,28 @@ export default function PlanCatalog({ heading = "Plans" }: Props) {
               </div>
 
               <div style={{ marginTop: "auto", paddingTop: 14 }}>
-                {plan.id === "assistant" ? (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: "10px 0",
-                      borderRadius: 999,
-                      background: `${color}14`,
-                      color,
-                      fontWeight: 700,
-                      fontSize: 14,
-                    }}
-                  >
-                    Included with every account
-                  </div>
-                ) : plan.id === "enterprise" ? (
-                  <Link
-                    href="/enterprise"
-                    style={{
-                      display: "block",
-                      textAlign: "center",
-                      padding: "10px 16px",
-                      borderRadius: 999,
-                      background: color,
-                      color: "#fff",
-                      fontWeight: 700,
-                      fontSize: 14,
-                    }}
-                  >
-                    Contact sales
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => startCheckout(plan.id as SelfServePlanId)}
-                    disabled={busyPlan === plan.id}
-                    style={{
-                      width: "100%",
-                      padding: "10px 16px",
-                      borderRadius: 999,
-                      border: "none",
-                      background: color,
-                      color: "#fff",
-                      fontWeight: 700,
-                      fontSize: 14,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {busyPlan === plan.id ? "Processing..." : "Subscribe"}
-                  </button>
-                )}
+                <BuyPlanButton
+                  planId={plan.id}
+                  interval={interval}
+                  extraSeats={plan.id === "team" ? extraSeats : 0}
+                  verb={verb}
+                  onError={setErrorMsg}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "center",
+                    padding: "10px 16px",
+                    borderRadius: 999,
+                    border: "none",
+                    background: color,
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    textDecoration: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
               </div>
             </div>
           );

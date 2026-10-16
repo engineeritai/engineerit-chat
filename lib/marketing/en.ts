@@ -22,7 +22,7 @@ export const en: MarketingContent = {
       "Attach files, pick a tool, and get structured answers. Paid plans add exports.",
     primaryCta: "Open chat",
     secondaryCta: "View pricing",
-    tertiaryCta: "Request a team pilot",
+    tertiaryCta: "Buy Team",
     panelTitle: "Chat is one click away",
     panelBody:
       "Attach a file, pick a tool, and get a structured answer. Paid plans add exports.",
@@ -130,30 +130,9 @@ export const en: MarketingContent = {
     ],
   },
   teams: {
-    title: "For teams and consultancies",
+    title: "Plans and pricing",
     intro:
-      "Individual plans are for one person. A team pilot is for a firm that wants shared projects, an admin, and seats for the people doing the work. Nothing here is charged in the app.",
-    consultantTier: "Consultant-tier features for {seats} seats",
-    teamBullet:
-      "Team is {teamMonthly} per month for {seats} seats. An extra seat is {extraMonthly} per month, with shared projects and an admin.",
-    enterpriseBullet:
-      "Enterprise starts from {enterpriseMonthly} per month and includes SSO, priority support, and custom standards.",
-    annualBullet:
-      "Annual billing is ten times the monthly price, which is two months free. Ask for it in the pilot request.",
-    regionBullet:
-      "Aimed at consultancies working in Saudi Arabia and the wider GCC, in the disciplines and standards those projects use.",
-    cta: "Request a team pilot",
-    formTitle: "Request a team pilot",
-    formNote:
-      "This form opens an email to us. It does not create an account or start a payment.",
-    name: "Name",
-    email: "Work email",
-    company: "Company",
-    message: "What do you want to try?",
-    messagePlaceholder: "Disciplines, team size, and the kind of projects you deliver.",
-    submit: "Request a team pilot",
-    opened: "Your email app should open with this request.",
-    mailtoFallback: "Or email us directly",
+      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing is 10 times the monthly price. Buy Team through Moyasar. Enterprise continues to a Moyasar invoice for the quoted amount. Consultant Engineer, Team, and Enterprise include AI Advisors (coming soon).",
   },
   faq: {
     title: "Questions consultancies ask",
@@ -165,7 +144,7 @@ export const en: MarketingContent = {
           "Yes. Open chat is available without an account. Guests receive one reply a day. The free Assistant Engineer plan includes three replies a day. Engineer, Professional Engineer, and Consultant Engineer are not capped by that daily limit.",
       },
       {
-        question: "Does a team pilot replace our engineers?",
+        question: "Does Team replace our engineers?",
         answer:
           "No. engineerit.ai assists the people in your firm. A qualified engineer remains responsible for the design and for what is issued to a client.",
       },
@@ -177,7 +156,7 @@ export const en: MarketingContent = {
       {
         question: "How do Team, Enterprise, and annual billing get paid?",
         answer:
-          "Individual monthly plans stay on the prices shown at registration and are paid in the app. Team, Enterprise, and annual billing are arranged by email for now. Use Request a team pilot or contact us. They are not sent to the card checkout.",
+          "Engineer, Professional Engineer, Consultant Engineer, and Team are paid through Moyasar, monthly or annual. Annual price is 10 times the monthly price. Enterprise is paid with a Moyasar invoice for the quoted amount, starting from the Enterprise price below. Consultant Engineer, Team, and Enterprise include AI Advisors (coming soon).",
       },
       {
         question: "How do I change the interface language?",
@@ -192,10 +171,10 @@ export const en: MarketingContent = {
     ],
   },
   closing: {
-    title: "Start with a question, or ask for a pilot",
-    body: "Engineers can open the chat now. Consultancies can request a team pilot and we will reply by email.",
+    title: "Start with a question, or buy a plan",
+    body: "Engineers can open the chat now. Team and the individual paid plans are bought through Moyasar. Enterprise continues to a Moyasar invoice.",
     primaryCta: "Open chat",
-    secondaryCta: "Request a team pilot",
+    secondaryCta: "Buy Team",
   },
   footer: {
     blurb: "AI engineering assistant for consultancies, engineers, and students.",
@@ -210,39 +189,20 @@ export const en: MarketingContent = {
   pricing: {
     title: "Plans and pricing",
     intro:
-      "Individual plans use the same names and monthly prices as registration. Team, Enterprise, and annual billing are quoted here and arranged with us.",
+      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise. Monthly and annual prices match registration and billing.",
     monthly: "Monthly",
     annual: "Annual",
     twoMonthsFree: "2 months free",
     annualExplainer:
-      "Annual price is 10 times the monthly price. Team, Enterprise, and annual plans are not charged in the app — the button opens an email.",
+      "Annual price is 10 times the monthly price (2 months free). Paid plans open Moyasar checkout. Enterprise opens a Moyasar invoice for the quoted amount.",
     usdNote: "US dollar amounts are approximate, at SAR 3.75 per USD 1.",
     vatNote: "Prices include VAT.",
     individualTitle: "Individual plans",
-    individualIntro: "Same plans and monthly prices as registration.",
+    individualIntro:
+      "Assistant Engineer, Engineer, Professional Engineer, and Consultant Engineer. Same names, prices, and features as registration.",
     firmTitle: "Team and Enterprise",
-    firmIntro: "For consultancies. Contact us to start. No checkout in the app.",
-    perMonth: "/ month",
-    perYear: "/ year",
-    from: "From",
-    free: "Free",
+    firmIntro:
+      "Team is bought through Moyasar and includes AI Advisors (coming soon). Enterprise continues to a Moyasar invoice and includes AI Advisors (coming soon).",
     approx: "approx.",
-    forSeats: "For {seats} seats",
-    extraSeat: "Extra seat",
-    startFree: "Start free",
-    createAccount: "Create account",
-    requestAnnual: "Request annual billing",
-    requestPilot: "Request a team pilot",
-    contactUs: "Contact us",
-    consultantTier: "Consultant-tier features for {seats} seats",
-    sharedProjects: "Shared projects",
-    admin: "Admin for the team",
-    sso: "SSO",
-    prioritySupport: "Priority support",
-    customStandards: "Custom standards",
-    contactScope: "Scope agreed when you contact us",
-    featuresTitle: "Included",
-    notInApp: "Not charged in the app.",
-    seeChat: "Open chat",
   },
 };

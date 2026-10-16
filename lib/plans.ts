@@ -48,13 +48,15 @@ export const ENTERPRISE_FROM_SAR: { month: number; year: number } = {
 };
 
 export const PLAN_LABELS: Record<PlanId, string> = {
-  assistant: "Assistant",
+  assistant: "Assistant Engineer",
   engineer: "Engineer",
-  professional: "Professional",
-  consultant: "Consultant",
+  professional: "Professional Engineer",
+  consultant: "Consultant Engineer",
   team: "Team",
   enterprise: "Enterprise",
 };
+
+export const AI_ADVISORS_FEATURE = "AI Advisors (coming soon)";
 
 export const PLAN_COLORS: Record<PlanId, string> = {
   assistant: "#2563eb",
@@ -203,6 +205,7 @@ export const PLANS: Plan[] = [
       "Resource & cost estimation & schedule check",
       "Project dashboards and portfolio overview",
       "Export to pdf, word and Powerpoint",
+      AI_ADVISORS_FEATURE,
     ],
   },
   {
@@ -219,6 +222,7 @@ export const PLANS: Plan[] = [
       "Invite colleagues by email",
       "VAT included",
       "Access ends for the whole team if the subscription lapses",
+      AI_ADVISORS_FEATURE,
     ],
   },
   {
@@ -234,6 +238,7 @@ export const PLANS: Plan[] = [
       "Moyasar payment link for the quoted amount",
       "Access starts after Moyasar confirms payment",
       "VAT included",
+      AI_ADVISORS_FEATURE,
     ],
   },
 ];

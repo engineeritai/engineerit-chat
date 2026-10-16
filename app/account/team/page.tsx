@@ -5,7 +5,8 @@ import Link from "next/link";
 import Header from "../../components/Header";
 import NavSidebar from "../../components/NavSidebar";
 import { supabase } from "@/lib/supabaseClient";
-import { PLAN_LABELS, formatSar, type PlanId } from "@/lib/plans";
+import { AI_ADVISORS_FEATURE, EXTRA_SEAT_SAR, PLAN_LABELS, formatSar, type PlanId } from "@/lib/plans";
+import { formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
 
 type Member = {
   id: string;
@@ -127,6 +128,8 @@ export default function TeamPage() {
   }
 
   const team = payload?.team;
+  const teamMonth = planPriceLabel("team", "month");
+  const teamYear = planPriceLabel("team", "year");
   const planName =
     team && (team.plan === "team" || team.plan === "enterprise")
       ? PLAN_LABELS[team.plan as PlanId]
@@ -144,7 +147,7 @@ export default function TeamPage() {
           <h1 className="page-title">Team</h1>
           <p className="page-subtitle">
             The buyer is the owner. Colleagues who accept an invite get Consultant-tier
-            access until the subscription ends.
+            access, including {AI_ADVISORS_FEATURE}, until the subscription ends.
           </p>
 
           {error && <p style={{ color: "#b91c1c", fontSize: 14 }}>{error}</p>}
@@ -155,8 +158,10 @@ export default function TeamPage() {
           ) : !team ? (
             <div className="card">
               <p style={{ marginTop: 0 }}>
-                You are not on a team yet. A Team plan includes 5 seats. Extra seats are{" "}
-                {formatSar(69, "month")}.
+                You are not on a team yet. Team is {teamMonth.primary} (approx. {teamMonth.usd}) for 5
+                seats, or {teamYear.primary} (approx. {teamYear.usd}). Extra seats are{" "}
+                {formatSar(EXTRA_SEAT_SAR.month, "month")} (approx. {formatUsdApprox(EXTRA_SEAT_SAR.month)}).{" "}
+                {AI_ADVISORS_FEATURE} is included.
               </p>
               <Link href="/pricing" className="btn" style={{ display: "inline-block" }}>
                 View Team pricing

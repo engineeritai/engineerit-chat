@@ -5,10 +5,11 @@ import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import { supabase } from "../../lib/supabaseClient";
 import Link from "next/link";
-import { planById } from "@/lib/labels";
+import { localizedPlan, planById, formatMoney } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
-import { isPlanId, type PlanId } from "@/lib/plans";
+import { PLANS, isPlanId, type PlanId } from "@/lib/plans";
+import { displayFeatures, formatSar, formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
 
 type ProfileRow = {
@@ -386,7 +387,12 @@ export default function ProfilePage() {
 
   const storedPlan = profile?.subscription_tier || "assistant";
   const currentPlan = effectivePlan || "assistant";
-  const currentPlanLabel = planById(locale, isPlanId(currentPlan) ? currentPlan : "assistant").name;
+  const currentPlanId: PlanId = isPlanId(currentPlan) ? currentPlan : "assistant";
+  const currentPlanLabel = planById(locale, currentPlanId).name;
+  const catalogSource = PLANS.find((plan) => plan.id === currentPlanId) ?? PLANS[0];
+  const catalogPlan = localizedPlan(locale, catalogSource);
+  const catalogMonth = planPriceLabel(currentPlanId, "month");
+  const catalogYear = planPriceLabel(currentPlanId, "year");
   const teamLapsed =
     (storedPlan === "team" || storedPlan === "enterprise") && currentPlan === "assistant";
 
@@ -574,8 +580,10 @@ export default function ProfilePage() {
                     <div>
                       {s.profile.price}:{" "}
                       <strong>
-                        {locale === "ar" && activeSub.currency === "SAR"
-                          ? `${activeSub.price} ر.س`
+                        {activeSub.currency === "SAR"
+                          ? locale === "ar"
+                            ? formatMoney(activeSub.price, "ar")
+                            : `${formatSar(activeSub.price)} (approx. ${formatUsdApprox(activeSub.price)})`
                           : `${activeSub.price} ${activeSub.currency}`}
                       </strong>
                     </div>
@@ -596,6 +604,18 @@ export default function ProfilePage() {
               </p>
             )}
 
+            <p style={{ fontSize: 14, color: "#374151", marginBottom: 8 }}>
+              {catalogMonth.primary}
+              {catalogMonth.usd ? ` (approx. ${catalogMonth.usd})` : ""}
+              {catalogYear.amountSar > 0
+                ? ` · ${catalogYear.primary} (approx. ${catalogYear.usd})`
+                : ""}
+            </p>
+            <ul style={{ margin: "0 0 12px", paddingLeft: 18, fontSize: 14, color: "#374151" }}>
+              {(locale === "ar" ? catalogPlan.features : displayFeatures(catalogSource, "month")).map((feature) => (
+                <li key={feature}>{feature}</li>
+              ))}
+            </ul>
             <p style={{ fontSize: 14, color: "#6b7280" }}>
               {s.profile.billingNote}
             </p>
@@ -685,13 +705,13 @@ export default function ProfilePage() {
                         idx === subHistory.length - 1 ? "none" : "1px solid #f3f4f6",
                     }}
                   >
-                    <span>
-                      {planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}
-                    </span>
+                    <span>{planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}</span>
                     <span>
                       {row.price !== null && row.currency
-                        ? locale === "ar" && row.currency === "SAR"
-                          ? `${row.price} ر.س`
+                        ? row.currency === "SAR"
+                          ? locale === "ar"
+                            ? formatMoney(row.price, "ar")
+                            : `${formatSar(row.price)} (approx. ${formatUsdApprox(row.price)})`
                           : `${row.price} ${row.currency}`
                         : "-"}
                     </span>

@@ -1808,7 +1808,8 @@ body {
   color: #1e66ff;
 }
 
-.mkt a.mkt-btn-ghost {
+.mkt a.mkt-btn-ghost,
+.mkt button.mkt-btn-ghost {
   background: transparent;
   color: #1e66ff;
   padding-left: 8px;

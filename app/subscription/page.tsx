@@ -22,7 +22,7 @@ export default function SubscriptionPage() {
         <div className="page-wrap">
           <h1 className="page-title">{s.subscription.title}</h1>
           <p className="page-subtitle">{s.subscription.lead}</p>
-          <PlanCatalog heading={s.subscription.title} />
+          <PlanCatalog heading={s.subscription.title} verb="upgrade" />
           <div style={{ marginTop: 28, display: "flex", justifyContent: "center" }}>
             <Link
               href="/profile"

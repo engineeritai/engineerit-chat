@@ -4,6 +4,8 @@ import { useState } from "react";
 import Header from "../components/Header";
 import NavSidebar from "../components/NavSidebar";
 import Link from "next/link";
+import { PLANS } from "@/lib/plans";
+import { displayFeatures, planPriceLabel } from "@/lib/pricingDisplay";
 
 export default function EnterprisePage() {
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
@@ -52,6 +54,11 @@ export default function EnterprisePage() {
     }
   }
 
+  const plan = PLANS.find((item) => item.id === "enterprise")!;
+  const month = planPriceLabel("enterprise", "month");
+  const year = planPriceLabel("enterprise", "year");
+  const features = displayFeatures(plan, "month");
+
   return (
     <div className="app-shell">
       <NavSidebar
@@ -61,12 +68,18 @@ export default function EnterprisePage() {
       <div className="main">
         <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
         <div className="page-wrap">
-          <h1 className="page-title">Contact sales</h1>
+          <h1 className="page-title">Enterprise</h1>
           <p className="page-subtitle">
-            Enterprise starts from SAR 2,500 / month (SAR 25,000 / year), VAT included.
-            Tell us who to reach and how many seats you need. We email a Moyasar payment
-            link for the quoted amount. The subscription starts after Moyasar confirms payment.
+            {month.primary} (approx. {month.usd}), or {year.primary} (approx. {year.usd}).
+            Prices include VAT. Tell us who to reach and how many seats
+            you need. We email a Moyasar payment link for the quoted amount. The subscription
+            starts after Moyasar confirms payment.
           </p>
+          <ul style={{ margin: "0 0 16px", paddingLeft: 18, color: "#374151", fontSize: 14 }}>
+            {features.map((feature) => (
+              <li key={feature}>{feature}</li>
+            ))}
+          </ul>
 
           <form className="card" onSubmit={handleSubmit} style={{ maxWidth: 560 }}>
             <div className="form-row">
@@ -115,7 +128,7 @@ export default function EnterprisePage() {
             )}
 
             <button className="btn" type="submit" disabled={loading}>
-              {loading ? "Sending..." : "Send to sales"}
+              {loading ? "Sending..." : "Request a Moyasar invoice"}
             </button>
             <div style={{ marginTop: 12, fontSize: 13 }}>
               <Link href="/pricing" className="link">

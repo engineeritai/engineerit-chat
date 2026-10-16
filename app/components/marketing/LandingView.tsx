@@ -6,32 +6,16 @@ import { ENGINEER_TOOLS } from "@/lib/engineerTools";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { useMessages } from "@/lib/useMessages";
 import { getMarketingContent } from "@/lib/marketing";
-import { disciplineLabel, formatMoney, toolLabel } from "@/lib/labels";
-import { ENTERPRISE_PLAN, TEAM_PLAN } from "@/lib/pricingDisplay";
-import PilotRequestForm from "@/app/components/marketing/PilotRequestForm";
+import { disciplineLabel, toolLabel } from "@/lib/labels";
+import BuyPlanButton from "@/app/components/BuyPlanButton";
+import PricingBoard from "@/app/components/marketing/PricingBoard";
 import SaudiBusinessBadge from "@/app/components/marketing/SaudiBusinessBadge";
 import AdvisorEcosystem from "@/app/components/AdvisorEcosystem";
-
-function fill(template: string, values: Record<string, string>) {
-  return Object.entries(values).reduce(
-    (text, [key, value]) => text.replaceAll(`{${key}}`, value),
-    template
-  );
-}
 
 export default function LandingView() {
   const { locale } = useLocale();
   const { m } = useMessages();
   const content = getMarketingContent(locale);
-
-  const teamBullet = fill(content.teams.teamBullet, {
-    teamMonthly: formatMoney(TEAM_PLAN.monthlySar, locale),
-    seats: String(TEAM_PLAN.includedSeats),
-    extraMonthly: formatMoney(TEAM_PLAN.extraSeatMonthlySar, locale),
-  });
-  const enterpriseBullet = fill(content.teams.enterpriseBullet, {
-    enterpriseMonthly: formatMoney(ENTERPRISE_PLAN.monthlySarFrom, locale),
-  });
 
   return (
     <>
@@ -47,9 +31,7 @@ export default function LandingView() {
             <Link className="mkt-btn mkt-btn-secondary" href="/pricing">
               {content.hero.secondaryCta}
             </Link>
-            <a className="mkt-btn mkt-btn-ghost" href="#teams">
-              {content.hero.tertiaryCta}
-            </a>
+            <BuyPlanButton planId="team" interval="month" className="mkt-btn mkt-btn-ghost" />
           </div>
         </div>
 
@@ -130,29 +112,9 @@ export default function LandingView() {
       </section>
 
       <section className="mkt-section" id="teams">
-        <div className="mkt-teams">
-          <div>
-            <h2>{content.teams.title}</h2>
-            <p className="mkt-intro">{content.teams.intro}</p>
-            <ul className="mkt-bullets">
-              <li>
-                {fill(content.teams.consultantTier, {
-                  seats: String(TEAM_PLAN.includedSeats),
-                })}
-              </li>
-              <li>{teamBullet}</li>
-              <li>{enterpriseBullet}</li>
-              <li>{content.teams.annualBullet}</li>
-              <li>{content.teams.regionBullet}</li>
-            </ul>
-            <div className="mkt-cta-row">
-              <Link className="mkt-btn mkt-btn-secondary" href="/pricing">
-                {content.nav.pricing}
-              </Link>
-            </div>
-          </div>
-          <PilotRequestForm />
-        </div>
+        <h2>{content.teams.title}</h2>
+        <p className="mkt-intro">{content.teams.intro}</p>
+        <PricingBoard />
       </section>
 
       <section className="mkt-section" id="faq">
@@ -166,6 +128,8 @@ export default function LandingView() {
             </details>
           ))}
         </div>
+        <h3>Plan prices and features</h3>
+        <PlanPriceList showFeatures />
       </section>
 
       <section className="mkt-closing">
@@ -175,9 +139,7 @@ export default function LandingView() {
           <Link className="mkt-btn mkt-btn-primary" href="/chat">
             {content.closing.primaryCta}
           </Link>
-          <a className="mkt-btn mkt-btn-secondary" href="#teams">
-            {content.closing.secondaryCta}
-          </a>
+          <BuyPlanButton planId="team" interval="month" className="mkt-btn mkt-btn-secondary" />
         </div>
       </section>
     </>
