@@ -10,9 +10,26 @@ import React, {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import Link from "next/link";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
+import AdvisorBar from "./components/AdvisorBar";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  copyAsHtml,
+  exportPdf,
+  exportPptx,
+  exportWordDocx,
+  getLocalCount,
+  isArabicText,
+  nativeShareHtml,
+  printHtml,
+  saveHtml,
+  setLocalCount,
+  shareToWhatsApp,
+  todayUTCKey,
+} from "@/lib/chatActions";
+import { useMessages } from "@/lib/useMessages";
 
 type Role = "user" | "assistant";
 
@@ -79,259 +96,6 @@ function hasAccess(planId: PlanId, toolId: ToolId) {
   return TOOL_ACCESS[planId]?.includes(toolId);
 }
 
-/* ============================
-   Helpers: RTL + Export/Share
-   ============================ */
-
-function isArabicText(text: string) {
-  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text);
-}
-
-function escapeHtml(s: string) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function buildHtmlDocument(aiText: string) {
-  const rtl = isArabicText(aiText);
-  const safe = escapeHtml(aiText);
-
-  return `<!doctype html>
-<html lang="${rtl ? "ar" : "en"}" dir="${rtl ? "rtl" : "ltr"}">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>engineerit.ai</title>
-<style>
-  *{box-sizing:border-box}
-  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px;color:#111827;background:#fff;}
-  .wrap{max-width:980px;margin:0 auto;}
-  .card{border:1px solid #e5e7eb;border-radius:16px;padding:18px;background:#fff;}
-  pre{white-space:pre-wrap;word-break:break-word;margin:0;font:inherit;line-height:1.6;}
-  .footer{margin-top:14px;color:#6b7280;font-size:12px}
-</style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card"><pre>${safe}</pre></div>
-    <div class="footer">— engineerit.ai</div>
-  </div>
-</body>
-</html>`;
-}
-
-function htmlFileFromText(aiText: string) {
-  const html = buildHtmlDocument(aiText);
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-
-  // IMPORTANT: extension for iOS share + WhatsApp compatibility
-  const file = new File([blob], "engineerit.ai.html", {
-    type: "text/html",
-  });
-
-  return { html, blob, file };
-}
-
-async function copyAsHtml(aiText: string) {
-  const { html } = htmlFileFromText(aiText);
-  try {
-    // @ts-ignore
-    if (navigator.clipboard && window.ClipboardItem) {
-      const item = new ClipboardItem({
-        "text/html": new Blob([html], { type: "text/html" }),
-        "text/plain": new Blob([aiText], { type: "text/plain" }),
-      });
-      // @ts-ignore
-      await navigator.clipboard.write([item]);
-      return true;
-    }
-  } catch {}
-  try {
-    await navigator.clipboard.writeText(aiText);
-    return true;
-  } catch {}
-  return false;
-}
-
-function saveHtml(aiText: string) {
-  const { blob } = htmlFileFromText(aiText);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "engineerit.ai.html";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-/**
- * Modern reliable print (avoids popup + blank print)
- * - Creates hidden iframe
- * - Writes HTML
- * - Prints after render tick
- */
-function printHtml(aiText: string) {
-  const html = buildHtmlDocument(aiText);
-
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  iframe.setAttribute("aria-hidden", "true");
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentWindow?.document;
-  if (!doc) {
-    iframe.remove();
-    return;
-  }
-
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  setTimeout(() => {
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } finally {
-      setTimeout(() => iframe.remove(), 900);
-    }
-  }, 250);
-}
-
-/**
- * ✅ REAL PDF export for Professional/Consultant
- * Downloads a true PDF file from /api/export/pdf (works on Windows + iOS + Android).
- */
-async function exportPdf(aiText: string) {
-  const res = await fetch("/api/export/pdf", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      title: "engineerit.ai",
-      content: aiText,
-      filename: "engineerit.ai",
-    }),
-  });
-
-  if (!res.ok) throw new Error(await res.text());
-  const blob = await res.blob();
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "engineerit.ai.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-async function nativeShareHtml(aiText: string) {
-  const { file } = htmlFileFromText(aiText);
-  try {
-    // @ts-ignore
-    if (navigator.share) {
-      // @ts-ignore
-      if (navigator.canShare?.({ files: [file] })) {
-        // @ts-ignore
-        await navigator.share({
-          title: "engineerit.ai",
-          text: "engineerit.ai",
-          files: [file],
-        });
-        return true;
-      }
-      // @ts-ignore
-      await navigator.share({
-        title: "engineerit.ai",
-        text: aiText.slice(0, 4000),
-      });
-      return true;
-    }
-  } catch {}
-  return false;
-}
-
-function shareToWhatsApp(text: string) {
-  const payload = text.slice(0, 8000);
-  const wa = `https://wa.me/?text=${encodeURIComponent(payload)}`;
-  window.open(wa, "_blank", "noopener,noreferrer");
-}
-
-async function exportWordDocx(aiText: string) {
-  const res = await fetch("/api/export/docx", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: aiText }),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  const blob = await res.blob();
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "engineerit.ai.docx";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-async function exportPptx(aiText: string) {
-  const res = await fetch("/api/export/pptx", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: aiText }),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  const blob = await res.blob();
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "engineerit.ai.pptx";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-/* ============================
-   Daily limits (client quick)
-   ============================ */
-
-function todayUTCKey() {
-  const d = new Date();
-  const yyyy = d.getUTCFullYear();
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function getLocalCount(key: string) {
-  try {
-    const v = window.localStorage.getItem(key);
-    return v ? Number(v) || 0 : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function setLocalCount(key: string, n: number) {
-  try {
-    window.localStorage.setItem(key, String(n));
-  } catch {}
-}
 
 export default function Page() {
   const [discipline, setDiscipline] = useState("General");
@@ -348,6 +112,8 @@ export default function Page() {
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
 
   const [planId, setPlanId] = useState<PlanId>("assistant");
+  const [advisorPlan, setAdvisorPlan] = useState("guest");
+  const { m: ui } = useMessages();
 
   const [showMobileTools, setShowMobileTools] = useState(false);
 
@@ -381,6 +147,7 @@ export default function Page() {
           setPlanId("assistant");
           setIsGuest(true);
           setUserId(null);
+          setAdvisorPlan("guest");
           return;
         }
 
@@ -394,7 +161,9 @@ export default function Page() {
           .maybeSingle();
 
         if (!error && profile?.subscription_tier) {
-          const p = profile.subscription_tier as PlanId;
+          const rawTier = String(profile.subscription_tier);
+          setAdvisorPlan(rawTier);
+          const p = rawTier as PlanId;
           if (
             p === "assistant" ||
             p === "engineer" ||
@@ -403,16 +172,19 @@ export default function Page() {
           ) {
             setPlanId(p);
           } else {
+            // Team / Enterprise unlock advisors without changing engineer-tool gating.
             setPlanId("assistant");
           }
         } else {
           setPlanId("assistant");
+          setAdvisorPlan("assistant");
         }
       } catch (err) {
         console.error(err);
         setPlanId("assistant");
         setIsGuest(true);
         setUserId(null);
+        setAdvisorPlan("guest");
       }
     };
 
@@ -768,6 +540,12 @@ export default function Page() {
                 consulting, and operating an interactive system that utilizes AI technologies to
                 analyze documents, drawings, and enhance engineering experience.
               </div>
+              <div style={{ marginTop: 8, fontSize: 12, color: "#374151", lineHeight: 1.4 }}>
+                {ui.advisors.homeWelcome}{" "}
+                <Link href="/advisors" className="link">
+                  {ui.advisors.homeCta}
+                </Link>
+              </div>
             </div>
             <button
               type="button"
@@ -786,6 +564,9 @@ export default function Page() {
             </button>
           </div>
         )}
+
+        <div className="chat-mode-stack">
+          <AdvisorBar planId={advisorPlan} isGuest={isGuest} />
 
         <div className="engineer-tools">
           <span className="engineer-tools-label">Engineer tools:</span>
@@ -855,6 +636,7 @@ export default function Page() {
               </div>
             </div>
           )}
+        </div>
         </div>
 
         <div className="conversation">

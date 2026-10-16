@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { gateAdvisor } from "@/lib/advisorGate";
 
 export const runtime = "nodejs";
 
@@ -99,13 +100,18 @@ async function enforceDailyLimit(args: {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { discipline, messages, attachments, planId, userId } = body as {
+  const { discipline, messages, attachments, planId, userId, advisorId, locale } = body as {
     discipline: string;
     messages: { role: "user" | "assistant"; content: string }[];
     attachments?: { type: "image" | "file"; url: string }[];
     planId?: string;
     userId?: string | null;
+    advisorId?: string;
+    locale?: string;
   };
+
+  const advisorGate = gateAdvisor({ advisorId, planId, locale });
+  if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
 
   // Enforce daily limit per IP
   const ip = getIp(req);
@@ -131,7 +137,7 @@ export async function POST(req: NextRequest) {
   const now = new Date ();
   const currentDate = now.toISOString();
   
-  const systemPrompt = `
+  const baseSystemPrompt = `
 You are "engineer it", an AI engineering assistant.
 You are well trained as of today with latest update of current calendar year ${currentDate} for all ongoing technologies, latest versions of standards and best practices and guideline.
 - Answer as an expert subject matter in the selected discipline: ${discipline} with professional mechanism and relevant engineering standards such as ASME, IEEE, ISO, API, NEBOSH, NFPA, ASTM, IEC, ACI, AISC, International Building Code (IBC), OSHA, and others recognized international standard related to discipline or topic.
@@ -144,6 +150,9 @@ You are well trained as of today with latest update of current calendar year ${c
 - Give General Feedback for non registered or non logged in users, limited feedback to assistant plan, and act as professional and expert subject matter for subscribered plans of engineer, professional and consultant
 - Where applicable per topic and relevant chat, it is preferred to include and address related standard, clauses and specification of Saudi Building Code, SASO, Saudi Aramco Standards and specifications, Saudi Electricity Regulations, Sabic applicable specifications
   `;
+
+  const systemPrompt =
+    advisorGate.active && advisorGate.ok ? advisorGate.prompt : baseSystemPrompt;
 
   const apiMessages: any[] = [
     { role: "system", content: systemPrompt },

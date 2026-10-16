@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type React from "react";
+import AdvisorNav from "./AdvisorNav";
 
 type Props = {
   discipline: string;
@@ -96,6 +97,7 @@ export default function Sidebar({
               label="Registration & Plans"
               currentPath={pathname}
             />
+            <SidebarLink href="/pricing" label="Pricing" currentPath={pathname} />
             <SidebarLink
               href="/profile"
               label="My Profile"
@@ -113,6 +115,8 @@ export default function Sidebar({
             />
           </nav>
         </div>
+
+        <AdvisorNav currentPath={pathname} />
 
         <div>
           <h3>History</h3>

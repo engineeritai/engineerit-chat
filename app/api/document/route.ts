@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { toFile } from "openai/uploads";
 import JSZip from "jszip";
+import { gateAdvisor } from "@/lib/advisorGate";
 
 export const runtime = "nodejs";
 
@@ -58,7 +59,11 @@ async function extractOfficeText(buffer: Buffer, filename: string): Promise<stri
 }
 
 // Summarize from already-extracted plain text
-async function summarizeFromText(text: string, question: string): Promise<string> {
+async function summarizeFromText(
+  text: string,
+  question: string,
+  advisorSystem?: string
+): Promise<string> {
   if (!text.trim()) {
     return `
 I couldn't extract readable text from this document.  
@@ -72,7 +77,9 @@ Please try:
   const maxChars = 20000;
   const truncated = text.slice(0, maxChars);
 
-  const prompt = `
+  const prompt = advisorSystem
+    ? `User request:\n${question}\n\nBelow is the extracted content of a document:\n---\n${truncated}\n---\n\nFollow the output template in the system message. Use only evidence from this document and the request.`
+    : `
 You are an engineering document summarizer for engineerit.ai.
 
 User request:
@@ -100,6 +107,7 @@ Provide, in clear Markdown:
       {
         role: "system",
         content:
+          advisorSystem ||
           "You are a precise engineering document summarizer. You handle technical reports, drawings, specs, codes, and project documents in Arabic and English.",
       },
       { role: "user", content: prompt },
@@ -117,7 +125,8 @@ Provide, in clear Markdown:
 async function summarizeViaUpload(
   buffer: Buffer,
   filename: string,
-  question: string
+  question: string,
+  advisorSystem?: string
 ): Promise<string> {
   const uploaded = await client.files.create({
     file: await toFile(buffer, filename),
@@ -132,14 +141,15 @@ async function summarizeViaUpload(
         content: [
           {
             type: "input_text",
-            text:
-              question +
-              "\n\nPlease answer in clear markdown with:\n" +
-              "1) Title / عنوان\n" +
-              "2) Short context\n" +
-              "3) Bullet points for key findings\n" +
-              "4) Important numbers/dates/names\n" +
-              "5) Key recommendations.",
+            text: advisorSystem
+              ? `${advisorSystem}\n\nUser request:\n${question}\n\nFollow the output template. Use only evidence from this file and the request.`
+              : question +
+                "\n\nPlease answer in clear markdown with:\n" +
+                "1) Title / عنوان\n" +
+                "2) Short context\n" +
+                "3) Bullet points for key findings\n" +
+                "4) Important numbers/dates/names\n" +
+                "5) Key recommendations.",
           },
           {
             type: "input_file",
@@ -163,11 +173,22 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const questionField = formData.get("question");
+    const advisorField = formData.get("advisorId");
+    const planField = formData.get("planId");
+    const localeField = formData.get("locale");
 
     const question =
       typeof questionField === "string" && questionField.trim().length > 0
         ? questionField
         : "Summarize this engineering document (Arabic + English) with headings, bullet points, important numbers/dates, and key recommendations.";
+
+    const advisorGate = gateAdvisor({
+      advisorId: typeof advisorField === "string" ? advisorField : "",
+      planId: typeof planField === "string" ? planField : "",
+      locale: typeof localeField === "string" ? localeField : "",
+    });
+    if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
+    const advisorSystem = advisorGate.active && advisorGate.ok ? advisorGate.prompt : undefined;
 
     if (!file) {
       return NextResponse.json(
@@ -204,18 +225,18 @@ export async function POST(req: NextRequest) {
     ) {
       try {
         const officeText = await extractOfficeText(buffer, lowerName);
-        reply = await summarizeFromText(officeText, question);
+        reply = await summarizeFromText(officeText, question, advisorSystem);
       } catch (err) {
         console.error(
           "OFFICE extraction failed, falling back to upload/raw:",
           err
         );
         try {
-          reply = await summarizeViaUpload(buffer, file.name, question);
+          reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
         } catch (err2) {
           console.error("Upload also failed, falling back to raw text:", err2);
           const raw = buffer.toString("utf8").replace(/\0/g, " ");
-          reply = await summarizeFromText(raw, question);
+          reply = await summarizeFromText(raw, question, advisorSystem);
         }
       }
 
@@ -224,11 +245,11 @@ export async function POST(req: NextRequest) {
       // ─────────────────────────────────────
     } else if (lowerName.endsWith(".pdf")) {
       try {
-        reply = await summarizeViaUpload(buffer, file.name, question);
+        reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
       } catch (err) {
         console.error("PDF upload failed, falling back to raw:", err);
         const raw = buffer.toString("utf8").replace(/\0/g, " ");
-        reply = await summarizeFromText(raw, question);
+        reply = await summarizeFromText(raw, question, advisorSystem);
       }
 
       // ─────────────────────────────────────
@@ -249,14 +270,14 @@ export async function POST(req: NextRequest) {
       lowerName.endsWith(".nas")
     ) {
       try {
-        reply = await summarizeViaUpload(buffer, file.name, question);
+        reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
       } catch (err) {
         console.error(
           "Engineering/binary upload failed, falling back to raw:",
           err
         );
         const raw = buffer.toString("utf8").replace(/\0/g, " ");
-        reply = await summarizeFromText(raw, question);
+        reply = await summarizeFromText(raw, question, advisorSystem);
       }
 
       // ─────────────────────────────────────
@@ -264,11 +285,11 @@ export async function POST(req: NextRequest) {
       // ─────────────────────────────────────
     } else {
       try {
-        reply = await summarizeViaUpload(buffer, file.name, question);
+        reply = await summarizeViaUpload(buffer, file.name, question, advisorSystem);
       } catch (err) {
         console.error("Generic upload failed, falling back to raw:", err);
         const raw = buffer.toString("utf8").replace(/\0/g, " ");
-        reply = await summarizeFromText(raw, question);
+        reply = await summarizeFromText(raw, question, advisorSystem);
       }
     }
 
