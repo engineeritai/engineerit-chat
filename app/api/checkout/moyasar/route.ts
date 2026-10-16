@@ -49,11 +49,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => null)) as
-      | { planId?: string; interval?: string; extraSeats?: number }
+      | { planId?: string; interval?: string; extraSeats?: number; purpose?: string; locale?: string }
       | null;
+    const locale = body?.locale === "ar" ? "ar" : "en";
+    const renewNow = body?.purpose === "renew_now";
 
     const planId = body?.planId;
-    if (!planId || !isSelfServePlan(planId)) {
+    if (!renewNow && (!planId || !isSelfServePlan(planId))) {
       return NextResponse.json(
         { error: "Invalid or missing planId." },
         { status: 400 }
@@ -71,8 +73,62 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Sign in required." }, { status: 401 });
     }
-    const interval = parseInterval(body?.interval);
     const admin = getSupabaseAdmin();
+    if (renewNow) {
+      const { data: sub, error: subErr } = await admin
+        .from("billing_subscriptions")
+        .select("plan, billing_interval, extra_seats, status")
+        .eq("user_id", user.id)
+        .in("status", ["active", "past_due"])
+        .maybeSingle();
+      if (subErr) return NextResponse.json({ error: subErr.message }, { status: 500 });
+      if (!sub || !isSelfServePlan(sub.plan)) {
+        return NextResponse.json({ error: "No open subscription to renew." }, { status: 404 });
+      }
+      const interval = parseInterval(sub.billing_interval);
+      let consultantLegacy = false;
+      if (sub.plan === "consultant") {
+        const { data: profile } = await admin
+          .from("profiles")
+          .select("consultant_legacy_price_until")
+          .eq("id", user.id)
+          .maybeSingle();
+        consultantLegacy = consultantLegacyActive(profile?.consultant_legacy_price_until);
+      }
+      const quote = quoteSelfServe(sub.plan, interval, normalizeExtraSeats(sub.extra_seats), { consultantLegacy });
+      const checkoutId = crypto.randomUUID();
+      const baseUrl = getAppBaseUrl(req);
+      const pageUrl = `${baseUrl}/checkout/${checkoutId}`;
+      const { error: insertErr } = await admin.from("moyasar_invoices").insert({
+        id: checkoutId,
+        invoice_id: null,
+        plan: quote.planId,
+        billing_interval: quote.interval,
+        amount_sar: quote.amountSar,
+        amount_halalas: quote.amountHalalas,
+        currency: "SAR",
+        seat_limit: quote.seatLimit,
+        extra_seats: quote.extraSeats,
+        customer_email: user.email?.toLowerCase() || null,
+        user_id: user.id,
+        payment_url: pageUrl,
+        purpose: "renew_now",
+        locale,
+        status: "pending",
+      });
+      if (insertErr) {
+        console.error("moyasar renew insert", insertErr);
+        return NextResponse.json({ error: "Could not start the renewal payment." }, { status: 500 });
+      }
+      return NextResponse.json({
+        url: pageUrl,
+        checkoutId,
+        amountHalalas: quote.amountHalalas,
+        callbackUrl: `${baseUrl}/checkout/return?checkout=${checkoutId}`,
+      });
+    }
+
+    const interval = parseInterval(body?.interval);
     let consultantLegacy = false;
     if (planId === "consultant") {
       const { data: profile } = await admin
@@ -108,6 +164,7 @@ export async function POST(req: NextRequest) {
       user_id: user.id,
       payment_url: pageUrl,
       purpose: "checkout",
+      locale,
       status: "pending",
     });
 

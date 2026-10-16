@@ -1,5 +1,7 @@
 import { PLAN_LABELS, formatSar, type BillingInterval, type PlanId } from "@/lib/plans";
 import { receiptVatMode, vatFromInclusive } from "@/lib/billingCycle";
+import { renderInvoicePdf } from "@/lib/invoicePdf";
+import { invoiceBccAddress } from "@/lib/invoiceMail";
 import { escapeHtml, getMailer } from "@/lib/mail";
 import type { ReplyLanguage } from "@/lib/replyLanguage";
 
@@ -159,12 +161,23 @@ export async function sendReceipt(to: string, input: ReceiptInput) {
   const mailer = getMailer();
   if (!mailer) return false;
   const receipt = buildReceipt({ ...input, locale: input.locale === "ar" ? "ar" : "en" });
+  const pdf = await renderInvoicePdf(receipt.text);
+  const bcc = invoiceBccAddress();
+  const sameInbox = bcc.toLowerCase() === to.trim().toLowerCase();
   await mailer.transporter.sendMail({
     from: `"engineerit.ai" <${mailer.from}>`,
     to,
+    ...(sameInbox ? {} : { bcc }),
     subject: receipt.subject,
     text: receipt.text,
     html: receipt.html,
+    attachments: [
+      {
+        filename: "engineerit-invoice.pdf",
+        content: Buffer.from(pdf),
+        contentType: "application/pdf",
+      },
+    ],
   });
   return true;
 }

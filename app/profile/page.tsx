@@ -7,15 +7,36 @@ import Link from "next/link";
 import { localizedPlan, planById, formatMoney } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
-import { PLANS, consultantLegacyActive, isPlanId, type PlanId } from "@/lib/plans";
+import { PLANS, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
 import PlanCatalog from "@/app/components/PlanCatalog";
 import { displayFeatures, formatSar, formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
+import { downloadInvoicePdf } from "@/lib/invoiceDownload";
 
 type ProfileRow = {
   full_name: string | null;
   avatar_url: string | null;
   subscription_tier: string | null;
+};
+
+type BillingView = {
+  plan: PlanId;
+  billing_interval: "month" | "year";
+  amount_sar: number;
+  status: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  seat_limit: number | null;
+};
+
+type InvoiceRow = {
+  id: string;
+  plan: string;
+  billing_interval: string;
+  amount_sar: number;
+  paid_at: string | null;
+  period_end: string | null;
 };
 
 type SubscriptionRow = {
@@ -56,6 +77,9 @@ export default function ProfilePage() {
   const [consultantLegacy, setConsultantLegacy] = useState(false);
   const [activeSub, setActiveSub] = useState<SubscriptionRow | null>(null);
   const [subHistory, setSubHistory] = useState<SubscriptionRow[]>([]);
+  const [billing, setBilling] = useState<BillingView | null>(null);
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const [busyAction, setBusyAction] = useState("");
   const [chatCount, setChatCount] = useState<number | null>(null);
   const [docCount, setDocCount] = useState<number | null>(null);
 
@@ -214,6 +238,27 @@ export default function ProfilePage() {
           console.warn("SUBSCRIPTIONS HISTORY WARN:", e);
         }
 
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (token) {
+          const billingRes = await fetch("/api/billing", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const billingJson = await billingRes.json().catch(() => ({}));
+          if (billingRes.ok && billingJson.subscription && isPlanId(billingJson.subscription.plan)) {
+            setBilling(billingJson.subscription as BillingView);
+          } else {
+            setBilling(null);
+          }
+          const invoiceRes = await fetch("/api/invoices", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const invoiceJson = await invoiceRes.json().catch(() => ({}));
+          if (invoiceRes.ok && Array.isArray(invoiceJson.invoices)) {
+            setInvoices(invoiceJson.invoices as InvoiceRow[]);
+          }
+        }
+
         // 5) counts (optional)
         try {
           const { count: cCount, error: cErr } = await supabase
@@ -242,6 +287,62 @@ export default function ProfilePage() {
 
     void loadProfileAndPayment();
   }, []);
+
+  async function bearer() {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token || "";
+  }
+
+  async function renewNow() {
+    setBusyAction("renew");
+    setErrorMsg(null);
+    try {
+      const token = await bearer();
+      const res = await fetch("/api/checkout/moyasar", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ purpose: "renew_now", locale }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.url) {
+        setErrorMsg(json.error || s.profile.paymentFailed);
+        return;
+      }
+      window.location.href = json.url as string;
+    } finally {
+      setBusyAction("");
+    }
+  }
+
+  async function toggleAutoRenew() {
+    if (!billing) return;
+    setBusyAction("toggle");
+    setErrorMsg(null);
+    try {
+      const token = await bearer();
+      const turningOn = billing.cancel_at_period_end;
+      const res = await fetch(turningOn ? "/api/billing/resume" : "/api/billing/cancel", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.status === 409 && json.needsCard) {
+        setErrorMsg(s.profile.cardRequired);
+        window.location.href = "/account/billing/card";
+        return;
+      }
+      if (!res.ok) {
+        setErrorMsg(json.error || s.profile.saveFailed);
+        return;
+      }
+      setBilling({ ...billing, cancel_at_period_end: !turningOn });
+    } finally {
+      setBusyAction("");
+    }
+  }
 
   async function handleSaveName() {
     try {
@@ -519,6 +620,29 @@ export default function ProfilePage() {
               <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
                 {s.profile.freeBody}
               </p>
+            ) : billing ? (
+              <div style={{ fontSize: 14, color: "#374151", marginBottom: 10, lineHeight: 1.7 }}>
+                <div>
+                  {s.profile.status}: <strong>{billing.status}</strong>
+                </div>
+                <div>
+                  {s.profile.price}: <strong>{formatMoney(Number(billing.amount_sar), locale)}</strong>
+                </div>
+                <div>
+                  {s.profile.cycle}:{" "}
+                  <strong>{billing.billing_interval === "year" ? s.profile.annual : s.profile.monthly}</strong>
+                </div>
+                <div>
+                  {s.profile.startDate}: <strong>{formatDate(billing.current_period_start, locale)}</strong>
+                </div>
+                <div>
+                  {s.profile.nextRenewal}: <strong>{formatDate(billing.current_period_end, locale)}</strong>
+                </div>
+                <div>
+                  {s.profile.autoRenew}:{" "}
+                  <strong>{billing.cancel_at_period_end ? s.profile.autoRenewOff : s.profile.autoRenewOn}</strong>
+                </div>
+              </div>
             ) : activeSub ? (
               <div
                 style={{
@@ -582,14 +706,36 @@ export default function ProfilePage() {
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {billing && isSelfServePlan(billing.plan) && (
+                <button
+                  className="btn"
+                  type="button"
+                  style={{ marginTop: 16 }}
+                  onClick={() => void renewNow()}
+                  disabled={busyAction !== ""}
+                >
+                  {busyAction === "renew" ? s.profile.renewing : s.profile.renewNow}
+                </button>
+              )}
+              {billing && (
+                <button
+                  className="btn"
+                  type="button"
+                  style={{ marginTop: 16 }}
+                  onClick={() => void toggleAutoRenew()}
+                  disabled={busyAction !== ""}
+                >
+                  {s.profile.autoRenew}: {billing.cancel_at_period_end ? s.profile.autoRenewOn : s.profile.autoRenewOff}
+                </button>
+              )}
+              <Link href="/pricing">
+                <button className="btn" type="button" style={{ marginTop: 16 }}>
+                  {s.profile.changePlan}
+                </button>
+              </Link>
               <Link href="/account/billing">
                 <button className="btn" type="button" style={{ marginTop: 16 }}>
                   {s.profile.billingLink}
-                </button>
-              </Link>
-              <Link href="/subscription">
-                <button className="btn" type="button" style={{ marginTop: 16 }}>
-                  {s.profile.manage}
                 </button>
               </Link>
               {(currentPlan === "team" ||
@@ -632,9 +778,48 @@ export default function ProfilePage() {
 
           {/* Billing history */}
           <div className="card" style={{ marginTop: 24 }}>
-            <h2 className="card-title">{s.profile.history}</h2>
+            <h2 className="card-title">{s.profile.invoices}</h2>
 
-            {subHistory.length === 0 ? (
+            {invoices.length > 0 ? (
+              <div style={{ marginTop: 8, fontSize: 13, color: "#374151" }}>
+                {invoices.map((row) => (
+                  <div
+                    key={row.id}
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 12,
+                      alignItems: "center",
+                      padding: "8px 0",
+                      borderBottom: "1px solid #f3f4f6",
+                    }}
+                  >
+                    <span>{planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}</span>
+                    <span>{formatMoney(Number(row.amount_sar), locale)}</span>
+                    <span>{row.billing_interval === "year" ? s.profile.annual : s.profile.monthly}</span>
+                    <span>{formatDate(row.paid_at, locale)}</span>
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => {
+                        void (async () => {
+                          const token = await bearer();
+                          if (!token) return;
+                          try {
+                            await downloadInvoicePdf(row.id, token);
+                          } catch (err) {
+                            setErrorMsg(err instanceof Error ? err.message : s.profile.paymentFailed);
+                          }
+                        })();
+                      }}
+                    >
+                      {s.profile.downloadInvoice}
+                    </button>
+                  </div>
+                ))}
+                <p style={{ marginTop: 8, fontSize: 12, color: "#9ca3af" }}>{s.profile.invoiceNote}</p>
+              </div>
+            ) : subHistory.length === 0 ? (
               <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>
                 {s.profile.noPayments}
               </p>

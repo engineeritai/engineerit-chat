@@ -3,11 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { useMessages } from "@/lib/useMessages";
 
 function ReturnInner() {
   const params = useSearchParams();
   const router = useRouter();
-  const [message, setMessage] = useState("Confirming the Moyasar payment…");
+  const { shell: s } = useMessages();
+  const [message, setMessage] = useState(s.profile.confirmingPayment);
+
+  useEffect(() => {
+    setMessage(s.profile.confirmingPayment);
+  }, [s.profile.confirmingPayment]);
 
   useEffect(() => {
     const checkout = params.get("checkout") || "";
@@ -19,19 +25,18 @@ function ReturnInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ checkoutId: checkout, paymentId }),
       });
-      const json = await res.json().catch(() => ({}));
       if (cancelled) return;
       if (!res.ok) {
-        setMessage(json.error || "Moyasar has not confirmed this payment yet.");
+        router.replace("/pricing?payment=failed");
         return;
       }
-      setMessage("Payment confirmed. A receipt is on its way.");
-      router.replace(`/profile?status=paid&plan=${json.plan || ""}&checkout=${checkout}`);
+      setMessage(s.profile.paymentConfirmedGo);
+      router.replace(`/payment/success?checkout=${encodeURIComponent(checkout)}`);
     })();
     return () => {
       cancelled = true;
     };
-  }, [params, router]);
+  }, [params, router, s.profile.paymentConfirmedGo]);
 
   return <p>{message}</p>;
 }
@@ -39,7 +44,7 @@ function ReturnInner() {
 export default function CheckoutReturnPage() {
   return (
     <div className="page-wrap">
-      <Suspense fallback={<p>Confirming the Moyasar payment…</p>}>
+      <Suspense fallback={<p>…</p>}>
         <ReturnInner />
       </Suspense>
     </div>

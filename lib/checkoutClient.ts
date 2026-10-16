@@ -35,6 +35,16 @@ export function readPendingCheckout(): PendingCheckout | null {
   }
 }
 
+function readLocale() {
+  try {
+    const stored = window.localStorage.getItem("engineerit_locale");
+    if (stored === "ar" || stored === "en") return stored;
+  } catch {
+    /* ignore */
+  }
+  return "en";
+}
+
 export function clearPendingCheckout() {
   try {
     window.sessionStorage.removeItem(PENDING_KEY);
@@ -69,6 +79,7 @@ export async function startMoyasarCheckout(
       interval: pending.interval,
       extraSeats:
         pending.planId === "team" || pending.planId === "enterprise" ? pending.extraSeats : 0,
+      locale: readLocale(),
     }),
   });
   const json = await res.json().catch(() => ({ error: "Could not start payment." }));

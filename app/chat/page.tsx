@@ -1268,7 +1268,7 @@ export default function Page() {
                 <div className="gate-body">
                   <div className="gate-text">{s.chat.upgradeBody}</div>
                   <div className="gate-actions">
-                    <a className="gate-btn gate-btn-primary" href="/subscription">
+                    <a className="gate-btn gate-btn-primary" href="/pricing">
                       {s.chat.upgrade}
                     </a>
                     <button

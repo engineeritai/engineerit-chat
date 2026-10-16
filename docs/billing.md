@@ -48,6 +48,7 @@ The first payment uses the Moyasar payment form with **Save card** after the cus
 | `ADMIN_EMAILS` | yes for the monitor | Comma-separated emails allowed to open `/admin/subscriptions` |
 | `VAT_NUMBER` | no | Leave unset while the business is VAT-exempt. When set, receipts show a VAT-inclusive net and 15% breakdown plus this number. | 
 | `ZATCA_INVOICES_ENABLED` | no | `true` or `1`, and only together with `VAT_NUMBER`, titles the receipt as a tax invoice. This does not generate ZATCA XML. Unset receipts do not use the words “tax invoice”. |
+| `INVOICE_BCC_EMAIL` | no | BCC on every invoice email (first payment and renewals). Defaults to `info@engineerit.ai` when unset. |
 
 ## Supabase migrations
 
@@ -57,6 +58,7 @@ Run once, in order. Each file is idempotent (`if not exists` / `add column if no
 2. `supabase/migrations/20261016140000_moyasar_invoices.sql` — checkout rows used by the first payment.
 3. `supabase/migrations/20261016160000_recurring_billing.sql` — `saved_cards`, `billing_subscriptions`, `renewal_attempts`, plus `payment_id` on checkout rows.
 4. `supabase/migrations/20261016180000_advisor_tiers_and_legacy_price.sql` — `consultant_legacy_price_until` and `advisor_trial_plan` on `profiles`, and a three-month grandfather backfill for current Consultant rows. Apply this before the new prices go live.
+5. `supabase/migrations/20261016210000_profile_subscription_fields.sql` — `locale` on checkout rows and billing subscriptions, so invoice emails and PDFs stay in the buyer’s language. Apply this before deploy.
 
 `saved_cards`, `billing_subscriptions`, and `renewal_attempts` have RLS enabled and no client policies. Only the service role reads or writes them. Card tokens are never returned to the browser.
 

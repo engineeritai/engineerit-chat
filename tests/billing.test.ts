@@ -43,6 +43,9 @@ import {
   verifyMoyasarSignature,
 } from "../lib/moyasar";
 import { chosenLanguage } from "../lib/replyLanguage";
+import { PDFDocument } from "pdf-lib";
+import { canDownloadInvoice, invoiceBccAddress } from "../lib/invoiceMail";
+import { renderInvoicePdf } from "../lib/invoicePdf";
 import { buildReceipt } from "../lib/receipt";
 import crypto from "node:crypto";
 
@@ -243,6 +246,40 @@ describe("Moyasar confirmation and receipts", () => {
     assert.doesNotMatch(arabic.text, /Receipt|VAT|Net:|Plan:|tax invoice|Total paid/);
     assert.equal(chosenLanguage("لخص هذه الوثيقة"), "ar");
     assert.equal(chosenLanguage("Summarize this document"), "en");
+  });
+
+  it("BCCs every invoice email to INVOICE_BCC_EMAIL, defaulting to info@engineerit.ai", () => {
+    assert.equal(invoiceBccAddress(undefined), "info@engineerit.ai");
+    assert.equal(invoiceBccAddress("   "), "info@engineerit.ai");
+    assert.equal(invoiceBccAddress(" finance@engineerit.ai "), "finance@engineerit.ai");
+  });
+
+  it("lets only the invoice owner download a paid invoice", () => {
+    assert.equal(canDownloadInvoice("user-1", "user-1", "paid"), true);
+    assert.equal(canDownloadInvoice("user-1", "user-2", "paid"), false);
+    assert.equal(canDownloadInvoice("user-1", "user-1", "pending"), false);
+    assert.equal(canDownloadInvoice(null, "user-1", "paid"), false);
+  });
+
+  it("builds a PDF invoice with the total and no VAT until VAT_NUMBER is set", async () => {
+    const receipt = buildReceipt(
+      { plan: "engineer", amountSar: 19, interval: "month", periodEnd: "2026-11-16T00:00:00.000Z" },
+      { vatNumber: "", zatcaFlag: "true" }
+    );
+    assert.doesNotMatch(receipt.text, /VAT|tax invoice/i);
+    const pdf = Buffer.from(await renderInvoicePdf(receipt.text));
+    assert.equal(pdf.subarray(0, 5).toString(), "%PDF-");
+    const loaded = await PDFDocument.load(pdf);
+    assert.ok(loaded.getPageCount() >= 1);
+
+    const arabic = buildReceipt(
+      { plan: "consultant", amountSar: 99, interval: "month", locale: "ar" },
+      { vatNumber: "", zatcaFlag: "" }
+    );
+    assert.doesNotMatch(arabic.text, /VAT|ضريبة/);
+    const arabicPdf = Buffer.from(await renderInvoicePdf(arabic.text));
+    const loadedArabic = await PDFDocument.load(arabicPdf);
+    assert.ok(loadedArabic.getPageCount() >= 1);
   });
 });
 

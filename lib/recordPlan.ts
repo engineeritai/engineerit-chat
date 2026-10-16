@@ -15,6 +15,10 @@ type RecordArgs = {
   periodEnd?: string | null;
   company?: string | null;
   source: "moyasar" | "manual";
+  periodStart?: string | null;
+  cancelAtPeriodEnd?: boolean;
+  locale?: string | null;
+  skipRecent?: boolean;
 };
 
 function addDays(from: Date, days: number) {
@@ -45,7 +49,12 @@ export async function recordPlanPurchase(admin: SupabaseClient, args: RecordArgs
   }
   const endIso = endDate.toISOString();
 
-  if (args.source === "moyasar") {
+  const periodStart =
+    args.periodStart && !Number.isNaN(new Date(args.periodStart).getTime())
+      ? new Date(args.periodStart).toISOString()
+      : nowIso;
+
+  if (args.source === "moyasar" && !args.skipRecent) {
     const since = new Date(now.getTime() - 2 * 60 * 1000).toISOString();
     const { data: recentRows } = await admin
       .from("subscriptions")
@@ -85,9 +94,11 @@ export async function recordPlanPurchase(admin: SupabaseClient, args: RecordArgs
         seatLimit,
         amountSar,
         amountHalalas: Math.round(amountSar * 100),
-        periodStart: nowIso,
+        periodStart,
         periodEnd: healedEnd,
         teamId: healedTeam,
+        cancelAtPeriodEnd: args.cancelAtPeriodEnd,
+        locale: args.locale,
       });
       return { ok: true as const, idempotent: true, endDate: healedEnd };
     }
@@ -157,9 +168,11 @@ export async function recordPlanPurchase(admin: SupabaseClient, args: RecordArgs
     seatLimit,
     amountSar,
     amountHalalas: Math.round(amountSar * 100),
-    periodStart: nowIso,
+    periodStart,
     periodEnd: endIso,
     teamId,
+    cancelAtPeriodEnd: args.cancelAtPeriodEnd,
+    locale: args.locale,
   });
 
   return { ok: true as const, idempotent: false, endDate: endIso, amountSar, seatLimit };

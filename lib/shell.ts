@@ -201,6 +201,33 @@ export type ShellCopy = {
     saved: string;
     photoFailed: string;
     photoSaved: string;
+    cycle: string;
+    monthly: string;
+    annual: string;
+    nextRenewal: string;
+    autoRenew: string;
+    autoRenewOn: string;
+    autoRenewOff: string;
+    renewNow: string;
+    renewing: string;
+    changePlan: string;
+    downloadInvoice: string;
+    invoices: string;
+    noInvoices: string;
+    continueChat: string;
+    invoiceHeading: string;
+    paymentFailedBanner: string;
+    confirmingPayment: string;
+    paymentConfirmedGo: string;
+    cardRequired: string;
+  };
+  checkout: {
+    title: string;
+    savedCard: string;
+    consent: string;
+    openFailed: string;
+    missingKey: string;
+    seats: string;
   };
   subscription: {
     title: string;
@@ -426,7 +453,7 @@ const en: ShellCopy = {
     createdConfirm:
       "Account created. We sent a confirmation email. Check your inbox and junk folder, confirm the address, then sign in from the top bar.",
     createdRedirect: "Account created. Redirecting to your profile...",
-    upgradeAnytime: "You can change your plan at any time from your profile or the subscription page.",
+    upgradeAnytime: "You can change your plan at any time from your profile or the pricing page.",
     policyName: "User policy and agreement",
   },
   profile: {
@@ -447,7 +474,7 @@ const en: ShellCopy = {
     startDate: "Start date",
     endDate: "End date",
     noBilling: "No billing data found yet for this plan.",
-    billingNote: "Plan changes are handled by engineerit.ai billing. Manage or upgrade from the subscription page.",
+    billingNote: "Plan changes are handled by engineerit.ai billing. Change plan from the pricing page.",
     manage: "Manage or upgrade subscription",
     billingLink: "Billing, card, and cancellation",
     manageTeam: "Manage team seats",
@@ -476,6 +503,34 @@ const en: ShellCopy = {
     saved: "Profile updated.",
     photoFailed: "Could not upload the profile photo.",
     photoSaved: "Profile photo updated.",
+    cycle: "Billing cycle",
+    monthly: "Monthly",
+    annual: "Annual",
+    nextRenewal: "Next renewal",
+    autoRenew: "Auto-renew",
+    autoRenewOn: "On",
+    autoRenewOff: "Off",
+    renewNow: "Renew now",
+    renewing: "Starting payment…",
+    changePlan: "Change plan",
+    downloadInvoice: "Download invoice (PDF)",
+    invoices: "Invoices",
+    noInvoices: "No invoices yet.",
+    continueChat: "Continue to chat",
+    invoiceHeading: "Invoice",
+    paymentFailedBanner: "The payment was not completed. Choose a plan and try again.",
+    confirmingPayment: "Confirming the payment…",
+    paymentConfirmedGo: "Payment confirmed. Your invoice is ready.",
+    cardRequired: "Save a card with Moyasar before auto-renew can be turned on.",
+  },
+  checkout: {
+    title: "Checkout",
+    savedCard: "The card is saved for automatic renewal until you cancel.",
+    consent:
+      "I agree to save this card with Moyasar and to be charged automatically on each renewal until I cancel in billing.",
+    openFailed: "Could not open checkout.",
+    missingKey: "The card form is not configured yet.",
+    seats: "seats",
   },
   subscription: {
     title: "Plans and subscription",
@@ -700,7 +755,7 @@ const ar: ShellCopy = {
     createdConfirm:
       "تم إنشاء الحساب. أرسلنا رسالة تأكيد. راجع الوارد والبريد غير الهام، ثم أكّد العنوان وادخل من الشريط العلوي.",
     createdRedirect: "تم إنشاء الحساب. جارٍ التحويل إلى ملفك...",
-    upgradeAnytime: "يمكنك تغيير الباقة في أي وقت من ملفك أو صفحة الاشتراك.",
+    upgradeAnytime: "يمكنك تغيير الباقة في أي وقت من ملفك أو صفحة الأسعار.",
     policyName: "سياسة الاستخدام والاتفاق",
   },
   profile: {
@@ -721,7 +776,7 @@ const ar: ShellCopy = {
     startDate: "تاريخ البدء",
     endDate: "تاريخ الانتهاء",
     noBilling: "لا توجد بيانات فوترة لهذه الباقة بعد.",
-    billingNote: "تغيير الباقة يتم عبر فوترة engineerit.ai. أدر الباقة أو رقّها من صفحة الاشتراك.",
+    billingNote: "تغيير الباقة يتم عبر فوترة engineerit.ai. غيّر الباقة من صفحة الأسعار.",
     manage: "إدارة الاشتراك أو ترقيته",
     billingLink: "الفوترة والبطاقة والإلغاء",
     manageTeam: "إدارة مقاعد الفريق",
@@ -749,6 +804,34 @@ const ar: ShellCopy = {
     saved: "تم تحديث الملف.",
     photoFailed: "تعذر رفع صورة الملف.",
     photoSaved: "تم تحديث صورة الملف.",
+    cycle: "دورة الفوترة",
+    monthly: "شهري",
+    annual: "سنوي",
+    nextRenewal: "التجديد التالي",
+    autoRenew: "التجديد التلقائي",
+    autoRenewOn: "مفعّل",
+    autoRenewOff: "متوقف",
+    renewNow: "جدّد الآن",
+    renewing: "جارٍ بدء الدفع…",
+    changePlan: "تغيير الباقة",
+    downloadInvoice: "تنزيل الفاتورة (PDF)",
+    invoices: "الفواتير",
+    noInvoices: "لا توجد فواتير بعد.",
+    continueChat: "المتابعة إلى المحادثة",
+    invoiceHeading: "الفاتورة",
+    paymentFailedBanner: "لم يكتمل الدفع. اختر باقة وحاول مرة أخرى.",
+    confirmingPayment: "جارٍ تأكيد الدفع…",
+    paymentConfirmedGo: "تم تأكيد الدفع. الفاتورة جاهزة.",
+    cardRequired: "احفظ بطاقة عبر Moyasar قبل تفعيل التجديد التلقائي.",
+  },
+  checkout: {
+    title: "الدفع",
+    savedCard: "تُحفظ البطاقة للتجديد التلقائي حتى الإلغاء.",
+    consent:
+      "أوافق على حفظ هذه البطاقة لدى Moyasar وعلى الخصم التلقائي في كل تجديد حتى أُلغي ذلك من الفوترة.",
+    openFailed: "تعذر فتح صفحة الدفع.",
+    missingKey: "نموذج البطاقة غير مُعد بعد.",
+    seats: "مقاعد",
   },
   subscription: {
     title: "الباقات والاشتراك",

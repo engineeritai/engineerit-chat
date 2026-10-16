@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { nextPeriodEnd } from "@/lib/billingCycle";
 import { periodDays, type BillingInterval } from "@/lib/plans";
 import { saveCardFromPayment } from "@/lib/billingAccount";
 import {
@@ -29,6 +30,8 @@ export type CheckoutRow = {
   receipt_sent_at: string | null;
   period_end: string | null;
   payment_id?: string | null;
+  purpose?: string | null;
+  locale?: string | null;
 };
 
 function addDays(from: Date, days: number) {
@@ -110,6 +113,7 @@ export async function settleCheckout(
           interval,
           seats: row.seat_limit,
           periodEnd,
+          locale: row.locale === "ar" ? "ar" : "en",
         });
         if (!sent) {
           await admin
@@ -132,7 +136,28 @@ async function activateCheckout(
   row: CheckoutRow,
   interval: BillingInterval
 ) {
-  const periodEnd = addDays(new Date(), periodDays(interval));
+  const now = new Date();
+  let periodEnd = addDays(now, periodDays(interval));
+  let periodStart = now.toISOString();
+  let cancelAtPeriodEnd = false;
+  if (row.purpose === "renew_now" && row.user_id) {
+    const { data: billing } = await admin
+      .from("billing_subscriptions")
+      .select("current_period_start, current_period_end, cancel_at_period_end")
+      .eq("user_id", row.user_id)
+      .in("status", ["active", "past_due"])
+      .maybeSingle();
+    const currentEnd = billing?.current_period_end ? new Date(billing.current_period_end) : now;
+    periodEnd = nextPeriodEnd(now, Number.isNaN(currentEnd.getTime()) ? now : currentEnd, interval).toISOString();
+    if (
+      billing?.current_period_start &&
+      !Number.isNaN(currentEnd.getTime()) &&
+      currentEnd.getTime() > now.getTime()
+    ) {
+      periodStart = billing.current_period_start as string;
+    }
+    cancelAtPeriodEnd = Boolean(billing?.cancel_at_period_end);
+  }
   const email = row.customer_email?.trim().toLowerCase() || null;
   const plan = row.plan === "enterprise" || row.plan === "team" || row.plan === "engineer" || row.plan === "professional" || row.plan === "consultant"
     ? row.plan
@@ -151,6 +176,10 @@ async function activateCheckout(
       seatLimit: row.seat_limit || undefined,
       amountSar: Number(row.amount_sar),
       periodEnd,
+      periodStart,
+      cancelAtPeriodEnd,
+      locale: row.locale === "ar" ? "ar" : "en",
+      skipRecent: row.purpose === "renew_now",
       company: row.company,
       source: "moyasar",
     });
@@ -179,7 +208,7 @@ export async function loadCheckoutByInvoice(admin: SupabaseClient, invoiceId: st
   const { data, error } = await admin
     .from("moyasar_invoices")
     .select(
-      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end"
+      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale"
     )
     .eq("invoice_id", invoiceId)
     .maybeSingle();
@@ -191,7 +220,7 @@ export async function loadCheckoutById(admin: SupabaseClient, id: string) {
   const { data, error } = await admin
     .from("moyasar_invoices")
     .select(
-      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end"
+      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale"
     )
     .eq("id", id)
     .maybeSingle();

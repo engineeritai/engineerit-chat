@@ -10,7 +10,7 @@ export async function GET(req: Request) {
   const { data: sub, error } = await admin
     .from("billing_subscriptions")
     .select(
-      "id, plan, billing_interval, extra_seats, seat_limit, amount_sar, status, current_period_end, cancel_at_period_end, credit_halalas, failure_count, next_retry_at, saved_card_id"
+      "id, plan, billing_interval, extra_seats, seat_limit, amount_sar, status, current_period_start, current_period_end, cancel_at_period_end, credit_halalas, failure_count, next_retry_at, saved_card_id"
     )
     .eq("user_id", user.id)
     .in("status", ["active", "past_due"])

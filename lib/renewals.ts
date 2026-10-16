@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   addDays,
@@ -37,6 +38,7 @@ export type OpenSubscription = {
   team_id: string | null;
   credit_halalas: number;
   failure_count: number;
+  locale?: string | null;
 };
 
 type ChargeResult = {
@@ -50,7 +52,7 @@ export async function runDueRenewals(admin: SupabaseClient, now = new Date()) {
   const { data, error } = await admin
     .from("billing_subscriptions")
     .select(
-      "id, user_id, customer_email, plan, billing_interval, extra_seats, seat_limit, amount_halalas, status, current_period_end, cancel_at_period_end, saved_card_id, team_id, credit_halalas, failure_count"
+      "id, user_id, customer_email, plan, billing_interval, extra_seats, seat_limit, amount_halalas, status, current_period_end, cancel_at_period_end, saved_card_id, team_id, credit_halalas, failure_count, locale"
     )
     .in("status", ["active", "past_due"])
     .lte("current_period_end", now.toISOString())
@@ -117,13 +119,28 @@ export async function applyRenewalDecision(
     await extendSubscription(admin, sub, now, priced.creditRemaining);
     if (sub.customer_email) {
       const periodEnd = nextPeriodEnd(now, new Date(sub.current_period_end), sub.billing_interval);
-      await sendReceipt(sub.customer_email, {
-        plan: sub.plan,
-        amountSar: priced.chargeHalalas / 100,
-        interval: sub.billing_interval,
-        seats: sub.seat_limit,
+      const amountSar = priced.chargeHalalas / 100;
+      const locale = sub.locale === "ar" ? "ar" : "en";
+      await recordRenewalInvoice(admin, sub, {
+        amountSar,
+        amountHalalas: priced.chargeHalalas,
         periodEnd: periodEnd.toISOString(),
+        paymentId: charge.paymentId || null,
+        locale,
+        now,
       });
+      try {
+        await sendReceipt(sub.customer_email, {
+          plan: sub.plan,
+          amountSar,
+          interval: sub.billing_interval,
+          seats: sub.seat_limit,
+          periodEnd: periodEnd.toISOString(),
+          locale,
+        });
+      } catch (err) {
+        console.error("renewal receipt email failed", err);
+      }
     }
     return "renewed";
   }
@@ -398,6 +415,50 @@ export async function chargeSeatChange(
     attempt: 0,
     kind: "seat_change",
   });
+}
+
+async function recordRenewalInvoice(
+  admin: SupabaseClient,
+  sub: OpenSubscription,
+  args: {
+    amountSar: number;
+    amountHalalas: number;
+    periodEnd: string;
+    paymentId: string | null;
+    locale: "ar" | "en";
+    now: Date;
+  }
+) {
+  if (args.paymentId) {
+    const { data: existing } = await admin
+      .from("moyasar_invoices")
+      .select("id")
+      .eq("payment_id", args.paymentId)
+      .maybeSingle();
+    if (existing?.id) return;
+  }
+  const nowIso = args.now.toISOString();
+  const { error } = await admin.from("moyasar_invoices").insert({
+    id: crypto.randomUUID(),
+    invoice_id: args.paymentId,
+    payment_id: args.paymentId,
+    plan: sub.plan,
+    billing_interval: sub.billing_interval,
+    amount_sar: args.amountSar,
+    amount_halalas: args.amountHalalas,
+    currency: "SAR",
+    seat_limit: sub.seat_limit,
+    extra_seats: sub.extra_seats,
+    customer_email: sub.customer_email,
+    user_id: sub.user_id,
+    status: "paid",
+    paid_at: nowIso,
+    activated_at: nowIso,
+    period_end: args.periodEnd,
+    purpose: "renewal",
+    locale: args.locale,
+  });
+  if (error) console.error("renewal invoice insert", error);
 }
 
 async function sendBillingNote(to: string, subject: string, text: string) {

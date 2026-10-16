@@ -6,7 +6,9 @@ import Header from "../../components/Header";
 import NavSidebar from "../../components/NavSidebar";
 import MoyasarCardForm from "../../components/MoyasarCardForm";
 import { supabase } from "@/lib/supabaseClient";
-import { PLAN_LABELS, formatSar, type PlanId } from "@/lib/plans";
+import { type PlanId } from "@/lib/plans";
+import { formatMoney, planById } from "@/lib/labels";
+import { useMessages } from "@/lib/useMessages";
 
 type Checkout = {
   id: string;
@@ -19,6 +21,7 @@ type Checkout = {
 
 export default function CheckoutPage() {
   const params = useParams<{ id: string }>();
+  const { locale, shell: s } = useMessages();
   const [sidebar, setSidebar] = useState(false);
   const [consent, setConsent] = useState(false);
   const [checkout, setCheckout] = useState<Checkout | null>(null);
@@ -41,7 +44,7 @@ export default function CheckoutPage() {
       const json = await res.json().catch(() => ({}));
       if (cancelled) return;
       if (!res.ok) {
-        setError(json.error || "Could not open checkout.");
+        setError(json.error || s.checkout.openFailed);
         return;
       }
       setCheckout(json.checkout);
@@ -51,7 +54,7 @@ export default function CheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, [params.id]);
+  }, [params.id, s.checkout.openFailed]);
 
   const metadata = useMemo(
     () => ({
@@ -62,7 +65,9 @@ export default function CheckoutPage() {
     [checkout?.id, checkout?.plan]
   );
 
-  const label = checkout ? PLAN_LABELS[checkout.plan] || checkout.plan : "";
+  const label = checkout ? planById(locale, checkout.plan).name : "";
+  const amount = checkout ? formatMoney(Number(checkout.amount_sar), locale) : "";
+  const cycle = checkout?.billing_interval === "year" ? s.profile.annual : s.profile.monthly;
 
   return (
     <div className="app-shell">
@@ -70,20 +75,20 @@ export default function CheckoutPage() {
       <div className="main">
         <Header onToggleSidebar={() => setSidebar((v) => !v)} />
         <div className="page-wrap">
-          <h1 className="page-title">Checkout</h1>
+          <h1 className="page-title">{s.checkout.title}</h1>
           {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
           {checkout && (
             <>
               <p className="page-subtitle">
-                {label} · {formatSar(Number(checkout.amount_sar), checkout.billing_interval === "year" ? "year" : "month")}
-                {checkout.seat_limit && checkout.seat_limit > 1 ? ` · ${checkout.seat_limit} seats` : ""}.
-                The card is saved for automatic renewal until you cancel.
+                {label} · {amount} · {cycle}
+                {checkout.seat_limit && checkout.seat_limit > 1
+                  ? ` · ${checkout.seat_limit} ${s.checkout.seats}`
+                  : ""}
+                . {s.checkout.savedCard}
               </p>
               <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 16 }}>
                 <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-                <span>
-                  I agree to save this card with Moyasar and to be charged automatically on each renewal until I cancel in billing.
-                </span>
+                <span>{s.checkout.consent}</span>
               </label>
               {consent && publishableKey && callbackUrl ? (
                 <MoyasarCardForm
@@ -94,7 +99,7 @@ export default function CheckoutPage() {
                   metadata={metadata}
                 />
               ) : consent ? (
-                <p>NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY is not set.</p>
+                <p>{s.checkout.missingKey}</p>
               ) : null}
             </>
           )}

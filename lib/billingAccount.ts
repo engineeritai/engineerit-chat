@@ -16,6 +16,8 @@ export async function syncBillingSubscription(
     periodStart: string;
     periodEnd: string;
     teamId?: string | null;
+    cancelAtPeriodEnd?: boolean;
+    locale?: string | null;
   }
 ) {
   const nowIso = new Date().toISOString();
@@ -39,12 +41,13 @@ export async function syncBillingSubscription(
     status: "active",
     current_period_start: args.periodStart,
     current_period_end: args.periodEnd,
-    cancel_at_period_end: false,
-    canceled_at: null,
+    cancel_at_period_end: args.cancelAtPeriodEnd === true,
+    canceled_at: args.cancelAtPeriodEnd === true ? nowIso : null,
     team_id: args.teamId ?? null,
     failure_count: 0,
     next_retry_at: null,
     updated_at: nowIso,
+    ...(args.locale === "ar" || args.locale === "en" ? { locale: args.locale } : {}),
   };
 
   if (existing?.id) {

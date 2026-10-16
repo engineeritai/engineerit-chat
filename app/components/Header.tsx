@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import LanguageToggle from "./LanguageToggle";
 import { planById } from "@/lib/labels";
 import { useMessages } from "@/lib/useMessages";
@@ -48,6 +48,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const [resetMsg, setResetMsg] = useState<string | null>(null);
 
   const router = useRouter();
+  const pathname = usePathname();
   const { locale, shell: s } = useMessages();
   const planName = (id: PlanId) => planById(locale, id).name;
 
@@ -145,7 +146,12 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
     };
 
     void load();
-  }, []);
+    const refresh = () => {
+      void load();
+    };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [pathname]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -743,14 +749,14 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                 </button>
 
                 <button type="button" onClick={() => goTo("/pricing")} style={menuItemStyle}>
-                  Pricing
+                  {s.nav.pricing}
                 </button>
 
                 <button type="button" onClick={() => goTo("/account/team")} style={menuItemStyle}>
-                  Team
+                  {s.nav.team}
                 </button>
 
-                <button type="button" onClick={() => goTo("/subscription")} style={menuItemStyle}>
+                <button type="button" onClick={() => goTo("/pricing")} style={menuItemStyle}>
                   {s.header.subscribe}
                 </button>
 
