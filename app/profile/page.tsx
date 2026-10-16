@@ -221,7 +221,7 @@ export default function ProfilePage() {
         // 5) counts (optional)
         try {
           const { count: cCount, error: cErr } = await supabase
-            .from("chat_messages")
+            .from("conversations")
             .select("id", { count: "exact", head: true })
             .eq("user_id", user.id);
 
