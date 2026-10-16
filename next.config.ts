@@ -1,12 +1,21 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  skipTrailingSlashRedirect: true,
   outputFileTracingIncludes: {
     "/api/history/[id]/export": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
     "/api/invoices/[id]/pdf": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
     "/api/payments/moyasar/complete": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
     "/api/payments/moyasar/callback": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
     "/api/cron/renewals": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
+  },
+  async headers() {
+    return [
+      {
+        source: "/.well-known/:path*",
+        headers: [{ key: "Content-Type", value: "text/plain" }],
+      },
+    ];
   },
   async redirects() {
     return [
@@ -15,6 +24,16 @@ const nextConfig: NextConfig = {
       { source: "/subscription", destination: "/pricing", statusCode: 301 },
       { source: "/enterprise", destination: "/pricing", statusCode: 301 },
     ];
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/.well-known/:path*/",
+          destination: "/.well-known/:path*",
+        },
+      ],
+    };
   },
 };
 
