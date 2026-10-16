@@ -2159,6 +2159,70 @@ body.acct-open .mkt-header {
   background: #f4f6fa;
 }
 
+.advisor-menu-sub {
+  display: flex;
+  flex-direction: column;
+  margin: 0 4px 4px;
+  margin-inline-start: 14px;
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid var(--line);
+}
+
+.advisor-menu-chevron {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.plus-menu a.advisor-menu-all {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.advisor-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin: 2px 0 6px;
+  padding: 3px 6px 3px 8px;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: var(--brand-ink);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.advisor-mode-chip .tool-glyph {
+  width: 14px;
+  height: 14px;
+  flex-basis: 14px;
+}
+
+.advisor-mode-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.advisor-mode-chip button {
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
 .home-plans {
   margin-top: 8px;
 }

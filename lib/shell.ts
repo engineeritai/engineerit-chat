@@ -153,6 +153,8 @@ export type ShellCopy = {
     listening: string;
     toolsMenu: string;
     advisorsMenu: string;
+    viewAllAdvisors: string;
+    removeAdvisor: string;
     hideSidebar: string;
     showSidebar: string;
     moreActions: string;
@@ -531,6 +533,8 @@ const en: ShellCopy = {
     listening: "Listening",
     toolsMenu: "Tools",
     advisorsMenu: "Advisors",
+    viewAllAdvisors: "View all advisors",
+    removeAdvisor: "Remove advisor",
     hideSidebar: "Hide sidebar",
     showSidebar: "Show sidebar",
     moreActions: "Chat actions",
@@ -924,6 +928,8 @@ const ar: ShellCopy = {
     listening: "جارٍ الاستماع",
     toolsMenu: "الأدوات",
     advisorsMenu: "المستشارون",
+    viewAllAdvisors: "عرض كل المستشارين",
+    removeAdvisor: "إزالة المستشار",
     hideSidebar: "إخفاء الشريط",
     showSidebar: "إظهار الشريط",
     moreActions: "إجراءات المحادثة",
