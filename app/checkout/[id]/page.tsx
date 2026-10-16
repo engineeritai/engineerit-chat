@@ -255,9 +255,17 @@ export default function CheckoutPage() {
             </div>
             {showPhonePay && phonePayUrl ? (
               <aside className="checkout-phone">
-                <h2>{s.checkout.phonePay}</h2>
-                <PhonePayQr url={phonePayUrl} alt={s.checkout.phonePay} />
-                <p>{s.checkout.phonePayHint}</p>
+                <div className="checkout-phone-title">
+                  <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="7" y="2" width="10" height="20" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                    <circle cx="12" cy="18" r="0.8" fill="currentColor" />
+                  </svg>
+                  <div>
+                    <p className="checkout-phone-kicker">{s.checkout.phonePay}</p>
+                    <h2>{s.checkout.scanToPay}</h2>
+                  </div>
+                </div>
+                <PhonePayQr url={phonePayUrl} alt={s.checkout.scanToPay} />
                 <p>{s.checkout.phonePayWaiting}</p>
                 <button
                   type="button"

@@ -263,6 +263,7 @@ export type ShellCopy = {
     summary: string;
     walletReminder: string;
     phonePay: string;
+    scanToPay: string;
     phonePayHint: string;
     phonePayWaiting: string;
     phonePayExpired: string;
@@ -611,6 +612,7 @@ const en: ShellCopy = {
     walletReminder:
       "Apple Pay, Samsung Pay, and STC Pay are one-time payments. Renew from your profile whenever you like.",
     phonePay: "Pay with your phone",
+    scanToPay: "Scan to pay with Apple Pay, Samsung Pay, STC Pay or mada",
     phonePayHint:
       "Scan this code to open this checkout on your phone. The link lasts 15 minutes and opens this payment only.",
     phonePayWaiting: "This page opens the invoice when the phone payment is confirmed.",
@@ -958,6 +960,7 @@ const ar: ShellCopy = {
     walletReminder:
       "Apple Pay وSamsung Pay وSTC Pay دفعات لمرة واحدة. جدّد من ملفك وقتما تشاء.",
     phonePay: "ادفع من جوالك",
+    scanToPay: "امسح للدفع عبر Apple Pay أو Samsung Pay أو STC Pay أو mada",
     phonePayHint: "امسح الرمز لفتح هذا الدفع على الجوال. الرابط يعمل 15 دقيقة ولهذا الدفع فقط.",
     phonePayWaiting: "تنتقل هذه الصفحة إلى الفاتورة عند تأكيد الدفع من الجوال.",
     phonePayExpired: "انتهت صلاحية رابط الجوال. افتح الدفع على الكمبيوتر لمسح رمز جديد.",
