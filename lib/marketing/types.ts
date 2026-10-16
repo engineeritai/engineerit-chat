@@ -17,6 +17,7 @@ export type MarketingContent = {
     disciplines: string;
     tools: string;
     how: string;
+    guide: string;
     teams: string;
     advisors: string;
     pricing: string;
@@ -61,6 +62,8 @@ export type MarketingContent = {
     title: string;
     intro: string;
     steps: { title: string; body: string }[];
+    openPage: string;
+    openGuide: string;
   };
   audiences: {
     title: string;

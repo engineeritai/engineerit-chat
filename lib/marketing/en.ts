@@ -10,6 +10,7 @@ export const en: MarketingContent = {
     disciplines: "Disciplines",
     tools: "Tools",
     how: "How it works",
+    guide: "User guide",
     teams: "For teams",
     advisors: "AI Advisors",
     pricing: "Pricing",
@@ -122,6 +123,8 @@ export const en: MarketingContent = {
         body: "Use the answer in your own check. Paid plans can copy and share. Higher plans export PDF, Word, or PowerPoint.",
       },
     ],
+    openPage: "See how it works",
+    openGuide: "Open the user guide",
   },
   audiences: {
     title: "Who it is for",

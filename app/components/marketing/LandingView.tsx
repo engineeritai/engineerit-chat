@@ -136,6 +136,14 @@ export default function LandingView() {
             </li>
           ))}
         </ol>
+        <div className="mkt-cta-row">
+          <Link className="mkt-btn mkt-btn-secondary" href="/how-it-works">
+            {content.how.openPage}
+          </Link>
+          <Link className="mkt-btn mkt-btn-ghost" href="/guide">
+            {content.how.openGuide}
+          </Link>
+        </div>
       </section>
 
       <section className="mkt-section">

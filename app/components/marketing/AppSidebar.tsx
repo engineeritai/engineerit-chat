@@ -12,7 +12,6 @@ import { useMessages } from "@/lib/useMessages";
 const ANCHORS = [
   ["disciplines", "disciplines"],
   ["tools", "tools"],
-  ["how-it-works", "how"],
   ["teams", "teams"],
 ] as const;
 
@@ -39,7 +38,15 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
 
   const links = [
     { href: "/chat", label: shell.nav.chat, active: pathname === "/chat" },
-    ...ANCHORS.map(([id, key]) => ({
+    ...ANCHORS.filter(([, key]) => key !== "teams").map(([id, key]) => ({
+      href: `/#${id}`,
+      hash: id,
+      label: content.nav[key],
+      active: false,
+    })),
+    { href: "/how-it-works", label: content.nav.how, active: pathname === "/how-it-works" },
+    { href: "/guide", label: content.nav.guide, active: pathname === "/guide" },
+    ...ANCHORS.filter(([, key]) => key === "teams").map(([id, key]) => ({
       href: `/#${id}`,
       hash: id,
       label: content.nav[key],
@@ -52,7 +59,11 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
     },
     { href: "/pricing", label: content.nav.pricing, active: pathname === "/pricing" },
     { href: "/faq", label: content.nav.faq, active: pathname === "/faq" },
+    { href: "/register", label: shell.nav.register, active: pathname === "/register" },
     { href: "/profile", label: shell.nav.profile, active: pathname === "/profile" },
+    { href: "/account/team", label: shell.nav.team, active: pathname.startsWith("/account/team") },
+    { href: "/feedback", label: shell.nav.feedback, active: pathname === "/feedback" },
+    { href: "/legal/terms", label: shell.nav.terms, active: pathname.startsWith("/legal/") },
   ];
 
   function onNavClick(event: React.MouseEvent<HTMLAnchorElement>, hash?: string) {

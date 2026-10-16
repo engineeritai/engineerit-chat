@@ -327,9 +327,11 @@ a,
   justify-content: center;
   gap: 4px;
   min-width: 0;
+  overflow-x: auto;
   font-size: 15px;
   font-weight: 500;
   white-space: nowrap;
+  scrollbar-width: none;
 }
 
 .mkt-nav a {
@@ -1206,4 +1208,127 @@ video,
 canvas,
 svg {
   max-width: 100%;
+}
+
+.guide-svg {
+  display: block;
+  width: min(728px, 100%);
+  height: auto;
+  margin: 8px 0 16px;
+}
+
+[dir="rtl"] .guide-svg {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] .guide-svg text {
+  transform: scaleX(-1);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.guide-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-flow li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.guide-flow a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.guide-flow-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 12px;
+}
+
+.guide-flow-arrow {
+  color: var(--muted);
+}
+
+[dir="rtl"] .guide-flow-arrow {
+  transform: scaleX(-1);
+}
+
+.guide-steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-step {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+  scroll-margin-top: calc(var(--header-h) + var(--safe-top) + 12px);
+}
+
+.guide-step h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.guide-step p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.guide-step a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+
+.guide-more {
+  margin: 20px 0 0;
+}
+
+@media (max-width: 640px) {
+  .guide-step {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-step svg {
+    width: 120px;
+  }
 }

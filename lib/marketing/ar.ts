@@ -10,6 +10,7 @@ export const ar: MarketingContent = {
     disciplines: "التخصصات",
     tools: "الأدوات",
     how: "كيف يعمل",
+    guide: "دليل الاستخدام",
     teams: "للفرق",
     advisors: "مستشارو الذكاء الاصطناعي",
     pricing: "الأسعار",
@@ -104,6 +105,8 @@ export const ar: MarketingContent = {
         body: "استخدم الإجابة في مراجعتك. الباقات المدفوعة تنسخ وتشارك. الباقات الأعلى تصدّر بي دي إف أو وورد أو باوربوينت.",
       },
     ],
+    openPage: "اقرأ كيف يعمل",
+    openGuide: "افتح دليل الاستخدام",
   },
   audiences: {
     title: "لمن هو",

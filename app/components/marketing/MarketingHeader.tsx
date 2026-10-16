@@ -47,6 +47,26 @@ export default function MarketingHeader({ onMenu }: { onMenu: () => void }) {
             <span className="mkt-chat-label">{chatLabel}</span>
           </Link>
         )}
+        <nav className="mkt-nav" aria-label={content.nav.primary}>
+          <Link href="/" className={pathname === "/" ? "mkt-nav-active" : undefined}>
+            {shell.nav.home}
+          </Link>
+          <Link href="/#tools">{content.nav.tools}</Link>
+          <Link href="/#disciplines">{content.nav.disciplines}</Link>
+          <Link
+            href="/how-it-works"
+            className={pathname === "/how-it-works" ? "mkt-nav-active" : undefined}
+          >
+            {content.nav.how}
+          </Link>
+          <Link href="/#teams">{content.nav.teams}</Link>
+          <Link href="/faq" className={pathname === "/faq" ? "mkt-nav-active" : undefined}>
+            {content.nav.faq}
+          </Link>
+          <Link href="/guide" className={pathname === "/guide" ? "mkt-nav-active" : undefined}>
+            {content.nav.guide}
+          </Link>
+        </nav>
         <div className="mkt-header-spacer" />
         <AccountMenu presentation="photo" />
       </div>
