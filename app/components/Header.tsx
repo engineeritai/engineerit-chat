@@ -801,7 +801,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                         style={{
                           fontSize: 12,
                           marginBottom: 6,
-                          color: resetMsg.includes("success")
+                          color: resetMsg === s.header.passwordUpdated
                             ? "#15803d"
                             : "#b91c1c",
                         }}

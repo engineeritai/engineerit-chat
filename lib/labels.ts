@@ -31,12 +31,20 @@ const AR_TOOLS: Record<EngineerToolId, string> = {
   dashboard: "لوحات المشروع",
 };
 
+const AR_PLAN_MARK: Record<PlanId, string> = {
+  assistant: "م",
+  engineer: "ه",
+  professional: "ح",
+  consultant: "س",
+};
+
 const AR_PLANS: Record<
   PlanId,
-  { name: string; tagline: string; priceMonthly: string; features: string[] }
+  { name: string; shortName: string; tagline: string; priceMonthly: string; features: string[] }
 > = {
   assistant: {
     name: "مهندس مساعد",
+    shortName: AR_PLAN_MARK.assistant,
     tagline: "للطلاب والمهندسين المبتدئين.",
     priceMonthly: "مجاناً",
     features: [
@@ -47,6 +55,7 @@ const AR_PLANS: Record<
   },
   engineer: {
     name: "مهندس",
+    shortName: AR_PLAN_MARK.engineer,
     tagline: "للمهندسين الممارسين الذين يحتاجون توثيقاً أسرع.",
     priceMonthly: "19 ر.س شهرياً",
     features: [
@@ -59,6 +68,7 @@ const AR_PLANS: Record<
   },
   professional: {
     name: "مهندس محترف",
+    shortName: AR_PLAN_MARK.professional,
     tagline: "لكبار المهندسين وقادة التصميم.",
     priceMonthly: "41 ر.س شهرياً",
     features: [
@@ -67,11 +77,12 @@ const AR_PLANS: Record<
       "تحليل قوالب خطة الفحص وقوائم الجودة",
       "مراجعة جداول الكميات وحصرها",
       "نسخ ومشاركة المخرجات الهندسية",
-      "تصدير إلى PDF",
+      "تصدير إلى بي دي إف",
     ],
   },
   consultant: {
     name: "مهندس استشاري",
+    shortName: AR_PLAN_MARK.consultant,
     tagline: "للاستشاريين والمكاتب التي تدير مشاريع كاملة.",
     priceMonthly: "79 ر.س شهرياً",
     features: [
@@ -80,7 +91,7 @@ const AR_PLANS: Record<
       "خطوط الهندسة القيمية",
       "تقدير الموارد والتكلفة ومراجعة الجدول",
       "لوحات المشروع ونظرة على المحفظة",
-      "تصدير إلى PDF وورد وباوربوينت",
+      "تصدير إلى بي دي إف وورد وباوربوينت",
     ],
   },
 };
@@ -112,7 +123,7 @@ export function formatUsd(amountSar: number, locale: Locale): string {
 export function localizedPlan(locale: Locale, plan: Plan): Plan {
   if (locale !== "ar") return plan;
   const copy = AR_PLANS[plan.id];
-  return { ...plan, ...copy, priceYearly: "" };
+  return { ...plan, ...copy, shortName: copy.shortName, priceYearly: "" };
 }
 
 export function planById(locale: Locale, id: PlanId): Plan {

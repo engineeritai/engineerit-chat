@@ -218,9 +218,7 @@ export default function SubscriptionPage() {
               const isSelected = selectedPlanId === id;
               const isSaving = savingPlanId === id;
 
-              const letter = (rawPlan.shortName || plan.name || "E")
-                .charAt(0)
-                .toUpperCase();
+              const letter = plan.shortName || plan.name.charAt(0);
 
               return (
                 <div

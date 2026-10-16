@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import Header from "../components/Header";
-import NavSidebar from "../components/NavSidebar";
+import MarketingShell from "../components/marketing/MarketingShell";
 import AdvisorEcosystem from "../components/AdvisorEcosystem";
 import { ADVISOR_IDS, ADVISORS, getAdvisor, hasAdvisorAccess } from "@/lib/advisors";
 import { advisorsAreLive, advisorsNowLive } from "@/lib/advisorLaunch";
@@ -12,8 +10,7 @@ import { useMessages } from "@/lib/useMessages";
 import { useSubscriptionTier } from "@/lib/useSubscriptionTier";
 
 export default function AdvisorsPage() {
-  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
-  const { m, dir } = useMessages();
+  const { m } = useMessages();
   const { ready, isGuest, tier } = useSubscriptionTier();
   const live = advisorsAreLive();
   const nowLive = advisorsNowLive();
@@ -21,16 +18,10 @@ export default function AdvisorsPage() {
   const showPilot = live && ready && (isGuest || !anyUnlocked);
 
   return (
-    <div className="app-shell" dir={dir}>
-      <NavSidebar
-        isMobileOpen={isSidebarOpenMobile}
-        onCloseMobile={() => setIsSidebarOpenMobile(false)}
-      />
-      <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
+    <MarketingShell>
         <div className="page-wrap">
           <div className="advisor-breadcrumb">
-            <Link href="/">engineerit AI</Link>
+            <Link href="/">{m.advisors.ecosystemAi}</Link>
             <span aria-hidden="true">›</span>
             <span>{m.advisors.sectionTitle}</span>
           </div>
@@ -139,7 +130,6 @@ export default function AdvisorsPage() {
 
           <p className="advisor-responsibility">{m.advisors.responsibility}</p>
         </div>
-      </div>
-    </div>
+    </MarketingShell>
   );
 }

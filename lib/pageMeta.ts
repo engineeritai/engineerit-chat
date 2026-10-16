@@ -9,6 +9,11 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       description:
         "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Paid plans add exports.",
     },
+    "/faq": {
+      title: "Questions | engineerit.ai",
+      description:
+        "Answers for engineering consultancies: trying the chat, team pilots, standards, billing, language, and company verification.",
+    },
     "/pricing": {
       title: "Pricing | engineerit.ai",
       description:
@@ -82,6 +87,11 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       title: "engineerit.ai | مساعد هندسي بالذكاء الاصطناعي لمكاتب الخليج",
       description:
         "engineerit.ai يهندس أي فكرة أو موضوع بمنهج منظم. أرفق ملفاتك، واختر أداة، واحصل على إجابات منظمة. الباقات المدفوعة تضيف التصدير.",
+    },
+    "/faq": {
+      title: "الأسئلة الشائعة | engineerit.ai",
+      description:
+        "إجابات للمكاتب الهندسية: تجربة المحادثة، وتجربة الفريق، والمعايير، والفوترة، واللغة، وتوثيق الشركة.",
     },
     "/pricing": {
       title: "الأسعار | engineerit.ai",

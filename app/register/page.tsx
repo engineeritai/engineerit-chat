@@ -2,8 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import Header from "../components/Header";
-import NavSidebar from "../components/NavSidebar";
+import MarketingShell from "../components/marketing/MarketingShell";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -49,7 +48,6 @@ const TOOL_ACCESS: Record<PlanId, ToolId[]> = {
 
 export default function RegisterPage() {
   const { locale, shell: s } = useMessages();
-  const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -134,15 +132,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="app-shell">
-      <NavSidebar
-        isMobileOpen={isSidebarOpenMobile}
-        onCloseMobile={() => setIsSidebarOpenMobile(false)}
-      />
-
-      <div className="main">
-        <Header onToggleSidebar={() => setIsSidebarOpenMobile((v) => !v)} />
-
+    <MarketingShell>
         <div className="page-wrap">
           <h1 className="page-title">{s.auth.registerTitle}</h1>
           <p className="page-subtitle">{s.auth.registerLead}</p>
@@ -358,9 +348,7 @@ export default function RegisterPage() {
                 const plan = localizedPlan(locale, rawPlan);
                 const badge =
                   PLAN_BADGES[plan.id as PlanId] || PLAN_BADGES.assistant;
-                const letter = (rawPlan.shortName || plan.name || "E")
-                  .charAt(0)
-                  .toUpperCase();
+                const letter = plan.shortName || plan.name.charAt(0);
 
                 const planId = plan.id as PlanId;
                 const enabledTools = TOOL_ACCESS[planId] || [];
@@ -530,7 +518,6 @@ export default function RegisterPage() {
             </p>
           </div>
         </div>
-      </div>
-    </div>
+    </MarketingShell>
   );
 }
