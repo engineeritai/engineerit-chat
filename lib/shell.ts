@@ -110,6 +110,12 @@ export type ShellCopy = {
     exportPdf: string;
     exportWord: string;
     exportPpt: string;
+    copyTable: string;
+    exportExcel: string;
+    excelFailed: string;
+    diagramCopy: string;
+    diagramPng: string;
+    diagramSvg: string;
     toolsLabel: string;
     empty: string;
     you: string;
@@ -492,6 +498,12 @@ const en: ShellCopy = {
     exportPdf: "Export PDF",
     exportWord: "Export Word",
     exportPpt: "Export PowerPoint",
+    copyTable: "Copy table",
+    exportExcel: "Export to Excel",
+    excelFailed: "Excel export failed. Please try again.",
+    diagramCopy: "Copy as image",
+    diagramPng: "Download PNG",
+    diagramSvg: "Download SVG",
     toolsLabel: "Engineer tools:",
     empty: "Ask an engineering question to start the conversation.",
     you: "You",
@@ -889,6 +901,12 @@ const ar: ShellCopy = {
     exportPdf: "تصدير بي دي إف",
     exportWord: "تصدير وورد",
     exportPpt: "تصدير باوربوينت",
+    copyTable: "نسخ الجدول",
+    exportExcel: "تصدير إلى إكسل",
+    excelFailed: "تعذر تصدير إكسل. حاول مرة أخرى.",
+    diagramCopy: "نسخ كصورة",
+    diagramPng: "تنزيل PNG",
+    diagramSvg: "تنزيل SVG",
     toolsLabel: "أدوات المهندس:",
     empty: "اسأل سؤالاً هندسياً لبدء المحادثة.",
     you: "أنت",

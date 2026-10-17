@@ -1,53 +1,25 @@
+import { downloadName } from "@/lib/exportName";
+import { buildShareHtml } from "@/lib/shareDocument";
+import { toWhatsApp } from "@/lib/whatsappText";
+
 export function isArabicText(text: string) {
   return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text);
 }
 
-function escapeHtml(s: string) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+export function buildHtmlDocument(aiText: string, title = "Report", locale?: string) {
+  const lang = locale === "ar" || isArabicText(aiText) ? "ar" : "en";
+  return buildShareHtml({ title, markdown: aiText, locale: lang });
 }
 
-export function buildHtmlDocument(aiText: string, title = "engineerit.ai") {
-  const rtl = isArabicText(aiText);
-  const safe = escapeHtml(aiText);
-
-  return `<!doctype html>
-<html lang="${rtl ? "ar" : "en"}" dir="${rtl ? "rtl" : "ltr"}">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>${escapeHtml(title)}</title>
-<style>
-  *{box-sizing:border-box}
-  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px;color:#111827;background:#fff;}
-  .wrap{max-width:980px;margin:0 auto;}
-  .card{border:1px solid #e5e7eb;border-radius:16px;padding:18px;background:#fff;}
-  pre{white-space:pre-wrap;word-break:break-word;margin:0;font:inherit;line-height:1.6;}
-  .footer{margin-top:14px;color:#6b7280;font-size:12px}
-</style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card"><pre>${safe}</pre></div>
-    <div class="footer">— engineerit.ai</div>
-  </div>
-</body>
-</html>`;
-}
-
-function htmlFileFromText(aiText: string, filename = "engineerit.ai") {
-  const html = buildHtmlDocument(aiText, filename);
+function htmlFileFromText(aiText: string, title = "Report", locale?: string) {
+  const html = buildHtmlDocument(aiText, title, locale);
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const file = new File([blob], `${filename}.html`, { type: "text/html" });
+  const file = new File([blob], downloadName(title, "html"), { type: "text/html" });
   return { html, blob, file };
 }
 
-export async function copyAsHtml(aiText: string) {
-  const { html } = htmlFileFromText(aiText);
+export async function copyAsHtml(aiText: string, title = "Report") {
+  const { html } = htmlFileFromText(aiText, title);
   try {
     if (navigator.clipboard && window.ClipboardItem) {
       const item = new ClipboardItem({
@@ -68,20 +40,20 @@ export async function copyAsHtml(aiText: string) {
   }
 }
 
-export function saveHtml(aiText: string, filename = "engineerit.ai") {
-  const { blob } = htmlFileFromText(aiText, filename);
+export function saveHtml(aiText: string, title = "Report", locale?: string) {
+  const { blob } = htmlFileFromText(aiText, title, locale);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${filename}.html`;
+  a.download = downloadName(title, "html");
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
 
-export function printHtml(aiText: string, title = "engineerit.ai") {
-  const html = buildHtmlDocument(aiText, title);
+export function printHtml(aiText: string, title = "Report", locale?: string) {
+  const html = buildHtmlDocument(aiText, title, locale);
 
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
@@ -113,24 +85,31 @@ export function printHtml(aiText: string, title = "engineerit.ai") {
   }, 250);
 }
 
-export async function exportPdf(aiText: string, filename = "engineerit.ai") {
+export async function exportPdf(
+  aiText: string,
+  filename = "engineerit.ai",
+  options?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }
+) {
   const res = await fetch("/api/export/pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      title: filename,
+      title: options?.title || filename,
+      subtitle: options?.subtitle,
       content: aiText,
       filename,
+      locale: options?.locale,
+      diagrams: options?.diagrams,
     }),
   });
 
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
-  downloadBlob(blob, `${filename}.pdf`);
+  downloadBlob(blob, downloadName(options?.title || filename, "pdf"));
 }
 
-export async function nativeShareHtml(aiText: string, title = "engineerit.ai") {
-  const { file } = htmlFileFromText(aiText, title);
+export async function nativeShareHtml(aiText: string, title = "Report", locale?: string) {
+  const { file } = htmlFileFromText(aiText, title, locale);
   try {
     if (navigator.share) {
       if (navigator.canShare?.({ files: [file] })) {
@@ -143,7 +122,7 @@ export async function nativeShareHtml(aiText: string, title = "engineerit.ai") {
       }
       await navigator.share({
         title,
-        text: aiText.slice(0, 4000),
+        text: toWhatsApp(aiText).slice(0, 3500),
       });
       return true;
     }
@@ -153,32 +132,54 @@ export async function nativeShareHtml(aiText: string, title = "engineerit.ai") {
   return false;
 }
 
-export function shareToWhatsApp(text: string) {
-  const payload = text.slice(0, 8000);
+export function shareToWhatsApp(markdown: string, link?: string) {
+  const payload = toWhatsApp(markdown, link).slice(0, 3500);
   const wa = `https://wa.me/?text=${encodeURIComponent(payload)}`;
   window.open(wa, "_blank", "noopener,noreferrer");
 }
 
-export async function exportWordDocx(aiText: string, filename = "engineerit.ai") {
+export async function exportWordDocx(
+  aiText: string,
+  filename = "engineerit.ai",
+  options?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }
+) {
   const res = await fetch("/api/export/docx", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: aiText }),
+    body: JSON.stringify({
+      text: aiText,
+      title: options?.title || filename,
+      subtitle: options?.subtitle,
+      filename,
+      locale: options?.locale,
+      diagrams: options?.diagrams,
+    }),
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
-  downloadBlob(blob, `${filename}.docx`);
+  downloadBlob(blob, downloadName(options?.title || filename, "docx"));
 }
 
-export async function exportPptx(aiText: string, filename = "engineerit.ai") {
+export async function exportPptx(
+  aiText: string,
+  filename = "engineerit.ai",
+  options?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }
+) {
   const res = await fetch("/api/export/pptx", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: aiText }),
+    body: JSON.stringify({
+      text: aiText,
+      title: options?.title || filename,
+      subtitle: options?.subtitle,
+      filename,
+      locale: options?.locale,
+      diagrams: options?.diagrams,
+    }),
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
-  downloadBlob(blob, `${filename}.pptx`);
+  downloadBlob(blob, downloadName(options?.title || filename, "pptx"));
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -190,6 +191,21 @@ function downloadBlob(blob: Blob, filename: string) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+export async function publishShare(args: { title: string; markdown: string; locale: string }): Promise<string | null> {
+  try {
+    const res = await fetch("/api/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { url?: string };
+    return data.url || null;
+  } catch {
+    return null;
+  }
 }
 
 export function todayUTCKey() {

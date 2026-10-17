@@ -60,11 +60,11 @@ for (const lang of ["en", "ar"] as const) {
       await expect(page.locator("#how-it-works")).toBeAttached();
       await expect(page.locator("#teams")).toBeAttached();
       await expect(page.locator("a[href='/#disciplines']").first()).toBeVisible();
-      await expect(page.locator("a[href='/#tools']").first()).toBeVisible();
+      await expect(page.locator("a[href='/tools']").first()).toBeVisible();
       await expect(page.locator("a[href='/how-it-works']").first()).toBeVisible();
       await expect(page.locator("a[href='/guide']").first()).toBeVisible();
       await expect(page.locator(".app-side a[href='/how-it-works']")).toBeVisible();
-      await expect(page.locator("a[href='/#teams']").first()).toBeVisible();
+      await expect(page.locator("#teams h2").first()).toBeAttached();
       await expect(page.locator("a[href='/faq']").first()).toBeVisible();
       await expect(page.locator(".app-side-brand")).toBeVisible();
       const dir = await page.locator("html").getAttribute("dir");

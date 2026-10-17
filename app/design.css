@@ -883,6 +883,9 @@ html.kb-open .composer {
 
 .chat-input-icon-btn.is-plus,
 .hero-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 36px;
   min-width: 36px;
   height: 36px;

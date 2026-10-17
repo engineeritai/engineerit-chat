@@ -13,6 +13,7 @@ import {
   removeIncomingFile,
 } from "@/lib/incomingStorage";
 import { MAX_UPLOAD_BYTES, fileTooLargeMessage, messageLocale } from "@/lib/uploadLimits";
+import { freshnessRules } from "@/lib/assistantRules";
 import { replyLanguage, replyLanguageRule, type UiLocale } from "@/lib/replyLanguage";
 
 export const runtime = "nodejs";
@@ -103,10 +104,13 @@ async function summarizeFromText(
       {
         role: "system",
         content:
-          advisorSystem ||
-          (language === "ar"
-            ? "أنت ملخص وثائق هندسية للتقارير والمخططات والمواصفات والأكواد ووثائق المشاريع. أجب بالعربية فقط. لا تخلط العربية بالإنجليزية."
-            : "You are a precise engineering document summarizer for technical reports, drawings, specifications, codes, and project documents. Answer in English only. Do not mix English and Arabic."),
+          [
+            advisorSystem ||
+              (language === "ar"
+                ? "أنت ملخص وثائق هندسية للتقارير والمخططات والمواصفات والأكواد ووثائق المشاريع. أجب بالعربية فقط. لا تخلط العربية بالإنجليزية."
+                : "You are a precise engineering document summarizer for technical reports, drawings, specifications, codes, and project documents. Answer in English only. Do not mix English and Arabic."),
+            freshnessRules(new Date(), language === "ar" ? "ar" : "en"),
+          ].join("\n\n"),
       },
       { role: "user", content: prompt },
     ],

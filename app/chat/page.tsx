@@ -7,10 +7,15 @@ import React, {
   KeyboardEvent,
   ChangeEvent,
 } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-
 import Link from "next/link";
+import MessageMarkdown from "../components/MessageMarkdown";
+import { collectDiagramPngs, copyRichElement } from "../components/copyRich";
+import { publishShare, shareToWhatsApp } from "@/lib/chatActions";
+import { toWhatsApp } from "@/lib/whatsappText";
+import { downloadName } from "@/lib/exportName";
+import { exportMeta } from "@/lib/messageDocument";
+import { buildShareHtml } from "@/lib/shareDocument";
+import { sampleAr, sampleEn } from "@/lib/richSamples";
 import MarketingShell from "../components/marketing/MarketingShell";
 import ComposerPlus from "../components/ComposerPlus";
 import EitMark from "../components/marketing/EitMark";
@@ -70,57 +75,20 @@ function isArabicText(text: string) {
   return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text);
 }
 
-function escapeHtml(s: string) {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+function buildHtmlDocument(aiText: string, title: string, locale: "en" | "ar" = "en") {
+  const lang = locale === "ar" || isArabicText(aiText) ? "ar" : "en";
+  return buildShareHtml({ title, markdown: aiText, locale: lang });
 }
 
-function buildHtmlDocument(aiText: string) {
-  const rtl = isArabicText(aiText);
-  const safe = escapeHtml(aiText);
-
-  return `<!doctype html>
-<html lang="${rtl ? "ar" : "en"}" dir="${rtl ? "rtl" : "ltr"}">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>engineerit.ai</title>
-<style>
-  *{box-sizing:border-box}
-  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px;color:#111827;background:#fff;}
-  .wrap{max-width:980px;margin:0 auto;}
-  .card{border:1px solid #e5e7eb;border-radius:16px;padding:18px;background:#fff;}
-  pre{white-space:pre-wrap;word-break:break-word;margin:0;font:inherit;line-height:1.6;}
-  .footer{margin-top:14px;color:#6b7280;font-size:12px}
-</style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card"><pre>${safe}</pre></div>
-    <div class="footer">— engineerit.ai</div>
-  </div>
-</body>
-</html>`;
-}
-
-function htmlFileFromText(aiText: string) {
-  const html = buildHtmlDocument(aiText);
+function htmlFileFromText(aiText: string, title = "Report", locale: "en" | "ar" = "en") {
+  const html = buildHtmlDocument(aiText, title, locale);
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-
-  // IMPORTANT: extension for iOS share + WhatsApp compatibility
-  const file = new File([blob], "engineerit.ai.html", {
-    type: "text/html",
-  });
-
+  const file = new File([blob], downloadName(title, "html"), { type: "text/html" });
   return { html, blob, file };
 }
 
-async function copyAsHtml(aiText: string) {
-  const { html } = htmlFileFromText(aiText);
+async function copyAsHtml(aiText: string, title = "Report", locale: "en" | "ar" = "en") {
+  const { html } = htmlFileFromText(aiText, title, locale);
   try {
     // @ts-ignore
     if (navigator.clipboard && window.ClipboardItem) {
@@ -140,12 +108,12 @@ async function copyAsHtml(aiText: string) {
   return false;
 }
 
-function saveHtml(aiText: string) {
-  const { blob } = htmlFileFromText(aiText);
+function saveHtml(aiText: string, title = "Report", locale: "en" | "ar" = "en") {
+  const { blob } = htmlFileFromText(aiText, title, locale);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "engineerit.ai.html";
+  a.download = downloadName(title, "html");
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -158,8 +126,8 @@ function saveHtml(aiText: string) {
  * - Writes HTML
  * - Prints after render tick
  */
-function printHtml(aiText: string) {
-  const html = buildHtmlDocument(aiText);
+function printHtml(aiText: string, title = "Report", locale: "en" | "ar" = "en") {
+  const html = buildHtmlDocument(aiText, title, locale);
 
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
@@ -195,14 +163,17 @@ function printHtml(aiText: string) {
  * ✅ REAL PDF export for Professional/Consultant
  * Downloads a true PDF file from /api/export/pdf (works on Windows + iOS + Android).
  */
-async function exportPdf(aiText: string) {
+async function exportPdf(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
   const res = await fetch("/api/export/pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      title: "engineerit.ai",
+      title: extra?.title || "engineerit.ai",
+      subtitle: extra?.subtitle,
       content: aiText,
-      filename: "engineerit.ai",
+      filename: extra?.title || "Report",
+      locale: extra?.locale,
+      diagrams: extra?.diagrams,
     }),
   });
 
@@ -212,15 +183,15 @@ async function exportPdf(aiText: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "engineerit.ai.pdf";
+  a.download = downloadName(extra?.title || "Report", "pdf");
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
 
-async function nativeShareHtml(aiText: string) {
-  const { file } = htmlFileFromText(aiText);
+async function nativeShareHtml(aiText: string, title = "Report", locale: "en" | "ar" = "en") {
+  const { file } = htmlFileFromText(aiText, title, locale);
   try {
     // @ts-ignore
     if (navigator.share) {
@@ -228,16 +199,16 @@ async function nativeShareHtml(aiText: string) {
       if (navigator.canShare?.({ files: [file] })) {
         // @ts-ignore
         await navigator.share({
-          title: "engineerit.ai",
-          text: "engineerit.ai",
+          title,
+          text: title,
           files: [file],
         });
         return true;
       }
       // @ts-ignore
       await navigator.share({
-        title: "engineerit.ai",
-        text: aiText.slice(0, 4000),
+        title,
+        text: toWhatsApp(aiText).slice(0, 3500),
       });
       return true;
     }
@@ -245,17 +216,11 @@ async function nativeShareHtml(aiText: string) {
   return false;
 }
 
-function shareToWhatsApp(text: string) {
-  const payload = text.slice(0, 8000);
-  const wa = `https://wa.me/?text=${encodeURIComponent(payload)}`;
-  window.open(wa, "_blank", "noopener,noreferrer");
-}
-
-async function exportWordDocx(aiText: string) {
+async function exportWordDocx(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
   const res = await fetch("/api/export/docx", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: aiText }),
+    body: JSON.stringify({ text: aiText, title: extra?.title, subtitle: extra?.subtitle, locale: extra?.locale, diagrams: extra?.diagrams }),
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
@@ -263,18 +228,18 @@ async function exportWordDocx(aiText: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "engineerit.ai.docx";
+  a.download = downloadName(extra?.title || "Report", "docx");
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
 
-async function exportPptx(aiText: string) {
+async function exportPptx(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
   const res = await fetch("/api/export/pptx", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: aiText }),
+    body: JSON.stringify({ text: aiText, title: extra?.title, subtitle: extra?.subtitle, locale: extra?.locale, diagrams: extra?.diagrams }),
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
@@ -282,7 +247,7 @@ async function exportPptx(aiText: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "engineerit.ai.pptx";
+  a.download = downloadName(extra?.title || "Report", "pptx");
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -374,6 +339,9 @@ export default function Page() {
   const openedThread = useRef(false);
   const homeQuerySent = useRef(false);
   const toolApplied = useRef(false);
+  const conversationRef = useRef<HTMLDivElement>(null);
+  const pinBottom = useRef(true);
+  const [fixture, setFixture] = useState<Message[] | null>(null);
 
   useEffect(() => {
     const openDrawer = () => setIsSidebarOpenMobile(true);
@@ -476,7 +444,39 @@ export default function Page() {
   };
 
   const thread = history.thread;
-  const messages: Message[] = thread?.messages ?? [];
+  const messages: Message[] = fixture ?? thread?.messages ?? [];
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    const kind = new URLSearchParams(window.location.search).get("fixture");
+    if (kind !== "en" && kind !== "ar") return;
+    const content = kind === "ar" ? sampleAr : sampleEn;
+    setFixture([
+      {
+        id: "fixture-user",
+        role: "user",
+        content: kind === "ar" ? "اعرض الجدول الزمني والمقارنة." : "Show the schedule and the comparison table.",
+        attachments: [],
+      },
+      { id: "fixture-ai", role: "assistant", content, attachments: [] },
+    ]);
+  }, []);
+
+  useEffect(() => {
+    const el = conversationRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      pinBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [messages.length]);
+
+  useEffect(() => {
+    const el = conversationRef.current;
+    if (!el || !pinBottom.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   useEffect(() => {
     if (thread?.discipline) setDiscipline(thread.discipline);
@@ -873,7 +873,7 @@ export default function Page() {
               <h1>{s.chat.greeting}</h1>
             </div>
           ) : (
-            <div className="conversation">
+            <div className="conversation" ref={conversationRef}>
           {canExportChat && thread?.persisted && messages.length > 0 && (
             <div className="history-export">
               <button type="button" className="msg-action-btn" onClick={() => void history.exportCurrent("pdf")}>
@@ -887,6 +887,13 @@ export default function Page() {
             {messages.map((m) => {
               const rtl = isArabicText(m.content);
               const hasAtt = (m.attachments?.length || 0) > 0;
+              const meta = exportMeta(
+                m.content,
+                thread?.title,
+                locale,
+                messages.find((item) => item.role === "user")?.content
+              );
+              const topic = meta.title;
 
               return (
                 <div
@@ -899,8 +906,20 @@ export default function Page() {
                   <div className="message-avatar">{m.role === "user" ? s.chat.you : s.chat.ai}</div>
 
                   <div className="message-bubble">
-                    <div className="msg-content" dir={rtl ? "rtl" : "ltr"}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                    <div className="msg-content" dir={rtl ? "rtl" : "ltr"} data-message-id={m.id}>
+                      <MessageMarkdown
+                        markdown={m.content}
+                        dir={rtl ? "rtl" : "ltr"}
+                        locale={locale}
+                        fileBase={topic}
+                        labels={{
+                          copyTable: s.chat.copyTable,
+                          exportExcel: s.chat.exportExcel,
+                          diagramCopy: s.chat.diagramCopy,
+                          diagramPng: s.chat.diagramPng,
+                          diagramSvg: s.chat.diagramSvg,
+                        }}
+                      />
                     </div>
 
                     {/* ✅ Show attachments under the user question */}
@@ -990,7 +1009,8 @@ export default function Page() {
                                   type="button"
                                   className="msg-action-btn"
                                   onClick={async () => {
-                                    const ok = await copyAsHtml(m.content);
+                                    const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
+                                    const ok = root ? await copyRichElement(root, m.content) : false;
                                     if (!ok) alert(s.chat.copyFailed);
                                   }}
                                   aria-label={s.chat.copy}
@@ -1003,7 +1023,28 @@ export default function Page() {
                                   type="button"
                                   className="msg-action-btn"
                                   onClick={async () => {
-                                    const ok = await nativeShareHtml(m.content);
+                                    const title = topic;
+                                    const url = await publishShare({ title, markdown: m.content, locale });
+                                    if (url && navigator.share) {
+                                      try {
+                                        await navigator.share({ title, text: toWhatsApp(m.content), url });
+                                        return;
+                                      } catch {
+                                        /* fall through to the share menu */
+                                      }
+                                    }
+                                    if (url) {
+                                      try {
+                                        await navigator.clipboard.writeText(url);
+                                      } catch {
+                                        /* the menu still offers the other share actions */
+                                      }
+                                    }
+                                    const ok = url ? true : await nativeShareHtml(m.content);
+                                    if (ok && url) {
+                                      setOpenShareFor((prev) => (prev === m.id ? null : m.id));
+                                      return;
+                                    }
                                     if (ok) return;
                                     setOpenShareFor((prev) => (prev === m.id ? null : m.id));
                                   }}
@@ -1020,7 +1061,9 @@ export default function Page() {
                                     className="msg-action-btn"
                                     onClick={async () => {
                                       try {
-                                        await exportPdf(m.content);
+                                        const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
+                                        const diagrams = root ? await collectDiagramPngs(root) : [];
+                                        await exportPdf(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                       } catch (e) {
                                         console.error(e);
                                         alert(s.chat.pdfFailed);
@@ -1040,7 +1083,9 @@ export default function Page() {
                                       className="msg-action-btn"
                                       onClick={async () => {
                                         try {
-                                          await exportWordDocx(m.content);
+                                          const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
+                                          const diagrams = root ? await collectDiagramPngs(root) : [];
+                                          await exportWordDocx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                         } catch (e) {
                                           console.error(e);
                                           alert(s.chat.wordFailed);
@@ -1056,7 +1101,9 @@ export default function Page() {
                                       className="msg-action-btn"
                                       onClick={async () => {
                                         try {
-                                          await exportPptx(m.content);
+                                          const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
+                                          const diagrams = root ? await collectDiagramPngs(root) : [];
+                                          await exportPptx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                         } catch (e) {
                                           console.error(e);
                                           alert(s.chat.pptFailed);
@@ -1084,7 +1131,7 @@ export default function Page() {
                                 <button
                                   type="button"
                                   className="msg-action-btn"
-                                  onClick={() => saveHtml(m.content)}
+                                  onClick={() => saveHtml(m.content, topic, locale)}
                                 >
                                   {s.chat.saveHtml}
                                 </button>
@@ -1092,7 +1139,7 @@ export default function Page() {
                                 <button
                                   type="button"
                                   className="msg-action-btn"
-                                  onClick={() => printHtml(m.content)}
+                                  onClick={() => printHtml(m.content, topic, locale)}
                                 >
                                   {s.chat.print}
                                 </button>
@@ -1100,7 +1147,10 @@ export default function Page() {
                                 <button
                                   type="button"
                                   className="msg-action-btn"
-                                  onClick={() => shareToWhatsApp(m.content)}
+                                  onClick={async () => {
+                                    const url = await publishShare({ title: topic, markdown: m.content, locale });
+                                    shareToWhatsApp(m.content, url || undefined);
+                                  }}
                                 >
                                   {s.chat.whatsapp}
                                 </button>

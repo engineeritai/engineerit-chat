@@ -1,3 +1,4 @@
+import { assistantRules } from "@/lib/assistantRules";
 import { advisorTemplate, getAdvisor, isAdvisorId, type Advisor, type AdvisorId } from "@/lib/advisors";
 import type { Locale } from "@/lib/i18n";
 import { getPlaybook, playbookTemplate } from "@/lib/playbooks";
@@ -103,6 +104,7 @@ export function buildAdvisorSystemPrompt(
     language,
     "The report is export-ready. Follow the output template exactly. Use Markdown. Keep every heading and table. Start with the executive summary. Include an overall RAG rating with a one-line reason. If a field is unknown, write \"Not provided\" and name the missing file. Do not invent costs, dates, scores, owners, or compliance status.",
     template,
+    assistantRules({ locale }),
   ].join("\n\n");
 }
 
