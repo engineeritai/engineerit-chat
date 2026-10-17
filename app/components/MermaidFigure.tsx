@@ -34,7 +34,7 @@ export default function MermaidFigure({
         startOnLoad: false,
         securityLevel: "strict",
         theme: "base",
-        fontFamily: "Inter, IBM Plex Sans Arabic, sans-serif",
+        fontFamily: "IBM Plex Sans Arabic, Noto Sans Arabic, Inter, sans-serif",
         themeVariables: dark
           ? { primaryColor: "#1e3a8a", primaryTextColor: "#e2e8f0", lineColor: "#60a5fa", background: "#0b1220" }
           : { primaryColor: "#e7eeff", primaryTextColor: "#0f172a", primaryBorderColor: "#1a56ff", lineColor: "#1a56ff" },

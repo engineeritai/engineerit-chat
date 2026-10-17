@@ -1,21 +1,25 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
-import { visualLine } from "./arabicShape";
+import fontkit from "@pdf-lib/fontkit";
+import { visualTokens } from "./arabicShape";
 
-test("arabic words are shaped and placed right to left", () => {
-  const visual = visualLine("مرحبا");
-  assert.equal(visual.includes("مرحبا"), false);
-  assert.equal([...visual].length > 0, true);
-  assert.equal(visual[0], "\uFE8E");
+test("arabic title tokens stay logical and read from the right", () => {
+  assert.deepEqual(visualTokens("تركيب مضخة التغذية"), ["التغذية", " ", "مضخة", " ", "تركيب"]);
+  assert.deepEqual(visualTokens("40 بار"), ["بار", " ", "40"]);
+  assert.deepEqual(visualTokens("لا 12"), ["12", " ", "لا"]);
+  assert.deepEqual(visualTokens("Pump P-101"), ["Pump", " ", "P-101"]);
 });
 
-test("lam alef becomes a ligature and digits stay in order", () => {
-  const visual = visualLine("لا 12");
-  assert.equal(visual.includes("12"), true);
-  assert.equal(visual.includes("\uFEFB") || visual.includes("\uFEFC"), true);
-  assert.equal(visual.startsWith("12"), true);
-});
-
-test("latin lines are unchanged", () => {
-  assert.equal(visualLine("Pump P-101"), "Pump P-101");
+test("Noto Sans Arabic shapes the logical title with joining forms", () => {
+  const font = fontkit.create(readFileSync("assets/fonts/NotoSansArabic-Regular.ttf")) as {
+    layout: (text: string) => { glyphs: { name?: string }[] };
+  };
+  const names = font.layout("تركيب مضخة التغذية").glyphs.map((glyph) => glyph.name);
+  assert.equal(names[0], "uniFE94");
+  assert.equal(names.at(-1), "uniFE97");
+  assert.equal(names.includes("uni062A"), false);
+  assert.ok(names.includes("uniFEFB") === false);
+  const word = font.layout("تركيب").glyphs.map((glyph) => glyph.name);
+  assert.deepEqual(word, ["uniFE90", "uniFEF4", "uniFEDB", "uniFEAE", "uniFE97"]);
 });

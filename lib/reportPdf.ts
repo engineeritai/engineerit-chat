@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
-import { containsArabic, visualLine } from "@/lib/arabicShape";
+import { containsArabic, visualTokens } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
 import type { PreparedReport, ReportImage } from "@/lib/reportModel";
 
@@ -20,29 +20,48 @@ const WHITE = rgb(1, 1, 1);
 type Fonts = { body: PDFFont; bold: PDFFont; arabic: PDFFont };
 type Sheet = { page: PDFPage; width: number; height: number };
 
-function pickFont(text: string, fonts: Fonts, bold = false): PDFFont {
-  return containsArabic(text) ? fonts.arabic : bold ? fonts.bold : fonts.body;
+function tokenFont(token: string, fonts: Fonts, bold: boolean): PDFFont {
+  return containsArabic(token) ? fonts.arabic : bold ? fonts.bold : fonts.body;
 }
 
-function measure(text: string, font: PDFFont, size: number): number {
-  return font.widthOfTextAtSize(visualLine(text) || " ", size);
+function lineWidth(text: string, fonts: Fonts, size: number, bold: boolean): number {
+  return visualTokens(text).reduce((sum, token) => sum + tokenFont(token, fonts, bold).widthOfTextAtSize(token, size), 0);
+}
+
+function drawLogicalLine(
+  page: PDFPage,
+  text: string,
+  x: number,
+  y: number,
+  fonts: Fonts,
+  size: number,
+  bold: boolean,
+  color: ReturnType<typeof rgb>
+) {
+  let cursor = x;
+  for (const token of visualTokens(text)) {
+    const font = tokenFont(token, fonts, bold);
+    const width = font.widthOfTextAtSize(token, size);
+    if (token.trim()) page.drawText(token, { x: cursor, y, size, font, color });
+    cursor += width;
+  }
 }
 
 function wrap(text: string, fonts: Fonts, size: number, maxWidth: number, bold = false): string[] {
   const plain = plainInline(text);
-  const font = pickFont(plain, fonts, bold);
   const words = plain.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = "";
+  const widthOf = (value: string) => lineWidth(value, fonts, size, bold);
   const pushWord = (word: string) => {
-    if (measure(word, font, size) <= maxWidth) {
+    if (widthOf(word) <= maxWidth) {
       current = word;
       return;
     }
     let chunk = "";
     for (const ch of word) {
       const next = chunk + ch;
-      if (measure(next, font, size) <= maxWidth) chunk = next;
+      if (widthOf(next) <= maxWidth) chunk = next;
       else {
         if (chunk) lines.push(chunk);
         chunk = ch;
@@ -52,7 +71,7 @@ function wrap(text: string, fonts: Fonts, size: number, maxWidth: number, bold =
   };
   for (const word of words) {
     const candidate = current ? `${current} ${word}` : word;
-    if (measure(candidate, font, size) <= maxWidth) current = candidate;
+    if (widthOf(candidate) <= maxWidth) current = candidate;
     else {
       if (current) lines.push(current);
       pushWord(word);
@@ -87,11 +106,9 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
 
   const drawHeader = (page: PDFPage, size: { w: number; h: number }) => {
     const title = report.title;
-    const font = pickFont(title, fonts, true);
-    const visual = visualLine(title);
-    const width = font.widthOfTextAtSize(visual, 11);
+    const width = lineWidth(title, fonts, 11, true);
     const x = rtlDoc ? size.w - MARGIN - width : MARGIN;
-    page.drawText(visual || " ", { x, y: size.h - 30, size: 11, font, color: INK });
+    drawLogicalLine(page, title, x, size.h - 30, fonts, 11, true, INK);
     page.drawLine({
       start: { x: MARGIN, y: size.h - 38 },
       end: { x: size.w - MARGIN, y: size.h - 38 },
@@ -101,24 +118,18 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
   };
 
   const cover = addPage(false);
-  const coverFont = pickFont(report.title, fonts, true);
   cover.page.drawImage(logo, { x: (cover.size.w - 64) / 2, y: cover.size.h - 180, width: 64, height: 64 });
   const titleLines = wrap(report.title, fonts, 26, cover.size.w - MARGIN * 2, true);
   let y = cover.size.h - 230;
   for (const line of titleLines) {
-    const visual = visualLine(line);
-    const width = coverFont.widthOfTextAtSize(visual, 26);
-    cover.page.drawText(visual, { x: (cover.size.w - width) / 2, y, size: 26, font: coverFont, color: INK });
+    const width = lineWidth(line, fonts, 26, true);
+    drawLogicalLine(cover.page, line, (cover.size.w - width) / 2, y, fonts, 26, true, INK);
     y -= 34;
   }
-  const subFont = pickFont(report.subtitle, fonts);
-  const sub = visualLine(report.subtitle);
-  const subW = subFont.widthOfTextAtSize(sub, 13);
-  cover.page.drawText(sub, { x: (cover.size.w - subW) / 2, y: y - 8, size: 13, font: subFont, color: MUTED });
-  const stampFont = pickFont(report.stamp, fonts);
-  const stamp = visualLine(report.stamp);
-  const stampW = stampFont.widthOfTextAtSize(stamp, 11);
-  cover.page.drawText(stamp, { x: (cover.size.w - stampW) / 2, y: y - 32, size: 11, font: stampFont, color: BRAND });
+  const subW = lineWidth(report.subtitle, fonts, 13, false);
+  drawLogicalLine(cover.page, report.subtitle, (cover.size.w - subW) / 2, y - 8, fonts, 13, false, MUTED);
+  const stampW = lineWidth(report.stamp, fonts, 11, false);
+  drawLogicalLine(cover.page, report.stamp, (cover.size.w - stampW) / 2, y - 32, fonts, 11, false, BRAND);
 
   let current = addPage(false);
   drawHeader(current.page, current.size);
@@ -140,12 +151,10 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     const step = size + 4;
     ensure(lines.length * step + 4, false);
     for (const line of lines) {
-      const font = pickFont(line, fonts, bold);
-      const visual = visualLine(line);
-      const width = font.widthOfTextAtSize(visual, size);
+      const width = lineWidth(line, fonts, size, bold);
       const usable = current.page.getWidth();
       const x = alignRtl ? usable - MARGIN - indent - width : MARGIN + indent;
-      current.page.drawText(visual || " ", { x, y, size, font, color: INK });
+      drawLogicalLine(current.page, line, x, y, fonts, size, bold, INK);
       y -= step;
     }
   };
@@ -153,7 +162,7 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
   const drawTable = (headers: string[], rows: string[][]) => {
     const sample = headers.map((header, index) => {
       const cells = [header, ...rows.map((row) => row[index] || "")];
-      return Math.max(36, ...cells.map((cell) => Math.min(measure(plainInline(cell), pickFont(cell, fonts), 8) + 14, 220)));
+      return Math.max(36, ...cells.map((cell) => Math.min(lineWidth(plainInline(cell), fonts, 8, false) + 14, 220)));
     });
     const natural = sample.reduce((sum, width) => sum + width, 0);
     const portraitUsable = PORTRAIT.w - MARGIN * 2;
@@ -186,18 +195,10 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
         current.page.drawRectangle({ x: colX, y: top - laid.height, width: widths[index], height: laid.height, color: fill, borderColor: LINE, borderWidth: 0.6 });
         const cellLines = laid.lines[index];
         cellLines.forEach((line, lineIndex) => {
-          const font = pickFont(line, fonts, header);
-          const visual = visualLine(line);
           const size = header ? 9 : 8;
-          const width = font.widthOfTextAtSize(visual, size);
+          const width = lineWidth(line, fonts, size, header);
           const textX = tableRtl ? colX + widths[index] - 5 - width : colX + 5;
-          current.page.drawText(visual || " ", {
-            x: textX,
-            y: top - 12 - lineIndex * (header ? 12 : 11),
-            size,
-            font,
-            color: INK,
-          });
+          drawLogicalLine(current.page, line, textX, top - 12 - lineIndex * (header ? 12 : 11), fonts, size, header, INK);
         });
       });
       y -= laid.height;
@@ -288,14 +289,10 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
   const total = sheets.length;
   sheets.forEach((sheet, index) => {
     const pageLabel = report.locale === "ar" ? `صفحة ${index + 1} من ${total}` : `Page ${index + 1} of ${total}`;
-    const pageFont = pickFont(pageLabel, fonts);
-    const pageVisual = visualLine(pageLabel);
-    const pageW = pageFont.widthOfTextAtSize(pageVisual, 9);
+    const pageW = lineWidth(pageLabel, fonts, 9, false);
     const brand = "engineer it · engineerit.ai";
     const brandW = fonts.body.widthOfTextAtSize(brand, 9);
-    const stampFont = pickFont(report.stamp, fonts);
-    const stampVisual = visualLine(report.stamp);
-    const stampW = stampFont.widthOfTextAtSize(stampVisual, 9);
+    const stampW = lineWidth(report.stamp, fonts, 9, false);
     sheet.page.drawLine({
       start: { x: MARGIN, y: 42 },
       end: { x: sheet.width - MARGIN, y: 42 },
@@ -306,9 +303,9 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     sheet.page.drawImage(logo, { x: logoX, y: 22, width: 12, height: 12 });
     const brandX = rtlDoc ? sheet.width - MARGIN - 18 - brandW : MARGIN + 16;
     sheet.page.drawText(brand, { x: brandX, y: 24, size: 9, font: fonts.body, color: MUTED });
-    sheet.page.drawText(stampVisual, { x: (sheet.width - stampW) / 2, y: 24, size: 9, font: stampFont, color: MUTED });
+    drawLogicalLine(sheet.page, report.stamp, (sheet.width - stampW) / 2, 24, fonts, 9, false, MUTED);
     const pageX = rtlDoc ? MARGIN : sheet.width - MARGIN - pageW;
-    sheet.page.drawText(pageVisual, { x: pageX, y: 24, size: 9, font: pageFont, color: MUTED });
+    drawLogicalLine(sheet.page, pageLabel, pageX, 24, fonts, 9, false, MUTED);
   });
 
   return pdf.save();

@@ -5,7 +5,7 @@ import type { PreparedReport } from "@/lib/reportModel";
 function styleHeader(cell: ExcelJS.Cell, rtl: boolean) {
   cell.font = { name: rtl ? "Arial" : "Calibri", bold: true, color: { argb: "FF1E3A8A" }, size: 12 };
   cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE7EEFF" } };
-  cell.alignment = { horizontal: rtl ? "right" : "left", vertical: "middle", wrapText: true };
+  cell.alignment = { horizontal: rtl ? "right" : "left", vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
   cell.border = {
     top: { style: "thin", color: { argb: "FFD0D7E2" } },
     bottom: { style: "thin", color: { argb: "FFD0D7E2" } },
@@ -16,7 +16,7 @@ function styleHeader(cell: ExcelJS.Cell, rtl: boolean) {
 
 function styleBody(cell: ExcelJS.Cell, rtl: boolean, zebra: boolean) {
   cell.font = { name: rtl ? "Arial" : "Calibri", size: 11, color: { argb: "FF0F172A" } };
-  cell.alignment = { horizontal: rtl ? "right" : "left", vertical: "middle", wrapText: true };
+  cell.alignment = { horizontal: rtl ? "right" : "left", vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
   if (zebra) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } };
 }
 
@@ -39,11 +39,11 @@ function addTableSheet(book: ExcelJS.Workbook, name: string, title: string, stam
   sheet.mergeCells(1, 1, 1, span);
   sheet.getCell(1, 1).value = title;
   sheet.getCell(1, 1).font = { name: rtl ? "Arial" : "Calibri", size: 18, bold: true, color: { argb: "FF1A56FF" } };
-  sheet.getCell(1, 1).alignment = { horizontal: rtl ? "right" : "left" };
+  sheet.getCell(1, 1).alignment = { horizontal: rtl ? "right" : "left", readingOrder: rtl ? "rtl" : "ltr" };
   sheet.mergeCells(2, 1, 2, span);
   sheet.getCell(2, 1).value = stamp;
   sheet.getCell(2, 1).font = { name: rtl ? "Arial" : "Calibri", size: 11, color: { argb: "FF64748B" } };
-  sheet.getCell(2, 1).alignment = { horizontal: rtl ? "right" : "left" };
+  sheet.getCell(2, 1).alignment = { horizontal: rtl ? "right" : "left", readingOrder: rtl ? "rtl" : "ltr" };
   headers.forEach((header, index) => {
     const cell = sheet.getCell(4, index + 1);
     cell.value = plainInline(header);
