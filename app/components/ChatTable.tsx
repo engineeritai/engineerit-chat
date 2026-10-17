@@ -138,7 +138,7 @@ export default function ChatTable({
         </button>
       </div>
       <div className="chat-table-pin">
-        <table ref={pinRef} style={{ width: widths.reduce((sum, width) => sum + width, 0) }}>
+        <table ref={pinRef} style={{ width: "100%", minWidth: widths.reduce((sum, width) => sum + width, 0) }}>
           <colgroup>
             {widths.map((width, index) => (
               <col key={index} style={{ width }} />
@@ -159,7 +159,7 @@ export default function ChatTable({
         ref={scrollRef}
         onScroll={sync}
       >
-        <table style={{ width: widths.reduce((sum, width) => sum + width, 0) }}>
+        <table style={{ width: "100%", minWidth: widths.reduce((sum, width) => sum + width, 0) }}>
           <colgroup>
             {widths.map((width, index) => (
               <col key={index} style={{ width }} />
@@ -192,7 +192,12 @@ export default function ChatTable({
 function columnWidths(headers: string[], rows: string[][]): number[] {
   return headers.map((header, index) => {
     const values = [header, ...rows.map((row) => row[index] || "")];
-    const longest = values.reduce((max, value) => Math.max(max, [...value].length), 0);
-    return Math.min(220, Math.max(96, longest * 8 + 28));
+    const longestWord = values.reduce((max, value) => {
+      const word = value.split(/\s+/).reduce((best, part) => Math.max(best, [...part].length), 0);
+      return Math.max(max, word);
+    }, 1);
+    const fromHeader = Math.min(168, [...header].length * 8 + 28);
+    const fromWord = Math.min(180, longestWord * 8 + 24);
+    return Math.max(112, fromHeader, fromWord);
   });
 }

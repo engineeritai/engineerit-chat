@@ -101,6 +101,15 @@ function readList(lines: string[], start: number): { ordered: boolean; items: Li
   const items: ListItem[] = [];
   let i = start;
   while (i < lines.length) {
+    if (!lines[i]?.trim()) {
+      let next = i + 1;
+      while (next < lines.length && !lines[next].trim()) next += 1;
+      const peek = /^(\s*)([-*]|\d+[.)])\s+/.exec(lines[next] || "");
+      if (!peek || peek[1].length < base) break;
+      if (peek[1].length === base && /\d/.test(peek[2]) !== ordered) break;
+      i = next;
+      continue;
+    }
     const match = /^(\s*)([-*]|\d+[.)])\s+(.+)$/.exec(lines[i] || "");
     if (!match) break;
     const pad = match[1].length;

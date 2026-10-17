@@ -93,7 +93,8 @@ export async function clipboardPayload(root: HTMLElement, plain: string): Promis
   }
   paintExportStyles(clone, dir);
   const html = `<!DOCTYPE html><html><body><!--StartFragment--><div dir="${dir}">${clone.innerHTML}</div><!--EndFragment--></body></html>`;
-  const text = plain.trim() || clone.innerText.trim();
+  const rendered = clone.innerText.replace(/\n{3,}/g, "\n\n").trim();
+  const text = rendered || plain.trim();
   return { html, text };
 }
 

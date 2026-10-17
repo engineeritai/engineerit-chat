@@ -13,10 +13,11 @@ import { prepareReport } from "../lib/reportModel";
 import { buildReportPdf } from "../lib/reportPdf";
 import { buildReportPptx } from "../lib/reportPptx";
 import { buildReportXlsx } from "../lib/reportXlsx";
-import { sampleAr, sampleEn } from "../lib/richSamples";
-import { parseGantt } from "../lib/scheduleModel";
+import { chartCaseAr, chartCaseEn, sampleAr, sampleEn } from "../lib/richSamples";
+import { parseChart, parseGantt } from "../lib/scheduleModel";
 import { renderChartSvg } from "../lib/scheduleSvg";
 import { buildShareHtml } from "../lib/shareDocument";
+import { toWhatsApp } from "../lib/whatsappText";
 
 const now = new Date("2026-10-16T23:34:00Z");
 
@@ -67,6 +68,40 @@ test("gantt parser keeps groups, the critical path, and milestones", () => {
   const xOf = (svg: string, id: string) => Number(new RegExp(`data-id="${id}"[^>]*\\sx="([\\d.]+)"`).exec(svg)?.[1]);
   assert.ok(xOf(ltr, "des") < xOf(ltr, "inst"));
   assert.ok(xOf(rtl, "des") > xOf(rtl, "inst"));
+});
+
+test("charts, loose numbered lists, and wrapped tables survive the model formats", () => {
+  for (const sample of [chartCaseEn, chartCaseAr]) {
+    const blocks = parseMessage(sample);
+    const charts = blocks.filter((block) => block.type === "chart");
+    assert.equal(charts.length, 5);
+    assert.deepEqual(charts.map((block) => (block.type === "chart" ? block.model.kind : "")), ["scurve", "line", "bar", "area", "pie"]);
+    const svg = charts.map((block) => (block.type === "chart" ? renderChartSvg(block.model, "ltr") : ""));
+    assert.match(svg[0], /data-chart="scurve"/);
+    assert.match(svg[0], /data-kind="planned"/);
+    assert.match(svg[0], /data-kind="actual"/);
+    assert.match(svg[1], /data-chart="line"/);
+    assert.match(svg[2], /data-kind="bar"/);
+    assert.match(svg[3], /data-kind="area"/);
+    assert.match(svg[4], /data-kind="pie"/);
+    const list = blocks.find((block) => block.type === "list");
+    assert.ok(list && list.type === "list" && list.ordered && list.items.length === 3);
+    const table = blocks.find((block) => block.type === "table");
+    assert.ok(table && table.type === "table" && table.headers.length === 4);
+    assert.equal(table.rows[0][0].includes("|"), false);
+  }
+  const xy = parseChart("mermaid", chartCaseEn.match(/```mermaid\n([\s\S]*?)```/)?.[1] || "", "2026-10-17");
+  assert.equal(xy?.kind, "scurve");
+  const plain = toWhatsApp(chartCaseEn);
+  assert.match(plain, /1\. Confirm the baseline/);
+  assert.match(plain, /2\. Issue the traffic/);
+  assert.match(plain, /3\. Book the asphalt/);
+  assert.equal(plain.split(/\n1\. /).length, 2);
+  const share = buildShareHtml({ title: "Road", markdown: chartCaseEn, locale: "en", now });
+  assert.match(share, /<ol>/);
+  assert.equal(share.match(/<li\b/g)?.length, 3);
+  assert.match(share, /data-chart="pie"/);
+  assert.match(share, /white-space: normal/);
 });
 
 test("markdown keeps a wide table and drops ascii art", () => {

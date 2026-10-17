@@ -15,7 +15,7 @@ import { toWhatsApp } from "@/lib/whatsappText";
 import { downloadName } from "@/lib/exportName";
 import { exportMeta } from "@/lib/messageDocument";
 import { buildShareHtml } from "@/lib/shareDocument";
-import { sampleAr, sampleEn } from "@/lib/richSamples";
+import { chartCaseAr, chartCaseEn, sampleAr, sampleEn } from "@/lib/richSamples";
 import MarketingShell from "../components/marketing/MarketingShell";
 import ComposerPlus from "../components/ComposerPlus";
 import EitMark from "../components/marketing/EitMark";
@@ -424,13 +424,21 @@ export default function Page() {
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     const kind = new URLSearchParams(window.location.search).get("fixture");
-    if (kind !== "en" && kind !== "ar") return;
-    const content = kind === "ar" ? sampleAr : sampleEn;
+    if (kind !== "en" && kind !== "ar" && kind !== "charts-en" && kind !== "charts-ar") return;
+    const content = kind === "ar" ? sampleAr : kind === "charts-ar" ? chartCaseAr : kind === "charts-en" ? chartCaseEn : sampleEn;
+    const prompt =
+      kind === "charts-ar"
+        ? "اعرض منحنى التقدم المخطط مقابل الفعلي لمشروع طريق مدته 12 شهراً وعلّق على الاتجاه."
+        : kind === "charts-en"
+          ? "Show a chart of planned vs actual progress (S-curve) for a 12-month road project and comment on the trend."
+          : kind === "ar"
+            ? "اعرض الجدول الزمني والمقارنة."
+            : "Show the schedule and the comparison table.";
     setFixture([
       {
         id: "fixture-user",
         role: "user",
-        content: kind === "ar" ? "اعرض الجدول الزمني والمقارنة." : "Show the schedule and the comparison table.",
+        content: prompt,
         attachments: [],
       },
       { id: "fixture-ai", role: "assistant", content, attachments: [] },

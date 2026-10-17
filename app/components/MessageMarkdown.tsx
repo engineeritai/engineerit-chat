@@ -18,7 +18,7 @@ function ListView({ ordered, items }: { ordered: boolean; items: ListItem[] }) {
   return (
     <Tag>
       {items.map((item, index) => (
-        <li key={index}>
+        <li key={index} value={ordered ? index + 1 : undefined}>
           <InlineText tokens={tokenizeInline(item.text)} />
           {item.children.length ? <ListView ordered={item.orderedChildren} items={item.children} /> : null}
         </li>

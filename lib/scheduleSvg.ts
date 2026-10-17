@@ -198,7 +198,7 @@ function seriesSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
   const plotW = width - padL - padR;
   const parts = [svgOpen(width, height, theme)];
   parts.push(text(rtl ? width - 28 : 28, 36, model.title, { size: 22, weight: 700, fill: colors.ink, rtl, anchor: rtl ? "end" : "start" }));
-  const values = model.points.flatMap((point) => [point.planned, point.actual ?? 0]);
+  const values = model.points.flatMap((point) => [point.planned, ...(point.actual == null ? [] : [point.actual])]);
   const max = Math.max(1, ...values) * 1.15;
   const yOf = (value: number) => bottom - (value / max) * (bottom - top);
   const xOf = (index: number) => {
@@ -211,21 +211,24 @@ function seriesSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
     parts.push(`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${padL + plotW}" y2="${y.toFixed(1)}" stroke="${colors.grid}"/>`);
     parts.push(text(rtl ? width - 28 : 16, y + 4, String(Math.round(value)), { size: 11, fill: colors.muted, anchor: rtl ? "end" : "start" }));
   }
-  if (model.kind === "histogram") {
+  const grouped = model.points.some((point) => point.actual != null);
+  if (model.kind === "histogram" || model.kind === "bar") {
     const gap = plotW / model.points.length;
     model.points.forEach((point, index) => {
       const cx = xOf(index);
-      const bw = Math.min(28, gap * 0.28);
-      const plannedH = bottom - yOf(point.planned);
-      const plannedX = cx - bw - 3;
-      parts.push(`<rect x="${plannedX.toFixed(1)}" y="${yOf(point.planned).toFixed(1)}" width="${bw}" height="${plannedH.toFixed(1)}" rx="6" fill="${colors.bar}" opacity="0.45"/>`);
+      const bw = Math.min(28, gap * (grouped ? 0.28 : 0.46));
+      const plannedH = Math.max(0, bottom - yOf(point.planned));
+      const plannedX = grouped ? cx - bw - 3 : cx - bw / 2;
+      parts.push(`<rect data-kind="bar" x="${plannedX.toFixed(1)}" y="${yOf(point.planned).toFixed(1)}" width="${bw}" height="${plannedH.toFixed(1)}" rx="6" fill="${colors.bar}" opacity="${grouped ? "0.45" : "1"}"/>`);
       if (point.actual != null) {
-        const actualH = bottom - yOf(point.actual);
+        const actualH = Math.max(0, bottom - yOf(point.actual));
         parts.push(`<rect data-kind="bar" x="${(cx + 3).toFixed(1)}" y="${yOf(point.actual).toFixed(1)}" width="${bw}" height="${actualH.toFixed(1)}" rx="6" fill="${colors.actual}"/>`);
       }
       parts.push(text(cx, bottom + 24, clip(point.label, 12), { size: 12, fill: colors.muted, anchor: "middle", rtl }));
     });
   } else {
+    const fillArea = model.kind === "area" || model.kind === "scurve";
+    const dashedPlanned = model.kind === "scurve" && grouped;
     const line = (key: "planned" | "actual") => {
       const cmds: string[] = [];
       model.points.forEach((point, index) => {
@@ -237,13 +240,19 @@ function seriesSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
     };
     const planned = line("planned");
     const actual = line("actual");
-    if (actual) {
-      const first = model.points.findIndex((point) => point.actual != null);
-      const last = model.points.length - 1 - [...model.points].reverse().findIndex((point) => point.actual != null);
-      const area = `${actual} L${xOf(last).toFixed(1)},${bottom} L${xOf(first).toFixed(1)},${bottom} Z`;
-      parts.push(`<path d="${area}" fill="${colors.actual}" opacity="0.12"/>`);
+    const areaFor = (path: string, key: "planned" | "actual") => {
+      const present = model.points.map((point, index) => (key === "planned" ? point.planned != null : point.actual != null) ? index : -1).filter((index) => index >= 0);
+      if (!path || present.length < 2) return "";
+      const first = present[0];
+      const last = present[present.length - 1];
+      return `${path} L${xOf(last).toFixed(1)},${bottom} L${xOf(first).toFixed(1)},${bottom} Z`;
+    };
+    if (fillArea && model.kind === "area" && planned) parts.push(`<path data-kind="area" d="${areaFor(planned, "planned")}" fill="${colors.bar}" opacity="0.16"/>`);
+    if (fillArea && actual) parts.push(`<path data-kind="area" d="${areaFor(actual, "actual")}" fill="${colors.actual}" opacity="0.16"/>`);
+    if (planned) {
+      const dash = dashedPlanned ? ` stroke-dasharray="7 5"` : "";
+      parts.push(`<path data-kind="planned" d="${planned}" fill="none" stroke="${colors.bar}" stroke-width="3"${dash}/>`);
     }
-    if (planned) parts.push(`<path data-kind="planned" d="${planned}" fill="none" stroke="${colors.bar}" stroke-width="3" stroke-dasharray="7 5"/>`);
     if (actual) parts.push(`<path data-kind="actual" d="${actual}" fill="none" stroke="${colors.actual}" stroke-width="3.5"/>`);
     model.points.forEach((point, index) => {
       const x = xOf(index);
@@ -252,10 +261,52 @@ function seriesSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
       parts.push(text(x, bottom + 24, clip(point.label, 12), { size: 12, fill: colors.muted, anchor: "middle", rtl }));
     });
   }
-  const legend = model.kind === "scurve"
-    ? rtl ? "مخطط ·  فعلي" : "Planned    Actual"
-    : rtl ? "مخطط ·  فعلي" : "Planned    Actual";
-  parts.push(text(rtl ? width - 28 : 28, height - 16, legend, { size: 12, fill: colors.muted, rtl, anchor: rtl ? "end" : "start" }));
+  const names = model.seriesNames?.filter(Boolean) || [];
+  const legend = names.length >= 2 ? names.slice(0, 2).join("    ") : names[0] && !grouped ? names[0] : grouped ? (rtl ? "مخطط    فعلي" : "Planned    Actual") : "";
+  if (legend) parts.push(text(rtl ? width - 28 : 28, height - 16, legend, { size: 12, fill: colors.muted, rtl, anchor: rtl ? "end" : "start" }));
+  parts.push("</svg>");
+  return parts.join("").replace("<svg ", `<svg data-chart="${model.kind}" `);
+}
+
+const PIE_COLORS = ["#1a56ff", "#0f766e", "#c2410c", "#7c3aed", "#b45309", "#0369a1", "#be123c", "#15803d", "#4338ca", "#a16207"];
+
+function pieSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string {
+  const colors = palette[theme];
+  const width = 1400;
+  const height = 460;
+  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg data-chart="pie" `)];
+  parts.push(text(rtl ? width - 28 : 28, 36, model.title, { size: 22, weight: 700, fill: colors.ink, rtl, anchor: rtl ? "end" : "start" }));
+  const slices = model.points.filter((point) => point.planned > 0);
+  const total = slices.reduce((sum, point) => sum + point.planned, 0) || 1;
+  const cx = rtl ? 980 : 420;
+  const cy = 250;
+  const radius = 150;
+  let angle = -Math.PI / 2;
+  slices.forEach((point, index) => {
+    const sweep = (point.planned / total) * Math.PI * 2;
+    const color = PIE_COLORS[index % PIE_COLORS.length];
+    if (sweep >= Math.PI * 2 - 0.001) {
+      parts.push(`<circle data-kind="pie" cx="${cx}" cy="${cy}" r="${radius}" fill="${color}"/>`);
+    } else {
+      const end = angle + sweep;
+      const large = sweep > Math.PI ? 1 : 0;
+      const x1 = cx + radius * Math.cos(angle);
+      const y1 = cy + radius * Math.sin(angle);
+      const x2 = cx + radius * Math.cos(end);
+      const y2 = cy + radius * Math.sin(end);
+      parts.push(`<path data-kind="pie" d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${radius},${radius} 0 ${large} 1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${color}"/>`);
+    }
+    angle += sweep;
+  });
+  slices.forEach((point, index) => {
+    const y = 92 + index * 28;
+    const x = rtl ? 360 : 760;
+    const color = PIE_COLORS[index % PIE_COLORS.length];
+    const mark = rtl ? x + 220 : x;
+    parts.push(`<rect x="${mark}" y="${y - 12}" width="14" height="14" rx="3" fill="${color}"/>`);
+    const share = Math.round((point.planned / total) * 100);
+    parts.push(text(rtl ? mark - 10 : mark + 22, y, `${clip(point.label, 22)}  ${share}%`, { size: 14, fill: colors.ink, rtl, anchor: rtl ? "end" : "start" }));
+  });
   parts.push("</svg>");
   return parts.join("");
 }
@@ -264,5 +315,6 @@ export function renderChartSvg(model: ChartModel, dir: "ltr" | "rtl", theme: Cha
   const rtl = dir === "rtl";
   if (model.kind === "gantt") return ganttSvg(model, rtl, theme);
   if (model.kind === "timeline") return timelineSvg(model, rtl, theme);
+  if (model.kind === "pie") return pieSvg(model, rtl, theme);
   return seriesSvg(model, rtl, theme);
 }
