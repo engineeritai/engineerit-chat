@@ -91,6 +91,7 @@ test("share html carries open graph tags and direction", () => {
     now,
   });
   assert.match(html, /property="og:title"/);
+  assert.match(html, /https:\/\/engineerit\.ai\/share\/abc123xyz/);
   assert.match(html, /twitter:card" content="summary_large_image"/);
   assert.match(html, /dir="rtl"/);
   assert.match(html, /<table>/);

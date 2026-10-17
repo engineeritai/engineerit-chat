@@ -3613,3 +3613,19 @@ button.advisor-card-link {
 .share-footer img {
   vertical-align: middle;
 }
+
+.share-expired {
+  max-width: 640px;
+  margin: 48px auto;
+  padding: 8px 22px 64px;
+}
+
+.share-expired h2 {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+
+.share-expired a {
+  color: #1a56ff;
+  font-weight: 600;
+}

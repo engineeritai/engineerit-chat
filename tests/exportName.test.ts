@@ -84,11 +84,11 @@ test("html export renders the urea note instead of a markdown dump", () => {
 });
 
 test("whatsapp share drops markdown fences and keeps the link", () => {
-  const text = toWhatsApp(urea, "https://engineerit.ai/s/urea");
+  const text = toWhatsApp(urea, "https://engineerit.ai/share/urea");
   assert.match(text, /\*Simplified Urea Production Process Diagram\*/);
   assert.match(text, /• Ammonia is produced using the Haber process\./);
   assert.match(text, /Ammonia Plant \(Hydrogen & N2\) → Urea Reactor \(CO2 \+ Ammonia\) → Finished Urea Storage/);
-  assert.match(text, /https:\/\/engineerit\.ai\/s\/urea/);
+  assert.match(text, /https:\/\/engineerit\.ai\/share\/urea/);
   assert.equal(text.includes("###"), false);
   assert.equal(text.includes("```"), false);
   assert.equal(text.includes("**"), false);

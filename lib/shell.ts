@@ -90,6 +90,7 @@ export type ShellCopy = {
     dailyPaidReply: string;
     sorry: string;
     copyFailed: string;
+    shareFailed: string;
     pdfFailed: string;
     wordFailed: string;
     pptFailed: string;
@@ -477,6 +478,7 @@ const en: ShellCopy = {
     dailyPaidReply: "Daily limit reached. Please upgrade to continue.",
     sorry: "Sorry, something failed. Please try again.",
     copyFailed: "Copy failed on this browser.",
+    shareFailed: "Could not create the share link. Please try again.",
     pdfFailed: "PDF export failed. Please try again.",
     wordFailed: "Word export failed. Please try again.",
     pptFailed: "PowerPoint export failed. Please try again.",
@@ -881,6 +883,7 @@ const ar: ShellCopy = {
     dailyPaidReply: "بلغت الحد اليومي. يرجى الترقية للمتابعة.",
     sorry: "عذراً، حدث خطأ. حاول مرة أخرى.",
     copyFailed: "تعذر النسخ في هذا المتصفح.",
+    shareFailed: "تعذر إنشاء رابط المشاركة. حاول مرة أخرى.",
     pdfFailed: "تعذر تصدير بي دي إف. حاول مرة أخرى.",
     wordFailed: "تعذر تصدير وورد. حاول مرة أخرى.",
     pptFailed: "تعذر تصدير باوربوينت. حاول مرة أخرى.",

@@ -79,8 +79,8 @@ export function buildShareHtml(args: {
   const stamp = riyadhStamp(args.now ?? new Date(), args.locale);
   const description = shareDescription(args.markdown);
   const blocks = parseMessage(args.markdown);
-  const image = args.origin && args.id ? `${args.origin}/s/${args.id}/og` : `${args.origin || ""}/og.png`;
-  const pageUrl = args.origin && args.id ? `${args.origin}/s/${args.id}` : "";
+  const image = args.origin && args.id ? `${args.origin}/share/${args.id}/og` : `${args.origin || ""}/og.png`;
+  const pageUrl = args.origin && args.id ? `${args.origin}/share/${args.id}` : "";
   return `<!doctype html>
 <html lang="${args.locale}" dir="${dir}">
 <head>

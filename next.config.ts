@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
       "./assets/fonts/NotoSansArabic-Regular.ttf",
       "./assets/fonts/Inter-SemiBold.ttf",
     ],
+    "/share/[id]/og": [
+      "./assets/fonts/NotoSansArabic-Regular.ttf",
+      "./assets/fonts/Inter-SemiBold.ttf",
+    ],
     "/api/invoices/[id]/pdf": [
       "./assets/fonts/NotoSansArabic-Regular.ttf",
       "./assets/fonts/Inter-Regular.ttf",
