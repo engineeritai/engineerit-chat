@@ -10,6 +10,7 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as {
       title?: string;
+      subtitle?: string;
       content?: string;
       text?: string;
       filename?: string;
@@ -20,6 +21,7 @@ export async function POST(req: Request) {
     if (!markdown.trim()) return NextResponse.json({ error: "Missing content." }, { status: 400 });
     const report = await prepareReport({
       title: body.title,
+      subtitle: body.subtitle,
       markdown,
       locale: body.locale,
       diagrams: body.diagrams,

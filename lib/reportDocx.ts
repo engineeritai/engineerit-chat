@@ -236,6 +236,9 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
   if (current.children.length) buckets.push(current);
 
   const doc = new Document({
+    title: report.title,
+    subject: report.subtitle,
+    creator: "engineerit.ai",
     styles: {
       default: {
         document: { run: { font: rtlDoc ? "Arial" : "Calibri", size: 22 } },

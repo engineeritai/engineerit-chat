@@ -11,6 +11,22 @@ function clean(value: string | undefined): string {
   return (value || "").replace(/\s+/g, " ").trim();
 }
 
+/** Separate a dash, colon, or parenthetical clause from the main topic. */
+function splitAside(text: string): { main: string; extra: string } {
+  const parts = text.split(/\s+[–—]\s+|\s+-\s+|:\s+/);
+  let main = parts[0].trim();
+  let extra = parts.slice(1).join(" – ").trim();
+  const paren = main.match(/^(.*\S)\s+\(([^)]+)\)\s*$/);
+  if (paren) {
+    const head = paren[1].trim();
+    if (head.split(/\s+/).length >= 2) {
+      main = head;
+      extra = extra || paren[2].trim();
+    }
+  }
+  return { main, extra };
+}
+
 function titleCase(text: string): string {
   if (/[\u0600-\u06FF]/.test(text) || /[A-Z]/.test(text)) return text;
   return text
@@ -27,7 +43,7 @@ function titleCase(text: string): string {
 export function shortTopic(source: string | undefined, fallback = ""): string {
   let text = clean(source);
   if (!text || GENERIC.has(text.toLowerCase())) return fallback;
-  text = text.split(/\s+[–—]\s+|\s+-\s+|:\s+/)[0].replace(/[?؟.]+$/g, "").trim();
+  text = splitAside(text).main.replace(/[?؟.]+$/g, "").trim();
   let words = text.split(" ").filter(Boolean);
   while (words.length > 2 && LEADING.test(words[0])) words.shift();
   while (words.length > 2 && TRAILING.test(words[words.length - 1])) words.pop();
@@ -39,9 +55,8 @@ export function shortTopic(source: string | undefined, fallback = ""): string {
 /** Cover line for the clause that was left out of the short title. */
 export function coverSubtitle(source: string | undefined, locale: "en" | "ar"): string {
   const text = clean(source);
-  const parts = text.split(/\s+[–—]\s+|\s+-\s+|:\s+/);
-  const rest = parts.slice(1).join(" – ").trim();
-  if (rest) return rest.slice(0, 160);
+  const extra = text && !GENERIC.has(text.toLowerCase()) ? splitAside(text).extra : "";
+  if (extra) return extra.slice(0, 160);
   return locale === "ar" ? "تقرير هندسي" : "Engineering report";
 }
 
@@ -56,7 +71,7 @@ export function pickTopicSource(requested: string | undefined, prompt: string | 
 /** Filename is the topic plus an extension. Arabic is kept. No brand or date suffix. */
 export function downloadName(topic: string, extension: string): string {
   const ext = extension.replace(/^\./, "").toLowerCase() || "pdf";
-  const base = (topic || "Report")
+  const base = shortTopic(topic, topic || "Report")
     .replace(/[\\/:*?"<>|\u0000-\u001f]/g, "")
     .replace(/\s+/g, " ")
     .trim()

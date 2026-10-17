@@ -249,10 +249,19 @@ export function ganttAppendix(blocks: Block[], locale: UiLocale): { headers: str
   return { headers, rows };
 }
 
-export function topicFrom(markdown: string, requested: string | undefined, locale: UiLocale, prompt?: string): string {
+export function exportMeta(markdown: string, requested: string | undefined, locale: UiLocale, prompt?: string) {
   const heading = markdown.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim();
   const source = pickTopicSource(requested, prompt, heading);
-  return shortTopic(source, locale === "ar" ? "تقرير هندسي" : "Engineering report");
+  const fallback = locale === "ar" ? "تقرير هندسي" : "Engineering report";
+  return {
+    source,
+    title: shortTopic(source, fallback),
+    subtitle: coverSubtitle(source, locale),
+  };
+}
+
+export function topicFrom(markdown: string, requested: string | undefined, locale: UiLocale, prompt?: string): string {
+  return exportMeta(markdown, requested, locale, prompt).title;
 }
 
 export function subtitleFor(source: string | undefined, locale: UiLocale): string {

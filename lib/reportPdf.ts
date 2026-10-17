@@ -64,6 +64,9 @@ function wrap(text: string, fonts: Fonts, size: number, maxWidth: number, bold =
 
 export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
+  pdf.setTitle(report.title);
+  pdf.setSubject(report.subtitle);
+  pdf.setCreator("engineerit.ai");
   pdf.registerFontkit(fontkit);
   const dir = path.join(process.cwd(), "assets/fonts");
   const fonts: Fonts = {

@@ -39,12 +39,16 @@ This simplified workflow illustrates the essential process.`;
 
 test("short topic drops the subtitle and stays within a few words", () => {
   assert.equal(shortTopic("Technical Grade Urea Production – SABIC Process Workflow"), "Technical Grade Urea Production");
+  assert.equal(shortTopic("Technical Grade Urea Production Process Workflow"), "Technical Grade Urea Production");
+  assert.equal(shortTopic("Technical Grade Urea Production (SABIC)"), "Technical Grade Urea Production");
   assert.equal(shortTopic("technical grade urea production"), "Technical Grade Urea Production");
   assert.equal(shortTopic("Simplified Urea Production Process Diagram"), "Urea Production");
   assert.equal(shortTopic("إنتاج اليوريا الفنية – سابك"), "إنتاج اليوريا الفنية");
   assert.equal(coverSubtitle("Technical Grade Urea Production – SABIC Process Workflow", "en"), "SABIC Process Workflow");
-  const name = downloadName("Technical Grade Urea Production", "pdf");
+  assert.equal(coverSubtitle("Technical Grade Urea Production (SABIC)", "en"), "SABIC");
+  const name = downloadName("Technical Grade Urea Production – SABIC Process Workflow", "pdf");
   assert.equal(name, "Technical Grade Urea Production.pdf");
+  assert.equal(downloadName("Technical Grade Urea Production", "html"), "Technical Grade Urea Production.html");
   assert.equal(name.includes("engineerit"), false);
   assert.equal(/\d{4}-\d{2}-\d{2}/.test(name), false);
   const arabic = downloadName("إنتاج اليوريا الفنية", "docx");

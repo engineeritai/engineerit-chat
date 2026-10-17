@@ -5,7 +5,7 @@ import Link from "next/link";
 import ComposerPlus from "@/app/components/ComposerPlus";
 import MessageMarkdown from "@/app/components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "@/app/components/copyRich";
-import { topicFrom } from "@/lib/messageDocument";
+import { exportMeta } from "@/lib/messageDocument";
 import {
   exportCapabilities,
   getAdvisor,
@@ -470,6 +470,8 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         ) : (
           messages.map((message) => {
             const rtl = isArabicText(message.content);
+            const meta = exportMeta(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content);
+            const topic = meta.title;
             return (
               <div
                 key={message.id}
@@ -485,7 +487,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                       markdown={message.content}
                       dir={rtl ? "rtl" : "ltr"}
                       locale={locale}
-                      fileBase={topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content)}
+                      fileBase={topic}
                       labels={{
                         copyTable: s.chat.copyTable,
                         exportExcel: s.chat.exportExcel,
@@ -521,7 +523,6 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                         type="button"
                         className="msg-action-btn"
                         onClick={async () => {
-                          const topic = topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content);
                           const ok = await nativeShareHtml(message.content, topic, locale);
                           if (ok) return;
                           setOpenShareFor((prev) => (prev === message.id ? null : message.id));
@@ -537,8 +538,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                             try {
                               const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
                               const diagrams = root ? await collectDiagramPngs(root) : [];
-                              const topic = topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content);
-                              await exportPdf(message.content, topic, { title: topic, locale, diagrams });
+                              await exportPdf(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                             } catch (err) {
                               console.error(err);
                               alert(s.chat.pdfFailed);
@@ -557,8 +557,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                               try {
                                 const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
                                 const diagrams = root ? await collectDiagramPngs(root) : [];
-                                const topic = topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content);
-                                await exportWordDocx(message.content, topic, { title: topic, locale, diagrams });
+                                await exportWordDocx(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                               } catch (err) {
                                 console.error(err);
                                 alert(s.chat.wordFailed);
@@ -574,8 +573,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                               try {
                                 const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
                                 const diagrams = root ? await collectDiagramPngs(root) : [];
-                                const topic = topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content);
-                                await exportPptx(message.content, topic, { title: topic, locale, diagrams });
+                                await exportPptx(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                               } catch (err) {
                                 console.error(err);
                                 alert(s.chat.pptFailed);
@@ -593,14 +591,14 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                       <button
                         type="button"
                         className="msg-action-btn"
-                        onClick={() => saveHtml(message.content, topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content), locale)}
+                        onClick={() => saveHtml(message.content, topic, locale)}
                       >
                         Save HTML
                       </button>
                       <button
                         type="button"
                         className="msg-action-btn"
-                        onClick={() => printHtml(message.content, topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content), locale)}
+                        onClick={() => printHtml(message.content, topic, locale)}
                       >
                         Print
                       </button>

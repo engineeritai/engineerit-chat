@@ -12,7 +12,7 @@ import MessageMarkdown from "../components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "../components/copyRich";
 import { publishShare } from "@/lib/chatActions";
 import { downloadName } from "@/lib/exportName";
-import { topicFrom } from "@/lib/messageDocument";
+import { exportMeta } from "@/lib/messageDocument";
 import { buildShareHtml } from "@/lib/shareDocument";
 import { sampleAr, sampleEn } from "@/lib/richSamples";
 import MarketingShell from "../components/marketing/MarketingShell";
@@ -162,12 +162,13 @@ function printHtml(aiText: string, title = "Report", locale: "en" | "ar" = "en")
  * ✅ REAL PDF export for Professional/Consultant
  * Downloads a true PDF file from /api/export/pdf (works on Windows + iOS + Android).
  */
-async function exportPdf(aiText: string, extra?: { title?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
+async function exportPdf(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
   const res = await fetch("/api/export/pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       title: extra?.title || "engineerit.ai",
+      subtitle: extra?.subtitle,
       content: aiText,
       filename: extra?.title || "Report",
       locale: extra?.locale,
@@ -220,11 +221,11 @@ function shareToWhatsApp(text: string) {
   window.open(wa, "_blank", "noopener,noreferrer");
 }
 
-async function exportWordDocx(aiText: string, extra?: { title?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
+async function exportWordDocx(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
   const res = await fetch("/api/export/docx", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: aiText, title: extra?.title, locale: extra?.locale, diagrams: extra?.diagrams }),
+    body: JSON.stringify({ text: aiText, title: extra?.title, subtitle: extra?.subtitle, locale: extra?.locale, diagrams: extra?.diagrams }),
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
@@ -239,11 +240,11 @@ async function exportWordDocx(aiText: string, extra?: { title?: string; locale?:
   URL.revokeObjectURL(url);
 }
 
-async function exportPptx(aiText: string, extra?: { title?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
+async function exportPptx(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
   const res = await fetch("/api/export/pptx", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: aiText, title: extra?.title, locale: extra?.locale, diagrams: extra?.diagrams }),
+    body: JSON.stringify({ text: aiText, title: extra?.title, subtitle: extra?.subtitle, locale: extra?.locale, diagrams: extra?.diagrams }),
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
@@ -891,12 +892,13 @@ export default function Page() {
             {messages.map((m) => {
               const rtl = isArabicText(m.content);
               const hasAtt = (m.attachments?.length || 0) > 0;
-              const topic = topicFrom(
+              const meta = exportMeta(
                 m.content,
                 thread?.title,
                 locale,
                 messages.find((item) => item.role === "user")?.content
               );
+              const topic = meta.title;
 
               return (
                 <div
@@ -1066,7 +1068,7 @@ export default function Page() {
                                       try {
                                         const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
                                         const diagrams = root ? await collectDiagramPngs(root) : [];
-                                        await exportPdf(m.content, { title: topic, locale, diagrams });
+                                        await exportPdf(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                       } catch (e) {
                                         console.error(e);
                                         alert(s.chat.pdfFailed);
@@ -1088,7 +1090,7 @@ export default function Page() {
                                         try {
                                           const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
                                           const diagrams = root ? await collectDiagramPngs(root) : [];
-                                          await exportWordDocx(m.content, { title: topic, locale, diagrams });
+                                          await exportWordDocx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                         } catch (e) {
                                           console.error(e);
                                           alert(s.chat.wordFailed);
@@ -1106,7 +1108,7 @@ export default function Page() {
                                         try {
                                           const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
                                           const diagrams = root ? await collectDiagramPngs(root) : [];
-                                          await exportPptx(m.content, { title: topic, locale, diagrams });
+                                          await exportPptx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                         } catch (e) {
                                           console.error(e);
                                           alert(s.chat.pptFailed);

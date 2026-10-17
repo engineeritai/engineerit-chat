@@ -87,13 +87,14 @@ export function printHtml(aiText: string, title = "Report", locale?: string) {
 export async function exportPdf(
   aiText: string,
   filename = "engineerit.ai",
-  options?: { title?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }
+  options?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }
 ) {
   const res = await fetch("/api/export/pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       title: options?.title || filename,
+      subtitle: options?.subtitle,
       content: aiText,
       filename,
       locale: options?.locale,
@@ -139,7 +140,7 @@ export function shareToWhatsApp(text: string) {
 export async function exportWordDocx(
   aiText: string,
   filename = "engineerit.ai",
-  options?: { title?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }
+  options?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }
 ) {
   const res = await fetch("/api/export/docx", {
     method: "POST",
@@ -147,6 +148,7 @@ export async function exportWordDocx(
     body: JSON.stringify({
       text: aiText,
       title: options?.title || filename,
+      subtitle: options?.subtitle,
       filename,
       locale: options?.locale,
       diagrams: options?.diagrams,
@@ -160,7 +162,7 @@ export async function exportWordDocx(
 export async function exportPptx(
   aiText: string,
   filename = "engineerit.ai",
-  options?: { title?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }
+  options?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }
 ) {
   const res = await fetch("/api/export/pptx", {
     method: "POST",
@@ -168,6 +170,7 @@ export async function exportPptx(
     body: JSON.stringify({
       text: aiText,
       title: options?.title || filename,
+      subtitle: options?.subtitle,
       filename,
       locale: options?.locale,
       diagrams: options?.diagrams,

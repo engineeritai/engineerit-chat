@@ -29,6 +29,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
   pptx.layout = "WIDE";
   pptx.author = "engineerit.ai";
   pptx.title = report.title;
+  pptx.subject = report.subtitle;
   pptx.rtlMode = report.locale === "ar";
   const rtl = report.locale === "ar";
   const slides: Slide[] = [];

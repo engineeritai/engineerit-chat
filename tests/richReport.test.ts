@@ -103,6 +103,41 @@ async function writeSamples(name: string, bytes: Uint8Array) {
   await writeFile(path.join(dir, name), bytes);
 }
 
+test("cover title is the short topic and the dropped clause stays on the cover", async () => {
+  const report = await prepareReport({
+    title: "Technical Grade Urea Production – SABIC Process Workflow",
+    subtitle: "SABIC Process Workflow",
+    markdown: "Ammonia is converted to technical grade urea.",
+    locale: "en",
+    now,
+  });
+  assert.equal(report.title, "Technical Grade Urea Production");
+  assert.equal(report.subtitle, "SABIC Process Workflow");
+  const fromSource = await prepareReport({
+    title: "Technical Grade Urea Production – SABIC Process Workflow",
+    markdown: "Ammonia is converted to technical grade urea.",
+    locale: "en",
+    now,
+  });
+  assert.equal(fromSource.title, "Technical Grade Urea Production");
+  assert.equal(fromSource.subtitle, "SABIC Process Workflow");
+  const pdf = await buildReportPdf(report);
+  const pdfDoc = await PDFDocument.load(pdf);
+  assert.equal(pdfDoc.getTitle(), "Technical Grade Urea Production");
+  assert.equal(pdfDoc.getSubject(), "SABIC Process Workflow");
+  const docx = await buildReportDocx(report);
+  const word = await JSZip.loadAsync(docx);
+  const xml = await word.file("word/document.xml")!.async("string");
+  const core = await word.file("docProps/core.xml")!.async("string");
+  assert.match(xml, /Technical Grade Urea Production/);
+  assert.match(xml, /SABIC Process Workflow/);
+  assert.match(core, /Technical Grade Urea Production/);
+  const deck = await JSZip.loadAsync(await buildReportPptx(report));
+  const cover = await deck.file("ppt/slides/slide1.xml")!.async("string");
+  assert.match(cover, /Technical Grade Urea Production/);
+  assert.match(cover, /SABIC Process Workflow/);
+});
+
 test("exports build pdf, docx, pptx, and xlsx in english and arabic", async () => {
   for (const [locale, markdown, title] of [
     ["en", sampleEn, "Feed pump installation"],
