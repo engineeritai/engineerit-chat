@@ -23,14 +23,23 @@ import type { PreparedReport, ReportImage } from "@/lib/reportModel";
 const border = { style: BorderStyle.SINGLE, size: 4, color: "D0D7E2" };
 const borders = { top: border, bottom: border, left: border, right: border };
 
+function runFont(rtl: boolean) {
+  const name = rtl ? "Arial" : "Calibri";
+  return { ascii: name, hAnsi: name, cs: name, eastAsia: name };
+}
+
 function textRun(value: string, opts: { bold?: boolean; size?: number; color?: string; rtl: boolean }) {
+  const size = opts.size ?? 22;
   return new TextRun({
     text: value || " ",
     bold: opts.bold,
-    size: opts.size ?? 22,
-    font: opts.rtl ? "Arial" : "Calibri",
+    boldComplexScript: opts.bold,
+    size,
+    sizeComplexScript: size,
+    font: runFont(opts.rtl),
     rightToLeft: opts.rtl,
     color: opts.color,
+    language: opts.rtl ? { value: "ar-SA", bidirectional: "ar-SA" } : { value: "en-US" },
   });
 }
 
@@ -91,7 +100,15 @@ function makeFooter(report: PreparedReport) {
           textRun("  engineer it · engineerit.ai    ", { size: 16, rtl: false, color: "64748B" }),
           textRun(report.stamp, { size: 16, rtl, color: "64748B" }),
           textRun("    ", { size: 16, rtl: false }),
-          new TextRun({ children: pageLabel, font: rtl ? "Arial" : "Calibri", size: 16, color: "64748B", rightToLeft: rtl }),
+          new TextRun({
+            children: pageLabel,
+            font: runFont(rtl),
+            size: 16,
+            sizeComplexScript: 16,
+            color: "64748B",
+            rightToLeft: rtl,
+            language: rtl ? { value: "ar-SA", bidirectional: "ar-SA" } : { value: "en-US" },
+          }),
         ],
       }),
     ],

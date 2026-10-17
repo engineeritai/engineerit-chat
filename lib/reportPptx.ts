@@ -32,6 +32,8 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
   pptx.subject = report.subtitle;
   pptx.rtlMode = report.locale === "ar";
   const rtl = report.locale === "ar";
+  const face = rtl ? "Arial" : "Calibri";
+  const lang = rtl ? "ar-SA" : "en-US";
   const slides: Slide[] = [];
 
   const add = () => {
@@ -47,7 +49,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       y: 7.08,
       w: 3.6,
       h: 0.28,
-      fontFace: "Calibri",
+      fontFace: face, lang,
       fontSize: 11,
       color: "64748B",
       align: rtl ? "right" : "left",
@@ -58,10 +60,11 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       y: 7.08,
       w: 4.5,
       h: 0.28,
-      fontFace: "Calibri",
+      fontFace: face, lang,
       fontSize: 11,
       color: "64748B",
       align: "center",
+      rtlMode: rtl,
     });
     const label = rtl ? `شريحة ${page} من ${total}` : `Slide ${page} of ${total}`;
     slide.addText(label, {
@@ -69,10 +72,11 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       y: 7.08,
       w: 3.4,
       h: 0.28,
-      fontFace: "Calibri",
+      fontFace: face, lang,
       fontSize: 11,
       color: "64748B",
       align: rtl ? "left" : "right",
+      rtlMode: rtl,
     });
   };
 
@@ -83,7 +87,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
     y: 2.3,
     w: W - 1.6,
     h: 1.4,
-    fontFace: "Calibri",
+    fontFace: face, lang,
     fontSize: 36,
     bold: true,
     color: "0F172A",
@@ -95,10 +99,11 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
     y: 3.8,
     w: W - 2.4,
     h: 0.4,
-    fontFace: "Calibri",
+    fontFace: face, lang,
     fontSize: 16,
     color: "64748B",
     align: "center",
+    rtlMode: rtl,
   });
   cover.addShape(pptx.ShapeType.rect, {
     x: (W - 2.2) / 2,
@@ -113,10 +118,11 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
     y: 4.6,
     w: W - 2.4,
     h: 0.35,
-    fontFace: "Calibri",
+    fontFace: face, lang,
     fontSize: 14,
     color: "1A56FF",
     align: "center",
+    rtlMode: rtl,
   });
 
   const contentSlide = (title: string) => {
@@ -134,7 +140,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       y: 0.22,
       w: W - 1,
       h: 0.42,
-      fontFace: "Calibri",
+      fontFace: face, lang,
       fontSize: 20,
       bold: true,
       color: "0F172A",
@@ -167,7 +173,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
         y: 0.85,
         w: W - 1.1,
         h: 5.9,
-        fontFace: "Calibri",
+        fontFace: face, lang,
         fontSize: 18,
         color: "0F172A",
         align: rtl ? "right" : "left",
@@ -246,7 +252,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
           { pt: 0.5, color: "D0D7E2" },
           { pt: 0.5, color: "D0D7E2" },
         ],
-        fontFace: "Calibri",
+        fontFace: face, lang,
         fontSize: block.headers.length >= 7 ? 11 : 13,
         valign: "middle",
         rtlMode: tableRtl,

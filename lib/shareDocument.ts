@@ -87,6 +87,7 @@ export function buildShareHtml(args: {
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${esc(args.title)}</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&amp;family=IBM+Plex+Sans+Arabic:wght@400;600;700&amp;display=swap"/>
 <meta name="description" content="${esc(description)}"/>
 <meta property="og:type" content="article"/>
 <meta property="og:title" content="${esc(args.title)}"/>
@@ -100,7 +101,7 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: Inter, "IBM Plex Sans Arabic", "Segoe UI", sans-serif; color: #0f172a; background: #f5f7fb; }
+  body { margin: 0; font-family: "Noto Naskh Arabic", "IBM Plex Sans Arabic", "Noto Sans Arabic", Inter, "Segoe UI", sans-serif; color: #0f172a; background: #f5f7fb; }
   header, footer { display: flex; align-items: center; gap: 12px; padding: 16px 22px; background: #fff; }
   header { border-bottom: 3px solid #1a56ff; }
   header h1 { margin: 0; font-size: 22px; font-weight: 700; }

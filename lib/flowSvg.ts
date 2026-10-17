@@ -56,7 +56,7 @@ export function flowSvg(source: string, dir: "ltr" | "rtl"): string | null {
     .map((box) => {
       const text = box.label.length > 42 ? `${box.label.slice(0, 41)}…` : box.label;
       return `<rect x="${box.x}" y="${box.y}" width="${boxW}" height="${boxH}" rx="12" fill="#e7eeff" stroke="#1a56ff" stroke-width="1.5"/>
-<text x="${box.x + boxW / 2}" y="${box.y + 32}" text-anchor="middle" font-size="14" font-family="Inter, Segoe UI, sans-serif" fill="#0f172a"${dir === "rtl" ? ' direction="rtl"' : ""}>${escapeXml(text)}</text>`;
+<text x="${box.x + boxW / 2}" y="${box.y + 32}" text-anchor="middle" font-size="14" font-family="${dir === "rtl" ? "Noto Sans Arabic" : "Inter, 'Noto Sans Arabic', 'Segoe UI', sans-serif"}" fill="#0f172a"${dir === "rtl" ? ' direction="rtl"' : ""}>${escapeXml(text)}</text>`;
     })
     .join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" width="100%">

@@ -1,3 +1,4 @@
+import { containsArabic } from "@/lib/arabicShape";
 import { parseIso, type ChartModel, type GanttModel, type SeriesModel, type TimelineModel } from "@/lib/scheduleModel";
 
 export type ChartTheme = "light" | "dark";
@@ -55,14 +56,16 @@ function svgOpen(width: number, height: number, theme: ChartTheme): string {
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img">
 <rect width="${width}" height="${height}" fill="${colors.bg}"/>
 <style>
-text { font-family: Inter, "Noto Sans Arabic", sans-serif; }
+text { font-family: "Noto Sans Arabic", Inter, sans-serif; }
 </style>`;
 }
 
 function text(x: number, y: number, value: string, opts: { size?: number; fill?: string; anchor?: "start" | "end" | "middle"; weight?: number; rtl?: boolean }) {
   const anchor = opts.anchor ?? (opts.rtl ? "end" : "start");
-  const direction = opts.rtl ? ` direction="rtl"` : "";
-  return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${opts.fill ?? "#0f172a"}" font-size="${opts.size ?? 13}" font-weight="${opts.weight ?? 500}" text-anchor="${anchor}"${direction}>${esc(value)}</text>`;
+  const arabic = opts.rtl || containsArabic(value);
+  const direction = arabic ? ` direction="rtl"` : "";
+  const family = arabic ? "Noto Sans Arabic" : "Inter";
+  return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${opts.fill ?? "#0f172a"}" font-size="${opts.size ?? 13}" font-weight="${opts.weight ?? 500}" font-family="${family}" text-anchor="${anchor}"${direction}>${esc(value)}</text>`;
 }
 
 function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme): string {
