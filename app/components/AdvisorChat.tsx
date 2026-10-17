@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
+import ComposerPlus from "@/app/components/ComposerPlus";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -633,7 +634,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
             <div className="chat-input-left">
               <button
                 type="button"
-                className="chat-input-icon-btn"
+                className="chat-input-icon-btn is-plus"
                 aria-label="Add attachments"
                 onClick={() => {
                   if (!unlocked) {
@@ -643,7 +644,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                   setAttachOpen((v) => !v);
                 }}
               >
-                <span className="chat-input-plus">+</span>
+                <ComposerPlus />
               </button>
               {attachOpen && unlocked && (
                 <div className="attach-menu">

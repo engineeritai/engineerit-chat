@@ -1124,34 +1124,24 @@ body {
   align-items: center;
 }
 
-/* + button */
+/* + button: bare 22px plus inside a 36px target */
 .chat-input-icon-btn {
   border: none;
   background: transparent;
   cursor: pointer;
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #333;
+  padding: 0;
 }
 
-.chat-input-icon-btn:hover {
-  background: #e5e7eb;
-}
-
-.chat-input-plus {
-  display: inline-flex;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  border: 1px solid #6b7280;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  line-height: 1;
-  color: #374151;
+.chat-input-icon-btn:hover,
+.chat-input-icon-btn:active {
+  background: rgba(51, 51, 51, 0.06);
 }
 
 .attach-menu {
