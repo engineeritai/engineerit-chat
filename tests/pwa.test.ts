@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import manifest from "../app/manifest";
+import { DISMISS_MS, dismissIsActive, installPlatform } from "../lib/installApp";
+import { shellCopy } from "../lib/shell";
 
 describe("android pwa", () => {
   it("publishes the install manifest the Trusted Web Activity expects", () => {
@@ -32,5 +34,42 @@ describe("android pwa", () => {
     assert.match(config, /assetlinks\.json/);
     assert.match(config, /application\/json/);
     assert.match(config, /\/privacy".*\/legal\/privacy/);
+    const layout = readFileSync("app/layout.tsx", "utf8");
+    assert.match(layout, /apple-mobile-web-app-capable/);
+    assert.match(layout, /apple-mobile-web-app-title/);
+    assert.match(layout, /apple-touch-icon/);
+  });
+
+  it("remembers an install dismissal for 14 days and tells iOS browsers apart", () => {
+    const now = Date.UTC(2026, 9, 17);
+    assert.equal(dismissIsActive(null, now), false);
+    assert.equal(dismissIsActive(String(now - DISMISS_MS + 1000), now), true);
+    assert.equal(dismissIsActive(String(now - DISMISS_MS - 1000), now), false);
+    assert.equal(installPlatform("Mozilla/5.0 (Linux; Android 14; Pixel 7) Chrome/131.0.0.0 Mobile"), "android");
+    assert.equal(
+      installPlatform(
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Version/17.5 Mobile/15E148 Safari/604.1"
+      ),
+      "ios-safari"
+    );
+    assert.equal(
+      installPlatform(
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 CriOS/131.0.6778.73 Mobile/15E148 Safari/604.1"
+      ),
+      "ios-other"
+    );
+    assert.equal(
+      installPlatform("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15", {
+        platform: "MacIntel",
+        maxTouchPoints: 5,
+      }),
+      "ios-safari"
+    );
+    assert.match(shellCopy.en.install.bannerTitle, /Install the app/);
+    assert.equal(shellCopy.en.install.menu, "Install app");
+    assert.match(shellCopy.en.install.iosSafari, /Add to Home Screen/);
+    assert.match(shellCopy.ar.install.iosSafari, /الشاشة الرئيسية/);
+    assert.match(shellCopy.ar.install.iosOther, /Safari/);
+    assert.match(shellCopy.ar.install.menu, /تثبيت التطبيق/);
   });
 });

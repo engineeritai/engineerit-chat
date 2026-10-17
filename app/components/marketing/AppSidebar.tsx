@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { PlanSummary } from "@/app/components/marketing/AccountMenu";
 import { useAccount } from "@/app/components/marketing/AccountState";
 import Wordmark from "@/app/components/marketing/Wordmark";
+import { InstallTrigger } from "@/app/components/InstallApp";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { getMarketingContent } from "@/lib/marketing";
 import { useMessages } from "@/lib/useMessages";
@@ -99,6 +100,7 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
               {link.label}
             </Link>
           ))}
+          <InstallTrigger variant="sidebar" onDone={onClose} />
         </nav>
         <div className="app-side-foot">
           <PlanSummary onNavigate={onClose} />

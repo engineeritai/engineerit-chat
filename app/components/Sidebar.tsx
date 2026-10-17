@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useRef, useState } from "react";
+import { InstallTrigger } from "@/app/components/InstallApp";
 import { PlanSummary } from "@/app/components/marketing/AccountMenu";
 import { useAccount } from "@/app/components/marketing/AccountState";
 import Wordmark from "@/app/components/marketing/Wordmark";
@@ -124,6 +125,7 @@ export default function Sidebar({
               {item.label}
             </Link>
           ))}
+          <InstallTrigger variant="chat" onDone={onCloseMobile} />
         </nav>
       </div>
 
