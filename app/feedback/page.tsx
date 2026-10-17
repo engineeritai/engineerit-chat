@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import MarketingShell from "../components/marketing/MarketingShell";
+import EitMark from "../components/marketing/EitMark";
 import { useMessages } from "@/lib/useMessages";
 
 type BotMessage = {
@@ -186,8 +187,8 @@ export default function FeedbackPage() {
               className="helper-bot-button"
               onClick={() => setBotOpen((v) => !v)}
             >
-              🤖
-              <span>{s.feedback.assistant}</span>
+              <EitMark size={18} title="eit" />
+              <span>{s.feedback.askAssistant}</span>
             </button>
           </div>
 

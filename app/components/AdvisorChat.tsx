@@ -2,8 +2,10 @@
 
 import { useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import ComposerPlus from "@/app/components/ComposerPlus";
+import MessageMarkdown from "@/app/components/MessageMarkdown";
+import { collectDiagramPngs, copyRichElement } from "@/app/components/copyRich";
+import { topicFrom } from "@/lib/messageDocument";
 import {
   exportCapabilities,
   getAdvisor,
@@ -16,7 +18,6 @@ import { advisorsAreLive, advisorsNowLive } from "@/lib/advisorLaunch";
 import { getAccessToken } from "@/lib/accessToken";
 import { getPlaybook, groupedPlaybooks, playbooksFor, playbookTemplate } from "@/lib/playbooks";
 import {
-  copyAsHtml,
   exportPdf,
   exportPptx,
   exportWordDocx,
@@ -86,7 +87,6 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
 
   const selected = getPlaybook(advisor.id, activePlaybook) ?? playbooks[0];
   const template = selected ? playbookTemplate(selected, locale) : "";
-  const filename = `engineerit-${advisorId}${selected ? `-${selected.id}` : ""}`;
 
   function openGate(notice?: string) {
     setGateNotice(notice || m.advisors.includedOn[advisorId]);
@@ -480,8 +480,20 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
               >
                 <div className="message-avatar">{message.role === "user" ? "You" : "AI"}</div>
                 <div className="message-bubble">
-                  <div className="msg-content" dir={rtl ? "rtl" : "ltr"}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                  <div className="msg-content" dir={rtl ? "rtl" : "ltr"} data-message-id={message.id}>
+                    <MessageMarkdown
+                      markdown={message.content}
+                      dir={rtl ? "rtl" : "ltr"}
+                      locale={locale}
+                      fileBase={topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content)}
+                      labels={{
+                        copyTable: s.chat.copyTable,
+                        exportExcel: s.chat.exportExcel,
+                        diagramCopy: s.chat.diagramCopy,
+                        diagramPng: s.chat.diagramPng,
+                        diagramSvg: s.chat.diagramSvg,
+                      }}
+                    />
                   </div>
                   {(message.attachments?.length || 0) > 0 && (
                     <div className="advisor-attachment-list">
@@ -498,8 +510,9 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                         type="button"
                         className="msg-action-btn"
                         onClick={async () => {
-                          const ok = await copyAsHtml(message.content);
-                          if (!ok) alert("Copy failed on this browser.");
+                          const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
+                          const ok = root ? await copyRichElement(root, message.content) : false;
+                          if (!ok) alert(s.chat.copyFailed);
                         }}
                       >
                         📋 Copy
@@ -508,7 +521,8 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                         type="button"
                         className="msg-action-btn"
                         onClick={async () => {
-                          const ok = await nativeShareHtml(message.content, filename);
+                          const topic = topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content);
+                          const ok = await nativeShareHtml(message.content, topic, locale);
                           if (ok) return;
                           setOpenShareFor((prev) => (prev === message.id ? null : message.id));
                         }}
@@ -521,7 +535,10 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                           className="msg-action-btn"
                           onClick={async () => {
                             try {
-                              await exportPdf(message.content, filename);
+                              const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
+                              const diagrams = root ? await collectDiagramPngs(root) : [];
+                              const topic = topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content);
+                              await exportPdf(message.content, topic, { title: topic, locale, diagrams });
                             } catch (err) {
                               console.error(err);
                               alert(s.chat.pdfFailed);
@@ -538,7 +555,10 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                             className="msg-action-btn"
                             onClick={async () => {
                               try {
-                                await exportWordDocx(message.content, filename);
+                                const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
+                                const diagrams = root ? await collectDiagramPngs(root) : [];
+                                const topic = topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content);
+                                await exportWordDocx(message.content, topic, { title: topic, locale, diagrams });
                               } catch (err) {
                                 console.error(err);
                                 alert(s.chat.wordFailed);
@@ -552,7 +572,10 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                             className="msg-action-btn"
                             onClick={async () => {
                               try {
-                                await exportPptx(message.content, filename);
+                                const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
+                                const diagrams = root ? await collectDiagramPngs(root) : [];
+                                const topic = topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content);
+                                await exportPptx(message.content, topic, { title: topic, locale, diagrams });
                               } catch (err) {
                                 console.error(err);
                                 alert(s.chat.pptFailed);
@@ -570,14 +593,14 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                       <button
                         type="button"
                         className="msg-action-btn"
-                        onClick={() => saveHtml(message.content, filename)}
+                        onClick={() => saveHtml(message.content, topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content), locale)}
                       >
                         Save HTML
                       </button>
                       <button
                         type="button"
                         className="msg-action-btn"
-                        onClick={() => printHtml(message.content, filename)}
+                        onClick={() => printHtml(message.content, topicFrom(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content), locale)}
                       >
                         Print
                       </button>
@@ -633,7 +656,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
             <div className="chat-input-left">
               <button
                 type="button"
-                className="chat-input-icon-btn"
+                className="chat-input-icon-btn is-plus"
                 aria-label="Add attachments"
                 onClick={() => {
                   if (!unlocked) {
@@ -643,7 +666,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                   setAttachOpen((v) => !v);
                 }}
               >
-                <span className="chat-input-plus">+</span>
+                <ComposerPlus />
               </button>
               {attachOpen && unlocked && (
                 <div className="attach-menu">

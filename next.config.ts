@@ -1,10 +1,28 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["@resvg/resvg-js", "exceljs"],
   devIndicators: false,
   skipTrailingSlashRedirect: true,
   outputFileTracingIncludes: {
-    "/api/history/[id]/export": ["./assets/fonts/NotoSansArabic-Regular.ttf"],
+    "/api/history/[id]/export": [
+      "./assets/fonts/NotoSansArabic-Regular.ttf",
+      "./assets/fonts/Inter-Regular.ttf",
+      "./assets/fonts/Inter-SemiBold.ttf",
+      "./public/icon-192.png",
+    ],
+    "/api/export/pdf": [
+      "./assets/fonts/NotoSansArabic-Regular.ttf",
+      "./assets/fonts/Inter-Regular.ttf",
+      "./assets/fonts/Inter-SemiBold.ttf",
+      "./public/icon-192.png",
+    ],
+    "/api/export/docx": ["./public/icon-192.png"],
+    "/api/export/pptx": ["./public/icon-192.png"],
+    "/s/[id]/og": [
+      "./assets/fonts/NotoSansArabic-Regular.ttf",
+      "./assets/fonts/Inter-SemiBold.ttf",
+    ],
     "/api/invoices/[id]/pdf": [
       "./assets/fonts/NotoSansArabic-Regular.ttf",
       "./assets/fonts/Inter-Regular.ttf",

@@ -1124,34 +1124,24 @@ body {
   align-items: center;
 }
 
-/* + button */
+/* + button: bare 22px plus inside a 36px target */
 .chat-input-icon-btn {
   border: none;
   background: transparent;
   cursor: pointer;
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #333;
+  padding: 0;
 }
 
-.chat-input-icon-btn:hover {
-  background: #e5e7eb;
-}
-
-.chat-input-plus {
-  display: inline-flex;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  border: 1px solid #6b7280;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  line-height: 1;
-  color: #374151;
+.chat-input-icon-btn:hover,
+.chat-input-icon-btn:active {
+  background: rgba(51, 51, 51, 0.06);
 }
 
 .attach-menu {
@@ -1364,14 +1354,9 @@ body {
   word-break: break-word;
 }
 
-/* Tables: scroll horizontally INSIDE message */
 .msg-content table {
-  display: block;
-  width: max-content;
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .msg-content th,
@@ -3428,4 +3413,203 @@ button.advisor-card-link {
   border: 1px solid #fde68a;
   border-radius: 10px;
   padding: 8px 10px;
+}
+
+.message-row {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.message-bubble {
+  flex: 1;
+  min-width: 0;
+  max-width: min(800px, 100%);
+}
+
+.conversation {
+  overflow-x: hidden;
+}
+
+.msg-content a {
+  color: #1a56ff;
+  font-size: 13px;
+}
+
+.msg-sources {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.chat-table {
+  position: relative;
+  max-width: 100%;
+  min-width: 0;
+  margin: 12px 0;
+}
+
+.chat-table-tools,
+.diagram-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.chat-table-pin {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  overflow: hidden;
+  background: #e7eeff;
+  border: 1px solid #d0d7e2;
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+}
+
+.chat-table-pin table,
+.chat-table-scroll table {
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.chat-table-pin th,
+.chat-table-scroll th,
+.chat-table-scroll td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #d0d7e2;
+  border-inline-end: 1px solid #e2e8f0;
+  text-align: start;
+  vertical-align: middle;
+  background: #fff;
+}
+
+.chat-table-pin th,
+.chat-table-scroll th {
+  background: #e7eeff;
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+.chat-table-scroll thead {
+  visibility: collapse;
+}
+
+.chat-table-scroll td:first-child,
+.chat-table-pin th:first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 2;
+  box-shadow: 1px 0 0 #d0d7e2;
+}
+
+.chat-table-scroll tbody tr:nth-child(even) td {
+  background: #f8fafc;
+}
+
+.chat-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  border: 1px solid #d0d7e2;
+  border-radius: 0 0 12px 12px;
+  background: #fff;
+}
+
+.chat-table-fade {
+  position: absolute;
+  top: 36px;
+  bottom: 0;
+  width: 18px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+}
+
+.chat-table-fade.is-on {
+  opacity: 1;
+}
+
+.chat-table-fade.is-left {
+  left: 0;
+  background: linear-gradient(to right, rgba(15, 23, 42, 0.16), transparent);
+}
+
+.chat-table-fade.is-right {
+  right: 0;
+  background: linear-gradient(to left, rgba(15, 23, 42, 0.16), transparent);
+}
+
+.schedule-figure {
+  margin: 12px 0;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.schedule-figure figcaption {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.schedule-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.schedule-scroll svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-width: 640px;
+}
+
+.share-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  display: flex;
+  flex-direction: column;
+}
+
+.share-header,
+.share-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 22px;
+  background: #fff;
+}
+
+.share-header {
+  border-bottom: 3px solid #1a56ff;
+}
+
+.share-header h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.share-body {
+  flex: 1;
+  overflow: auto;
+}
+
+.share-footer {
+  border-top: 1px solid #e5e7eb;
+  color: #64748b;
+  font-size: 13px;
+  justify-content: space-between;
+}
+
+.share-footer img {
+  vertical-align: middle;
 }

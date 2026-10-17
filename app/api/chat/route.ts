@@ -3,6 +3,8 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { gateAdvisor } from "@/lib/advisorGate";
+import { assistantRules } from "@/lib/assistantRules";
+import { appendSources, sourcesFromResponse, type SearchResponse } from "@/lib/citations";
 import { replyLanguageRule, uiLocale } from "@/lib/replyLanguage";
 
 export const runtime = "nodejs";
@@ -141,58 +143,58 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const now = new Date ();
-  const currentDate = now.toISOString();
-  
-  const baseSystemPrompt = `
-You are "engineer it", an AI engineering assistant.
-You are well trained as of today with latest update of current calendar year ${currentDate} for all ongoing technologies, latest versions of standards and best practices and guideline.
-- ${replyLanguageRule(locale)}
-- Answer as an expert subject matter in the selected discipline: ${discipline} with professional mechanism and relevant engineering standards such as ASME, IEEE, ISO, API, NEBOSH, NFPA, ASTM, IEC, ACI, AISC, International Building Code (IBC), OSHA, and others recognized international standard related to discipline or topic.
-- Use clear Markdown with headings, bullet lists, and professional designed tables when helpful.
-- Be concise with latest updates, revisions, answers and solutions; but technically strong and correct.
-- Include as appicable for topic or discipline related engineering references such as layouts, drawings, diagrams, photos, images, P&ID, PFD for specific topics e.g. pumps, compressors, turbines, heat exchangers, vessels, columns, building structures, roads, bridges, furnaces, heaters, tanks, electrical transformers, electrical substations, instrumentation loops, and others to support the topic.
-- Act in specific engineering topics or discipline: ${discipline} as Engineering Consultant and expert subject matter.
-- Specify the Material Types and related standards applicable for required processes or environment.
-- Be Specific with rich references of engineering standards related topic or descipline. 
-- Give General Feedback for non registered or non logged in users, limited feedback to assistant plan, and act as professional and expert subject matter for subscribed plans of engineer, professional, consultant, team, and enterprise
-- Where applicable per topic and relevant chat, it is preferred to include and address related standard, clauses and specification of Saudi Building Code, SASO, Saudi Aramco Standards and specifications, Saudi Electricity Regulations, Sabic applicable specifications
-- Reply in the language of the user's latest message. If that message is Arabic, the whole answer is Arabic. Otherwise the whole answer is English. Do not mix Arabic and English in one answer.
-  `;
+  const baseSystemPrompt = [
+    `You are "engineer it", an AI engineering assistant.`,
+    replyLanguageRule(locale),
+    `Answer as an expert in the selected discipline: ${discipline}. Use the relevant engineering standards, including ASME, IEEE, ISO, API, NEBOSH, NFPA, ASTM, IEC, ACI, AISC, the International Building Code, OSHA, and the Saudi Building Code, SASO, Saudi Aramco standards, Saudi Electricity regulations, and SABIC specifications when they apply.`,
+    `Be concise, technically correct, and specific about materials and standards. Subscribed engineer, professional, consultant, team, and enterprise plans receive a full expert answer. Guests and the assistant plan receive a shorter answer.`,
+    `Reply in the language of the user's latest message. If that message is Arabic, the whole answer is Arabic. Otherwise the whole answer is English. Do not mix Arabic and English in one answer.`,
+    assistantRules({ locale }),
+  ].join("\n\n");
 
-  const systemPrompt =
-    advisorGate.active && advisorGate.ok ? advisorGate.prompt : baseSystemPrompt;
-
-  const apiMessages: any[] = [
-    { role: "system", content: systemPrompt },
-    ...messages.map((m: any) => ({ role: m.role, content: m.content })),
-  ];
-
-  // If the last user message has an image attachment, make it multimodal
-  if (attachments && attachments.length > 0) {
-    const img = attachments.find((a) => a.type === "image");
-    if (img) {
-      const lastIndex = apiMessages.length - 1;
-      const last = apiMessages[lastIndex];
-
-      apiMessages[lastIndex] = {
-        role: last.role,
+  const systemPrompt = advisorGate.active && advisorGate.ok ? advisorGate.prompt : baseSystemPrompt;
+  const image = attachments?.find((item) => item.type === "image");
+  const input = messages.map((message, index) => {
+    const isLast = index === messages.length - 1;
+    if (isLast && message.role === "user" && image?.url) {
+      return {
+        role: message.role,
         content: [
-          { type: "text", text: last.content },
-          { type: "input_image", image_url: { url: img.url } },
+          { type: "input_text" as const, text: message.content },
+          { type: "input_image" as const, image_url: image.url, detail: "auto" as const },
         ],
       };
     }
-  }
-
-  const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: apiMessages,
+    return { role: message.role, content: message.content };
   });
 
-  const reply =
-    completion.choices[0]?.message?.content ||
-    (locale === "ar" ? "تعذر إنشاء رد هذه المرة." : "I couldn't generate a response this time.");
-
-  return NextResponse.json({ reply });
+  try {
+    const response = await client.responses.create({
+      model: "gpt-4o-mini",
+      instructions: systemPrompt,
+      input,
+      tools: [
+        {
+          type: "web_search",
+          search_context_size: "low",
+          user_location: { type: "approximate", country: "SA", city: "Riyadh", timezone: "Asia/Riyadh" },
+        },
+      ],
+    });
+    const parsed = sourcesFromResponse(response as SearchResponse);
+    const reply =
+      appendSources(parsed.text, parsed.sources, locale) ||
+      (locale === "ar" ? "تعذر إنشاء رد هذه المرة." : "I couldn't generate a response this time.");
+    return NextResponse.json({ reply, sources: parsed.sources });
+  } catch (err) {
+    console.error("web search response failed", err);
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "system", content: systemPrompt }, ...messages.map((message) => ({ role: message.role, content: message.content }))],
+    });
+    const reply =
+      completion.choices[0]?.message?.content ||
+      (locale === "ar" ? "تعذر إنشاء رد هذه المرة." : "I couldn't generate a response this time.");
+    return NextResponse.json({ reply, sources: [] });
+  }
 }

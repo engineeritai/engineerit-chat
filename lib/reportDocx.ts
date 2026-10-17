@@ -1,0 +1,260 @@
+import {
+  AlignmentType,
+  BorderStyle,
+  Document,
+  Footer,
+  Header,
+  HeadingLevel,
+  ImageRun,
+  Packer,
+  PageNumber,
+  PageOrientation,
+  Paragraph,
+  Table,
+  TableCell,
+  TableRow,
+  TextRun,
+  VerticalAlign,
+  WidthType,
+} from "docx";
+import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
+import type { PreparedReport, ReportImage } from "@/lib/reportModel";
+
+const border = { style: BorderStyle.SINGLE, size: 4, color: "D0D7E2" };
+const borders = { top: border, bottom: border, left: border, right: border };
+
+function textRun(value: string, opts: { bold?: boolean; size?: number; color?: string; rtl: boolean }) {
+  return new TextRun({
+    text: value || " ",
+    bold: opts.bold,
+    size: opts.size ?? 22,
+    font: opts.rtl ? "Arial" : "Calibri",
+    rightToLeft: opts.rtl,
+    color: opts.color,
+  });
+}
+
+function paragraph(
+  value: string,
+  rtl: boolean,
+  align?: (typeof AlignmentType)[keyof typeof AlignmentType]
+) {
+  return new Paragraph({
+    bidirectional: rtl,
+    alignment: align ?? (rtl ? AlignmentType.RIGHT : AlignmentType.LEFT),
+    spacing: { after: 80 },
+    children: [textRun(plainInline(value), { rtl, size: 22 })],
+  });
+}
+
+function imageRun(image: ReportImage, width: number) {
+  const height = Math.max(48, Math.round(image.height * (width / image.width)));
+  return new ImageRun({
+    type: "png",
+    data: image.png,
+    transformation: { width, height },
+    altText: { title: "Chart", description: "Chart", name: "chart" },
+  });
+}
+
+function makeHeader(title: string, rtl: boolean) {
+  return new Header({
+    children: [
+      new Paragraph({
+        bidirectional: rtl,
+        alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+        border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: "1A56FF", space: 6 } },
+        children: [textRun(title, { bold: true, size: 20, rtl, color: "0F172A" })],
+      }),
+    ],
+  });
+}
+
+function makeFooter(report: PreparedReport) {
+  const rtl = report.locale === "ar";
+  const pageLabel = rtl
+    ? ["صفحة ", PageNumber.CURRENT, " من ", PageNumber.TOTAL_PAGES]
+    : ["Page ", PageNumber.CURRENT, " of ", PageNumber.TOTAL_PAGES];
+  return new Footer({
+    children: [
+      new Paragraph({
+        bidirectional: rtl,
+        alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+        border: { top: { style: BorderStyle.SINGLE, size: 6, color: "D0D7E2", space: 8 } },
+        children: [
+          new ImageRun({
+            type: "png",
+            data: report.logo,
+            transformation: { width: 14, height: 14 },
+            altText: { title: "eit", description: "engineer it", name: "eit" },
+          }),
+          textRun("  engineer it · engineerit.ai    ", { size: 16, rtl: false, color: "64748B" }),
+          textRun(report.stamp, { size: 16, rtl, color: "64748B" }),
+          textRun("    ", { size: 16, rtl: false }),
+          new TextRun({ children: pageLabel, font: rtl ? "Arial" : "Calibri", size: 16, color: "64748B", rightToLeft: rtl }),
+        ],
+      }),
+    ],
+  });
+}
+
+function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape: boolean) {
+  const total = landscape ? 13900 : 9026;
+  const columnWidths = headers.map(() => Math.floor(total / headers.length));
+  const cell = (value: string, header: boolean, zebra: boolean) =>
+    new TableCell({
+      borders,
+      width: { size: columnWidths[0], type: WidthType.DXA },
+      shading: { fill: header ? "E7EEFF" : zebra ? "F8FAFC" : "FFFFFF" },
+      margins: { top: 60, bottom: 60, left: 80, right: 80 },
+      verticalAlign: VerticalAlign.CENTER,
+      children: [
+        new Paragraph({
+          bidirectional: rtl,
+          alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+          children: [textRun(plainInline(value), { bold: header, size: 18, rtl, color: header ? "1E3A8A" : "0F172A" })],
+        }),
+      ],
+    });
+  return new Table({
+    width: { size: total, type: WidthType.DXA },
+    columnWidths,
+    visuallyRightToLeft: rtl,
+    rows: [
+      new TableRow({
+        tableHeader: true,
+        cantSplit: true,
+        children: headers.map((header) => cell(header, true, false)),
+      }),
+      ...rows.map(
+        (row, index) =>
+          new TableRow({
+            cantSplit: true,
+            children: headers.map((_, cellIndex) => cell(row[cellIndex] ?? "", false, index % 2 === 1)),
+          })
+      ),
+    ],
+  });
+}
+
+type Child = Paragraph | Table;
+type Bucket = { landscape: boolean; cover: boolean; children: Child[] };
+
+export async function buildReportDocx(report: PreparedReport): Promise<Uint8Array> {
+  const rtlDoc = report.locale === "ar";
+  const buckets: Bucket[] = [];
+  const cover: Child[] = [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 1200, after: 200 },
+      children: [
+        new ImageRun({
+          type: "png",
+          data: report.logo,
+          transformation: { width: 72, height: 72 },
+          altText: { title: "eit", description: "engineer it", name: "eit" },
+        }),
+      ],
+    }),
+    new Paragraph({
+      heading: HeadingLevel.TITLE,
+      alignment: AlignmentType.CENTER,
+      bidirectional: blockDir(report.title, report.locale) === "rtl",
+      spacing: { before: 400, after: 160 },
+      children: [textRun(report.title, { bold: true, size: 56, rtl: blockDir(report.title, report.locale) === "rtl" })],
+    }),
+    paragraph(report.subtitle, blockDir(report.subtitle, report.locale) === "rtl", AlignmentType.CENTER),
+    paragraph(report.stamp, rtlDoc, AlignmentType.CENTER),
+  ];
+  buckets.push({ landscape: false, cover: true, children: cover });
+
+  let current: Bucket = { landscape: false, cover: false, children: [] };
+  const useBucket = (landscape: boolean) => {
+    if (current.children.length && current.landscape !== landscape) {
+      buckets.push(current);
+      current = { landscape, cover: false, children: [] };
+    }
+    current.landscape = landscape;
+  };
+
+  const pushBlock = (block: Block) => {
+    if (block.type === "heading") {
+      useBucket(false);
+      const rtl = blockDir(block.text, report.locale) === "rtl";
+      const headings = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6];
+      const heading = headings[block.level - 1] || HeadingLevel.HEADING_3;
+      const size = block.level === 1 ? 32 : block.level === 2 ? 28 : block.level === 3 ? 24 : 22;
+      current.children.push(
+        new Paragraph({
+          heading,
+          bidirectional: rtl,
+          alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+          spacing: { before: 280, after: 80 },
+          children: [textRun(block.text, { bold: true, size, rtl, color: "1A56FF" })],
+        })
+      );
+      return;
+    }
+    if (block.type === "paragraph") {
+      useBucket(false);
+      current.children.push(paragraph(block.text, blockDir(block.text, report.locale) === "rtl"));
+      return;
+    }
+    if (block.type === "list") {
+      useBucket(false);
+      const pushItems = (items: typeof block.items, ordered: boolean, depth: number) => {
+        items.forEach((item, index) => {
+          const rtl = blockDir(item.text, report.locale) === "rtl";
+          const marker = ordered ? `${index + 1}. ` : "• ";
+          const pad = "  ".repeat(depth);
+          current.children.push(paragraph(`${pad}${marker}${item.text}`, rtl));
+          if (item.children.length) pushItems(item.children, item.orderedChildren, depth + 1);
+        });
+      };
+      pushItems(block.items, block.ordered, 0);
+      return;
+    }
+    if (block.type === "table") {
+      const rtl = rtlDoc || block.headers.some((header) => /[\u0600-\u06FF]/.test(header));
+      const landscape = block.headers.length >= 7;
+      useBucket(landscape);
+      current.children.push(tableFrom(block.headers, block.rows, rtl, landscape));
+      current.children.push(new Paragraph({ text: "" }));
+      return;
+    }
+    if (block.type === "chart" || block.type === "diagram") {
+      const image = report.images.get(block.index);
+      if (!image) return;
+      useBucket(true);
+      const caption = block.type === "chart" ? block.model.title : report.locale === "ar" ? "مخطط" : "Diagram";
+      current.children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 200, after: 80 }, children: [imageRun(image, 900)] }));
+      current.children.push(paragraph(caption, blockDir(caption, report.locale) === "rtl", AlignmentType.CENTER));
+    }
+  };
+
+  for (const block of report.blocks) pushBlock(block);
+  if (current.children.length) buckets.push(current);
+
+  const doc = new Document({
+    styles: {
+      default: {
+        document: { run: { font: rtlDoc ? "Arial" : "Calibri", size: 22 } },
+      },
+    },
+    sections: buckets.map((bucket) => ({
+      properties: {
+        page: {
+          size: {
+            orientation: bucket.landscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
+          },
+          margin: { top: 900, bottom: 800, left: 720, right: 720, header: 400, footer: 400 },
+        },
+      },
+      headers: bucket.cover ? undefined : { default: makeHeader(report.title, rtlDoc) },
+      footers: { default: makeFooter(report) },
+      children: bucket.children,
+    })),
+  });
+  const buffer = await Packer.toBuffer(doc);
+  return new Uint8Array(buffer);
+}
