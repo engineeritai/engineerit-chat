@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand name stays Latin in Arabic as well. -->
+    <string name="app_name">engineer it</string>
+</resources>

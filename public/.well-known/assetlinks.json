@@ -1,0 +1,13 @@
+[
+  {
+    "comment": "TODO: After the first upload to Play Console, add the Play App Signing SHA-256 from Play Console > Test and release > App integrity > App signing to sha256_cert_fingerprints. The fingerprint below is the upload key only. The Android URL bar stays visible until the Play App Signing certificate is listed here.",
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ai.engineerit.app",
+      "sha256_cert_fingerprints": [
+        "B2:B5:F9:02:2D:BF:F8:20:75:97:84:88:CC:3B:BB:B4:7F:BF:77:62:20:A3:72:BC:9B:49:10:B1:07:C3:C7:CC"
+      ]
+    }
+  }
+]

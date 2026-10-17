@@ -110,6 +110,7 @@ test("redirects, sitemap, apple pay file, invoice route", async ({ request }, in
     ["/registration", "/register"],
     ["/subscription", "/pricing"],
     ["/enterprise", "/pricing"],
+    ["/privacy", "/legal/privacy"],
   ];
   for (const [from, to] of redirects) {
     const res = await request.get(from, { maxRedirects: 0 });
@@ -132,6 +133,12 @@ test("redirects, sitemap, apple pay file, invoice route", async ({ request }, in
   expect(apple.status()).toBe(200);
   expect(apple.headers()["content-type"] || "").toContain("text/plain");
   expect((await apple.text()).length).toBeGreaterThan(20);
+
+  const assetlinks = await request.get("/.well-known/assetlinks.json");
+  expect(assetlinks.status()).toBe(200);
+  expect(assetlinks.headers()["content-type"] || "").toContain("application/json");
+  const statements = await assetlinks.json();
+  expect(JSON.stringify(statements)).toContain("ai.engineerit.app");
 
   const invoices = await request.get("/api/invoices");
   expect(invoices.status()).toBe(401);
