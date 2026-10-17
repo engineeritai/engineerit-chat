@@ -1,13 +1,23 @@
 import type { BillingInterval } from "@/lib/plans";
 
-/** First charge on the renewal date, then retries 1, 3, and 7 days later. */
-export const RENEWAL_ATTEMPT_DAY_OFFSETS = [0, 1, 3, 7] as const;
-export const GRACE_DAYS = 7;
+/** First charge on the renewal date, then retries 1 and 3 days later. The day-3 failure downgrades. */
+export const RENEWAL_ATTEMPT_DAY_OFFSETS = [0, 1, 3] as const;
+export const GRACE_DAYS = 3;
 export const VAT_RATE = 0.15;
 export const MIN_CHARGE_HALALAS = 100;
 
 export function addDays(date: Date, days: number) {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+export function formatBillingDate(value: Date | string, locale: "en" | "ar") {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(locale === "ar" ? "ar-SA-u-nu-latn" : "en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function renewalIdempotencyKey(

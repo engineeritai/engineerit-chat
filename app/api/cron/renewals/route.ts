@@ -18,8 +18,9 @@ export async function GET(req: Request) {
   }
   try {
     const admin = getSupabaseAdmin();
-    const results = await runDueRenewals(admin, new Date());
-    return NextResponse.json({ ok: true, processed: results.length, results });
+    const dryRun = new URL(req.url).searchParams.get("dry") === "1";
+    const results = await runDueRenewals(admin, new Date(), { dryRun });
+    return NextResponse.json({ ok: true, dryRun, processed: results.length, results });
   } catch (err) {
     console.error("renewal cron", err);
     return NextResponse.json({ error: "Renewal run failed." }, { status: 500 });

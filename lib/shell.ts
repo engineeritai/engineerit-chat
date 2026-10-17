@@ -328,6 +328,33 @@ export type ShellCopy = {
     networks: string;
     vatNote: string;
   };
+  billing: {
+    title: string;
+    empty: string;
+    renewsOn: string;
+    endsOn: string;
+    cancelsAtEnd: string;
+    cardLabel: string;
+    cardMissing: string;
+    ending: string;
+    updateCard: string;
+    cancelRenewal: string;
+    resumeRenewal: string;
+    cancelledInfo: string;
+    resumedInfo: string;
+    loadFailed: string;
+    updateFailed: string;
+    chargeFailed: string;
+    nextRetry: string;
+    seats: string;
+    cardTitle: string;
+    cardLead: string;
+    cardConsent: string;
+    cardUpdated: string;
+    cardSaveFailed: string;
+    cardUnavailable: string;
+    downgraded: string;
+  };
   subscription: {
     title: string;
     lead: string;
@@ -704,7 +731,7 @@ const en: ShellCopy = {
   checkout: {
     title: "Checkout",
     savedCard: "We'll renew with this card. You can cancel anytime from your profile.",
-    consent: "Save card for automatic renewal (optional)",
+    consent: "Save this card for automatic renewal",
     optional: "Optional",
     renewManually: "You can renew manually anytime from your profile.",
     securePay: "Secure payment by Moyasar",
@@ -717,7 +744,7 @@ const en: ShellCopy = {
     saveRejected: "We could not save the card this time. You can still pay once and renew from your profile.",
     summary: "Order",
     walletReminder:
-      "Apple Pay, Samsung Pay, and STC Pay are one-time payments. Renew from your profile whenever you like.",
+      "Apple Pay, Samsung Pay, and cards renew automatically. STC Pay is a one-time payment.",
     phonePay: "Pay with your phone",
     scanToPay: "STC Pay or mada on your phone",
     phonePayHint:
@@ -731,6 +758,34 @@ const en: ShellCopy = {
     copied: "Link copied",
     networks: "Cards",
     vatNote: "VAT as applicable",
+  },
+  billing: {
+    title: "Billing",
+    empty: "No paid subscription yet. Buy a plan on the pricing page. It renews automatically until you cancel.",
+    renewsOn: "Renews automatically on",
+    endsOn: "Access continues until",
+    cancelsAtEnd: "cancels at period end",
+    cardLabel: "Card",
+    cardMissing: "not on file yet",
+    ending: "ending",
+    updateCard: "Update card",
+    cancelRenewal: "Cancel auto-renew",
+    resumeRenewal: "Resume auto-renew",
+    cancelledInfo: "Renewal is cancelled at the end of this period.",
+    resumedInfo: "Renewal is on again.",
+    loadFailed: "Could not load billing.",
+    updateFailed: "Could not update billing.",
+    chargeFailed: "The last charge failed. Update the card so the subscription can renew.",
+    nextRetry: "The next retry is",
+    seats: "seats",
+    cardTitle: "Update card",
+    cardLead: "Moyasar verifies the card with a SAR 1 charge and saves it for renewal. This does not change the plan period.",
+    cardConsent: "I agree to replace the saved card used for automatic Moyasar renewals.",
+    cardUpdated: "Card updated. Future renewals use this card.",
+    cardSaveFailed: "Could not save the card.",
+    cardUnavailable: "Saving the card is unavailable until Moyasar tokenization is enabled.",
+    downgraded:
+      "We could not renew the saved card on the renewal date or on the retries 1 and 3 days later. This account is on the free Assistant Engineer plan.",
   },
   subscription: {
     title: "Plans and subscription",
@@ -1106,7 +1161,7 @@ const ar: ShellCopy = {
   checkout: {
     title: "الدفع",
     savedCard: "سنجدّد بهذه البطاقة. يمكنك الإلغاء في أي وقت من ملفك.",
-    consent: "حفظ البطاقة للتجديد التلقائي (اختياري)",
+    consent: "احفظ هذه البطاقة للتجديد التلقائي",
     optional: "اختياري",
     renewManually: "يمكنك التجديد يدويًا في أي وقت من ملفك الشخصي.",
     securePay: "دفع آمن عبر ميسر",
@@ -1119,7 +1174,7 @@ const ar: ShellCopy = {
     saveRejected: "تعذر حفظ البطاقة هذه المرة. يمكنك الدفع مرة واحدة والتجديد من ملفك.",
     summary: "الطلب",
     walletReminder:
-      "Apple Pay وSamsung Pay وSTC Pay دفعات لمرة واحدة. جدّد من ملفك وقتما تشاء.",
+      "Apple Pay وSamsung Pay والبطاقة تتجدد تلقائيًا. STC Pay دفعة لمرة واحدة.",
     phonePay: "ادفع من جوالك",
     scanToPay: "STC Pay أو مدى من جوالك",
     phonePayHint: "امسح الرمز لفتح هذا الدفع على الجوال. الرابط يعمل 15 دقيقة ولهذا الدفع فقط.",
@@ -1132,6 +1187,34 @@ const ar: ShellCopy = {
     copied: "تم نسخ الرابط",
     networks: "البطاقات",
     vatNote: "ضريبة القيمة المضافة حسب الأنظمة",
+  },
+  billing: {
+    title: "الفوترة",
+    empty: "لا يوجد اشتراك مدفوع بعد. اشترِ باقة من صفحة الأسعار. يتجدد تلقائيًا حتى تلغيه.",
+    renewsOn: "يتجدد تلقائيًا في",
+    endsOn: "يستمر الوصول حتى",
+    cancelsAtEnd: "يُلغى في نهاية الفترة",
+    cardLabel: "البطاقة",
+    cardMissing: "غير محفوظة بعد",
+    ending: "تنتهي بـ",
+    updateCard: "تحديث البطاقة",
+    cancelRenewal: "إيقاف التجديد التلقائي",
+    resumeRenewal: "استئناف التجديد التلقائي",
+    cancelledInfo: "سيُلغى التجديد في نهاية هذه الفترة.",
+    resumedInfo: "التجديد التلقائي مفعّل من جديد.",
+    loadFailed: "تعذر تحميل الفوترة.",
+    updateFailed: "تعذر تحديث الفوترة.",
+    chargeFailed: "فشلت آخر عملية خصم. حدّث البطاقة ليتمكن الاشتراك من التجدد.",
+    nextRetry: "المحاولة التالية في",
+    seats: "مقاعد",
+    cardTitle: "تحديث البطاقة",
+    cardLead: "يتحقق ميسر من البطاقة بخصم 1 ريال ويحفظها للتجديد. هذا لا يغيّر فترة الباقة.",
+    cardConsent: "أوافق على استبدال البطاقة المحفوظة للتجديد التلقائي عبر ميسر.",
+    cardUpdated: "تم تحديث البطاقة. التجديدات القادمة تستخدم هذه البطاقة.",
+    cardSaveFailed: "تعذر حفظ البطاقة.",
+    cardUnavailable: "حفظ البطاقة غير متاح حتى يُفعّل حفظ البطاقات في ميسر.",
+    downgraded:
+      "تعذر تجديد البطاقة المحفوظة في يوم التجديد وبعد يوم و3 أيام. هذا الحساب على باقة المهندس المساعد المجانية.",
   },
   subscription: {
     title: "الباقات والاشتراك",

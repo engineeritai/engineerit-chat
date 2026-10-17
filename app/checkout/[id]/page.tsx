@@ -12,6 +12,8 @@ import { formatMoney, planById } from "@/lib/labels";
 import { SarText } from "@/app/components/RiyalAmount";
 import { paymentSuccessPath } from "@/lib/checkoutReturn";
 import { phonePayStartsOpen, saveCardStartsChecked } from "@/lib/moyasarEnv";
+import { addDays, formatBillingDate } from "@/lib/billingCycle";
+import { periodDays } from "@/lib/plans";
 import { useMessages } from "@/lib/useMessages";
 import { trackOnce } from "@/lib/attribution";
 
@@ -140,6 +142,11 @@ export default function CheckoutPage() {
   const label = checkout ? planById(locale, checkout.plan).name : "";
   const amount = checkout ? formatMoney(Number(checkout.amount_sar), locale) : "";
   const cycle = checkout?.billing_interval === "year" ? s.profile.annual : s.profile.monthly;
+  const renewsOn = useMemo(() => {
+    if (!checkout) return "";
+    const interval = checkout.billing_interval === "year" ? "year" : "month";
+    return formatBillingDate(addDays(new Date(), periodDays(interval)), locale);
+  }, [checkout, locale]);
   const banner = paymentError || error;
 
   return (
@@ -216,11 +223,14 @@ export default function CheckoutPage() {
                     />
                     <span className="checkout-consent-copy">
                       <span>{s.checkout.consent}</span>
-                      <span className="checkout-optional">{s.checkout.optional}</span>
                     </span>
                   </label>
                   <p className="checkout-help">
-                    {saveRejected ? s.checkout.saveRejected : consent ? s.checkout.savedCard : s.checkout.renewManually}
+                    {saveRejected
+                      ? s.checkout.saveRejected
+                      : consent
+                        ? `${s.billing.renewsOn} ${renewsOn}`
+                        : s.checkout.renewManually}
                   </p>
                   <ul className="checkout-trust">
                     <li>

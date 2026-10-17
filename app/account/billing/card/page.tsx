@@ -7,11 +7,13 @@ import Header from "../../../components/Header";
 import NavSidebar from "../../../components/NavSidebar";
 import MoyasarCardForm from "../../../components/MoyasarCardForm";
 import { supabase } from "@/lib/supabaseClient";
+import { useMessages } from "@/lib/useMessages";
 
 function CardForm() {
   const params = useSearchParams();
+  const { locale, shell: s } = useMessages();
   const [sidebar, setSidebar] = useState(false);
-  const [consent, setConsent] = useState(false);
+  const [consent, setConsent] = useState(true);
   const [userId, setUserId] = useState("");
   const [message, setMessage] = useState("");
   const key = process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY || "";
@@ -40,12 +42,12 @@ function CardForm() {
       });
       const json = await res.json().catch(() => ({}));
       if (cancelled) return;
-      setMessage(res.ok ? "Card updated. Future renewals use this card." : json.error || "Could not save the card.");
+      setMessage(res.ok ? s.billing.cardUpdated : json.error || s.billing.cardSaveFailed);
     })();
     return () => {
       cancelled = true;
     };
-  }, [paymentId]);
+  }, [paymentId, s.billing.cardSaveFailed, s.billing.cardUpdated]);
 
   const origin = typeof window === "undefined" ? "" : window.location.origin;
 
@@ -55,15 +57,13 @@ function CardForm() {
       <div className="main">
         <Header onToggleSidebar={() => setSidebar((v) => !v)} />
         <div className="page-wrap">
-          <h1 className="page-title">Update card</h1>
-          <p className="page-subtitle">
-            Moyasar verifies the card with a SAR 1 charge and saves it for renewal. This does not change the plan period.
-          </p>
+          <h1 className="page-title">{s.billing.cardTitle}</h1>
+          <p className="page-subtitle">{s.billing.cardLead}</p>
           {message && <p>{message}</p>}
           {userId && !paymentId && (
             <label style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-              <span>I agree to replace the saved card used for automatic Moyasar renewals.</span>
+              <span>{s.billing.cardConsent}</span>
             </label>
           )}
           {consent && userId && key && !paymentId && (
@@ -74,9 +74,8 @@ function CardForm() {
               publishableKey={key}
               metadata={{ purpose: "card_update", user_id: userId }}
               saveCard
-              onSaveCardRejected={() =>
-                setMessage("Saving the card is unavailable until Moyasar tokenization is enabled.")
-              }
+              locale={locale}
+              onSaveCardRejected={() => setMessage(s.billing.cardUnavailable)}
             />
           )}
         </div>
@@ -86,8 +85,9 @@ function CardForm() {
 }
 
 export default function UpdateCardPage() {
+  const { shell } = useMessages();
   return (
-    <Suspense fallback={<p>Loading card update…</p>}>
+    <Suspense fallback={<p>{shell.billing.cardTitle}</p>}>
       <CardForm />
     </Suspense>
   );

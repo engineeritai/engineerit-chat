@@ -35,9 +35,9 @@ export function phonePayStartsOpen() {
   return false;
 }
 
-/** Saving a card for auto-renew is optional and off until the customer checks it. */
+/** Subscription checkout saves the card for automatic renewal unless tokenization is rejected. */
 export function saveCardStartsChecked() {
-  return false;
+  return true;
 }
 
 /**
@@ -53,9 +53,71 @@ export function checkoutPaymentMethods(samsungServiceId: string, wallets = true)
   return methods;
 }
 
-/** Apple Pay, Samsung Pay, and STC Pay cannot be stored for automatic renewal. */
+/** Wallet sources. Apple Pay and Samsung Pay can still be tokenized; STC Pay cannot. */
 export function isWalletPaymentSource(type: string | null | undefined) {
   return type === "applepay" || type === "samsungpay" || type === "stcpay";
+}
+
+/**
+ * Store a Moyasar token for credit cards, Apple Pay, and Samsung Pay.
+ * STC Pay has no save_card token. Any other source is stored only when Moyasar returned token_….
+ */
+export function shouldStorePaymentToken(
+  source: { type?: string | null; token?: string | null } | null | undefined
+) {
+  const type = (source?.type || "").toLowerCase();
+  if (type === "stcpay") return false;
+  if (type === "creditcard" || type === "applepay" || type === "samsungpay") return true;
+  return typeof source?.token === "string" && source.token.startsWith("token_");
+}
+
+/** Form blocks passed to Moyasar.init. save_card is set on card, Apple Pay, and Samsung Pay together. */
+export function moyasarSaveOptions(input: {
+  saveCard: boolean;
+  wallets: boolean;
+  samsungServiceId: string;
+  orderNumber: string;
+  checkoutId?: string;
+}) {
+  const save = input.saveCard ? { save_card: true as const } : {};
+  const config: {
+    apple_pay?: {
+      country: string;
+      label: string;
+      validate_merchant_url: string;
+      save_card?: true;
+    };
+    samsung_pay?: {
+      service_id: string;
+      order_number: string;
+      country: string;
+      label: string;
+      environment: string;
+      save_card?: true;
+    };
+    credit_card?: { save_card: true };
+  } = {};
+  if (input.wallets) {
+    config.apple_pay = {
+      country: "SA",
+      label: "engineerit.ai",
+      validate_merchant_url: "https://api.moyasar.com/v1/applepay/initiate",
+      ...save,
+    };
+  }
+  const serviceId = input.samsungServiceId.trim();
+  if (input.wallets && serviceId) {
+    config.samsung_pay = {
+      service_id: serviceId,
+      order_number: input.orderNumber || input.checkoutId || "engineerit",
+      country: "SA",
+      label: "engineerit.ai",
+      environment: "PRODUCTION",
+      ...save,
+    };
+  }
+  if (input.saveCard) config.credit_card = { save_card: true };
+  return config;
 }
 
 /** Moyasar rejects save_card when tokenization is not enabled for the merchant. */

@@ -4,11 +4,13 @@ import {
   addDays,
   afterChargeFailure,
   decideRenewal,
+  formatBillingDate,
   GRACE_DAYS,
   nextPeriodEnd,
   renewalChargeHalalas,
   type RenewalDecision,
 } from "@/lib/billingCycle";
+import { downgradeNotice, expireNotice, pastDueNotice } from "@/lib/billingNotices";
 import { appBaseUrl, escapeHtml, getMailer } from "@/lib/mail";
 import { createMoyasarTokenPayment, fetchMoyasarPayment } from "@/lib/moyasar";
 import {
@@ -20,6 +22,7 @@ import {
   type PlanId,
   type SelfServePlanId,
 } from "@/lib/plans";
+import { planById } from "@/lib/labels";
 import { sendReceipt } from "@/lib/receipt";
 
 export type OpenSubscription = {
@@ -48,7 +51,20 @@ type ChargeResult = {
   error?: string;
 };
 
-export async function runDueRenewals(admin: SupabaseClient, now = new Date()) {
+export type RenewalRunResult = {
+  id: string;
+  action: string;
+  plan?: string;
+  periodEnd?: string;
+  failureCount?: number;
+  hasCard?: boolean;
+};
+
+export async function runDueRenewals(
+  admin: SupabaseClient,
+  now = new Date(),
+  options?: { dryRun?: boolean }
+) {
   const { data, error } = await admin
     .from("billing_subscriptions")
     .select(
@@ -60,7 +76,7 @@ export async function runDueRenewals(admin: SupabaseClient, now = new Date()) {
 
   if (error) throw new Error(error.message);
 
-  const results: { id: string; action: string }[] = [];
+  const results: RenewalRunResult[] = [];
   for (const row of data || []) {
     const sub = row as OpenSubscription;
     const decision = decideRenewal({
@@ -71,6 +87,17 @@ export async function runDueRenewals(admin: SupabaseClient, now = new Date()) {
       cancelAtPeriodEnd: sub.cancel_at_period_end,
       failureCount: sub.failure_count,
     });
+    if (options?.dryRun) {
+      results.push({
+        id: sub.id,
+        action: `dry:${decision.action}`,
+        plan: sub.plan,
+        periodEnd: sub.current_period_end,
+        failureCount: sub.failure_count,
+        hasCard: Boolean(sub.saved_card_id),
+      });
+      continue;
+    }
     const action = await applyRenewalDecision(admin, sub, decision, now);
     results.push({ id: sub.id, action });
   }
@@ -87,13 +114,9 @@ export async function applyRenewalDecision(
   if (decision.action === "expire" || decision.action === "downgrade") {
     await endAccess(admin, sub, decision.action === "expire" ? "canceled" : "expired");
     if (sub.customer_email) {
-      await sendBillingNote(
-        sub.customer_email,
-        decision.action === "expire" ? "Subscription ended" : "Subscription moved to Assistant Engineer",
-        decision.action === "expire"
-          ? "The paid period ended after you cancelled. The account is now on Assistant Engineer."
-          : "We could not renew the saved card after the retries on day 1, day 3, and day 7. The account is now on Assistant Engineer."
-      );
+      const note =
+        decision.action === "expire" ? expireNotice(noticeLocale(sub)) : downgradeNotice(noticeLocale(sub));
+      await sendBillingNote(sub.customer_email, note.subject, note.text);
     }
     return decision.action;
   }
@@ -154,11 +177,8 @@ export async function applyRenewalDecision(
   if (next.status === "downgrade") {
     await endAccess(admin, sub, "expired");
     if (sub.customer_email) {
-      await sendBillingNote(
-        sub.customer_email,
-        "Subscription moved to Assistant Engineer",
-        "The last renewal retry failed. The account is now on Assistant Engineer. You can buy a plan again from the pricing page."
-      );
+      const note = downgradeNotice(noticeLocale(sub));
+      await sendBillingNote(sub.customer_email, note.subject, note.text);
     }
     return "downgraded";
   }
@@ -183,12 +203,13 @@ export async function applyRenewalDecision(
   }
 
   if (sub.customer_email) {
-    const base = appBaseUrl();
-    await sendBillingNote(
-      sub.customer_email,
-      "Card charge failed",
-      `We could not renew ${PLAN_LABELS[sub.plan]}. Update the card at ${base}/account/billing. The next retry is ${retryAt.toLocaleDateString("en-GB")}. Access stays on until the day-7 retry fails.`
-    );
+    const locale = noticeLocale(sub);
+    const note = pastDueNotice(locale, {
+      plan: planById(locale, sub.plan).name,
+      retryDate: formatBillingDate(retryAt, locale),
+      billingUrl: `${appBaseUrl()}/account/billing`,
+    });
+    await sendBillingNote(sub.customer_email, note.subject, note.text);
   }
   return "past_due";
 }
@@ -464,6 +485,10 @@ async function recordRenewalInvoice(
     locale: args.locale,
   });
   if (error) console.error("renewal invoice insert", error);
+}
+
+function noticeLocale(sub: OpenSubscription): "en" | "ar" {
+  return sub.locale === "ar" ? "ar" : "en";
 }
 
 async function sendBillingNote(to: string, subject: string, text: string) {

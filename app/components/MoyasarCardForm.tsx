@@ -8,6 +8,7 @@ import {
   SAMSUNG_PAY_SDK_URL,
   checkoutPaymentMethods,
   isSaveCardRejection,
+  moyasarSaveOptions,
 } from "@/lib/moyasarEnv";
 
 type Props = {
@@ -84,27 +85,13 @@ export default function MoyasarCardForm({
         metadata,
         language: locale,
         fixed_width: false,
-        ...(wallets
-          ? {
-              apple_pay: {
-                country: "SA",
-                label: "engineerit.ai",
-                validate_merchant_url: "https://api.moyasar.com/v1/applepay/initiate",
-              },
-            }
-          : {}),
-        ...(wallets && serviceId
-          ? {
-              samsung_pay: {
-                service_id: serviceId,
-                order_number: orderNumber || metadata.checkout_id || "engineerit",
-                country: "SA",
-                label: "engineerit.ai",
-                environment: "PRODUCTION",
-              },
-            }
-          : {}),
-        ...(saveCard ? { credit_card: { save_card: true } } : {}),
+        ...moyasarSaveOptions({
+          saveCard,
+          wallets,
+          samsungServiceId: serviceId,
+          orderNumber,
+          checkoutId: metadata.checkout_id,
+        }),
         on_failure: (error: unknown) => {
           if (saveCard && !reported && isSaveCardRejection(error)) {
             reported = true;
