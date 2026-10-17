@@ -6,7 +6,7 @@ import { getMarketingContent } from "@/lib/marketing";
 import { PLANS, type BillingInterval } from "@/lib/plans";
 import { planPriceLabel } from "@/lib/pricingDisplay";
 import PriceRateNote from "@/app/components/marketing/PriceRateNote";
-import { SarText } from "@/app/components/RiyalAmount";
+import { FeatureLine, SarText } from "@/app/components/RiyalAmount";
 
 export default function PlanPriceList({
   interval = "month",
@@ -49,7 +49,7 @@ export default function PlanPriceList({
                   shown.amountSar > 0 && interval === "year" ? "year" : "month"
                 ).map((feature) => (
                   <li key={feature}>
-                    <SarText>{feature}</SarText>
+                    <FeatureLine>{feature}</FeatureLine>
                   </li>
                 ))}
               </ul>

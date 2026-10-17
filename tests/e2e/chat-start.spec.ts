@@ -1,4 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function clickWhenHydrated(page: Page, selector: string) {
+  await page.waitForFunction((target) => {
+    const button = document.querySelector(target);
+    return Boolean(button && Object.getOwnPropertyNames(button).some((key) => key.startsWith("__reactProps")));
+  }, selector);
+  await page.locator(selector).click();
+}
 
 const drawerOrder = ["Home", "New chat", "AI Advisors", "Pricing", "How it works", "User guide", "Tools", "Feedback", "History"];
 
@@ -11,14 +19,13 @@ test("chat start screen is centered and the drawer lists site nav", async ({ pag
   await expect(page.locator(".app-side")).toHaveCount(0);
   await expect(page.locator(".main")).toHaveClass(/is-start/);
   await expect(page.locator("textarea")).toBeVisible();
-  const plus = page.getByRole("button", { name: "Add attachments" });
-  await plus.click();
+  await clickWhenHydrated(page, ".chat-input-icon-btn.is-plus");
   await expect(page.locator(".plus-menu select")).toBeVisible();
-  await plus.click();
+  await page.locator(".chat-input-icon-btn.is-plus").click();
   await expect(page.locator(".plus-menu")).toBeHidden();
 
   if (info.project.name === "phone-390") {
-    await page.locator(".mkt-menu-btn").click();
+    await clickWhenHydrated(page, ".mkt-menu-btn");
     const panel = page.locator(".sidebar-mobile-panel");
     await expect(panel).toBeVisible();
     const text = await panel.innerText();
@@ -51,7 +58,7 @@ test("arabic chat start uses the arabic greeting", async ({ page }, info) => {
   await expect(page.locator(".chat-start h1")).toHaveText("كيف نهندس أفكارك ومشاريعك اليوم؟");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.locator(".chat-suggestion")).toHaveCount(4);
-  await page.locator(".mkt-menu-btn").click();
+  await clickWhenHydrated(page, ".mkt-menu-btn");
   await expect(page.locator(".sidebar-mobile-panel")).toContainText("الرئيسية");
   await expect(page.locator(".sidebar-mobile-panel")).toContainText("محادثة جديدة");
   await expect(page.locator(".sidebar-mobile-panel")).toContainText("الأسعار");

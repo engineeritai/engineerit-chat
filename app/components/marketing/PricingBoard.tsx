@@ -9,7 +9,7 @@ import { featuresForLocale, localizedPlan } from "@/lib/labels";
 import { assertIndividualPlanPrices, planPriceLabel } from "@/lib/pricingDisplay";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
 import PriceRateNote from "@/app/components/marketing/PriceRateNote";
-import { SarText } from "@/app/components/RiyalAmount";
+import { FeatureLine, SarText } from "@/app/components/RiyalAmount";
 import { useMessages } from "@/lib/useMessages";
 
 assertIndividualPlanPrices();
@@ -152,7 +152,7 @@ function PlanCard({
       <ul className="mkt-bullets">
         {features.map((feature) => (
           <li key={feature}>
-            <SarText>{feature}</SarText>
+            <FeatureLine>{feature}</FeatureLine>
           </li>
         ))}
       </ul>
@@ -198,7 +198,7 @@ function PlanComparison({ locale, current }: { locale: Locale; current: PlanId |
               const theme = PLAN_THEME[plan.id];
               const name = localizedPlan(locale, plan).name;
               return (
-                <th key={plan.id} style={{ background: theme.accent, color: "#fff" }}>
+                <th key={plan.id} className="plan-compare-plan" style={{ background: theme.accent }}>
                   {current === plan.id ? <span className="plan-ribbon plan-ribbon-inline">{s.profile.yourPlan}</span> : null}
                   {name}
                 </th>
@@ -230,7 +230,7 @@ function PlanComparison({ locale, current }: { locale: Locale; current: PlanId |
                 <ul>
                   {featuresForLocale(locale, plan, "month").slice(0, 4).map((feature) => (
                     <li key={feature}>
-                      <SarText>{feature}</SarText>
+                      <FeatureLine>{feature}</FeatureLine>
                     </li>
                   ))}
                 </ul>

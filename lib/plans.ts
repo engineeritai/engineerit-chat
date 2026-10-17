@@ -78,6 +78,15 @@ export const ADVISOR_FEATURE_BY_PLAN = {
   enterprise: "PMO, Program Assurance, Operations Readiness, and Decision Support included",
 } as const;
 
+export const ENTERPRISE_ADVISOR_FEATURES = [
+  "PMO Advisor included",
+  "Program Assurance included",
+  "Operations Readiness included",
+  "Decision Support included",
+] as const;
+
+export const MOYASAR_CHECKOUT_FEATURE = "Secure payment via Moyasar, monthly or yearly";
+
 /** Shared plan colour tokens. Accent is the pill; soft is a wash behind cards. */
 export const PLAN_THEME: Record<PlanId, { accent: string; soft: string; ink: string }> = {
   assistant: { accent: "#5c6b82", soft: "#f3f5f8", ink: "#243044" },
@@ -256,6 +265,7 @@ export const PLANS: Plan[] = [
       "Technical report review and analysis",
       "Engineering calculation sheets review",
       "Copy and Share Engineering Outcomes",
+      MOYASAR_CHECKOUT_FEATURE,
     ],
   },
   {
@@ -272,6 +282,7 @@ export const PLANS: Plan[] = [
       "BOQ & quantities take-off review",
       "Copy and Share Engineering Outcomes",
       "Export to pdf",
+      MOYASAR_CHECKOUT_FEATURE,
     ],
   },
   {
@@ -289,6 +300,7 @@ export const PLANS: Plan[] = [
       "Resource & cost estimation & schedule check",
       "Project dashboards and portfolio overview",
       "Export to pdf, word and Powerpoint",
+      MOYASAR_CHECKOUT_FEATURE,
     ],
   },
   {
@@ -303,7 +315,7 @@ export const PLANS: Plan[] = [
       "Everything in Consultant Engineer",
       `${TEAM_INCLUDED_SEATS} seats included`,
       `Extra seat ${formatSar(EXTRA_SEAT_SAR.month, "month")}`,
-      "Paid through Moyasar for the period you choose",
+      MOYASAR_CHECKOUT_FEATURE,
       "Invite colleagues by email",
       "Access ends for the whole team if the subscription lapses",
     ],
@@ -316,11 +328,11 @@ export const PLANS: Plan[] = [
     priceMonthly: formatSar(ENTERPRISE_FROM_SAR.month, "month"),
     priceYearly: formatSar(ENTERPRISE_FROM_SAR.year, "year"),
     features: [
-      ADVISOR_FEATURE_BY_PLAN.enterprise,
+      ...ENTERPRISE_ADVISOR_FEATURES,
       "Everything in Consultant Engineer",
       `${ENTERPRISE_INCLUDED_SEATS} seats included`,
       `Extra seat ${formatSar(ENTERPRISE_EXTRA_SEAT_SAR.month, "month")}`,
-      "Paid through Moyasar for the period you choose",
+      MOYASAR_CHECKOUT_FEATURE,
     ],
   },
 ];
