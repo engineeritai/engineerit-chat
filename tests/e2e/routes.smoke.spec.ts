@@ -12,6 +12,7 @@ const pages: { path: string; marker: string; note?: string }[] = [
   { path: "/pricing", marker: "h1" },
   { path: "/register", marker: "form" },
   { path: "/login", marker: "input[type='password']" },
+  { path: "/forgot-password", marker: "form" },
   { path: "/profile", marker: "h1, .page-title" },
   { path: "/faq", marker: ".mkt-faq, details" },
   { path: "/how-it-works", marker: "h1" },

@@ -89,6 +89,10 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       title: "Reset password | engineerit.ai",
       description: "Set a new password for your engineerit.ai account.",
     },
+    "/forgot-password": {
+      title: "Forgot password | engineerit.ai",
+      description: "Send a password reset link for an engineerit.ai account.",
+    },
     "/auth/login": {
       title: "Login | engineerit.ai",
       description: "Sign in to engineerit.ai.",
@@ -182,6 +186,10 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/reset-password": {
       title: "إعادة تعيين كلمة المرور | engineerit.ai",
       description: "عيّن كلمة مرور جديدة لحساب engineerit.ai.",
+    },
+    "/forgot-password": {
+      title: "نسيت كلمة المرور | engineerit.ai",
+      description: "أرسل رابط استعادة كلمة المرور لحساب engineerit.ai.",
     },
     "/auth/login": {
       title: "دخول | engineerit.ai",

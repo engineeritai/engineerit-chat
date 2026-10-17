@@ -6,6 +6,7 @@ import { useAccount } from "../components/marketing/AccountState";
 import { supabase } from "../../lib/supabaseClient";
 import Link from "next/link";
 import { localizedPlan, planById, formatMoney } from "@/lib/labels";
+import ChangePasswordCard from "@/app/components/ChangePasswordCard";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
 import { PLANS, PLAN_THEME, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
@@ -1007,9 +1008,11 @@ export default function ProfilePage() {
               <li>
                 {s.profile.projects}: <strong>{s.profile.soon}</strong>
               </li>
-            </ul>
-          </div>
+              </ul>
+            </div>
           )}
+
+          {tab === "overview" && <ChangePasswordCard />}
 
           {tab === "billing" && (
           <>

@@ -211,6 +211,41 @@ export type ShellCopy = {
     upgradeAnytime: string;
     policyName: string;
   };
+  password: {
+    changeTitle: string;
+    changeLead: string;
+    current: string;
+    newPassword: string;
+    confirm: string;
+    show: string;
+    hide: string;
+    hint: string;
+    strengthShort: string;
+    strengthOk: string;
+    strengthStrong: string;
+    update: string;
+    updating: string;
+    updated: string;
+    currentWrong: string;
+    mismatch: string;
+    tooShort: string;
+    sendReset: string;
+    sending: string;
+    resetSentYou: string;
+    ifExists: string;
+    tryLater: string;
+    generic: string;
+    forgotTitle: string;
+    forgotLead: string;
+    sendLink: string;
+    backToLogin: string;
+    resetTitle: string;
+    resetLead: string;
+    save: string;
+    savedRedirect: string;
+    linkInvalid: string;
+    requestNew: string;
+  };
   profile: {
     title: string;
     loading: string;
@@ -651,6 +686,41 @@ const en: ShellCopy = {
     createdRedirect: "Account created. Redirecting to your profile...",
     upgradeAnytime: "You can change your plan at any time from your profile or the pricing page.",
     policyName: "User policy and agreement",
+  },
+  password: {
+    changeTitle: "Change password",
+    changeLead: "Enter your current password, then choose a new one.",
+    current: "Current password",
+    newPassword: "New password",
+    confirm: "Confirm new password",
+    show: "Show",
+    hide: "Hide",
+    hint: "Use at least 8 characters. A mix of letters and numbers is stronger.",
+    strengthShort: "Too short",
+    strengthOk: "Long enough",
+    strengthStrong: "Strong",
+    update: "Update password",
+    updating: "Updating…",
+    updated: "Password updated.",
+    currentWrong: "Current password is incorrect.",
+    mismatch: "The two new passwords do not match.",
+    tooShort: "Password must be at least 8 characters.",
+    sendReset: "Send reset link to my email",
+    sending: "Sending…",
+    resetSentYou: "We sent a reset link to your email.",
+    ifExists: "If an account exists, we sent a link.",
+    tryLater: "Please wait a moment and try again.",
+    generic: "Something went wrong. Please try again.",
+    forgotTitle: "Forgot password",
+    forgotLead: "Enter the email on your account. We will send a link to choose a new password.",
+    sendLink: "Send reset link",
+    backToLogin: "Back to sign in",
+    resetTitle: "Set a new password",
+    resetLead: "Choose a new password for your account.",
+    save: "Save password",
+    savedRedirect: "Password saved. Opening chat…",
+    linkInvalid: "This reset link is invalid or has expired.",
+    requestNew: "Request a new link",
   },
   profile: {
     title: "Profile and subscription",
@@ -1095,6 +1165,41 @@ const ar: ShellCopy = {
     createdRedirect: "تم إنشاء الحساب. جارٍ التحويل إلى ملفك...",
     upgradeAnytime: "يمكنك تغيير الباقة في أي وقت من ملفك أو صفحة الأسعار.",
     policyName: "سياسة الاستخدام والاتفاق",
+  },
+  password: {
+    changeTitle: "تغيير كلمة المرور",
+    changeLead: "أدخل كلمة المرور الحالية، ثم اختر كلمة جديدة.",
+    current: "كلمة المرور الحالية",
+    newPassword: "كلمة المرور الجديدة",
+    confirm: "تأكيد كلمة المرور الجديدة",
+    show: "إظهار",
+    hide: "إخفاء",
+    hint: "استخدم 8 أحرف على الأقل. مزيج من الحروف والأرقام أقوى.",
+    strengthShort: "قصيرة",
+    strengthOk: "الطول مناسب",
+    strengthStrong: "قوية",
+    update: "تحديث كلمة المرور",
+    updating: "جارٍ التحديث…",
+    updated: "تم تحديث كلمة المرور.",
+    currentWrong: "كلمة المرور الحالية غير صحيحة.",
+    mismatch: "كلمتا المرور الجديدتان غير متطابقتين.",
+    tooShort: "يجب أن تكون كلمة المرور 8 أحرف على الأقل.",
+    sendReset: "أرسل رابط الاستعادة إلى بريدي",
+    sending: "جارٍ الإرسال…",
+    resetSentYou: "أرسلنا رابط الاستعادة إلى بريدك.",
+    ifExists: "إذا كان هناك حساب، أرسلنا رابطاً.",
+    tryLater: "انتظر قليلاً ثم حاول مرة أخرى.",
+    generic: "حدث خطأ. حاول مرة أخرى.",
+    forgotTitle: "نسيت كلمة المرور",
+    forgotLead: "أدخل البريد المسجّل في حسابك. سنرسل رابطاً لاختيار كلمة مرور جديدة.",
+    sendLink: "إرسال رابط الاستعادة",
+    backToLogin: "العودة لتسجيل الدخول",
+    resetTitle: "تعيين كلمة مرور جديدة",
+    resetLead: "اختر كلمة مرور جديدة لحسابك.",
+    save: "حفظ كلمة المرور",
+    savedRedirect: "تم حفظ كلمة المرور. جارٍ فتح المحادثة…",
+    linkInvalid: "رابط الاستعادة غير صالح أو انتهت صلاحيته.",
+    requestNew: "اطلب رابطاً جديداً",
   },
   profile: {
     title: "الملف والاشتراك",

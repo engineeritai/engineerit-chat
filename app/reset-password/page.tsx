@@ -1,192 +1,176 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import MarketingShell from "@/app/components/marketing/MarketingShell";
+import PasswordField from "@/app/components/PasswordField";
 import { supabase } from "@/lib/supabaseClient";
+import { passwordProblem, passwordStrength } from "@/lib/password";
 import { useMessages } from "@/lib/useMessages";
-import LanguageToggle from "@/app/components/LanguageToggle";
+import type { EmailOtpType } from "@supabase/supabase-js";
 
-function parseHashParams(hash: string) {
-  const h = hash.startsWith("#") ? hash.slice(1) : hash;
-  const p = new URLSearchParams(h);
-  const access_token = p.get("access_token") || "";
-  const refresh_token = p.get("refresh_token") || "";
-  const type = p.get("type") || "";
-  return { access_token, refresh_token, type };
+function hashParams(hash: string) {
+  const params = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+  return {
+    accessToken: params.get("access_token") || "",
+    refreshToken: params.get("refresh_token") || "",
+    type: params.get("type") || "",
+  };
 }
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const { shell: s } = useMessages();
-
   const [ready, setReady] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
-
-  const [p1, setP1] = useState("");
-  const [p2, setP2] = useState("");
+  const [invalid, setInvalid] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const strength = passwordStrength(password);
+  const strengthLabel =
+    strength === "short" ? s.password.strengthShort : strength === "strong" ? s.password.strengthStrong : strength === "ok" ? s.password.strengthOk : "";
 
-  // IMPORTANT: do all URL reading inside useEffect (client only)
   useEffect(() => {
-    const run = async () => {
-      try {
-        setStatus(s.header.sending);
-
-        // A) PKCE flow: ?code=...
-        const code =
-          typeof window !== "undefined"
-            ? new URLSearchParams(window.location.search).get("code") || ""
-            : "";
-
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) {
-            setStatus(error.message);
-            setReady(true);
-            return;
-          }
-          // clean URL
-          window.history.replaceState({}, "", "/reset-password");
-          setStatus(null);
-          setReady(true);
-          return;
-        }
-
-        // B) Hash token flow: #access_token=...&refresh_token=...&type=recovery
-        const { access_token, refresh_token } = parseHashParams(
-          typeof window !== "undefined" ? window.location.hash : ""
-        );
-
-        if (access_token && refresh_token) {
-          const { error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
-          if (error) {
-            setStatus(error.message);
-            setReady(true);
-            return;
-          }
-          // clean hash
-          window.history.replaceState({}, "", "/reset-password");
-          setStatus(null);
-          setReady(true);
-          return;
-        }
-
-        setStatus(s.header.genericError);
-        setReady(true);
-      } catch (e) {
-        console.error(e);
-        setStatus(s.header.genericError);
+    let cancel = false;
+    const { data: auth } = supabase.auth.onAuthStateChange((event) => {
+      if (cancel) return;
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+        setInvalid(false);
         setReady(true);
       }
-    };
+    });
 
-    void run();
-  }, []);
+    void (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code") || "";
+      const tokenHash = params.get("token_hash") || "";
+      const type = (params.get("type") || "") as EmailOtpType;
+      let failed = false;
 
-  const onSave = async () => {
-    setMsg(null);
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        failed = Boolean(exchangeError);
+      } else if (tokenHash && type) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+        failed = Boolean(verifyError);
+      } else {
+        const hashed = hashParams(window.location.hash);
+        if (hashed.accessToken && hashed.refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: hashed.accessToken,
+            refresh_token: hashed.refreshToken,
+          });
+          failed = Boolean(sessionError);
+        }
+      }
 
-    if (!p1 || p1.length < 6) {
-      setMsg(s.header.passwordShort);
-      return;
-    }
-    if (p1 !== p2) {
-      setMsg(s.header.passwordMismatch);
-      return;
-    }
+      if (code || tokenHash || window.location.hash) {
+        window.history.replaceState({}, "", "/reset-password");
+      }
 
-    setSaving(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: p1 });
-      if (error) {
-        setMsg(error.message);
-        setSaving(false);
+      if (cancel) return;
+      if (failed) {
+        setInvalid(true);
+        setReady(true);
         return;
       }
 
-      setMsg(s.header.passwordUpdated);
-      setTimeout(() => router.push("/"), 800);
-    } catch (e) {
-      console.error(e);
-      setMsg(s.header.genericError);
+      const { data } = await supabase.auth.getSession();
+      if (cancel) return;
+      setInvalid(!data.session);
+      setReady(true);
+    })();
+
+    return () => {
+      cancel = true;
+      auth.subscription.unsubscribe();
+    };
+  }, []);
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    const problem = passwordProblem(password, confirm);
+    if (problem === "short") {
+      setError(s.password.tooShort);
+      return;
+    }
+    if (problem === "mismatch") {
+      setError(s.password.mismatch);
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data: before } = await supabase.auth.getUser();
+      const email = before.user?.email || "";
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) {
+        setError(s.password.generic);
+        return;
+      }
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session && email) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) {
+          setError(s.password.generic);
+          return;
+        }
+      }
+      setInfo(s.password.savedRedirect);
+      window.setTimeout(() => router.push("/chat"), 700);
+    } catch {
+      setError(s.password.generic);
     } finally {
       setSaving(false);
     }
-  };
+  }
 
   return (
-    <div className="page-wrap" style={{ maxWidth: 520 }}>
-      <div className="card" style={{ padding: 18 }}>
-        <LanguageToggle />
-        <div className="page-title" style={{ fontSize: 22, marginBottom: 6 }}>
-          {s.header.resetPassword}
-        </div>
-        <div className="page-subtitle" style={{ marginBottom: 14 }}>
-          {s.header.resetTitle}
-        </div>
-
+    <MarketingShell>
+      <div className="page-wrap">
+        <h1 className="page-title">{s.password.resetTitle}</h1>
+        <p className="page-subtitle">{s.password.resetLead}</p>
         {!ready ? (
-          <div style={{ color: "#6b7280", fontSize: 14 }}>
-            {status || s.profile.loading}
-          </div>
-        ) : status ? (
-          <div style={{ color: "#b91c1c", fontSize: 14 }}>{status}</div>
+          <p className="page-subtitle">{s.profile.loading}</p>
+        ) : invalid ? (
+          <form className="register-form">
+            <p className="form-note is-bad">{s.password.linkInvalid}</p>
+            <p className="form-aside">
+              <Link href="/forgot-password" className="link">
+                {s.password.requestNew}
+              </Link>
+            </p>
+          </form>
         ) : (
-          <>
-            <div className="form-row">
-              <label style={{ fontSize: 13, fontWeight: 600 }}>
-                {s.header.newPassword}
-              </label>
-              <input
-                className="input"
-                type="password"
-                value={p1}
-                onChange={(e) => setP1(e.target.value)}
-                placeholder={s.header.passwordShort}
-              />
-            </div>
-
-            <div className="form-row">
-              <label style={{ fontSize: 13, fontWeight: 600 }}>
-                {s.header.confirmPassword}
-              </label>
-              <input
-                className="input"
-                type="password"
-                value={p2}
-                onChange={(e) => setP2(e.target.value)}
-                placeholder={s.header.confirmPassword}
-              />
-            </div>
-
-            {msg && (
-              <div
-                style={{
-                  marginTop: 8,
-                  fontSize: 13,
-                  color: msg === s.header.passwordUpdated ? "#15803d" : "#b91c1c",
-                }}
-              >
-                {msg}
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="btn w-full"
-              onClick={onSave}
-              disabled={saving}
-              style={{ marginTop: 12 }}
-            >
-              {saving ? s.header.updating : s.header.updatePassword}
+          <form className="register-form" onSubmit={(event) => void save(event)}>
+            <PasswordField
+              label={s.password.newPassword}
+              value={password}
+              onChange={setPassword}
+              autoComplete="new-password"
+              showLabel={s.password.show}
+              hideLabel={s.password.hide}
+              hint={strengthLabel ? `${s.password.hint} ${strengthLabel}` : s.password.hint}
+            />
+            <PasswordField
+              label={s.password.confirm}
+              value={confirm}
+              onChange={setConfirm}
+              autoComplete="new-password"
+              showLabel={s.password.show}
+              hideLabel={s.password.hide}
+            />
+            {error ? <p className="form-note is-bad">{error}</p> : null}
+            {info ? <p className="form-note is-ok">{info}</p> : null}
+            <button className="btn" disabled={saving}>
+              {saving ? s.password.updating : s.password.save}
             </button>
-          </>
+          </form>
         )}
       </div>
-    </div>
+    </MarketingShell>
   );
 }
