@@ -188,6 +188,7 @@ test("share page renders the topic, table, and chart", async ({ page, request },
   });
   expect(created.ok()).toBeTruthy();
   const body = (await created.json()) as { url: string };
+  expect(body.url).toContain("/share/");
   const html = await (await request.get(body.url)).text();
   expect(html).toContain('property="og:title"');
   expect(html).toContain("summary_large_image");
@@ -200,4 +201,14 @@ test("share page renders the topic, table, and chart", async ({ page, request },
     path: `/opt/cursor/artifacts/screenshots/share-${locale}-${info.project.name}.png`,
     fullPage: true,
   });
+  if (info.project.name === "desktop-1440") {
+    const missing = await request.get("/share/expiredlink");
+    expect(missing.status()).toBe(200);
+    const missingHtml = await missing.text();
+    expect(missingHtml).toContain("This share link has expired");
+    expect(missingHtml).toContain("https://engineerit.ai");
+    const legacy = await request.get("/s/expiredlink");
+    expect(legacy.status()).toBe(200);
+    expect(await legacy.text()).toContain("This share link has expired");
+  }
 });

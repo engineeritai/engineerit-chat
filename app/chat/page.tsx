@@ -10,7 +10,7 @@ import React, {
 import Link from "next/link";
 import MessageMarkdown from "../components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "../components/copyRich";
-import { publishShare, shareToWhatsApp } from "@/lib/chatActions";
+import { publishAndShare, publishShare, shareToWhatsApp } from "@/lib/chatActions";
 import { toWhatsApp } from "@/lib/whatsappText";
 import { downloadName } from "@/lib/exportName";
 import { exportMeta } from "@/lib/messageDocument";
@@ -190,31 +190,6 @@ async function exportPdf(aiText: string, extra?: { title?: string; subtitle?: st
   URL.revokeObjectURL(url);
 }
 
-async function nativeShareHtml(aiText: string, title = "Report", locale: "en" | "ar" = "en") {
-  const { file } = htmlFileFromText(aiText, title, locale);
-  try {
-    // @ts-ignore
-    if (navigator.share) {
-      // @ts-ignore
-      if (navigator.canShare?.({ files: [file] })) {
-        // @ts-ignore
-        await navigator.share({
-          title,
-          text: title,
-          files: [file],
-        });
-        return true;
-      }
-      // @ts-ignore
-      await navigator.share({
-        title,
-        text: toWhatsApp(aiText).slice(0, 3500),
-      });
-      return true;
-    }
-  } catch {}
-  return false;
-}
 
 async function exportWordDocx(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
   const res = await fetch("/api/export/docx", {
@@ -1024,28 +999,17 @@ export default function Page() {
                                   className="msg-action-btn"
                                   onClick={async () => {
                                     const title = topic;
-                                    const url = await publishShare({ title, markdown: m.content, locale });
-                                    if (url && navigator.share) {
-                                      try {
-                                        await navigator.share({ title, text: toWhatsApp(m.content), url });
-                                        return;
-                                      } catch {
-                                        /* fall through to the share menu */
-                                      }
-                                    }
-                                    if (url) {
-                                      try {
-                                        await navigator.clipboard.writeText(url);
-                                      } catch {
-                                        /* the menu still offers the other share actions */
-                                      }
-                                    }
-                                    const ok = url ? true : await nativeShareHtml(m.content);
-                                    if (ok && url) {
-                                      setOpenShareFor((prev) => (prev === m.id ? null : m.id));
+                                    const { url, shared } = await publishAndShare({ title, markdown: m.content, locale });
+                                    if (!url) {
+                                      alert(s.chat.shareFailed);
                                       return;
                                     }
-                                    if (ok) return;
+                                    if (shared) return;
+                                    try {
+                                      await navigator.clipboard.writeText(toWhatsApp(m.content, url));
+                                    } catch {
+                                      /* the menu still offers WhatsApp */
+                                    }
                                     setOpenShareFor((prev) => (prev === m.id ? null : m.id));
                                   }}
                                   aria-label={s.chat.share}
@@ -1149,7 +1113,11 @@ export default function Page() {
                                   className="msg-action-btn"
                                   onClick={async () => {
                                     const url = await publishShare({ title: topic, markdown: m.content, locale });
-                                    shareToWhatsApp(m.content, url || undefined);
+                                    if (!url) {
+                                      alert(s.chat.shareFailed);
+                                      return;
+                                    }
+                                    shareToWhatsApp(m.content, url);
                                   }}
                                 >
                                   {s.chat.whatsapp}

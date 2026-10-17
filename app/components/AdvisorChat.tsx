@@ -23,8 +23,8 @@ import {
   exportWordDocx,
   getLocalCount,
   isArabicText,
-  nativeShareHtml,
   printHtml,
+  publishAndShare,
   publishShare,
   saveHtml,
   setLocalCount,
@@ -524,8 +524,17 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                         type="button"
                         className="msg-action-btn"
                         onClick={async () => {
-                          const ok = await nativeShareHtml(message.content, topic, locale);
-                          if (ok) return;
+                          const { url, shared } = await publishAndShare({ title: topic, markdown: message.content, locale });
+                          if (!url) {
+                            alert(s.chat.shareFailed);
+                            return;
+                          }
+                          if (shared) return;
+                          try {
+                            await navigator.clipboard.writeText(url);
+                          } catch {
+                            /* the menu still offers WhatsApp */
+                          }
                           setOpenShareFor((prev) => (prev === message.id ? null : message.id));
                         }}
                       >
@@ -608,7 +617,11 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                         className="msg-action-btn"
                         onClick={async () => {
                           const url = await publishShare({ title: topic, markdown: message.content, locale });
-                          shareToWhatsApp(message.content, url || undefined);
+                          if (!url) {
+                            alert(s.chat.shareFailed);
+                            return;
+                          }
+                          shareToWhatsApp(message.content, url);
                         }}
                       >
                         WhatsApp

@@ -108,28 +108,38 @@ export async function exportPdf(
   downloadBlob(blob, downloadName(options?.title || filename, "pdf"));
 }
 
-export async function nativeShareHtml(aiText: string, title = "Report", locale?: string) {
+export async function nativeShareHtml(aiText: string, title = "Report", locale?: string, link?: string) {
+  const text = toWhatsApp(aiText, link).slice(0, 3500);
   const { file } = htmlFileFromText(aiText, title, locale);
   try {
     if (navigator.share) {
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          title,
-          text: title,
-          files: [file],
-        });
+      if (!link && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title, text, files: [file] });
         return true;
       }
-      await navigator.share({
-        title,
-        text: toWhatsApp(aiText).slice(0, 3500),
-      });
+      await navigator.share({ title, text, url: link });
       return true;
     }
   } catch {
     /* user cancelled or share failed */
   }
   return false;
+}
+
+/** Publish a durable page, then share the formatted text and that link together. */
+export async function publishAndShare(args: { title: string; markdown: string; locale: string }): Promise<{ url: string | null; shared: boolean }> {
+  const url = await publishShare(args);
+  if (!url) return { url: null, shared: false };
+  const text = toWhatsApp(args.markdown, url).slice(0, 3500);
+  try {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      await navigator.share({ title: args.title, text, url });
+      return { url, shared: true };
+    }
+  } catch {
+    /* user cancelled or this browser rejected the payload */
+  }
+  return { url, shared: false };
 }
 
 export function shareToWhatsApp(markdown: string, link?: string) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { topicFrom } from "@/lib/messageDocument";
 import { createShare } from "@/lib/shareStore";
+import { publicShareUrl } from "@/lib/shareUrl";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
       locale,
     });
     const origin = new URL(req.url).origin;
-    return NextResponse.json({ id: record.id, url: `${origin}/s/${record.id}` });
+    return NextResponse.json({ id: record.id, url: publicShareUrl(record.id, origin) });
   } catch (err) {
     console.error("share create failed", err);
     return NextResponse.json({ error: "Could not create the share page." }, { status: 500 });
