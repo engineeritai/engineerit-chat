@@ -22,6 +22,14 @@ const LONG_NAME: Record<"en" | "ar", Record<PlanId, string>> = {
   },
 };
 
+async function openHeaderMenu(page: Page) {
+  await page.waitForFunction(() => {
+    const button = document.querySelector(".mkt-menu-btn");
+    return Boolean(button && Object.getOwnPropertyNames(button).some((key) => key.startsWith("__reactProps")));
+  });
+  await page.locator(".mkt-menu-btn").click();
+}
+
 async function headerReport(page: Page) {
   return page.evaluate(() => {
     const header = document.querySelector(".mkt-header");
@@ -104,7 +112,7 @@ test.describe("header plan abbreviations stay inside the phone header", () => {
     expect(signedOut.offenders).toEqual([]);
 
     await page.goto("/profile?lang=en&planPreview=engineer&namePreview=Engineer", { waitUntil: "domcontentloaded" });
-    await page.locator(".mkt-menu-btn").click();
+    await openHeaderMenu(page);
     const drawer = page.locator(".app-side.is-open");
     await expect(drawer).toBeVisible();
     for (const href of [
@@ -130,7 +138,7 @@ test.describe("header plan abbreviations stay inside the phone header", () => {
     await page.goto("/profile?lang=ar&planPreview=professional&namePreview=" + encodeURIComponent("المهندس المحترف"), {
       waitUntil: "domcontentloaded",
     });
-    await page.locator(".mkt-menu-btn").click();
+    await openHeaderMenu(page);
     await expect(page.locator(".app-side.is-open")).toBeVisible();
     await page.screenshot({ path: "/opt/cursor/artifacts/header-iphone-ar-drawer.png" });
     await page.keyboard.press("Escape");

@@ -1,16 +1,17 @@
 import { RIYAL, RIYAL_PATHS, RIYAL_VIEWBOX, embedRiyal } from "@/lib/riyal";
 
 /** Official mark drawn as SVG. The U+20C1 font glyph is a box on Windows. */
-export function RiyalMark() {
+export function RiyalMark({ className, decorative = false }: { className?: string; decorative?: boolean }) {
   return (
     <svg
-      className="riyal-mark"
+      className={className ? `riyal-mark ${className}` : "riyal-mark"}
       viewBox={`0 0 ${RIYAL_VIEWBOX.width} ${RIYAL_VIEWBOX.height}`}
-      role="img"
-      aria-label="SAR"
+      role={decorative ? undefined : "img"}
+      aria-label={decorative ? undefined : "SAR"}
+      aria-hidden={decorative ? true : undefined}
       data-riyal="svg"
     >
-      <title>SAR</title>
+      {decorative ? null : <title>SAR</title>}
       {RIYAL_PATHS.map((d) => (
         <path key={d.slice(0, 16)} d={d} fill="currentColor" />
       ))}

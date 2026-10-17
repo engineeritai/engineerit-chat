@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { RiyalMark } from "@/app/components/RiyalAmount";
 import type { EngineerToolId } from "@/lib/engineerTools";
 
 const common = {
@@ -11,7 +12,7 @@ const common = {
   "aria-hidden": true as const,
 };
 
-const paths: Record<EngineerToolId, ReactNode> = {
+const paths: Record<Exclude<EngineerToolId, "value">, ReactNode> = {
   drawing: (
     <>
       <rect x="4" y="4" width="16" height="16" rx="2" />
@@ -43,12 +44,6 @@ const paths: Record<EngineerToolId, ReactNode> = {
       <path d="M8 3v4M16 3v4M4 10h16" />
     </>
   ),
-  value: (
-    <>
-      <path d="M12 3v18" />
-      <path d="M8 7h6.5a2.5 2.5 0 0 1 0 5H9.5a2.5 2.5 0 0 0 0 5H16" />
-    </>
-  ),
   dashboard: (
     <>
       <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5" />
@@ -60,6 +55,9 @@ const paths: Record<EngineerToolId, ReactNode> = {
 };
 
 export default function ToolGlyph({ id }: { id: EngineerToolId }) {
+  if (id === "value") {
+    return <RiyalMark className="tool-glyph" decorative />;
+  }
   return (
     <svg className="tool-glyph" {...common}>
       {paths[id]}

@@ -32,7 +32,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/pricing": {
       title: "Pricing | engineerit.ai",
       description:
-        "Assistant Engineer is free. Engineer is SAR 19 per month, Professional Engineer SAR 41 per month, Consultant Engineer SAR 99 per month. Team is SAR 499 per month for 5 seats. Enterprise is SAR 3,900 per month for 10 seats.",
+        "Assistant Engineer is free. Engineer is SAR 19 per month, Professional Engineer SAR 41 per month, Consultant Engineer SAR 99 per month. Team is SAR 449 per month for 5 seats. Enterprise is SAR 3,900 per month for 10 seats.",
     },
     "/chat": {
       title: "Chat | engineerit.ai",
@@ -42,7 +42,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/advisors": {
       title: "AI Advisors | engineerit.ai",
       description:
-        "The PMO Advisor is included on Consultant Engineer. Program Assurance is included on Team. Operations Readiness and Decision Support are included on Enterprise.",
+        "Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
     },
     "/login": {
       title: "Login | engineerit.ai",
@@ -127,7 +127,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/pricing": {
       title: "الأسعار | engineerit.ai",
       description:
-        "المهندس المساعد مجاني. المهندس 19 ر.س شهرياً، والمهندس المحترف 41 ر.س، والمهندس الاستشاري 99 ر.س. الفريق 499 ر.س شهرياً لخمسة مقاعد. المؤسسات 3,900 ر.س شهرياً لعشرة مقاعد.",
+        "المهندس المساعد مجاني. المهندس 19 ر.س شهرياً، والمهندس المحترف 41 ر.س، والمهندس الاستشاري 99 ر.س. الفريق 449 ر.س شهرياً لخمسة مقاعد. المؤسسات 3,900 ر.س شهرياً لعشرة مقاعد.",
     },
     "/chat": {
       title: "المحادثة | engineerit.ai",
@@ -136,7 +136,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/advisors": {
       title: "مستشارو الذكاء الاصطناعي | engineerit.ai",
       description:
-        "مستشار إدارة المشاريع مشمول في المهندس الاستشاري. ضمان البرنامج مشمول في الفريق. جاهزية التشغيل ودعم القرار مشمولان في المؤسسات.",
+        "المهندس الاستشاري يشمل مستشار إدارة المشاريع. الفريق يشمل إدارة المشاريع وضمان البرنامج. المؤسسات تشمل إدارة المشاريع وضمان البرنامج وجاهزية التشغيل ودعم القرار.",
     },
     "/login": {
       title: "دخول | engineerit.ai",

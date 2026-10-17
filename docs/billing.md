@@ -9,7 +9,7 @@ Published prices (annual = 10× monthly):
 | Engineer | SAR 19 | SAR 190 | 1 |
 | Professional Engineer | SAR 41 | SAR 410 | 1 |
 | Consultant Engineer | SAR 99 | SAR 990 | 1. PMO Advisor |
-| Team | SAR 499 | SAR 4,990 | 5 included, extra seat SAR 89 / month (SAR 890 / year). PMO and Program Assurance |
+| Team | SAR 449 | SAR 4,490 | 5 included, extra seat SAR 89 / month (SAR 890 / year). PMO and Program Assurance |
 | Enterprise | SAR 3,900 | SAR 39,000 | 10 included, extra seat SAR 299 / month (SAR 2,990 / year). PMO, Program Assurance, Operations Readiness, and Decision Support |
 
 Engineer and Professional Engineer have no advisors. Advisor access is an allow-list per advisor, checked on the server from the signed-in profile. A locked advisor shows a short preview and a Moyasar checkout button for the lowest plan that includes it: PMO on Consultant Engineer, Program Assurance on Team, Operations Readiness and Decision Support on Enterprise.

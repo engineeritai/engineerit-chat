@@ -37,7 +37,7 @@ export const PLAN_AMOUNTS_SAR: Record<
   engineer: { month: 19, year: 190 },
   professional: { month: 41, year: 410 },
   consultant: { month: 99, year: 990 },
-  team: { month: 499, year: 4990 },
+  team: { month: 449, year: 4490 },
   enterprise: { month: 3900, year: 39000 },
 };
 
@@ -282,13 +282,13 @@ export const PLANS: Plan[] = [
     priceMonthly: formatSar(PLAN_AMOUNTS_SAR.consultant.month, "month"),
     priceYearly: formatSar(PLAN_AMOUNTS_SAR.consultant.year, "year"),
     features: [
+      ADVISOR_FEATURE_BY_PLAN.consultant,
       "Everything in Professional Engineer",
       "Equipment list & BOQ analysis",
       "Value Engineering outlines",
       "Resource & cost estimation & schedule check",
       "Project dashboards and portfolio overview",
       "Export to pdf, word and Powerpoint",
-      ADVISOR_FEATURE_BY_PLAN.consultant,
     ],
   },
   {
@@ -299,13 +299,13 @@ export const PLANS: Plan[] = [
     priceMonthly: formatSar(PLAN_AMOUNTS_SAR.team.month, "month"),
     priceYearly: formatSar(PLAN_AMOUNTS_SAR.team.year, "year"),
     features: [
+      ADVISOR_FEATURE_BY_PLAN.team,
       "Everything in Consultant Engineer",
       `${TEAM_INCLUDED_SEATS} seats included`,
       `Extra seat ${formatSar(EXTRA_SEAT_SAR.month, "month")}`,
       "Renews automatically until you cancel",
       "Invite colleagues by email",
       "Access ends for the whole team if the subscription lapses",
-      ADVISOR_FEATURE_BY_PLAN.team,
     ],
   },
   {
@@ -316,11 +316,11 @@ export const PLANS: Plan[] = [
     priceMonthly: formatSar(ENTERPRISE_FROM_SAR.month, "month"),
     priceYearly: formatSar(ENTERPRISE_FROM_SAR.year, "year"),
     features: [
+      ADVISOR_FEATURE_BY_PLAN.enterprise,
       "Everything in Consultant Engineer",
       `${ENTERPRISE_INCLUDED_SEATS} seats included`,
       `Extra seat ${formatSar(ENTERPRISE_EXTRA_SEAT_SAR.month, "month")}`,
       "Renews automatically until you cancel",
-      ADVISOR_FEATURE_BY_PLAN.enterprise,
     ],
   },
 ];
