@@ -162,6 +162,7 @@ export default function ProfilePage() {
   const [activeSub, setActiveSub] = useState<SubscriptionRow | null>(null);
   const [subHistory, setSubHistory] = useState<SubscriptionRow[]>([]);
   const [billing, setBilling] = useState<BillingView | null>(null);
+  const [billingNotice, setBillingNotice] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [busyAction, setBusyAction] = useState("");
   const [chatCount, setChatCount] = useState<number | null>(null);
@@ -354,8 +355,10 @@ export default function ProfilePage() {
           const billingJson = await billingRes.json().catch(() => ({}));
           if (billingRes.ok && billingJson.subscription && isPlanId(billingJson.subscription.plan)) {
             setBilling(billingJson.subscription as BillingView);
+            setBillingNotice(null);
           } else {
             setBilling(null);
+            setBillingNotice(billingRes.ok && billingJson.notice === "downgraded" ? "downgraded" : null);
           }
           const invoiceRes = await fetch("/api/invoices", {
             headers: { Authorization: `Bearer ${token}` },
@@ -817,7 +820,7 @@ export default function ProfilePage() {
               </p>
             ) : shown.planId === "assistant" ? (
               <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
-                {s.profile.freeBody}
+                {billingNotice === "downgraded" ? s.billing.downgraded : s.profile.freeBody}
               </p>
             ) : billing ? (
               <div style={{ fontSize: 14, color: "#374151", marginBottom: 10, lineHeight: 1.7 }}>
@@ -841,6 +844,12 @@ export default function ProfilePage() {
                   {s.profile.autoRenew}:{" "}
                   <strong>{billing.cancel_at_period_end ? s.profile.autoRenewOff : s.profile.autoRenewOn}</strong>
                 </div>
+                <div>
+                  {billing.cancel_at_period_end
+                    ? `${s.billing.endsOn} ${formatDate(billing.current_period_end, locale)}`
+                    : `${s.billing.renewsOn} ${formatDate(billing.current_period_end, locale)}`}
+                </div>
+                {billing.status === "past_due" ? <div>{s.billing.chargeFailed}</div> : null}
               </div>
             ) : activeSub ? (
               <div
@@ -939,7 +948,7 @@ export default function ProfilePage() {
                   onClick={() => void toggleAutoRenew()}
                   disabled={busyAction !== ""}
                 >
-                  {s.profile.autoRenew}: {billing.cancel_at_period_end ? s.profile.autoRenewOn : s.profile.autoRenewOff}
+                  {billing.cancel_at_period_end ? s.billing.resumeRenewal : s.billing.cancelRenewal}
                 </button>
               )}
               <Link href="/pricing">
@@ -952,6 +961,13 @@ export default function ProfilePage() {
                   {s.profile.billingLink}
                 </button>
               </Link>
+              {billing ? (
+                <Link href="/account/billing/card">
+                  <button className="btn" type="button" style={{ marginTop: 16 }}>
+                    {s.billing.updateCard}
+                  </button>
+                </Link>
+              ) : null}
               {(currentPlan === "team" ||
                 currentPlan === "enterprise" ||
                 storedPlan === "team" ||

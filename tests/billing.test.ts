@@ -5,8 +5,10 @@ import { pickEffectivePlan, teamGrantsAccess } from "../lib/effectivePlan";
 import {
   afterChargeFailure,
   decideRenewal,
+  GRACE_DAYS,
   prorateSeatChange,
   renewalChargeHalalas,
+  RENEWAL_ATTEMPT_DAY_OFFSETS,
   seatChangeIdempotencyKey,
   vatFromInclusive,
   zatcaInvoicesEnabled,
@@ -37,6 +39,7 @@ import {
   formatUsdApprox,
   planPriceLabel,
 } from "../lib/pricingDisplay";
+import { downgradeNotice, pastDueNotice } from "../lib/billingNotices";
 import { readApplePayDomainAssociation } from "../lib/applePayDomain";
 import { signCheckoutHandoff, verifyCheckoutHandoff } from "../lib/checkoutHandoff";
 import {
@@ -47,10 +50,12 @@ import {
   isSaveCardRejection,
   isWalletPaymentSource,
   moyasarKeysError,
+  moyasarSaveOptions,
   phonePayStartsOpen,
   readMoyasarKeys,
   readSamsungPayServiceId,
   saveCardStartsChecked,
+  shouldStorePaymentToken,
 } from "../lib/moyasarEnv";
 import { safeNextPath } from "../lib/safeNext";
 import {
@@ -472,7 +477,9 @@ describe("renewals, cancellation, and seat changes", () => {
     );
   });
 
-  it("charges on the renewal date and retries on day 1, 3, and 7", () => {
+  it("charges on the renewal date and retries on day 1 and day 3", () => {
+    assert.deepEqual(RENEWAL_ATTEMPT_DAY_OFFSETS, [0, 1, 3]);
+    assert.equal(GRACE_DAYS, 3);
     assert.equal(
       decideRenewal({ ...base, now: new Date("2026-11-15T00:00:00.000Z") }).action,
       "skip"
@@ -506,40 +513,38 @@ describe("renewals, cancellation, and seat changes", () => {
       failureCount: 2,
       status: "past_due",
     });
-    const day7 = decideRenewal({
-      ...base,
-      now: new Date("2026-11-23T00:00:00.000Z"),
-      failureCount: 3,
-      status: "past_due",
-    });
     assert.equal(day1.action, "charge");
     assert.equal(day3.action, "charge");
-    assert.equal(day7.action, "charge");
     if (day1.action === "charge") assert.equal(day1.attempt, 1);
     if (day3.action === "charge") assert.equal(day3.attempt, 2);
-    if (day7.action === "charge") assert.equal(day7.attempt, 3);
-  });
-
-  it("downgrades after the day-7 failure and expires a cancellation without charging", () => {
     assert.equal(
       decideRenewal({
         ...base,
-        now: new Date("2026-11-24T00:00:00.000Z"),
-        failureCount: 4,
+        now: new Date("2026-11-23T00:00:00.000Z"),
+        failureCount: 3,
         status: "past_due",
       }).action,
       "downgrade"
     );
-    assert.deepEqual(afterChargeFailure(3), { status: "downgrade", failureCount: 4 });
+  });
+
+  it("downgrades after the day-3 failure and expires a cancellation without charging", () => {
+    assert.equal(
+      decideRenewal({
+        ...base,
+        now: new Date("2026-11-20T00:00:00.000Z"),
+        failureCount: 3,
+        status: "past_due",
+      }).action,
+      "downgrade"
+    );
+    assert.deepEqual(afterChargeFailure(2), { status: "downgrade", failureCount: 3 });
     const firstRetry = afterChargeFailure(0);
     const secondRetry = afterChargeFailure(1);
-    const thirdRetry = afterChargeFailure(2);
     assert.equal(firstRetry.status, "past_due");
     assert.equal(secondRetry.status, "past_due");
-    assert.equal(thirdRetry.status, "past_due");
     if (firstRetry.status === "past_due") assert.equal(firstRetry.retryDay, 1);
     if (secondRetry.status === "past_due") assert.equal(secondRetry.retryDay, 3);
-    if (thirdRetry.status === "past_due") assert.equal(thirdRetry.retryDay, 7);
 
     assert.equal(
       decideRenewal({
@@ -717,12 +722,57 @@ describe("checkout and invoice regressions", () => {
     assert.match(shellCopy.en.checkout.scanToPay, /STC Pay or mada/);
     assert.doesNotMatch(shellCopy.en.checkout.scanToPay, /Apple Pay/);
     assert.match(shellCopy.ar.checkout.scanToPay, /STC Pay/);
-    assert.match(shellCopy.en.checkout.walletReminder, /Apple Pay, Samsung Pay, and STC Pay/);
+    assert.match(shellCopy.en.checkout.walletReminder, /Apple Pay/);
+    assert.match(shellCopy.en.checkout.walletReminder, /STC Pay/);
+    assert.match(shellCopy.en.checkout.walletReminder, /automatically/);
+    assert.match(shellCopy.ar.checkout.walletReminder, /STC Pay/);
     assert.match(shellCopy.en.checkout.securePay, /Moyasar/);
     assert.match(shellCopy.en.checkout.cardNotStored, /never stored/);
-    assert.equal(shellCopy.en.checkout.optional, "Optional");
-    assert.equal(saveCardStartsChecked(), false);
+    assert.equal(shellCopy.en.billing.renewsOn, "Renews automatically on");
+    assert.equal(shellCopy.ar.billing.renewsOn, "يتجدد تلقائيًا في");
+    assert.equal(saveCardStartsChecked(), true);
     assert.equal(isSaveCardRejection("Invalid source.save_card"), true);
+    const saved = moyasarSaveOptions({
+      saveCard: true,
+      wallets: true,
+      samsungServiceId: "svc",
+      orderNumber: "ord",
+    });
+    assert.equal(saved.credit_card?.save_card, true);
+    assert.equal(saved.apple_pay?.save_card, true);
+    assert.equal(saved.samsung_pay?.save_card, true);
+    const cardOnly = moyasarSaveOptions({
+      saveCard: true,
+      wallets: false,
+      samsungServiceId: "",
+      orderNumber: "ord",
+    });
+    assert.equal(cardOnly.apple_pay, undefined);
+    assert.equal(cardOnly.credit_card?.save_card, true);
+    assert.equal(shouldStorePaymentToken({ type: "applepay", token: "token_ap" }), true);
+    assert.equal(shouldStorePaymentToken({ type: "creditcard", token: "token_cc" }), true);
+    assert.equal(shouldStorePaymentToken({ type: "samsungpay", token: "token_sp" }), true);
+    assert.equal(shouldStorePaymentToken({ type: "stcpay", token: "token_stc" }), false);
+    assert.equal(shouldStorePaymentToken({ type: "stcpay" }), false);
+    assert.match(pastDueNotice("en", { plan: "Team", retryDate: "17 Nov 2026", billingUrl: "https://engineerit.ai/account/billing" }).text, /day-3/);
+    assert.match(pastDueNotice("ar", { plan: "الفريق", retryDate: "17 نوفمبر 2026", billingUrl: "https://engineerit.ai/account/billing" }).text, /اليوم 3/);
+    assert.match(downgradeNotice("en").text, /Assistant Engineer/);
+    assert.match(downgradeNotice("ar").text, /المهندس المساعد/);
+    const team = PLANS.find((plan) => plan.id === "team");
+    assert.equal(team?.features.includes(MOYASAR_CHECKOUT_FEATURE), true);
+    assert.equal(team?.features.some((feature) => /automatically/i.test(feature)), false);
+    const pricingCopy = [
+      readFileSync("lib/marketing/en.ts", "utf8"),
+      readFileSync("lib/marketing/ar.ts", "utf8"),
+      readFileSync("lib/plans.ts", "utf8"),
+      readFileSync("lib/labels.ts", "utf8"),
+    ].join("\n");
+    assert.equal(/renews automatically|يتجدد تلقائي/i.test(pricingCopy), false);
+    const billingRoute = readFileSync("app/api/billing/route.ts", "utf8");
+    assert.equal(billingRoute.includes("moyasar_token"), false);
+    const renewalJob = readFileSync("lib/renewals.ts", "utf8");
+    assert.match(renewalJob, /dry:\$\{decision\.action\}/);
+    assert.equal(renewalJob.includes("moyasar_token:"), false);
   });
 
   it("returns paid checkouts to the success page and keeps the invoice email BCC", () => {

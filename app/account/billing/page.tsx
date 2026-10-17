@@ -5,8 +5,11 @@ import Link from "next/link";
 import Header from "../../components/Header";
 import NavSidebar from "../../components/NavSidebar";
 import { supabase } from "@/lib/supabaseClient";
-import { PLAN_LABELS, formatSar, type PlanId } from "@/lib/plans";
+import { formatSar, type PlanId } from "@/lib/plans";
+import { planById } from "@/lib/labels";
 import { SarText } from "@/app/components/RiyalAmount";
+import { formatBillingDate } from "@/lib/billingCycle";
+import { useMessages } from "@/lib/useMessages";
 
 type Sub = {
   plan: PlanId;
@@ -21,11 +24,13 @@ type Sub = {
 };
 
 export default function BillingPage() {
+  const { locale, shell: s } = useMessages();
   const [sidebar, setSidebar] = useState(false);
   const [sub, setSub] = useState<Sub | null>(null);
   const [card, setCard] = useState<{ brand: string | null; last_four: string | null } | null>(null);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
+  const [loaded, setLoaded] = useState(false);
 
   async function load() {
     const { data } = await supabase.auth.getSession();
@@ -37,11 +42,13 @@ export default function BillingPage() {
     const res = await fetch("/api/billing", { headers: { Authorization: `Bearer ${token}` } });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(json.error || "Could not load billing.");
+      setError(json.error || s.billing.loadFailed);
+      setLoaded(true);
       return;
     }
     setSub(json.subscription);
     setCard(json.card);
+    setLoaded(true);
   }
 
   useEffect(() => {
@@ -56,12 +63,14 @@ export default function BillingPage() {
     const res = await fetch(path, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setError(json.error || "Could not update billing.");
+      setError(json.error || s.billing.updateFailed);
       return;
     }
-    setInfo(path.endsWith("cancel") ? "Renewal is cancelled at the end of this period." : "Renewal is on again.");
+    setInfo(path.endsWith("cancel") ? s.billing.cancelledInfo : s.billing.resumedInfo);
     await load();
   }
+
+  const renewalDate = sub ? formatBillingDate(sub.current_period_end, locale) : "";
 
   return (
     <div className="app-shell">
@@ -69,40 +78,51 @@ export default function BillingPage() {
       <div className="main">
         <Header onToggleSidebar={() => setSidebar((v) => !v)} />
         <div className="page-wrap">
-          <h1 className="page-title">Billing</h1>
+          <h1 className="page-title">{s.billing.title}</h1>
           {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
           {info && <p style={{ color: "#166534" }}>{info}</p>}
-          {!sub ? (
-            <p>No paid subscription yet. Buy a plan on the pricing page. It renews through Moyasar until you cancel.</p>
-          ) : (
+          {loaded && !sub ? (
+            <p>{s.billing.empty}</p>
+          ) : null}
+          {sub ? (
             <div className="card">
               <p>
-                <strong>{PLAN_LABELS[sub.plan] || sub.plan}</strong> · {sub.status}
-                {sub.cancel_at_period_end ? " · cancels at period end" : ""}
+                <strong>{planById(locale, sub.plan).name}</strong> · {sub.status}
+                {sub.cancel_at_period_end ? ` · ${s.billing.cancelsAtEnd}` : ""}
               </p>
               <p>
                 <SarText>
                   {formatSar(Number(sub.amount_sar), sub.billing_interval === "year" ? "year" : "month")}
                 </SarText>
-                {sub.seat_limit > 1 ? ` · ${sub.seat_limit} seats` : ""}
+                {sub.seat_limit > 1 ? ` · ${sub.seat_limit} ${s.billing.seats}` : ""}
               </p>
-              <p>Renews {new Date(sub.current_period_end).toLocaleDateString("en-GB")} unless you cancel.</p>
               <p>
-                Card: {card?.brand || "saved card"} {card?.last_four ? `ending ${card.last_four}` : "not on file yet"}
+                {sub.cancel_at_period_end
+                  ? `${s.billing.endsOn} ${renewalDate}`
+                  : `${s.billing.renewsOn} ${renewalDate}`}
+              </p>
+              <p>
+                {s.billing.cardLabel}: {card?.brand ? `${card.brand} ` : ""}
+                {card?.last_four ? `${s.billing.ending} ${card.last_four}` : s.billing.cardMissing}
               </p>
               {sub.failure_count > 0 && (
-                <p>The last charge failed. Update the card. The next retry is {sub.next_retry_at ? new Date(sub.next_retry_at).toLocaleDateString("en-GB") : "scheduled"}.</p>
+                <p>
+                  {s.billing.chargeFailed}{" "}
+                  {sub.next_retry_at
+                    ? `${s.billing.nextRetry} ${formatBillingDate(sub.next_retry_at, locale)}.`
+                    : ""}
+                </p>
               )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <Link className="btn" href="/account/billing/card">Update card</Link>
+                <Link className="btn" href="/account/billing/card">{s.billing.updateCard}</Link>
                 {sub.cancel_at_period_end ? (
-                  <button className="btn" type="button" onClick={() => post("/api/billing/resume")}>Resume renewal</button>
+                  <button className="btn" type="button" onClick={() => post("/api/billing/resume")}>{s.billing.resumeRenewal}</button>
                 ) : (
-                  <button className="btn" type="button" onClick={() => post("/api/billing/cancel")}>Cancel renewal</button>
+                  <button className="btn" type="button" onClick={() => post("/api/billing/cancel")}>{s.billing.cancelRenewal}</button>
                 )}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

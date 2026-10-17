@@ -17,6 +17,21 @@ export async function GET(req: Request) {
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  if (!sub) {
+    const { data: ended } = await admin
+      .from("billing_subscriptions")
+      .select("status, failure_count, updated_at")
+      .eq("user_id", user.id)
+      .eq("status", "expired")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const updated = ended?.updated_at ? new Date(ended.updated_at).getTime() : 0;
+    const recent = updated > 0 && Date.now() - updated < 30 * 24 * 60 * 60 * 1000;
+    const notice = ended && ended.failure_count >= 3 && recent ? "downgraded" : null;
+    return NextResponse.json({ subscription: null, card: null, notice });
+  }
+
   let card: { brand: string | null; last_four: string | null; status: string } | null = null;
   if (sub?.saved_card_id) {
     const { data } = await admin
