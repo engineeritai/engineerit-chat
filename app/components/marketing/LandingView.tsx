@@ -15,10 +15,11 @@ import HomePlanCards from "@/app/components/marketing/HomePlanCards";
 import PricingBoard from "@/app/components/marketing/PricingBoard";
 import AdvisorEcosystem from "@/app/components/AdvisorEcosystem";
 import StartChatLink from "@/app/components/marketing/StartChatLink";
+import ComposerPlus from "@/app/components/ComposerPlus";
 
 export default function LandingView() {
   const { locale } = useLocale();
-  const { m } = useMessages();
+  const { m, shell } = useMessages();
   const content = getMarketingContent(locale);
   const router = useRouter();
   const [draft, setDraft] = useState("");
@@ -54,6 +55,14 @@ export default function LandingView() {
               ask(draft);
             }}
           >
+            <button
+              className="hero-plus"
+              type="button"
+              aria-label={shell.chat.addAttachments}
+              onClick={() => router.push("/chat")}
+            >
+              <ComposerPlus />
+            </button>
             <textarea
               className="hero-composer-input"
               rows={1}

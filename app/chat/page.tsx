@@ -12,6 +12,7 @@ import remarkGfm from "remark-gfm";
 
 import Link from "next/link";
 import MarketingShell from "../components/marketing/MarketingShell";
+import ComposerPlus from "../components/ComposerPlus";
 import EitMark from "../components/marketing/EitMark";
 import { localPlanPreview } from "../components/marketing/AccountState";
 import ToolGlyph, { ToolLockIcon } from "../components/ToolGlyph";
@@ -1162,7 +1163,7 @@ export default function Page() {
               <div className="chat-input-left" style={{ position: "relative" }}>
                 <button
                   type="button"
-                  className="chat-input-icon-btn"
+                  className="chat-input-icon-btn is-plus"
                   aria-label={s.chat.addAttachments}
                   aria-expanded={toolsOpen}
                   onClick={() => {
@@ -1170,7 +1171,7 @@ export default function Page() {
                     setAdvisorsOpen(false);
                   }}
                 >
-                  <span className="chat-input-plus">+</span>
+                  <ComposerPlus />
                 </button>
                 {toolsOpen && (
                   <div className="tool-popover plus-menu" role="menu">

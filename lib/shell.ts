@@ -353,6 +353,7 @@ export type ShellCopy = {
     thanks: string;
     sendError: string;
     assistant: string;
+    askAssistant: string;
     askPlaceholder: string;
     send: string;
     close: string;
@@ -749,6 +750,7 @@ const en: ShellCopy = {
     thanks: "Thank you. Your message has been submitted.",
     sendError: "There was a problem sending your message. Please try again later.",
     assistant: "Smart assistant",
+    askAssistant: "Ask the smart assistant",
     askPlaceholder: "Ask the smart assistant…",
     send: "Send",
     close: "Close",
@@ -1142,6 +1144,7 @@ const ar: ShellCopy = {
     thanks: "شكراً لك. تم إرسال رسالتك.",
     sendError: "تعذر إرسال الرسالة. حاول لاحقاً.",
     assistant: "المساعد الذكي",
+    askAssistant: "اسأل المساعد الذكي",
     askPlaceholder: "اسأل المساعد الذكي…",
     send: "إرسال",
     close: "إغلاق",
