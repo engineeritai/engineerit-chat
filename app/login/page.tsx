@@ -109,6 +109,12 @@ export default function LoginPage() {
               </label>
             </div>
 
+            <p className="form-aside">
+              <Link href="/forgot-password" className="link">
+                {s.header.forgot}
+              </Link>
+            </p>
+
             {errorMessage && (
               <div
                 style={{

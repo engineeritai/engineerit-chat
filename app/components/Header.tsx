@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import LanguageToggle from "./LanguageToggle";
 import Wordmark from "@/app/components/marketing/Wordmark";
 import { planById } from "@/lib/labels";
+import { RESET_REDIRECT, classifyResetError } from "@/lib/password";
 import { useMessages } from "@/lib/useMessages";
 import { supabase } from "@/lib/supabaseClient";
 import { HEADER_PLAN_ABBREV, PLAN_COLORS, type PlanId } from "@/lib/plans";
@@ -270,23 +271,25 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
     setForgotLoading(true);
     try {
-      // ✅ FIX: always use production reset page
-      const redirectTo = "https://engineerit.ai/reset-password";
-
       const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
-        redirectTo,
+        redirectTo: RESET_REDIRECT,
       });
 
       // start cooldown regardless (prevents spam clicks)
       setForgotCooldown(60);
 
-      if (error) {
-        setForgotMsg(error.message);
+      if (error && classifyResetError(error.message) === "later") {
+        setForgotMsg(s.password.tryLater);
+        setForgotLoading(false);
+        return;
+      }
+      if (error && classifyResetError(error.message) === "failed") {
+        setForgotMsg(s.password.generic);
         setForgotLoading(false);
         return;
       }
 
-      setForgotMsg(s.header.resetSent);
+      setForgotMsg(s.password.ifExists);
     } catch (err) {
       console.error(err);
       setForgotMsg(s.header.genericError);
@@ -578,7 +581,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       <div
                         style={{
                           fontSize: 12,
-                          color: forgotMsg === s.header.resetSent
+                          color: forgotMsg === s.password.ifExists
                             ? "#15803d"
                             : "#b91c1c",
                           marginBottom: 6,
