@@ -2594,6 +2594,18 @@ body.acct-open .mkt-header {
   height: 20px;
 }
 
+.chat-tile-icon .tool-glyph {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: inherit;
+}
+
+.tool-glyph.riyal-mark {
+  fill: currentColor;
+  stroke: none;
+}
+
 .chat-tile-title {
   font-size: 14px;
   font-weight: 700;

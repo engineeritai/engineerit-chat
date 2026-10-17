@@ -26,8 +26,8 @@ const en: Messages = {
     comingSoonBody:
       "Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
     includedOn: {
-      pmo: "Included on Consultant Engineer",
-      assurance: "Included on Team",
+      pmo: "Included on Consultant Engineer, Team, and Enterprise",
+      assurance: "Included on Team and Enterprise",
       operations: "Included on Enterprise",
       decision: "Included on Enterprise",
     },
@@ -283,7 +283,7 @@ const en: Messages = {
     subtitle:
       "Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
     advisorsIncluded:
-      "PMO Advisor on Consultant Engineer. PMO and Program Assurance on Team. All four advisors on Enterprise.",
+      "PMO Advisor on Consultant Engineer. PMO and Program Assurance on Team. PMO, Program Assurance, Operations Readiness, and Decision Support on Enterprise.",
     advisorsLocked:
       "A locked advisor shows a short preview. Buy the plan that includes it through Moyasar.",
     availabilityTitle: "AI Advisors by plan",

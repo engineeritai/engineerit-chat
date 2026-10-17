@@ -104,12 +104,14 @@ describe("self-serve prices", () => {
     }
   });
 
-  it("prices the Team plan at SAR 499 / 4,990 with 5 seats and SAR 89 extra seats", () => {
+  it("prices the Team plan at SAR 449 / 4,490 with 5 seats and SAR 89 extra seats", () => {
     const month = quoteSelfServe("team", "month", 0);
     const year = quoteSelfServe("team", "year", 2);
-    assert.equal(month.amountSar, 499);
+    assert.equal(month.amountSar, 449);
+    assert.equal(month.amountHalalas, 44900);
     assert.equal(month.seatLimit, 5);
-    assert.equal(year.amountSar, 4990 + 2 * 890);
+    assert.equal(year.amountSar, 4490 + 2 * 890);
+    assert.equal(year.amountHalalas, (4490 + 2 * 890) * 100);
     assert.equal(year.seatLimit, 7);
     assert.equal(EXTRA_SEAT_SAR.month, 89);
     assert.equal(EXTRA_SEAT_SAR.year, EXTRA_SEAT_SAR.month * 10);
@@ -138,11 +140,11 @@ describe("self-serve prices", () => {
   it("shows the same names, SAR prices, USD, features, and annual prices", () => {
     assertIndividualPlanPrices();
     assert.equal(formatUsdApprox(19), "USD 5.07");
-    assert.equal(formatUsdApprox(499), "USD 133.07");
+    assert.equal(formatUsdApprox(449), "USD 119.73");
     assert.equal(formatUsdApprox(3900), "USD 1,040.00");
     assert.equal(planPriceLabel("consultant", "year").amountSar, 990);
     assert.equal(planPriceLabel("consultant", "year").primary, "\u20C1 990 / year");
-    assert.equal(planPriceLabel("team", "year", 1).amountSar, 4990 + 890);
+    assert.equal(planPriceLabel("team", "year", 1).amountSar, 4490 + 890);
     assert.equal(planPriceLabel("enterprise", "year").primary, "\u20C1 39,000 / year");
     assert.equal(planPriceLabel("enterprise", "month", 2).amountSar, 3900 + 2 * 299);
 
@@ -155,7 +157,17 @@ describe("self-serve prices", () => {
     }
 
     const consultant = PLANS.find((item) => item.id === "consultant");
-    assert.ok(consultant);
+    const team = PLANS.find((item) => item.id === "team");
+    const enterprise = PLANS.find((item) => item.id === "enterprise");
+    assert.ok(consultant && team && enterprise);
+    assert.equal(consultant.features[0], "PMO Advisor included");
+    assert.equal(team.features[0], "PMO and Program Assurance included");
+    assert.equal(
+      enterprise.features[0],
+      "PMO, Program Assurance, Operations Readiness, and Decision Support included"
+    );
+    assert.equal(consultant.features.some((feature) => /Program Assurance|Operations Readiness|Decision Support/.test(feature)), false);
+    assert.equal(team.features.some((feature) => /Operations Readiness|Decision Support/.test(feature)), false);
     assert.ok(consultant.features.includes("Equipment list & BOQ analysis"));
     assert.equal(
       consultant.features.some((feature) => /bank transfer|mailto|not charged/i.test(feature)),

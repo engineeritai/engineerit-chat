@@ -31,7 +31,7 @@ const EXPECTED_PRICE_LABELS: Record<PlanId, string> = {
   engineer: `${RIYAL} 19 / month`,
   professional: `${RIYAL} 41 / month`,
   consultant: `${RIYAL} 99 / month`,
-  team: `${RIYAL} 499 / month`,
+  team: `${RIYAL} 449 / month`,
   enterprise: `${RIYAL} 3,900 / month`,
 };
 
@@ -40,7 +40,7 @@ const EXPECTED_YEARLY_LABELS: Record<PlanId, string> = {
   engineer: `${RIYAL} 190 / year`,
   professional: `${RIYAL} 410 / year`,
   consultant: `${RIYAL} 990 / year`,
-  team: `${RIYAL} 4,990 / year`,
+  team: `${RIYAL} 4,490 / year`,
   enterprise: `${RIYAL} 39,000 / year`,
 };
 

@@ -51,6 +51,34 @@ for (const lang of ["en", "ar"] as const) {
       await expect.soft(marker, `${route.path} ${lang} marker`).toBeVisible();
       const file = path.join(SHOTS, `${info.project.name}-${lang}-${slug(route.path)}.png`);
       await page.screenshot({ path: file, fullPage: false });
+      if (route.path === "/") {
+        const mark = page.locator(".chat-tile-rose .riyal-mark");
+        await expect(mark, `${lang} value engineering riyal`).toBeVisible();
+        const color = await mark.evaluate((el) => getComputedStyle(el).color);
+        expect(color, `${lang} rose tint`).toBe("rgb(190, 18, 60)");
+        const markBox = await mark.boundingBox();
+        const otherBox = await page.locator(".chat-tile-blue .tool-glyph").boundingBox();
+        expect(markBox && otherBox).toBeTruthy();
+        expect(Math.abs((markBox?.width ?? 0) - (otherBox?.width ?? 0))).toBeLessThan(1);
+        expect(Math.abs((markBox?.height ?? 0) - (otherBox?.height ?? 0))).toBeLessThan(1);
+        const pathD = (await mark.locator("path").first().getAttribute("d")) || "";
+        expect(pathD.startsWith("M699.62")).toBe(true);
+      }
+    }
+    if (info.project.name === "phone-390") {
+      await page.goto(`/tools?lang=${lang}`, { waitUntil: "domcontentloaded" });
+      const toolMark = page.locator(".advisor-card .riyal-mark");
+      await expect(toolMark, `${lang} tools tab riyal`).toBeVisible();
+      const toolColor = await toolMark.evaluate((el) => getComputedStyle(el).color);
+      const siblingColor = await page
+        .locator(".advisor-card .tool-glyph:not(.riyal-mark)")
+        .first()
+        .evaluate((el) => getComputedStyle(el).color);
+      expect(toolColor).toBe(siblingColor);
+
+      await page.goto(`/chat?lang=${lang}`, { waitUntil: "domcontentloaded" });
+      await page.locator(".chat-input-icon-btn.is-plus").click();
+      await expect(page.locator(".plus-menu .riyal-mark"), `${lang} plus menu riyal`).toBeVisible();
     }
 
     if (info.project.name === "desktop-1440") {
@@ -118,6 +146,13 @@ test("redirects, sitemap, apple pay file, invoice route", async ({ request }, in
   const methods = fs.readFileSync("lib/moyasarEnv.ts", "utf8");
   expect(methods).toContain('"applepay"');
   expect(methods).toContain('"stcpay"');
+
+  const glyph = fs.readFileSync("app/components/ToolGlyph.tsx", "utf8");
+  expect(glyph).toContain("RiyalMark");
+  expect(glyph).not.toContain("M8 7h6.5");
+  const showcase = fs.readFileSync("app/components/marketing/ChatShowcase.tsx", "utf8");
+  expect(showcase).toContain("<ToolGlyph");
+  expect(showcase).not.toContain("M8 7h6.5");
 
   const home = fs.readFileSync("app/page.tsx", "utf8");
   expect(home).not.toContain("LoggedInChatRedirect");

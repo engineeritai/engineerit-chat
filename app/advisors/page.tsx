@@ -35,6 +35,7 @@ export default function AdvisorsPage() {
             )}
           </div>
           <p className="page-subtitle">{m.advisors.landingSubtitle}</p>
+          <p className="page-subtitle">{m.advisors.comingSoonBody}</p>
 
           <AdvisorEcosystem />
 
