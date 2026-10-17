@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { useAccount } from "@/app/components/marketing/AccountState";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
-import { RiyalMark, SarText } from "@/app/components/RiyalAmount";
+import { FeatureLine, RiyalMark } from "@/app/components/RiyalAmount";
 import { featuresForLocale, localizedPlan } from "@/lib/labels";
 import { getMarketingContent } from "@/lib/marketing";
 import {
@@ -140,7 +140,7 @@ function HomePlanCard({ planId, interval }: { planId: PlanId; interval: BillingI
       <ul className="home-plan-features">
         {shown.map((feature) => (
           <li key={feature}>
-            <SarText>{feature}</SarText>
+            <FeatureLine>{feature}</FeatureLine>
           </li>
         ))}
       </ul>

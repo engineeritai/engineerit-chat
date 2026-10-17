@@ -13,6 +13,7 @@ import {
 } from "../lib/billingCycle";
 import {
   ADVISOR_FEATURE_BY_PLAN,
+  MOYASAR_CHECKOUT_FEATURE,
   CONSULTANT_LEGACY_SAR,
   ENTERPRISE_EXTRA_SEAT_SAR,
   ENTERPRISE_FROM_SAR,
@@ -29,6 +30,7 @@ import {
   resolveAdvisorAccessPlan,
   unlockPlanForAdvisor,
 } from "../lib/advisors";
+import { featuresForLocale } from "../lib/labels";
 import {
   assertIndividualPlanPrices,
   displayFeatures,
@@ -148,24 +150,51 @@ describe("self-serve prices", () => {
     assert.equal(planPriceLabel("enterprise", "year").primary, "\u20C1 39,000 / year");
     assert.equal(planPriceLabel("enterprise", "month", 2).amountSar, 3900 + 2 * 299);
 
-    for (const id of ["consultant", "team", "enterprise"] as const) {
+    for (const id of ["consultant", "team"] as const) {
       const plan = PLANS.find((item) => item.id === id);
       assert.ok(plan);
       assert.ok(plan.features.length > 0);
       assert.ok(plan.features.includes(ADVISOR_FEATURE_BY_PLAN[id]));
       assert.equal(displayFeatures(plan, "month").includes(ADVISOR_FEATURE_BY_PLAN[id]), true);
+      assert.ok(plan.features.includes(MOYASAR_CHECKOUT_FEATURE));
     }
 
     const consultant = PLANS.find((item) => item.id === "consultant");
     const team = PLANS.find((item) => item.id === "team");
     const enterprise = PLANS.find((item) => item.id === "enterprise");
-    assert.ok(consultant && team && enterprise);
+    const engineer = PLANS.find((item) => item.id === "engineer");
+    const professional = PLANS.find((item) => item.id === "professional");
+    assert.ok(consultant && team && enterprise && engineer && professional);
     assert.equal(consultant.features[0], "PMO Advisor included");
     assert.equal(team.features[0], "PMO and Program Assurance included");
+    assert.deepEqual(enterprise.features.slice(0, 4), [
+      "PMO Advisor included",
+      "Program Assurance included",
+      "Operations Readiness included",
+      "Decision Support included",
+    ]);
+    assert.equal(enterprise.features.includes(ADVISOR_FEATURE_BY_PLAN.enterprise), false);
+    assert.ok(enterprise.features.includes(MOYASAR_CHECKOUT_FEATURE));
+    assert.ok(engineer.features.includes(MOYASAR_CHECKOUT_FEATURE));
+    assert.ok(professional.features.includes(MOYASAR_CHECKOUT_FEATURE));
     assert.equal(
-      enterprise.features[0],
-      "PMO, Program Assurance, Operations Readiness, and Decision Support included"
+      PLANS.find((item) => item.id === "assistant")?.features.includes(MOYASAR_CHECKOUT_FEATURE),
+      false
     );
+    const arabicPayment = "دفع آمن عبر Moyasar، شهرياً أو سنوياً";
+    for (const id of ["engineer", "professional", "consultant", "team", "enterprise"] as const) {
+      const plan = PLANS.find((item) => item.id === id);
+      assert.ok(plan);
+      assert.ok(featuresForLocale("ar", plan, "month").includes(arabicPayment));
+      assert.equal(featuresForLocale("ar", plan, "month").some((feature) => feature.includes("للمدة المختارة")), false);
+    }
+    const arabicEnterprise = featuresForLocale("ar", enterprise, "month");
+    assert.deepEqual(arabicEnterprise.slice(0, 4), [
+      "مستشار إدارة المشاريع مشمول",
+      "ضمان البرنامج مشمول",
+      "جاهزية التشغيل مشمولة",
+      "دعم القرار مشمول",
+    ]);
     assert.equal(consultant.features.some((feature) => /Program Assurance|Operations Readiness|Decision Support/.test(feature)), false);
     assert.equal(team.features.some((feature) => /Operations Readiness|Decision Support/.test(feature)), false);
     assert.ok(consultant.features.includes("Equipment list & BOQ analysis"));

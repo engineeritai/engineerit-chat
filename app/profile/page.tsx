@@ -10,7 +10,7 @@ import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
 import { PLANS, PLAN_THEME, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
 import { displayFeatures, formatSar, formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
-import { SarText } from "@/app/components/RiyalAmount";
+import { FeatureLine, SarText } from "@/app/components/RiyalAmount";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
 import { downloadInvoicePdf } from "@/lib/invoiceDownload";
 import AvatarCropper from "@/app/components/AvatarCropper";
@@ -912,7 +912,7 @@ export default function ProfilePage() {
             <ul style={{ margin: "0 0 12px", paddingLeft: 18, fontSize: 14, color: "#374151" }}>
               {(locale === "ar" ? shownPlan.features : displayFeatures(shownSource, "month")).map((feature) => (
                 <li key={feature}>
-                  <SarText>{feature}</SarText>
+                  <FeatureLine>{feature}</FeatureLine>
                 </li>
               ))}
             </ul>

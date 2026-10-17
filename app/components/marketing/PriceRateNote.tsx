@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale } from "@/app/components/LocaleProvider";
-import { SarText } from "@/app/components/RiyalAmount";
+import { FeatureLine } from "@/app/components/RiyalAmount";
 import { getMarketingContent } from "@/lib/marketing";
 
 export default function PriceRateNote() {
@@ -10,7 +10,7 @@ export default function PriceRateNote() {
 
   return (
     <p className="mkt-price-footnote">
-      <SarText>{content.pricing.rateNote}</SarText>
+      <FeatureLine>{content.pricing.rateNote}</FeatureLine>
     </p>
   );
 }

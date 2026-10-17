@@ -16,7 +16,7 @@ import {
 import { planPriceLabel } from "@/lib/pricingDisplay";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
 import PriceRateNote from "@/app/components/marketing/PriceRateNote";
-import { SarText } from "@/app/components/RiyalAmount";
+import { FeatureLine, SarText } from "@/app/components/RiyalAmount";
 
 const ENGINEER_TOOLS = [
   { id: "drawing", label: "Drawing & Diagrams" },
@@ -173,7 +173,7 @@ export default function PlanCatalog({ heading = "Plans", verb = "buy" }: Props) 
               <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "#374151", lineHeight: 1.45 }}>
                 {features.map((feature) => (
                   <li key={feature} style={{ marginBottom: 4 }}>
-                    <SarText>{feature}</SarText>
+                    <FeatureLine>{feature}</FeatureLine>
                   </li>
                 ))}
               </ul>

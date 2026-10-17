@@ -19,6 +19,35 @@ export function RiyalMark({ className, decorative = false }: { className?: strin
   );
 }
 
+/** A plan feature. Amounts stay with the riyal sign. Moyasar stays left to right inside Arabic. */
+export function FeatureLine({ children }: { children: string }) {
+  const text = embedRiyal(children);
+  const parts = text.split(/(\u20C1\s*[\d,]+(?:\.\d+)?|Moyasar)/g);
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (!part) return null;
+        if (part === "Moyasar") {
+          return (
+            <bdi key={index} dir="ltr">
+              Moyasar
+            </bdi>
+          );
+        }
+        if (part.startsWith(RIYAL)) {
+          return (
+            <bdi key={index} dir="ltr" className="sar-amount">
+              <RiyalMark />
+              {part.slice(RIYAL.length)}
+            </bdi>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 /** Renders a price string with the riyal sign kept on the left of the number. */
 export function SarText({ children, className }: { children: string; className?: string }) {
   const text = embedRiyal(children);
