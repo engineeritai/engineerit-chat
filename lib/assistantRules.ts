@@ -28,8 +28,12 @@ export function presentationRules(): string {
     "```",
     "Mark the critical path with the crit tag. Mark milestones with the milestone tag. Use section lines for task groups. Use real YYYY-MM-DD dates.",
     "For a roadmap or a milestone timeline without durations, output a fenced mermaid timeline.",
-    "For an S-curve or progress chart, output a fenced scurve block. Each line is `period | planned | actual`.",
+    "For an S-curve or planned-versus-actual progress chart, output a fenced scurve block. Each line is `period | planned | actual`.",
+    "For a line chart, output a fenced line block. For an area chart, output a fenced area block. For a bar chart, output a fenced bar block. Each line is `label | value` or `label | planned | actual`.",
+    "For a pie chart, output a fenced pie block. Each line is `label | value`.",
+    "A mermaid xychart-beta or mermaid pie block is also accepted. Never say a chart is shown unless that fenced block is in the answer, and do not draw the chart with ASCII.",
     "For a resource histogram, output a fenced histogram block. Each line is `period | planned | actual`.",
+    "Numbered lists use 1. 2. 3. in order. Do not put a blank line between items, and do not number every item 1.",
   ].join("\n");
 }
 

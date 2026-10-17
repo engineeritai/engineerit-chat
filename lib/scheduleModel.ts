@@ -23,9 +23,10 @@ export type TimelineModel = {
 };
 
 export type SeriesModel = {
-  kind: "scurve" | "histogram";
+  kind: "scurve" | "histogram" | "line" | "area" | "bar" | "pie";
   title: string;
   points: { label: string; planned: number; actual: number | null }[];
+  seriesNames?: string[];
 };
 
 export type ChartModel = GanttModel | TimelineModel | SeriesModel;
@@ -222,24 +223,109 @@ export function parseTimeline(source: string): TimelineModel | null {
   return { kind: "timeline", title, items };
 }
 
-export function parseSeries(kind: "scurve" | "histogram", source: string): SeriesModel | null {
+function unquote(value: string): string {
+  return value.trim().replace(/^["']|["']$/g, "").trim();
+}
+
+function contentLines(source: string): string[] {
   const lines = source.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  let title = kind === "scurve" ? "S-curve" : "Resources";
+  if (lines[0] !== "---") return lines;
+  const end = lines.indexOf("---", 1);
+  return end === -1 ? lines : lines.slice(end + 1);
+}
+
+function bracketList(line: string): string[] | null {
+  const match = /\[([^\]]*)\]/.exec(line);
+  if (!match) return null;
+  return match[1].split(",").map((part) => unquote(part)).filter(Boolean);
+}
+
+function seriesTitle(line: string): string {
+  return /["']([^"']+)["']/.exec(line)?.[1]?.trim() || "";
+}
+
+function parseXy(lines: string[]): SeriesModel | null {
+  let title = "Chart";
+  let labels: string[] = [];
+  const series: { name: string; values: number[]; bar: boolean }[] = [];
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    if (lower.startsWith("xychart")) continue;
+    if (lower.startsWith("title ")) {
+      title = unquote(line.slice(6)) || title;
+      continue;
+    }
+    if (lower.startsWith("x-axis")) {
+      labels = bracketList(line) || labels;
+      continue;
+    }
+    if (lower.startsWith("y-axis")) continue;
+    if (!/^(line|bar|area)\b/i.test(line)) continue;
+    const values = (bracketList(line) || []).map(Number).filter((value) => Number.isFinite(value));
+    if (values.length < 2) continue;
+    series.push({ name: seriesTitle(line) || (lower.startsWith("bar") ? "Bar" : "Value"), values, bar: lower.startsWith("bar") });
+  }
+  const drawn = series.filter((item) => !item.bar);
+  const chosen = drawn.length ? drawn : series;
+  if (!chosen.length) return null;
+  const count = Math.max(...chosen.map((item) => item.values.length));
+  if (!labels.length) labels = Array.from({ length: count }, (_, index) => String(index + 1));
+  while (labels.length < count) labels.push(String(labels.length + 1));
+  const names = chosen.map((item) => item.name.toLowerCase());
+  const paired = chosen.length >= 2 && ((/plan|مخطط/.test(names[0]) && /actual|فعلي/.test(names[1])) || /s-?curve|منحنى/.test(title));
+  const kind: SeriesModel["kind"] = paired ? "scurve" : chosen[0].bar && !drawn.length ? "bar" : "line";
+  const points = labels.slice(0, count).map((label, index) => ({
+    label,
+    planned: chosen[0].values[index] ?? 0,
+    actual: chosen[1] ? chosen[1].values[index] ?? null : null,
+  }));
+  return points.length >= 2 ? { kind, title, points, seriesNames: chosen.map((item) => item.name) } : null;
+}
+
+function parsePie(lines: string[]): SeriesModel | null {
+  let title = "Pie";
   const points: SeriesModel["points"] = [];
   for (const line of lines) {
     const lower = line.toLowerCase();
-    if (lower === "scurve" || lower === "histogram" || lower === "xychart-beta" || lower === "---") continue;
-    if (lower.startsWith("title ")) {
-      title = line.replace(/^title\s+/i, "").replace(/^"|"$/g, "").trim() || title;
+    if (lower === "showdata") continue;
+    if (lower.startsWith("pie")) {
+      const inline = /title\s+(.+)$/i.exec(line);
+      if (inline) title = unquote(inline[1]) || title;
       continue;
     }
-    if (/^(period|label|month|x-axis|y-axis|line|bar)\b/i.test(line)) continue;
+    if (lower.startsWith("title ")) {
+      title = unquote(line.slice(6)) || title;
+      continue;
+    }
+    const match = /^(?:"([^"]+)"|'([^']+)'|([^:|]+))\s*[:|]\s*(-?[0-9]+(?:\.[0-9]+)?)\s*$/.exec(line);
+    if (!match) continue;
+    const label = (match[1] || match[2] || match[3] || "").trim();
+    const value = Number(match[4]);
+    if (!label || !Number.isFinite(value)) continue;
+    points.push({ label, planned: value, actual: null });
+  }
+  return points.length >= 2 ? { kind: "pie", title, points } : null;
+}
+
+export function parseSeries(kind: SeriesModel["kind"], source: string): SeriesModel | null {
+  const lines = contentLines(source);
+  const fallback = kind === "histogram" || kind === "bar" ? "Resources" : kind === "pie" ? "Pie" : kind === "scurve" ? "S-curve" : "Chart";
+  let title = fallback;
+  const points: SeriesModel["points"] = [];
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    if (lower === kind || lower === "xychart-beta" || lower === "---" || lower === "showdata") continue;
+    if (lower.startsWith("title ")) {
+      title = unquote(line.replace(/^title\s+/i, "")) || title;
+      continue;
+    }
+    if (/^(period|label|month|x-axis|y-axis)\b/i.test(line)) continue;
     const parts = line.split(/[|,]/).map((part) => part.trim()).filter(Boolean);
     if (parts.length < 2) continue;
-    const planned = Number(parts[1]);
+    const planned = Number(parts[1].replace(/%$/, ""));
     if (!Number.isFinite(planned)) continue;
     const actualRaw = parts[2];
-    const actual = actualRaw == null || actualRaw === "" ? null : Number(actualRaw);
+    const actual = actualRaw == null || actualRaw === "" ? null : Number(actualRaw.replace(/%$/, ""));
     points.push({
       label: parts[0],
       planned,
@@ -247,16 +333,28 @@ export function parseSeries(kind: "scurve" | "histogram", source: string): Serie
     });
   }
   if (points.length < 2) return null;
-  return { kind, title, points };
+  const names = kind === "pie" || points.every((point) => point.actual == null) ? [title] : ["Planned", "Actual"];
+  return { kind, title, points, seriesNames: names };
 }
 
 export function parseChart(lang: string, source: string, today: string): ChartModel | null {
   const key = lang.toLowerCase();
+  const lines = contentLines(source);
+  const first = (lines[0] || "").toLowerCase();
+  if (key !== "gantt" && key !== "timeline" && (first.startsWith("xychart") || key === "xychart")) {
+    const chart = parseXy(lines);
+    if (chart) return chart;
+  }
+  if (key !== "gantt" && key !== "timeline" && (first.startsWith("pie") || key === "pie")) {
+    const chart = parsePie(lines) || parseSeries("pie", source);
+    if (chart) return chart;
+  }
   if (key === "gantt") return parseGantt(source, today);
   if (key === "timeline") return parseTimeline(source);
-  if (key === "scurve") return parseSeries("scurve", source);
+  if (key === "scurve" || key === "line" || key === "area") return parseSeries(key, source);
   if (key === "histogram") return parseSeries("histogram", source);
-  if (key !== "mermaid") return null;
+  if (key === "bar") return parseSeries("bar", source);
+  if (key !== "mermaid" && key !== "chart" && key !== "") return null;
   const body = source.toLowerCase();
   if (/^\s*gantt\b/m.test(body) || body.includes("\ngantt")) return parseGantt(source, today);
   if (/^\s*timeline\b/m.test(body)) return parseTimeline(source);

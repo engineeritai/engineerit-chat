@@ -1359,9 +1359,43 @@ body {
   border-spacing: 0;
 }
 
+.msg-content ol {
+  list-style: decimal;
+  margin: 8px 0 12px;
+  padding-inline-start: 1.4em;
+  counter-reset: msg-item;
+}
+
+.msg-content ol > li {
+  counter-increment: msg-item;
+}
+
+.msg-content ol > li::marker {
+  content: counter(msg-item) ". ";
+}
+
+.msg-content ul {
+  list-style: disc;
+  margin: 8px 0 12px;
+  padding-inline-start: 1.4em;
+}
+
+.msg-content li {
+  display: list-item;
+  margin: 3px 0;
+}
+
+.msg-content li ol,
+.msg-content li ul {
+  margin: 4px 0;
+}
+
 .msg-content th,
 .msg-content td {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
 }
 
 /* Code blocks: scroll horizontally INSIDE message */
@@ -3481,8 +3515,12 @@ button.advisor-card-link {
   border-bottom: 1px solid #d0d7e2;
   border-inline-end: 1px solid #e2e8f0;
   text-align: start;
-  vertical-align: middle;
+  vertical-align: top;
   background: #fff;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .chat-table-pin th,

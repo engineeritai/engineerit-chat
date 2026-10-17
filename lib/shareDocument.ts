@@ -33,9 +33,9 @@ function inlineHtml(value: string): string {
 function listHtml(ordered: boolean, items: ListItem[]): string {
   const tag = ordered ? "ol" : "ul";
   const body = items
-    .map((item) => {
+    .map((item, index) => {
       const nested = item.children.length ? listHtml(item.orderedChildren, item.children) : "";
-      return `<li>${inlineHtml(item.text)}${nested}</li>`;
+      return `<li${ordered ? ` value="${index + 1}"` : ""}>${inlineHtml(item.text)}${nested}</li>`;
     })
     .join("");
   return `<${tag}>${body}</${tag}>`;
@@ -112,8 +112,12 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
   h3 { font-size: 16px; }
   p, li { line-height: 1.6; }
   .table-scroll { max-width: 100%; overflow-x: auto; overflow-y: hidden; border: 1px solid #d0d7e2; border-radius: 12px; }
-  table { border-collapse: collapse; width: max-content; min-width: 100%; }
-  th, td { border: 1px solid #d0d7e2; padding: 8px 10px; text-align: start; white-space: nowrap; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #d0d7e2; padding: 8px 10px; text-align: start; white-space: normal; overflow-wrap: anywhere; vertical-align: top; min-width: 7em; }
+  ol { list-style: decimal; counter-reset: msg-item; }
+  ol > li { counter-increment: msg-item; }
+  ol > li::marker { content: counter(msg-item) ". "; }
+  ul { list-style: disc; }
   th { background: #e7eeff; color: #1e3a8a; position: sticky; top: 0; }
   th:first-child, td:first-child { position: sticky; inset-inline-start: 0; background: inherit; }
   tbody tr:nth-child(even) td { background: #f8fafc; }

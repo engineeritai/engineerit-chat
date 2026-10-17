@@ -147,3 +147,140 @@ flowchart RL
 1. أصدر ورقة بيانات المحرك.
 2. احجز فريق المحاذاة لأسبوع 10 أكتوبر.
 `;
+
+/** Model output that used to drop the chart, restart every number at 1, and clip the status column. */
+export const chartCaseEn = `Here's an S-curve chart of planned versus actual progress for a 12-month road project. Actual stays below the plan through the middle, then catches up.
+
+\`\`\`mermaid
+xychart-beta
+    title "Road project S-curve"
+    x-axis [M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11, M12]
+    y-axis "Percent" 0 --> 100
+    line "Planned" [4, 9, 16, 25, 36, 48, 60, 71, 81, 89, 96, 100]
+    line "Actual" [3, 7, 12, 19, 28, 38, 49, 61, 73, 84, 93, 99]
+\`\`\`
+
+## Trend
+
+\`\`\`line
+title Monthly output
+Jan | 12
+Feb | 18
+Mar | 15
+Apr | 22
+\`\`\`
+
+## Crew
+
+\`\`\`bar
+title Crew size
+Civil | 20 | 18
+Paving | 14 | 16
+Marking | 6 | 7
+\`\`\`
+
+## Spend
+
+\`\`\`area
+title Cumulative spend
+Q1 | 10
+Q2 | 24
+Q3 | 41
+Q4 | 63
+\`\`\`
+
+## Split
+
+\`\`\`pie
+title Cost split
+Earthworks | 35
+Pavement | 25
+Structures | 20
+Utilities | 12
+Contingency | 8
+\`\`\`
+
+## Next steps
+
+1. Confirm the baseline schedule with the client.
+
+2. Issue the traffic management plan.
+
+3. Book the asphalt plant window.
+
+## Action items
+
+| Action | Owner | Due | Status |
+| --- | --- | --- | --- |
+| Follow up on RFI on façade anchors | Architect | 2026-10-21 | Open |
+| Update the traffic diversion drawing for the northern interchange | Civil | 2026-10-24 | In review |
+| Close the night-work permit for station 12+400 | HSE | 2026-10-18 | Blocked |
+`;
+
+export const chartCaseAr = `هذا منحنى تقدم يقارن المخطط بالفعلي لمشروع طريق مدته 12 شهراً. يبقى الفعلي تحت المخطط في منتصف المدة، ثم يلحق به.
+
+\`\`\`mermaid
+xychart-beta
+    title "منحنى تقدم الطريق"
+    x-axis [ش1, ش2, ش3, ش4, ش5, ش6, ش7, ش8, ش9, ش10, ش11, ش12]
+    y-axis "النسبة" 0 --> 100
+    line "مخطط" [4, 9, 16, 25, 36, 48, 60, 71, 81, 89, 96, 100]
+    line "فعلي" [3, 7, 12, 19, 28, 38, 49, 61, 73, 84, 93, 99]
+\`\`\`
+
+## الاتجاه
+
+\`\`\`line
+title الإنتاج الشهري
+يناير | 12
+فبراير | 18
+مارس | 15
+أبريل | 22
+\`\`\`
+
+## الطاقم
+
+\`\`\`bar
+title حجم الطاقم
+مدني | 20 | 18
+سفلتة | 14 | 16
+تخطيط | 6 | 7
+\`\`\`
+
+## الإنفاق
+
+\`\`\`area
+title الإنفاق التراكمي
+ر1 | 10
+ر2 | 24
+ر3 | 41
+ر4 | 63
+\`\`\`
+
+## التوزيع
+
+\`\`\`pie
+title توزيع التكلفة
+أعمال ترابية | 35
+رصف | 25
+منشآت | 20
+مرافق | 12
+احتياطي | 8
+\`\`\`
+
+## الخطوات التالية
+
+1. اعتماد الجدول الأساسي مع العميل.
+
+2. إصدار خطة إدارة الحركة.
+
+3. حجز نافذة خلاطة الأسفلت.
+
+## بنود العمل
+
+| الإجراء | المسؤول | الاستحقاق | الحالة |
+| --- | --- | --- | --- |
+| متابعة طلب المعلومات عن مثبتات الواجهة | المعماري | 2026-10-21 | مفتوح |
+| تحديث مخطط تحويل الحركة عند التقاطع الشمالي | المدني | 2026-10-24 | قيد المراجعة |
+| إغلاق تصريح العمل الليلي عند المحطة 12+400 | السلامة | 2026-10-18 | متوقف |
+`;
