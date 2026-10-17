@@ -63,6 +63,19 @@ test("english tables stay inside the chat and keep vertical scrolling", async ({
   await page.screenshot({
     path: `/opt/cursor/artifacts/screenshots/chat-en-${info.project.name}.png`,
   });
+  if (info.project.name === "phone-390") {
+    await page.evaluate(() => {
+      for (const node of document.querySelectorAll<HTMLElement>(".conversation, .main, .message-bubble")) {
+        node.style.overflow = "visible";
+        node.style.maxHeight = "none";
+        node.style.height = "auto";
+      }
+    });
+    await page.screenshot({
+      path: "/opt/cursor/artifacts/screenshots/chat_en_390_diagram_gantt_table.png",
+      fullPage: true,
+    });
+  }
 });
 
 test("arabic tables start on the right and charts use rtl", async ({ page }, info) => {
@@ -90,6 +103,19 @@ test("arabic tables start on the right and charts use rtl", async ({ page }, inf
   await page.screenshot({
     path: `/opt/cursor/artifacts/screenshots/chat-ar-${info.project.name}.png`,
   });
+  if (info.project.name === "phone-390") {
+    await page.evaluate(() => {
+      for (const node of document.querySelectorAll<HTMLElement>(".conversation, .main, .message-bubble")) {
+        node.style.overflow = "visible";
+        node.style.maxHeight = "none";
+        node.style.height = "auto";
+      }
+    });
+    await page.screenshot({
+      path: "/opt/cursor/artifacts/screenshots/chat_ar_390_diagram_gantt_table.png",
+      fullPage: true,
+    });
+  }
 });
 
 test("copy keeps a table and a chart image on the clipboard", async ({ page, context }, info) => {
@@ -129,14 +155,23 @@ test("copy keeps a table and a chart image on the clipboard", async ({ page, con
   expect(rich).toContain("<table");
   expect(rich).toContain('dir="ltr"');
 
+  await page.evaluate(async () => {
+    try {
+      await navigator.clipboard.writeText("");
+    } catch {
+      /* the next poll waits for the Arabic payload */
+    }
+  });
   await openFixture(page, "ar");
   await page.locator(".msg-actions").getByRole("button", { name: "نسخ" }).click();
   const readArabic = readClip;
   let arabic = "";
   await expect.poll(async () => {
-    arabic = await readArabic();
+    const next = await readArabic();
+    if (!next.includes("<img") || !next.includes('dir="rtl"')) return "";
+    arabic = next;
     return arabic;
-  }).toContain("<img");
+  }).not.toBe("");
   expect(arabic).toContain('dir="rtl"');
   expect(arabic).toContain("<table");
 });

@@ -55,14 +55,9 @@ export default function LandingView() {
               ask(draft);
             }}
           >
-            <button
-              className="hero-plus"
-              type="button"
-              aria-label={shell.chat.addAttachments}
-              onClick={() => router.push("/chat")}
-            >
+            <Link className="hero-plus" href="/chat" aria-label={shell.chat.addAttachments}>
               <ComposerPlus />
-            </button>
+            </Link>
             <textarea
               className="hero-composer-input"
               rows={1}

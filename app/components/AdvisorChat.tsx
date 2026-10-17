@@ -25,6 +25,7 @@ import {
   isArabicText,
   nativeShareHtml,
   printHtml,
+  publishShare,
   saveHtml,
   setLocalCount,
   shareToWhatsApp,
@@ -605,7 +606,10 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                       <button
                         type="button"
                         className="msg-action-btn"
-                        onClick={() => shareToWhatsApp(message.content)}
+                        onClick={async () => {
+                          const url = await publishShare({ title: topic, markdown: message.content, locale });
+                          shareToWhatsApp(message.content, url || undefined);
+                        }}
                       >
                         WhatsApp
                       </button>

@@ -1,5 +1,6 @@
 import { downloadName } from "@/lib/exportName";
 import { buildShareHtml } from "@/lib/shareDocument";
+import { toWhatsApp } from "@/lib/whatsappText";
 
 export function isArabicText(text: string) {
   return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text);
@@ -121,7 +122,7 @@ export async function nativeShareHtml(aiText: string, title = "Report", locale?:
       }
       await navigator.share({
         title,
-        text: aiText.slice(0, 4000),
+        text: toWhatsApp(aiText).slice(0, 3500),
       });
       return true;
     }
@@ -131,8 +132,8 @@ export async function nativeShareHtml(aiText: string, title = "Report", locale?:
   return false;
 }
 
-export function shareToWhatsApp(text: string) {
-  const payload = text.slice(0, 8000);
+export function shareToWhatsApp(markdown: string, link?: string) {
+  const payload = toWhatsApp(markdown, link).slice(0, 3500);
   const wa = `https://wa.me/?text=${encodeURIComponent(payload)}`;
   window.open(wa, "_blank", "noopener,noreferrer");
 }

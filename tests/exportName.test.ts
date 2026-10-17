@@ -3,6 +3,7 @@ import test from "node:test";
 import { contentDisposition, coverSubtitle, downloadName, shortTopic } from "../lib/exportName";
 import { asciiToMermaid, parseMessage, topicFrom } from "../lib/messageDocument";
 import { buildShareHtml } from "../lib/shareDocument";
+import { toWhatsApp } from "../lib/whatsappText";
 
 const urea = `The production of technical grade urea by SABIC involves several key processes.
 
@@ -80,4 +81,15 @@ test("html export renders the urea note instead of a markdown dump", () => {
   assert.doesNotMatch(html, /<pre>[^<]*###/);
   assert.doesNotMatch(html, /Ammonia Plant\s+\|/);
   assert.equal(html.includes("```"), false);
+});
+
+test("whatsapp share drops markdown fences and keeps the link", () => {
+  const text = toWhatsApp(urea, "https://engineerit.ai/s/urea");
+  assert.match(text, /\*Simplified Urea Production Process Diagram\*/);
+  assert.match(text, /• Ammonia is produced using the Haber process\./);
+  assert.match(text, /Ammonia Plant \(Hydrogen & N2\) → Urea Reactor \(CO2 \+ Ammonia\) → Finished Urea Storage/);
+  assert.match(text, /https:\/\/engineerit\.ai\/s\/urea/);
+  assert.equal(text.includes("###"), false);
+  assert.equal(text.includes("```"), false);
+  assert.equal(text.includes("**"), false);
 });

@@ -82,7 +82,7 @@ export async function clipboardPayload(root: HTMLElement, plain: string): Promis
   const copied = [...clone.querySelectorAll("svg")];
   for (let i = 0; i < live.length; i++) {
     try {
-      const png = await svgElementToPng(live[i] as SVGSVGElement, 2);
+      const png = await svgElementToPng(live[i] as SVGSVGElement, 1.25);
       const img = document.createElement("img");
       img.src = png;
       img.alt = live[i].closest("figure")?.querySelector("figcaption")?.textContent || "chart";
