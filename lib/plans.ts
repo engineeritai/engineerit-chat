@@ -303,7 +303,7 @@ export const PLANS: Plan[] = [
       "Everything in Consultant Engineer",
       `${TEAM_INCLUDED_SEATS} seats included`,
       `Extra seat ${formatSar(EXTRA_SEAT_SAR.month, "month")}`,
-      "Renews automatically until you cancel",
+      "Paid through Moyasar for the period you choose",
       "Invite colleagues by email",
       "Access ends for the whole team if the subscription lapses",
     ],
@@ -320,7 +320,7 @@ export const PLANS: Plan[] = [
       "Everything in Consultant Engineer",
       `${ENTERPRISE_INCLUDED_SEATS} seats included`,
       `Extra seat ${formatSar(ENTERPRISE_EXTRA_SEAT_SAR.month, "month")}`,
-      "Renews automatically until you cancel",
+      "Paid through Moyasar for the period you choose",
     ],
   },
 ];
