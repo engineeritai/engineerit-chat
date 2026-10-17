@@ -1,0 +1,97 @@
+apply plugin: 'com.android.application'
+
+def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+if (keystorePath != null) {
+    keystorePath = keystorePath.trim()
+}
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+// Release signing is applied only when a keystore is actually available.
+// GitHub Actions sets ANDROID_KEYSTORE_PATH after decoding ANDROID_KEYSTORE_BASE64.
+// An empty secret must stay unsigned so bundleRelease still emits an AAB.
+def releaseStoreFile = null
+def releaseStorePassword = null
+def releaseKeyAlias = null
+def releaseKeyPassword = null
+if (keystorePath) {
+    releaseStoreFile = keystorePath
+    releaseStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+    releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+    releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+} else if (keystorePropertiesFile.exists() && keystoreProperties.getProperty("storeFile")) {
+    releaseStoreFile = keystoreProperties.getProperty("storeFile")
+    releaseStorePassword = keystoreProperties.getProperty("storePassword")
+    releaseKeyAlias = keystoreProperties.getProperty("keyAlias")
+    releaseKeyPassword = keystoreProperties.getProperty("keyPassword")
+}
+
+android {
+    namespace = "ai.engineerit.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "ai.engineerit.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    if (releaseStoreFile) {
+        signingConfigs {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (releaseStoreFile) {
+                signingConfig signingConfigs.release
+            }
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    implementation "androidx.browser:browser:1.8.0"
+    implementation "androidx.webkit:webkit:$androidxWebkitVersion"
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

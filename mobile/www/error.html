@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Can’t reach engineerit.ai</title>
+    <link rel="stylesheet" href="css/shell.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <img class="logo" src="img/logo.png" alt="engineerit.ai" />
+      <h1 id="title">Can’t reach engineerit.ai</h1>
+      <p id="body">The connection failed or the service did not respond. Check the network and try again.</p>
+      <p class="ar" id="body-ar" lang="ar">تعذر الوصول إلى engineerit.ai. تحقق من الشبكة ثم أعد المحاولة.</p>
+      <button type="button" id="retry">Try again</button>
+    </main>
+    <script>
+      if (navigator.onLine === false) {
+        document.getElementById("title").textContent = "You’re offline";
+        document.getElementById("body").textContent =
+          "engineerit AI needs a connection to open your account and engineering chats.";
+        document.getElementById("body-ar").textContent =
+          "لا يوجد اتصال بالإنترنت. يحتاج التطبيق إلى شبكة لفتح حسابك والمحادثات الهندسية.";
+      }
+      document.getElementById("retry").addEventListener("click", function () {
+        window.location.replace("https://engineerit.ai/");
+      });
+    </script>
+  </body>
+</html>
