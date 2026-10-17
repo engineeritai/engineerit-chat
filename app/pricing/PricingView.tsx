@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import AdvisorPricingNote from "@/app/components/AdvisorPricingNote";
+import { InstallTrigger } from "@/app/components/InstallApp";
 import PricingBoard from "@/app/components/marketing/PricingBoard";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { getMarketingContent } from "@/lib/marketing";
@@ -23,6 +24,7 @@ function PricingBody() {
         </p>
       ) : null}
       <p className="mkt-lead">{content.pricing.intro}</p>
+      <InstallTrigger variant="pricing" />
       <PricingBoard />
       <AdvisorPricingNote />
     </div>

@@ -409,6 +409,19 @@ export type ShellCopy = {
     downloadLead: string;
     downloadButton: string;
   };
+  install: {
+    menu: string;
+    bannerTitle: string;
+    bannerBody: string;
+    install: string;
+    notNow: string;
+    close: string;
+    share: string;
+    iosSafari: string;
+    iosOther: string;
+    browserMenu: string;
+    pricingLine: string;
+  };
 };
 
 const en: ShellCopy = {
@@ -842,6 +855,19 @@ const en: ShellCopy = {
     downloadLead: "Download the terms of use in the language you are reading.",
     downloadButton: "Download terms of use",
   },
+  install: {
+    menu: "Install app",
+    bannerTitle: "Install the app",
+    bannerBody: "Add engineer it to your home screen.",
+    install: "Install",
+    notNow: "Not now",
+    close: "Close",
+    share: "Share",
+    iosSafari: "Tap {share}, then Add to Home Screen.",
+    iosOther: "Open this page in Safari, then tap {share} and Add to Home Screen.",
+    browserMenu: "Open the browser menu and choose Install app or Add to Home screen.",
+    pricingLine: "Install the app",
+  },
 };
 
 const ar: ShellCopy = {
@@ -1269,6 +1295,19 @@ const ar: ShellCopy = {
     downloadTitle: "تنزيل الشروط الكاملة",
     downloadLead: "نزّل شروط الاستخدام باللغة التي تقرأ بها.",
     downloadButton: "تنزيل شروط الاستخدام",
+  },
+  install: {
+    menu: "تثبيت التطبيق",
+    bannerTitle: "ثبّت التطبيق",
+    bannerBody: "أضف engineer it إلى شاشتك الرئيسية.",
+    install: "تثبيت",
+    notNow: "ليس الآن",
+    close: "إغلاق",
+    share: "مشاركة",
+    iosSafari: "اضغط {share}، ثم «إضافة إلى الشاشة الرئيسية».",
+    iosOther: "افتح الصفحة في Safari، ثم اضغط {share} ثم «إضافة إلى الشاشة الرئيسية».",
+    browserMenu: "افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».",
+    pricingLine: "ثبّت التطبيق",
   },
 };
 

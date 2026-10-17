@@ -6,6 +6,7 @@ import { useLocale } from "@/app/components/LocaleProvider";
 import { AccountState } from "@/app/components/marketing/AccountState";
 import AppSidebar from "@/app/components/marketing/AppSidebar";
 import MarketingFooter from "@/app/components/marketing/MarketingFooter";
+import InstallApp from "@/app/components/InstallApp";
 import MarketingHeader from "@/app/components/marketing/MarketingHeader";
 import MobileTabBar from "@/app/components/MobileTabBar";
 
@@ -25,6 +26,7 @@ function ShellFrame({ children }: { children: ReactNode }) {
       {chat ? null : <AppSidebar open={drawer} onClose={() => setDrawer(false)} />}
       <div className="mkt-column">
         <MarketingHeader onMenu={() => setDrawer(true)} />
+        <InstallApp />
         <main className="mkt-main">{children}</main>
         {app ? null : <MarketingFooter />}
       </div>
