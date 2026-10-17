@@ -38,4 +38,12 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# Android upload key and build output. The keystore lives outside the repo.
+android/.gradle/
+android/build/
+android/app/build/
+android/keystore.properties
+*.keystore
+*.jks
 next-env.d.ts

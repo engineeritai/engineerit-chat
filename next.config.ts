@@ -55,8 +55,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/.well-known/:path*",
+        source: "/.well-known/apple-developer-merchantid-domain-association",
         headers: [{ key: "Content-Type", value: "text/plain" }],
+      },
+      {
+        source: "/.well-known/assetlinks.json",
+        headers: [{ key: "Content-Type", value: "application/json" }],
       },
     ];
   },
@@ -66,6 +70,7 @@ const nextConfig: NextConfig = {
       { source: "/registration", destination: "/register", statusCode: 301 },
       { source: "/subscription", destination: "/pricing", statusCode: 301 },
       { source: "/enterprise", destination: "/pricing", statusCode: 301 },
+      { source: "/privacy", destination: "/legal/privacy", statusCode: 301 },
     ];
   },
   async rewrites() {
