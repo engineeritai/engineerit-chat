@@ -7,6 +7,7 @@ export type GanttTask = {
   milestone: boolean;
   critical: boolean;
   progress: number;
+  dependsOn?: string;
 };
 
 export type GanttModel = {
@@ -187,6 +188,7 @@ export function parseGantt(source: string, today: string): GanttModel | null {
       milestone,
       critical: draft.critical,
       progress: milestone ? 100 : draft.progress,
+      dependsOn: draft.after || undefined,
     });
   });
   if (!tasks.length) return null;

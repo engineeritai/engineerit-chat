@@ -20,7 +20,7 @@ import MarketingShell from "../components/marketing/MarketingShell";
 import ComposerPlus from "../components/ComposerPlus";
 import EitMark from "../components/marketing/EitMark";
 import { DaySeparator, MessageTime, useMessageTimeZone } from "../components/MessageTime";
-import { hydroReplyAr, hydroReplyEn, stageGateReplyAr, stageGateReplyEn } from "@/lib/diagramReply";
+import { ensureGanttMarkdown, hydroReplyAr, hydroReplyEn, stageGateReplyAr, stageGateReplyEn } from "@/lib/diagramReply";
 import { formatDaySeparator, isoOnDay } from "@/lib/messageTime";
 import { applyComposerHeight, resetComposerHeight } from "@/lib/fitComposer";
 import { localPlanPreview } from "../components/marketing/AccountState";
@@ -442,7 +442,7 @@ export default function Page() {
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     const kind = new URLSearchParams(window.location.search).get("fixture");
-    const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar"]);
+    const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar"]);
     if (!kind || !kinds.has(kind)) return;
     const scurveEn = `Based on the provided weekly progress data, here's how the S-Curve would look:\n\n## Weekly Progress Data\n\n| Week | Cumulative Progress (%) |\n| --- | --- |\n| Wk1 | 10% |\n| Wk2 | 25% |\n| Wk3 | 67% |\n| Wk4 | 89% |\n| Wk5 | 100% |\n\n## S-Curve Chart\n\nThe curve starts slowly, accelerates in week 3, and reaches 100% in week 5.`;
     const scurveAr = `بناءً على نسب التقدم الأسبوعية، هذا منحنى التقدم:\n\n## بيانات التقدم\n\n| الأسبوع | التقدم التراكمي |\n| --- | --- |\n| أسبوع 1 | 10٪ |\n| أسبوع 2 | 25٪ |\n| أسبوع 3 | 67٪ |\n| أسبوع 4 | 89٪ |\n| أسبوع 5 | 100٪ |\n\n## منحنى التقدم\n\nيبدأ المنحنى ببطء، يتسارع في الأسبوع 3، ويصل إلى 100٪ في الأسبوع 5.`;
@@ -482,8 +482,14 @@ export default function Page() {
       ]);
       return;
     }
+    const shutdownEn = `Here is the shutdown plan.\n\n## Preparation:\n\n## Shutdown:\n\n## Post-Shutdown:`;
+    const shutdownAr = `هذه خطة الإيقاف.\n\n## التحضير:\n\n## الإيقاف:\n\n## ما بعد الإيقاف:`;
     const content =
-      kind === "flow-en"
+      kind === "gantt-en"
+        ? ensureGanttMarkdown(shutdownEn, "make Gantt chart for plant shutdown", "2026-10-16")
+        : kind === "gantt-ar"
+          ? ensureGanttMarkdown(shutdownAr, "اعمل مخطط جانت لإيقاف المحطة", "2026-10-16")
+        : kind === "flow-en"
         ? hydroReplyEn
         : kind === "flow-ar"
           ? hydroReplyAr

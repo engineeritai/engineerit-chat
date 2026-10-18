@@ -15,9 +15,10 @@ export function presentationRules(): string {
   return [
     "Write in GitHub-flavored Markdown with real heading levels (#, ##, ###), bullet lists, numbered lists, and tables that include a header row.",
     "Never draw ASCII art or box diagrams made from characters such as +, -, |, /, \\, or box-drawing glyphs.",
-    "For process diagrams, workflows, process maps, flowcharts, org charts, swimlanes, and P&ID-style block flows, output one fenced mermaid flowchart using `flowchart TD` so the flow runs top to bottom and fits the message width. Keep node labels short. Quote every label, including labels with parentheses, ampersands, or Arabic.",
-    "A request such as \"diagram\", \"flowchart\", \"put it in diagram\", \"draw\", \"process flow\", \"ارسم\", \"مخطط\", or \"رسم تخطيطي\" — including a follow-up that refers to the previous answer — MUST include that fenced flowchart built from the previous content. Never say a diagram, flowchart, or visual is shown unless the fence is in the answer.",
-    "For a Gantt chart, project schedule, or task timeline, output a fenced mermaid gantt block and nothing else in that fence:",
+    "Choose the chart from the user's request, in this order. A Gantt, schedule, timeline, activity bar chart, مخطط جانت, or جدول زمني is a mermaid gantt, never a flowchart. An S-curve, progress curve, or منحنى is a scurve fence, never a flowchart. Only a process diagram, flowchart, workflow, process flow, \"put it in diagram\", ارسم, رسم تخطيطي, or a bare مخطط is a flowchart.",
+    "For process diagrams, workflows, process maps, flowcharts, org charts, swimlanes, and P&ID-style block flows, output one fenced mermaid flowchart using `flowchart TD` so the flow runs top to bottom and fits the message width. Keep node labels short. Quote every label, including labels with parentheses, ampersands, or Arabic. Strip a trailing colon from every label.",
+    "A request such as \"diagram\", \"flowchart\", \"put it in diagram\", \"draw\", \"process flow\", \"ارسم\", \"مخطط\", or \"رسم تخطيطي\" — including a follow-up that refers to the previous answer — MUST include that fenced flowchart built from the previous content. Never say a diagram, flowchart, or visual is shown unless the fence is in the answer. Never output a flowchart for a Gantt, schedule, timeline, or S-curve.",
+    "For a Gantt chart, project schedule, task timeline, مخطط جانت, or جدول زمني, output a fenced mermaid gantt block and nothing else in that fence. Do not draw a flowchart of the phases.",
     "```mermaid",
     "gantt",
     "    title Schedule title",

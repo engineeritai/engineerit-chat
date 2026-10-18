@@ -29,6 +29,7 @@ export default function ScheduleFigure({
     return () => media.removeEventListener("change", apply);
   }, []);
   useLayoutEffect(() => {
+    if (model.kind !== "scurve") return;
     const frame = frameRef.current;
     if (!frame) return;
     const apply = () => {
@@ -40,7 +41,7 @@ export default function ScheduleFigure({
     const observer = new ResizeObserver(apply);
     observer.observe(frame);
     return () => observer.disconnect();
-  }, []);
+  }, [model.kind]);
   const svg = renderChartSvg(model, dir, theme, model.kind === "scurve" ? width : undefined).replace(/<\?xml[^?]*\?>/, "");
   const filename = model.title.replace(/[^\w\u0600-\u06FF.-]+/g, "-").slice(0, 40) || "chart";
 

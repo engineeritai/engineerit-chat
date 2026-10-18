@@ -7,14 +7,17 @@ import {
   claimsDiagram,
   diagramRetryNeeded,
   ensureDiagramMarkdown,
+  ensureReplyCharts,
   hasRenderableFlow,
   hydroReplyEn,
+  requestedCharts,
   sanitizeFlowchart,
   stageGateReplyAr,
   stageGateReplyEn,
 } from "../lib/diagramReply";
 import { flowSvg } from "../lib/flowSvg";
 import { parseMessage } from "../lib/messageDocument";
+import { renderChartSvg } from "../lib/scheduleSvg";
 
 const prior = `## Project stage-gate workflow
 
@@ -31,6 +34,13 @@ describe("diagram replies", () => {
       assert.equal(asksForDiagram(phrase), true, phrase);
     }
     assert.equal(asksForDiagram("Show the weekly S-curve"), false);
+    assert.equal(asksForDiagram("make Gantt chart for plant shutdown"), false);
+    assert.equal(asksForDiagram("اعمل مخطط جانت لإيقاف المحطة"), false);
+    assert.equal(asksForDiagram("جدول زمني لإيقاف المصنع"), false);
+    assert.equal(requestedCharts("make Gantt chart for plant shutdown").gantt, true);
+    assert.equal(requestedCharts("make s-curve").scurve, true);
+    assert.equal(requestedCharts("make s-curve").flowchart, false);
+    assert.equal(requestedCharts("Put it in diagram").flowchart, true);
   });
 
   it("turns the stage-gate follow-up into a top-down flowchart", () => {
@@ -154,11 +164,90 @@ describe("diagram replies", () => {
   it("tells the model to emit flowchart TD and not to claim a missing diagram", () => {
     const rules = assistantRules({ locale: "en" });
     assert.match(rules, /flowchart TD/);
+    assert.match(rules, /Never output a flowchart for a Gantt/);
     assert.match(rules, /put it in diagram/);
     assert.match(rules, /ارسم/);
     assert.match(rules, /رسم تخطيطي/);
     assert.match(rules, /Never say a diagram/);
+    assert.match(rules, /Never output a flowchart for a Gantt/);
     assert.match(readFileSync("app/api/chat/route.ts", "utf8"), /diagramRetryNeeded/);
+    assert.match(readFileSync("app/api/chat/route.ts", "utf8"), /hasRenderableGantt/);
     assert.match(readFileSync("app/design.css", "utf8"), /\.diagram-frame svg[\s\S]*min-width:\s*0/);
+  });
+
+  it("turns a plant-shutdown flowchart into a Gantt and keeps 13px type", () => {
+    const reply = [
+      "Here is the shutdown plan.",
+      "",
+      "## Preparation:",
+      "",
+      "## Shutdown:",
+      "",
+      "## Post-Shutdown:",
+      "",
+      "```mermaid",
+      "flowchart TD",
+      '  A["Preparation:"] --> B["Shutdown:"]',
+      '  B --> C["Post-Shutdown:"]',
+      "```",
+    ].join("\n");
+    const fixed = ensureReplyCharts(reply, "make Gantt chart for plant shutdown");
+    assert.match(fixed, /gantt/);
+    assert.doesNotMatch(fixed, /flowchart/);
+    const gantt = fixed.match(/```mermaid\n([\s\S]*?)```/)?.[1] || "";
+    assert.match(gantt, /Preparation :t1/);
+    assert.doesNotMatch(gantt, /Preparation:/);
+    assert.equal(diagramRetryNeeded(reply, "make Gantt chart for plant shutdown"), false);
+    const blocks = parseMessage(fixed);
+    assert.equal(blocks.some((block) => block.type === "diagram"), false);
+    const chart = blocks.find((block) => block.type === "chart");
+    assert.ok(chart && chart.type === "chart" && chart.model.kind === "gantt");
+    if (chart?.type !== "chart" || chart.model.kind !== "gantt") return;
+    assert.deepEqual(chart.model.tasks.map((task) => task.name), ["Preparation", "Shutdown", "Post-Shutdown"]);
+    assert.equal(chart.model.tasks[1].dependsOn, "t1");
+    assert.equal(chart.model.tasks[1].critical, true);
+    const svg = renderChartSvg(chart.model, "ltr", "dark");
+    assert.match(svg, /data-chart="gantt"/);
+    assert.match(svg, /data-kind="today"/);
+    assert.match(svg, /data-kind="dependency"/);
+    assert.match(svg, /font-size="13"/);
+    assert.doesNotMatch(svg, /font-size="(?:1[4-9]|[2-9]\d)"/);
+    assert.match(svg, /#0b1220/);
+    const fallback = flowSvg(sanitizeFlowchart('flowchart TD\n  A["Preparation:"] --> B["Shutdown:"]') || "", "ltr");
+    assert.match(fallback || "", /font-size="13"/);
+    assert.match(fallback || "", /data-font="13"/);
+    assert.doesNotMatch(fallback || "", /Preparation:/);
+    assert.doesNotMatch(fallback || "", /width:100%/);
+  });
+
+  it("turns an Arabic shutdown flowchart into a right-to-left Gantt", () => {
+    const reply = "## التحضير:\n\n## الإيقاف:\n\n## ما بعد الإيقاف:";
+    const fixed = ensureReplyCharts(reply, "اعمل مخطط جانت لإيقاف المحطة");
+    assert.match(fixed, /gantt/);
+    assert.doesNotMatch(fixed, /flowchart/);
+    assert.match(fixed, /إيقاف المحطة/);
+    const blocks = parseMessage(fixed);
+    const chart = blocks.find((block) => block.type === "chart");
+    assert.ok(chart && chart.type === "chart" && chart.model.kind === "gantt");
+    if (chart?.type !== "chart" || chart.model.kind !== "gantt") return;
+    const svg = renderChartSvg(chart.model, "rtl", "dark");
+    assert.match(svg, /direction="rtl"/);
+    assert.match(svg, /data-kind="today"/);
+    const xOf = (id: string) => Number(new RegExp(`data-id="${id}"[^>]*\\sx="([\\d.]+)"`).exec(svg)?.[1]);
+    assert.ok(xOf("t1") > xOf("t2"));
+  });
+
+  it("does not turn an S-curve or a table into a flowchart", () => {
+    const curve = ensureReplyCharts("## Preparation:\n\n## Shutdown:", "make s-curve");
+    assert.match(curve, /```scurve/);
+    assert.doesNotMatch(curve, /flowchart/);
+    assert.equal(parseMessage(curve).some((block) => block.type === "diagram"), false);
+    assert.equal(parseMessage(curve).some((block) => block.type === "chart" && block.model.kind === "scurve"), true);
+    const table = "| Item | Status |\n| --- | --- |\n| Pump | On order |\n| Motor | Approved |";
+    assert.equal(ensureReplyCharts(table, "Show the comparison table"), table);
+    assert.equal(parseMessage(table).some((block) => block.type === "diagram"), false);
+    const diagram = ensureReplyCharts(stageGateReplyEn, "Put it in diagram");
+    assert.match(diagram, /flowchart TD/);
+    assert.doesNotMatch(diagram, /\ngantt/);
   });
 });
