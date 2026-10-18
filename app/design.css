@@ -935,8 +935,8 @@ html[dir="rtl"] .message-assistant .message-bubble {
 
 .diagram-frame svg {
   display: block;
-  width: 100%;
-  max-width: 100%;
+  width: auto;
+  max-width: none;
   height: auto;
   min-width: 0;
   margin-inline: auto;
@@ -1834,11 +1834,17 @@ svg {
   }
 
   .message-bubble .chat-table-scroll td,
-  .message-bubble .chat-table-pin th,
-  .message-bubble .schedule-scroll,
-  .message-bubble .schedule-figure,
-  .message-bubble .schedule-figure figcaption {
+  .message-bubble .chat-table-pin th {
     color: #111418;
+  }
+
+  .message-bubble .schedule-scroll {
+    background: #0b1220;
+    border-color: #334155;
+  }
+
+  .message-bubble .schedule-figure figcaption {
+    color: #e8edf5;
   }
 
   .diagram-frame,

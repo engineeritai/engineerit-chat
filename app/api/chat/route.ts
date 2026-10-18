@@ -4,7 +4,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { gateAdvisor } from "@/lib/advisorGate";
 import { assistantRules } from "@/lib/assistantRules";
-import { asksForDiagram, diagramRetryNeeded, ensureDiagramMarkdown, hasRenderableFlow, mermaidFence, sanitizeFlowchart } from "@/lib/diagramReply";
+import {
+  diagramRetryNeeded,
+  ensureReplyCharts,
+  hasRenderableFlow,
+  hasRenderableGantt,
+  hasRenderableScurve,
+  mermaidFence,
+  requestedCharts,
+  sanitizeFlowchart,
+} from "@/lib/diagramReply";
 import { appendSources, sourcesFromResponse, type SearchResponse } from "@/lib/citations";
 import { replyLanguageRule, uiLocale } from "@/lib/replyLanguage";
 
@@ -219,34 +228,47 @@ async function finishDiagramReply(
     .filter((message) => message.role === "assistant")
     .map((message) => message.content)
     .join("\n\n");
+  const ask = requestedCharts(userText);
   let next = reply;
-  if (diagramRetryNeeded(next, userText)) {
+  const wrongGantt = ask.gantt && !hasRenderableGantt(next);
+  const wrongCurve = ask.scurve && !ask.flowchart && !hasRenderableScurve(next);
+  const wrongFlow = !ask.gantt && diagramRetryNeeded(next, userText);
+  if (wrongGantt || wrongCurve || wrongFlow) {
+    const instruction = wrongGantt
+      ? locale === "ar"
+        ? "استبدل أي مخطط انسيابي بمخطط جانت mermaid واحد فيه مهام ومدد واعتماد after ومحور تاريخ وخط today. لا تُخرج flowchart."
+        : "Replace any flowchart with one mermaid gantt. Include tasks, durations, after dependencies, dateFormat YYYY-MM-DD, and a today line. Do not output a flowchart."
+      : wrongCurve
+        ? locale === "ar"
+          ? "أضف سياج scurve الآن. لا تُخرج flowchart."
+          : "Include a fenced scurve block now. Do not output a flowchart."
+        : locale === "ar"
+          ? "أضف الآن مخطط mermaid بسياج flowchart TD مبنيًا من الجواب السابق. لا تكتفِ بوصف المخطط."
+          : "Include the fenced mermaid flowchart TD now, built from the previous answer. Do not only describe the diagram.";
     try {
       const retry = await client.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: `${systemPrompt}\n\nThe user asked for a diagram. Reply with a fenced mermaid flowchart TD built from the conversation. Quote every label. Do not say a diagram is shown unless that fence is in the answer.`,
+            content: `${systemPrompt}\n\n${instruction}`,
           },
           ...messages.map((message) => ({ role: message.role, content: message.content })),
           { role: "assistant", content: next },
-          {
-            role: "user",
-            content:
-              locale === "ar"
-                ? "أضف الآن مخطط mermaid بسياج flowchart TD مبنيًا من الجواب السابق. لا تكتفِ بوصف المخطط."
-                : "Include the fenced mermaid flowchart TD now, built from the previous answer. Do not only describe the diagram.",
-          },
+          { role: "user", content: instruction },
         ],
       });
       const retried = retry.choices[0]?.message?.content || "";
-      const fence = mermaidFence(retried);
-      const clean = fence ? sanitizeFlowchart(fence.source) : null;
-      if (clean && !hasRenderableFlow(next)) next = `${next.trim()}\n\n\`\`\`mermaid\n${clean}\n\`\`\`\n`;
+      if (wrongGantt && hasRenderableGantt(retried)) next = retried;
+      else if (wrongCurve && hasRenderableScurve(retried)) next = retried;
+      else if (wrongFlow) {
+        const fence = mermaidFence(retried);
+        const clean = fence ? sanitizeFlowchart(fence.source) : null;
+        if (clean && !hasRenderableFlow(next)) next = `${next.trim()}\n\n\`\`\`mermaid\n${clean}\n\`\`\`\n`;
+      }
     } catch (err) {
       console.error("diagram retry failed", err);
     }
   }
-  return ensureDiagramMarkdown(next, `${prior}\n${userText}`, asksForDiagram(userText));
+  return ensureReplyCharts(next, userText, prior);
 }

@@ -3619,6 +3619,13 @@ button.advisor-card-link {
   min-width: 0;
 }
 
+.schedule-scroll svg[data-chart="gantt"] {
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  height: auto;
+}
+
 .share-page {
   min-height: 100vh;
   background: #f5f7fb;

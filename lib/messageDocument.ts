@@ -1,4 +1,4 @@
-import { claimsDiagram, sanitizeFlowchart, stepsFromMarkdown, flowchartFromSteps } from "@/lib/diagramReply";
+import { claimsDiagram, requestedCharts, sanitizeFlowchart, stepsFromMarkdown, flowchartFromSteps } from "@/lib/diagramReply";
 import { coverSubtitle, pickTopicSource, shortTopic } from "@/lib/exportName";
 import { riyadhIsoDate } from "@/lib/ksaTime";
 import { scurveFromTable } from "@/lib/scurveFromTable";
@@ -256,6 +256,9 @@ function withDiagramFallback(blocks: Block[], markdown: string): Block[] {
   });
   if (next.some((block) => block.type === "diagram")) return next;
   if (!claimsDiagram(markdown)) return next;
+  const ask = requestedCharts(markdown);
+  if (ask.gantt || (ask.scurve && !ask.flowchart)) return next;
+  if (next.some((block) => block.type === "chart" && (block.model.kind === "gantt" || block.model.kind === "scurve"))) return next;
   const steps = stepsFromMarkdown(markdown);
   if (steps.length < 2) return next;
   next.push({ type: "diagram", source: flowchartFromSteps(steps), index: chartIndex });

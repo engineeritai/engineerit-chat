@@ -20,7 +20,6 @@ function fitSvg(svg: SVGSVGElement, frame: HTMLElement) {
       height = rawHeight;
     }
   }
-  svg.setAttribute("width", "100%");
   svg.removeAttribute("height");
   svg.style.display = "block";
   svg.style.height = "auto";
@@ -31,20 +30,12 @@ function fitSvg(svg: SVGSVGElement, frame: HTMLElement) {
     svg.style.minWidth = "0";
     return;
   }
-  const readable = Math.ceil(width * (12 / 14));
-  if (readable > frame.clientWidth + 1) {
-    if (!svg.dataset.compact) {
-      svg.dataset.overflow = "1";
-    }
-    svg.style.width = `${Math.ceil(width)}px`;
-    svg.style.maxWidth = "none";
-    svg.style.minWidth = `${Math.ceil(width)}px`;
-    return;
-  }
-  svg.style.width = "100%";
-  svg.style.maxWidth = `${Math.ceil(width)}px`;
-  svg.style.minWidth = "0";
-  if (height && width / Math.max(frame.clientWidth, 1) < 0.98) svg.style.maxWidth = `${Math.ceil(width)}px`;
+  const natural = Math.ceil(width);
+  svg.setAttribute("width", String(natural));
+  svg.style.width = `${natural}px`;
+  svg.style.maxWidth = "none";
+  svg.style.minWidth = `${natural}px`;
+  if (natural > frame.clientWidth + 1 && !svg.dataset.compact) svg.dataset.overflow = "1";
 }
 
 export default function MermaidFigure({

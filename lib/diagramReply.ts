@@ -1,13 +1,32 @@
 /** Detect diagram requests, repair mermaid flowcharts, and never leave a claimed diagram blank. */
 
-const ASK =
-  /(?:\b(?:diagram|flowchart|flow\s*chart|process\s*flow|draw)\b|put it in diagram|ارسم|رسم تخطيطي|مخطط)/i;
+import { riyadhIsoDate } from "@/lib/ksaTime";
+import { parseGantt } from "@/lib/scheduleModel";
+
+const GANTT_ASK =
+  /gantt|gannt|مخطط\s*جانت|جدول\s*زمني|\btimeline\b|\bschedule\b|bar\s*chart\s+(?:for|of)\s+activit/i;
+
+const SCURVE_ASK = /s-?\s*curve|scurve|منحنى|progress\s+curve|cumulative\s+progress/i;
+
+const FLOW_ASK =
+  /(?:\b(?:diagram|flowchart|flow\s*chart|process\s*flow|workflow|draw)\b|put it in diagram|ارسم|رسم تخطيطي|مخطط)/i;
 
 const CLAIM =
   /(?:\b(?:diagram|flowchart|flow\s*chart|visual representation)\b|flowchart format|رسم تخطيطي|مخطط انسيابي|مخطط سير|هذا المخطط|المخطط التالي)/i;
 
+export type ChartRequest = { gantt: boolean; scurve: boolean; flowchart: boolean };
+
+/** Gantt and S-curve win over a flowchart. A bare مخطط is a flowchart; مخطط جانت is a Gantt. */
+export function requestedCharts(text: string): ChartRequest {
+  const source = text || "";
+  const gantt = GANTT_ASK.test(source);
+  const scurve = SCURVE_ASK.test(source);
+  const flowchart = FLOW_ASK.test(source) && !gantt;
+  return { gantt, scurve, flowchart };
+}
+
 export function asksForDiagram(text: string): boolean {
-  return ASK.test(text || "");
+  return requestedCharts(text).flowchart;
 }
 
 export function claimsDiagram(text: string): boolean {
@@ -27,6 +46,7 @@ function escapeLabel(label: string): string {
     .replace(/[<>]/g, "")
     .replace(/\s+/g, " ")
     .trim()
+    .replace(/[:：]\s*$/u, "")
     .slice(0, 80);
 }
 
@@ -141,7 +161,9 @@ export function stepsFromMarkdown(markdown: string): string[] {
     if (!item) continue;
     const text = plain(item[1]);
     if (text.length < 2) continue;
-    steps.push(text.length > 72 ? `${text.slice(0, 71)}…` : text);
+    const clean = escapeLabel(text);
+    if (clean.length < 2) continue;
+    steps.push(clean.length > 72 ? `${clean.slice(0, 71)}…` : clean);
     if (steps.length >= 10) return steps;
   }
   if (steps.length >= 2) return steps;
@@ -151,7 +173,9 @@ export function stepsFromMarkdown(markdown: string): string[] {
     if (!heading) continue;
     const text = plain(heading[1]);
     if (!text || claimsDiagram(text)) continue;
-    heads.push(text.length > 72 ? `${text.slice(0, 71)}…` : text);
+    const clean = escapeLabel(text);
+    if (clean.length < 2 || claimsDiagram(clean)) continue;
+    heads.push(clean.length > 72 ? `${clean.slice(0, 71)}…` : clean);
   }
   return heads.length >= 2 ? heads.slice(0, 10) : steps;
 }
@@ -195,11 +219,95 @@ function replaceFence(text: string, fence: { start: number; end: number }, sourc
   return `${text.slice(0, fence.start)}\`\`\`mermaid\n${source}\n\`\`\`${text.slice(fence.end)}`;
 }
 
+function stripFlowFences(text: string): string {
+  return text.replace(/```mermaid\s*\n[\s\S]*?```/gi, (block) => (/flowchart|\bgraph\b/i.test(block) ? "" : block)).trim();
+}
+
+function addIsoDays(iso: string, days: number): string {
+  const [year, month, day] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(year || 1970, (month || 1) - 1, (day || 1) + days));
+  return date.toISOString().slice(0, 10);
+}
+
+function ganttTitle(userText: string): string {
+  const arabic = /[\u0600-\u06FF]/.test(userText);
+  if (/shutdown|إيقاف|اغلاق|إغلاق|توقف/i.test(userText)) return arabic ? "إيقاف المحطة" : "Plant shutdown";
+  return arabic ? "الجدول الزمني" : "Schedule";
+}
+
+function defaultGanttSteps(userText: string): string[] {
+  if (/[\u0600-\u06FF]/.test(userText)) return ["التحضير", "الإيقاف", "ما بعد الإيقاف"];
+  return ["Preparation", "Shutdown", "Post-shutdown"];
+}
+
+/** Tasks, durations, and finish-to-start links. The first bar starts on today. */
+export function ganttFromSteps(steps: string[], userText: string, today = riyadhIsoDate()): string {
+  const names = (steps.length >= 2 ? steps : defaultGanttSteps(userText)).map((step) => escapeLabel(step)).filter((step) => step.length >= 2).slice(0, 8);
+  const title = ganttTitle(userText);
+  const lines = ["gantt", `    title ${title}`, "    dateFormat YYYY-MM-DD", `    today ${today}`];
+  names.forEach((name, index) => {
+    const id = `t${index + 1}`;
+    const days = 4 + (index % 3);
+    const critical = /^(shutdown|الإيقاف)$/i.test(name) ? "crit, " : "";
+    if (index === 0) lines.push(`    ${name} :${critical}${id}, ${today}, ${days}d`);
+    else lines.push(`    ${name} :${critical}${id}, after t${index}, ${days}d`);
+  });
+  return lines.join("\n");
+}
+
+export function hasRenderableGantt(text: string): boolean {
+  const fence = mermaidFence(text);
+  return Boolean(fence && parseGantt(fence.source, riyadhIsoDate()));
+}
+
+export function ensureGanttMarkdown(markdown: string, userText: string, today = riyadhIsoDate()): string {
+  const kept = stripFlowFences(markdown || "");
+  if (hasRenderableGantt(kept)) return kept;
+  const names = stepsFromMarkdown(kept);
+  const source = ganttFromSteps(names, userText, today);
+  return `${kept.trim()}\n\n\`\`\`mermaid\n${source}\n\`\`\`\n`;
+}
+
+export function hasRenderableScurve(text: string): boolean {
+  return /```scurve\b/i.test(text || "");
+}
+
+export function ensureScurveMarkdown(markdown: string, userText: string): string {
+  const keepFlow = requestedCharts(userText).flowchart;
+  let text = markdown || "";
+  if (!keepFlow) text = stripFlowFences(text);
+  if (hasRenderableScurve(text)) return text;
+  const names = stepsFromMarkdown(text).map((step) => escapeLabel(step)).filter((step) => step.length >= 2).slice(0, 6);
+  const labels = names.length >= 2 ? names : ["Start", "Wk1", "Wk2", "Wk3", "Wk4"];
+  const lines = ["title S-curve", ...labels.map((label, index) => {
+    const planned = Math.round((index / Math.max(labels.length - 1, 1)) * 100);
+    return `${label} | ${planned} | `;
+  })];
+  return `${text.trim()}\n\n\`\`\`scurve\n${lines.join("\n")}\n\`\`\`\n`;
+}
+
+/**
+ * Apply the requested chart and refuse a flowchart when the user asked for a Gantt or an S-curve.
+ */
+export function ensureReplyCharts(markdown: string, userText: string, prior = ""): string {
+  const ask = requestedCharts(userText);
+  let next = markdown || "";
+  if (ask.gantt) next = ensureGanttMarkdown(next, userText);
+  else if (ask.flowchart) next = ensureDiagramMarkdown(next, `${prior}\n${userText}`, true);
+  else next = ensureDiagramMarkdown(next, prior, false);
+  if (ask.scurve) next = ensureScurveMarkdown(next, userText);
+  return next;
+}
+
 /**
  * Keep a valid flowchart, repair a broken one, or append a top-down flowchart
  * when the user asked for a diagram or the reply claims one.
+ * A Gantt or S-curve request never receives this flowchart.
  */
 export function ensureDiagramMarkdown(markdown: string, context = "", force = false): string {
+  const ask = requestedCharts(context);
+  if (ask.gantt && !ask.flowchart) return ensureGanttMarkdown(markdown, context);
+  if (ask.scurve && !ask.flowchart && !force) return ensureScurveMarkdown(markdown, context);
   const text = markdown || "";
   const fence = mermaidFence(text);
   if (fence && /flowchart|\bgraph\b/i.test(fence.source)) {

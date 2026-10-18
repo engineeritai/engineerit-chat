@@ -49,9 +49,26 @@ export default function CheckoutPage() {
   const [phoneOpen, setPhoneOpen] = useState(phonePayStartsOpen);
   const [payToken, setPayToken] = useState("");
   const [copied, setCopied] = useState(false);
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
+    if (process.env.NODE_ENV !== "production" && search.get("fixture") === "preview") {
+      const desktop = window.matchMedia("(min-width: 900px)").matches;
+      setPreview(true);
+      setShowPhonePay(desktop);
+      setPhonePayUrl("https://engineerit.ai/checkout/preview");
+      setCheckout({
+        id: params.id,
+        plan: "consultant",
+        billing_interval: "month",
+        amount_sar: 99,
+        amount_halalas: 9900,
+        seat_limit: null,
+        status: "pending",
+      });
+      return;
+    }
     const pay = search.get("pay") || "";
     const desktop = window.matchMedia("(min-width: 900px)").matches;
     setPayToken(pay);
@@ -246,7 +263,11 @@ export default function CheckoutPage() {
                       <a href="mailto:info@engineerit.ai">info@engineerit.ai</a>
                     </li>
                   </ul>
-                  {publishableKey && callbackUrl ? (
+                  {preview ? (
+                    <div className="checkout-preview" data-testid="checkout-preview">
+                      <p>{s.checkout.summary}</p>
+                    </div>
+                  ) : publishableKey && callbackUrl ? (
                     <MoyasarCardForm
                       amountHalalas={Number(checkout.amount_halalas)}
                       description={`engineerit.ai ${label}`}
