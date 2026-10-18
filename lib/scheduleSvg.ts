@@ -112,7 +112,7 @@ function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme): string {
   const headerH = GANTT_HEADER;
   const rowH = GANTT_ROW;
   const height = headerH + rows.length * rowH;
-  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg data-chart="gantt" style="width:${width}px;max-width:none;height:${height}px" `)];
+  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg data-chart="gantt" data-font="12" style="width:${width}px;max-width:none;height:${height}px" `)];
   parts.push(`<defs><marker id="gantt-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="${colors.muted}"/></marker></defs>`);
 
   let cursor = min;
@@ -298,7 +298,7 @@ function scurveSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme, pixelWid
     const t = points.length === 1 ? 0.5 : index / (points.length - 1);
     return rtl ? padL + plotW - t * plotW : padL + t * plotW;
   };
-  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg data-chart="scurve" data-plot-bottom="${bottom}" `)];
+  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg data-chart="scurve" data-font="12" data-plot-bottom="${bottom}" `)];
   for (const tick of [0, 20, 40, 60, 80, 100]) {
     const y = yOf(tick);
     parts.push(`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${padL + plotW}" y2="${y.toFixed(1)}" stroke="${colors.grid}"/>`);

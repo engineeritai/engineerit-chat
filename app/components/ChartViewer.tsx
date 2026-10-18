@@ -19,6 +19,7 @@ export default function ChartViewer({ open, dir, closeLabel, title, sourceRef, o
   const canvasRef = useRef<HTMLDivElement>(null);
   const [html, setHtml] = useState("");
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
+  const [hint, setHint] = useState(false);
   const viewRef = useRef(view);
   viewRef.current = view;
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -37,20 +38,61 @@ export default function ChartViewer({ open, dir, closeLabel, title, sourceRef, o
   }, [open, sourceRef]);
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open || !html) return;
     const stage = stageRef.current;
     const canvas = canvasRef.current;
-    if (!stage || !canvas || !html) return;
-    const svg = canvas.querySelector("svg");
-    const font = Number(svg?.querySelector("text")?.getAttribute("font-size") || svg?.getAttribute("data-font") || 13);
-    const attrW = Number(svg?.getAttribute("width") || 0);
-    const attrH = Number(svg?.getAttribute("height") || svg?.viewBox?.baseVal?.height || 0);
-    const next = viewerScale(
-      { w: Math.max(canvas.scrollWidth, attrW), h: Math.max(canvas.scrollHeight, attrH), font },
-      { w: stage.clientWidth, h: stage.clientHeight },
-      dir === "rtl"
-    );
-    setView(next);
+    if (!stage || !canvas) return;
+    const fit = () => {
+      const svg = canvas.querySelector("svg");
+      const attrW = Number(svg?.getAttribute("width") || svg?.viewBox?.baseVal?.width || 0);
+      const attrH = Number(svg?.getAttribute("height") || svg?.viewBox?.baseVal?.height || 0);
+      if (svg && attrW > 0) svg.style.setProperty("width", `${attrW}px`, "important");
+      if (svg && attrH > 0) svg.style.setProperty("height", `${attrH}px`, "important");
+      const declared = Number(svg?.getAttribute("data-font") || 0);
+      const sizes = [...(svg?.querySelectorAll("text") || [])]
+        .map((node) => Number(node.getAttribute("font-size")))
+        .filter((size) => size > 0);
+      const font = declared || (sizes.length ? Math.min(...sizes) : 13);
+      if (stage.clientWidth < 2 || stage.clientHeight < 2) return;
+      const previous = canvas.style.transform;
+      canvas.style.transform = "none";
+      const base = canvas.getBoundingClientRect();
+      let minX = 0;
+      let minY = 0;
+      let maxX = base.width;
+      let maxY = base.height;
+      for (const node of canvas.querySelectorAll("svg text, .gantt-name, .gantt-legend li")) {
+        const rect = node.getBoundingClientRect();
+        if (rect.width < 1 || rect.height < 1) continue;
+        minX = Math.min(minX, rect.left - base.left);
+        minY = Math.min(minY, rect.top - base.top);
+        maxX = Math.max(maxX, rect.right - base.left);
+        maxY = Math.max(maxY, rect.bottom - base.top);
+      }
+      canvas.style.transform = previous;
+      const pad = 4;
+      minX -= pad;
+      minY -= pad;
+      maxX += pad;
+      maxY += pad;
+      const next = viewerScale(
+        { w: Math.max(1, maxX - minX), h: Math.max(1, maxY - minY), font },
+        { w: stage.clientWidth, h: stage.clientHeight },
+        dir === "rtl"
+      );
+      const placed = {
+        scale: next.scale,
+        x: next.x - minX * next.scale,
+        y: next.y - minY * next.scale,
+      };
+      viewRef.current = placed;
+      setView(placed);
+      setHint(next.panX && stage.clientHeight > stage.clientWidth);
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(stage);
+    return () => observer.disconnect();
   }, [open, html, dir]);
 
   useEffect(() => {
@@ -90,8 +132,13 @@ export default function ChartViewer({ open, dir, closeLabel, title, sourceRef, o
       viewRef.current = next;
       setView(next);
     };
+    const blockTouch = (event: TouchEvent) => event.preventDefault();
     stage.addEventListener("wheel", onWheel, { passive: false });
-    return () => stage.removeEventListener("wheel", onWheel);
+    stage.addEventListener("touchmove", blockTouch, { passive: false });
+    return () => {
+      stage.removeEventListener("wheel", onWheel);
+      stage.removeEventListener("touchmove", blockTouch);
+    };
   }, [open, html]);
 
   if (!open || typeof document === "undefined") return null;
@@ -173,6 +220,11 @@ export default function ChartViewer({ open, dir, closeLabel, title, sourceRef, o
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </div>
+      {hint ? (
+        <p className="chart-viewer-hint" role="status">
+          {dir === "rtl" ? "أدر الشاشة عرضياً لرؤية المخطط كاملاً" : "Turn sideways for a wider view"}
+        </p>
+      ) : null}
       <button type="button" className="chart-viewer-close" aria-label={closeLabel} onClick={onClose}>
         <span aria-hidden="true">×</span>
       </button>

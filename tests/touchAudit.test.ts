@@ -20,16 +20,35 @@ test("iOS and Xiaomi save through the share sheet, other browsers download", () 
   assert.equal(unreliableDownload(samsung), false);
 });
 
-test("viewer fits the stage height and never starts below 12px text", () => {
+test("viewer keeps chart text near 14px and never upscales past 2x", () => {
   const wide = viewerScale({ w: 1168, h: 84, font: 13 }, { w: 390, h: 700 }, false);
-  assert.ok(Math.abs(wide.scale - 700 / 84) < 0.001);
+  assert.ok(Math.abs(wide.scale - 14 / 13) < 0.001);
+  assert.ok(wide.scale <= 2);
+  assert.ok(wide.scale * 13 >= 12 && wide.scale * 13 <= 16);
   assert.equal(wide.x, 0);
-  const floor = viewerScale({ w: 2000, h: 4000, font: 13 }, { w: 390, h: 700 }, false);
-  assert.ok(Math.abs(floor.scale - 12 / 13) < 0.001);
-  assert.equal(floor.x, 0);
-  const rtl = viewerScale({ w: 2000, h: 4000, font: 13 }, { w: 390, h: 700 }, true);
+  assert.equal(wide.panX, true);
+  assert.ok(wide.y > 0);
+  assert.ok(84 * wide.scale < 700);
+
+  const rtl = viewerScale({ w: 1168, h: 84, font: 13 }, { w: 390, h: 700 }, true);
+  assert.ok(Math.abs(rtl.x - (390 - 1168 * rtl.scale)) < 0.01);
   assert.ok(rtl.x < 0);
-  assert.ok(rtl.scale * 13 >= 12);
+  assert.equal(rtl.panX, true);
+
+  const landscape = viewerScale({ w: 1168, h: 84, font: 13 }, { w: 844, h: 320 }, false);
+  assert.ok(Math.abs(landscape.scale - 14 / 13) < 0.001);
+  assert.equal(landscape.x, 0);
+  assert.ok(landscape.y > 0);
+
+  const contained = viewerScale({ w: 400, h: 200, font: 13 }, { w: 1440, h: 800 }, false);
+  assert.ok(Math.abs(contained.scale - 16 / 13) < 0.001);
+  assert.ok(contained.scale <= 2);
+  assert.equal(contained.panX, false);
+  assert.ok(Math.abs(contained.x - (1440 - 400 * contained.scale) / 2) < 0.01);
+  assert.ok(contained.y > 0);
+
+  const tinyFont = viewerScale({ w: 100, h: 40, font: 4 }, { w: 1440, h: 800 }, false);
+  assert.ok(Math.abs(tinyFont.scale - 2) < 0.001);
 });
 
 test("touch styles keep pinch zoom and block pull-to-refresh", () => {
