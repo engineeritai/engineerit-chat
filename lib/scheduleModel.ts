@@ -333,6 +333,9 @@ export function parseSeries(kind: SeriesModel["kind"], source: string): SeriesMo
     });
   }
   if (points.length < 2) return null;
+  if (kind === "scurve" && !points.some((point, index) => index > 0 && point.actual != null)) {
+    for (const point of points) point.actual = null;
+  }
   const names = kind === "pie" || points.every((point) => point.actual == null) ? [title] : ["Planned", "Actual"];
   return { kind, title, points, seriesNames: names };
 }

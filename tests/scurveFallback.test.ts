@@ -86,6 +86,19 @@ describe("s-curve fallback", () => {
     assert.match(rtl, /متأخر عن المخطط|التقدم/);
   });
 
+  it("draws the fenced scurve the live model returned", () => {
+    const blocks = parseMessage("```scurve\ntitle S-curve\nStart | 0 | 0\nWk1 | 10 | \nWk2 | 25 | \nWk3 | 67 | \nWk4 | 89 | \nWk5 | 100 | \n```");
+    const chart = blocks.find((block) => block.type === "chart");
+    assert.ok(chart && chart.type === "chart" && chart.model.kind === "scurve");
+    if (chart.type !== "chart") return;
+    assert.deepEqual(chart.model.points.map((point) => point.planned), [0, 10, 25, 67, 89, 100]);
+    assert.equal(chart.model.points.every((point) => point.actual == null), true);
+    const svg = renderChartSvg(chart.model, "ltr");
+    assert.match(svg, /data-chart="scurve"/);
+    assert.match(svg, /data-kind="planned"/);
+    assert.match(svg, /data-kind="increment"/);
+  });
+
   it("leaves an ordinary table as a table", () => {
     const blocks = parseMessage("| Item | Cost |\n| --- | --- |\n| Pump | 40 bar |\n| Motor | 400 kW |");
     assert.equal(blocks.some((block) => block.type === "chart"), false);
