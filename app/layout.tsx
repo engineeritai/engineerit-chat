@@ -75,10 +75,7 @@ export async function generateMetadata(): Promise<Metadata> {
         { url: "/favicon.ico" },
       ],
       shortcut: "/favicon.png",
-      apple: [
-        { url: "/apple-touch-icon.png", media: "(prefers-color-scheme: light)" },
-        { url: "/apple-touch-icon-dark.png", media: "(prefers-color-scheme: dark)" },
-      ],
+      apple: [{ url: "/apple-touch-icon-eit.png", sizes: "180x180", type: "image/png" }],
     },
     appleWebApp: {
       capable: true,
@@ -103,6 +100,7 @@ export default async function RootLayout({
   return (
     <html lang={locale === "ar" ? "ar" : "en"} dir={locale === "ar" ? "rtl" : "ltr"}>
       <head>
+        <meta name="application-name" content="engineer it" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="engineer it" />
@@ -111,8 +109,7 @@ export default async function RootLayout({
         <link rel="icon" href="/favicon.png" type="image/png" media="(prefers-color-scheme: light)" />
         <link rel="icon" href="/favicon-dark.svg" type="image/svg+xml" media="(prefers-color-scheme: dark)" />
         <link rel="icon" href="/favicon-dark.png" type="image/png" media="(prefers-color-scheme: dark)" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon-dark.png" media="(prefers-color-scheme: dark)" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon-eit.png" sizes="180x180" />
         <script
           type="text/javascript"
           id="hs-script-loader"

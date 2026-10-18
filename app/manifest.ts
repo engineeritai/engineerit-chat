@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/?source=android",
     name: "engineer it",
-    short_name: "eit",
+    short_name: "engineer it",
     description: "Structured engineering answers, tools, and advisors.",
     start_url: "/?source=android",
     scope: "/",
@@ -14,8 +14,8 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "en",
     dir: "auto",
     icons: [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-eit-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icon-eit-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       { src: "/icon-192-maskable.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
       { src: "/icon-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
