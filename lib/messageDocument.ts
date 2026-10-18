@@ -172,7 +172,7 @@ export function parseMessage(markdown: string, today = riyadhIsoDate()): Block[]
         index += 1;
         continue;
       }
-      if (isAsciiArt(source)) {
+      if (lang !== "mermaid" && isAsciiArt(source)) {
         const mermaid = asciiToMermaid(source, "ltr");
         if (mermaid) {
           blocks.push({ type: "diagram", source: mermaid, index });

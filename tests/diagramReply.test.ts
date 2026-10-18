@@ -87,6 +87,39 @@ describe("diagram replies", () => {
     assert.equal(hasRenderableFlow(fixed), true);
   });
 
+  it("keeps a branched mermaid fence instead of dropping it as ascii art", () => {
+    const reply = [
+      "Here's a process diagram for a hydrocracker plant using mermaid syntax:",
+      "",
+      "```mermaid",
+      "flowchart TD",
+      '  A["Feed Preparation"]',
+      '  B["Hydrocracking Unit"]',
+      '  C["Separation"]',
+      '  D["Distillation"]',
+      '  E["Hydrogen Recovery"]',
+      '  F["Product Storage"]',
+      '  G["Recycled Hydrogen"]',
+      "  A --> B",
+      "  B --> C",
+      "  C --> D",
+      "  C --> E",
+      "  D --> F",
+      "  E --> G",
+      "  G --> A",
+      "```",
+      "",
+      "This diagram outlines the main steps.",
+    ].join("\n");
+    const blocks = parseMessage(reply);
+    const diagram = blocks.find((block) => block.type === "diagram");
+    assert.ok(diagram && diagram.type === "diagram");
+    if (diagram?.type === "diagram") {
+      assert.match(diagram.source, /Feed Preparation/);
+      assert.match(diagram.source, /Recycled Hydrogen/);
+    }
+  });
+
   it("leaves an ordinary answer unchanged", () => {
     const text = "The pump is API 610. Confirm the nozzle loads.";
     assert.equal(claimsDiagram(text), false);
