@@ -43,38 +43,42 @@ describe("diagram replies", () => {
     assert.equal(requestedCharts("Put it in diagram").flowchart, true);
   });
 
-  it("turns the stage-gate follow-up into a top-down flowchart", () => {
+  it("turns the stage-gate follow-up into a left-to-right flowchart", () => {
     assert.equal(diagramRetryNeeded(stageGateReplyEn, "Put it in diagram"), true);
     const repaired = ensureDiagramMarkdown(stageGateReplyEn, prior, true);
     assert.match(repaired, /```mermaid/);
-    assert.match(repaired, /flowchart TD/);
+    assert.match(repaired, /flowchart LR/);
+    assert.doesNotMatch(repaired, /flowchart TD/);
     assert.match(repaired, /Identify the opportunity/);
     assert.match(repaired, /Operate and close/);
     const blocks = parseMessage(stageGateReplyEn);
     const diagram = blocks.find((block) => block.type === "diagram");
     assert.ok(diagram && diagram.type === "diagram");
-    if (diagram?.type === "diagram") assert.match(diagram.source, /flowchart TD/);
+    if (diagram?.type === "diagram") assert.match(diagram.source, /flowchart LR/);
     const arabic = parseMessage(stageGateReplyAr);
     const arDiagram = arabic.find((block) => block.type === "diagram");
     assert.ok(arDiagram && arDiagram.type === "diagram");
     if (arDiagram?.type === "diagram") {
-      assert.match(arDiagram.source, /flowchart TD/);
+      assert.match(arDiagram.source, /flowchart LR/);
       assert.match(arDiagram.source, /تحديد الفرصة/);
     }
+    assert.match(sanitizeFlowchart('flowchart TD\n  A["One"] --> B["Two"]', "rtl") || "", /^flowchart RL/);
   });
 
   it("quotes parentheses and ampersands and stacks a long flow", () => {
     const fence = hydroReplyEn.match(/```mermaid\n([\s\S]*?)```/)?.[1] || "";
     const clean = sanitizeFlowchart(fence);
     assert.ok(clean);
-    assert.match(clean || "", /flowchart TD/);
+    assert.match(clean || "", /flowchart LR/);
+    assert.doesNotMatch(clean || "", /flowchart TD/);
     assert.match(clean || "", /Feed\["Feedstock \(Vacuum Gas Oil\)"\]/);
     assert.match(clean || "", /Separator\["HP Separator & Recycle"\]/);
+    assert.match(sanitizeFlowchart(fence, "rtl") || "", /flowchart RL/);
     assert.equal(hasRenderableFlow(ensureDiagramMarkdown(hydroReplyEn)), true);
     const blocks = parseMessage(hydroReplyEn);
     const diagram = blocks.find((block) => block.type === "diagram");
     assert.ok(diagram && diagram.type === "diagram");
-    if (diagram?.type === "diagram") assert.doesNotMatch(diagram.source, /flowchart LR/);
+    if (diagram?.type === "diagram") assert.match(diagram.source, /flowchart LR/);
   });
 
   it("still draws a flowchart when the model only returns an S-curve", () => {
@@ -82,7 +86,7 @@ describe("diagram replies", () => {
     const user = "Draw a process diagram of a hydrocracker plant. Then an S-curve.";
     const fixed = ensureDiagramMarkdown(reply, user, true);
     assert.match(fixed, /```scurve/);
-    assert.match(fixed, /flowchart TD/);
+    assert.match(fixed, /flowchart LR/);
     assert.match(fixed, /hydrocracker plant/);
     assert.equal(diagramRetryNeeded(reply, user), true);
     assert.equal(hasRenderableFlow(fixed), true);
@@ -93,7 +97,7 @@ describe("diagram replies", () => {
     const user = "ارسم مخطط عملية وحدة التكسير الهيدروجيني. ثم اعرض منحنى S كاتجاه.";
     const fixed = ensureDiagramMarkdown(reply, user, true);
     assert.match(fixed, /```scurve/);
-    assert.match(fixed, /flowchart TD/);
+    assert.match(fixed, /flowchart LR/);
     assert.match(fixed, /التكسير الهيدروجيني/);
     assert.equal(hasRenderableFlow(fixed), true);
   });
@@ -131,28 +135,33 @@ describe("diagram replies", () => {
     }
   });
 
-  it("draws both outputs of a branch beside each other", () => {
-    const svg = flowSvg(`flowchart TD
+  it("stacks both outputs of a branch in the next column", () => {
+    const source = `flowchart LR
   Sep["Product Separation"]
   Light["Light Products"]
   Heavy["Heavy Products"]
   Sep --> Light
-  Sep --> Heavy`, "ltr");
+  Sep --> Heavy`;
+    const svg = flowSvg(source, "ltr");
     assert.ok(svg);
     assert.match(svg || "", /data-edge="Sep-Light"/);
     assert.match(svg || "", /data-edge="Sep-Heavy"/);
-    const box = (id: string) => {
-      const match = svg?.match(new RegExp(`data-node="${id}" x="([\\d.]+)" y="([\\d.]+)"`));
+    assert.match(svg || "", /font-size="13"/);
+    assert.doesNotMatch(svg || "", /viewBox="0 0 272 /);
+    const box = (markup: string | null, id: string) => {
+      const match = markup?.match(new RegExp(`data-node="${id}" x="([\\d.]+)" y="([\\d.]+)"`));
       assert.ok(match, id);
       return { x: Number(match?.[1]), y: Number(match?.[2]) };
     };
-    const parent = box("Sep");
-    const light = box("Light");
-    const heavy = box("Heavy");
-    assert.equal(light.y, heavy.y);
-    assert.notEqual(light.x, heavy.x);
-    assert.ok(light.y > parent.y);
-    assert.match(svg || "", /viewBox="0 0 272 /);
+    const parent = box(svg, "Sep");
+    const light = box(svg, "Light");
+    const heavy = box(svg, "Heavy");
+    assert.equal(light.x, heavy.x);
+    assert.notEqual(light.y, heavy.y);
+    assert.ok(light.x > parent.x);
+    const rtl = flowSvg(source, "rtl");
+    assert.ok(box(rtl, "Light").x < box(rtl, "Sep").x);
+    assert.equal(box(rtl, "Light").x, box(rtl, "Heavy").x);
   });
 
   it("leaves an ordinary answer unchanged", () => {
@@ -161,9 +170,11 @@ describe("diagram replies", () => {
     assert.equal(ensureDiagramMarkdown(text), text);
   });
 
-  it("tells the model to emit flowchart TD and not to claim a missing diagram", () => {
+  it("tells the model to emit flowchart LR and not to claim a missing diagram", () => {
     const rules = assistantRules({ locale: "en" });
-    assert.match(rules, /flowchart TD/);
+    assert.match(rules, /flowchart LR/);
+    assert.match(rules, /flowchart RL/);
+    assert.doesNotMatch(rules, /flowchart TD/);
     assert.match(rules, /Never output a flowchart for a Gantt/);
     assert.match(rules, /put it in diagram/);
     assert.match(rules, /ارسم/);
@@ -175,7 +186,7 @@ describe("diagram replies", () => {
     assert.match(readFileSync("app/design.css", "utf8"), /\.diagram-frame svg[\s\S]*min-width:\s*0/);
   });
 
-  it("turns a plant-shutdown flowchart into a Gantt and keeps 13px type", () => {
+  it("turns a plant-shutdown flowchart into a Gantt and keeps 12px type", () => {
     const reply = [
       "Here is the shutdown plan.",
       "",
@@ -210,7 +221,11 @@ describe("diagram replies", () => {
     assert.match(svg, /data-chart="gantt"/);
     assert.match(svg, /data-kind="today"/);
     assert.match(svg, /data-kind="dependency"/);
-    assert.match(svg, /font-size="13"/);
+    assert.match(svg, /font-size="12"/);
+    assert.match(svg, /style="width:\d+px/);
+    assert.doesNotMatch(svg, />Preparation</);
+    const firstBar = Number(/data-id="t1"[^>]*\sx="([\d.]+)"/.exec(svg)?.[1]);
+    assert.ok(firstBar < 80, `first bar starts at ${firstBar}`);
     assert.doesNotMatch(svg, /font-size="(?:1[4-9]|[2-9]\d)"/);
     assert.match(svg, /#0b1220/);
     const fallback = flowSvg(sanitizeFlowchart('flowchart TD\n  A["Preparation:"] --> B["Shutdown:"]') || "", "ltr");
@@ -247,7 +262,7 @@ describe("diagram replies", () => {
     assert.equal(ensureReplyCharts(table, "Show the comparison table"), table);
     assert.equal(parseMessage(table).some((block) => block.type === "diagram"), false);
     const diagram = ensureReplyCharts(stageGateReplyEn, "Put it in diagram");
-    assert.match(diagram, /flowchart TD/);
+    assert.match(diagram, /flowchart LR/);
     assert.doesNotMatch(diagram, /\ngantt/);
   });
 });

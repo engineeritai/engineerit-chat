@@ -10,8 +10,8 @@ async function prepare(page: Page) {
   });
 }
 
-async function stable(page: Page, selector: string) {
-  const target = page.locator(selector).first();
+async function stable(page: Page, selector: string, which: "first" | "last" = "first") {
+  const target = which === "last" ? page.locator(selector).last() : page.locator(selector).first();
   await expect(target).toBeVisible({ timeout: 20_000 });
   let previous = "";
   for (let attempt = 0; attempt < 12; attempt += 1) {
@@ -38,25 +38,56 @@ test.beforeEach(async ({ page }) => {
 test("gantt, s-curve, diagram, and table stay in their own frames", async ({ page }, info) => {
   test.setTimeout(180_000);
   const shots: { name: string; path: string; target: string }[] = [
-    { name: "gantt-en.png", path: "/chat?lang=en&fixture=gantt-en&planPreview=consultant", target: "svg[data-chart='gantt']" },
-    { name: "gantt-ar.png", path: "/chat?lang=ar&fixture=gantt-ar&planPreview=consultant", target: "svg[data-chart='gantt']" },
+    { name: "gantt-en.png", path: "/chat?lang=en&fixture=gantt-en&planPreview=consultant", target: ".message-assistant .message-bubble" },
+    { name: "gantt-ar.png", path: "/chat?lang=ar&fixture=gantt-ar&planPreview=consultant", target: ".message-assistant .message-bubble" },
     { name: "scurve-en.png", path: "/chat?lang=en&fixture=scurve-en&planPreview=consultant", target: "svg[data-chart='scurve']" },
     { name: "diagram-en.png", path: "/chat?lang=en&fixture=gate-en&planPreview=consultant", target: ".diagram-frame" },
     { name: "table-en.png", path: "/chat?lang=en&fixture=en&planPreview=consultant", target: ".chat-table" },
   ];
   for (const shot of shots) {
     await openChat(page, shot.path);
-    const target = await stable(page, shot.target);
+    const target = await stable(page, shot.target, shot.name.startsWith("gantt") ? "last" : "first");
+    if (shot.name.startsWith("gantt")) {
+      const natural = await page.locator(".gantt-scroll svg").first().evaluate((el) => {
+        const name = el.closest(".gantt-board")?.querySelector(".gantt-name");
+        const port = el.closest(".gantt-scroll");
+        const bar = port?.querySelector("[data-kind='bar']");
+        const portBox = port?.getBoundingClientRect();
+        const barBox = bar?.getBoundingClientRect();
+        return {
+          attr: Number(el.getAttribute("width")),
+          box: el.getBoundingClientRect().width,
+          font: name ? getComputedStyle(name).fontSize : "",
+          barVisible: Boolean(portBox && barBox && barBox.right > portBox.left + 8 && barBox.left < portBox.right - 8),
+        };
+      });
+      expect(natural.font).toBe("12px");
+      expect(Math.abs(natural.box - natural.attr)).toBeLessThan(2);
+      expect(natural.barVisible).toBe(true);
+    }
+    if (shot.name.startsWith("diagram")) {
+      const drawn = await page.locator(".diagram-frame svg").first().evaluate((el) => ({
+        attr: Number(el.getAttribute("width")),
+        box: el.getBoundingClientRect().width,
+        nodes: Number(el.getAttribute("data-nodes") || "0"),
+      }));
+      if (drawn.nodes > 3) expect(Math.abs(drawn.box - drawn.attr)).toBeLessThan(2);
+    }
+    const pageBox = await page.evaluate(() => ({
+      client: document.documentElement.clientWidth,
+      scroll: document.documentElement.scrollWidth,
+    }));
+    expect(pageBox.scroll).toBeLessThanOrEqual(pageBox.client + 2);
     await target.evaluate((el) => el.scrollIntoView({ block: "center", inline: "nearest" }));
     await expect(target).toHaveScreenshot(shot.name);
   }
   if (info.project.name === "phone-390") {
     await openChat(page, "/chat?lang=en&fixture=gantt-en&planPreview=consultant");
-    const scroller = page.locator(".schedule-scroll").first();
-    await scroller.evaluate((el) => {
-      el.scrollLeft = 160;
+    const bubble = await stable(page, ".message-assistant .message-bubble", "last");
+    await page.locator(".gantt-scroll").first().evaluate((el) => {
+      el.scrollLeft += 140;
     });
-    await expect(scroller).toHaveScreenshot("gantt-en-scrolled.png");
+    await expect(bubble).toHaveScreenshot("gantt-en-scrolled.png");
   }
 });
 
@@ -66,7 +97,9 @@ test("gantt dark mode on a phone", async ({ page }, info) => {
   await openChat(page, "/chat?lang=en&fixture=gantt-en&planPreview=consultant");
   const chart = await stable(page, "svg[data-chart='gantt']");
   await expect(chart.locator("rect").first()).toHaveAttribute("fill", "#0b1220");
-  await expect(chart).toHaveScreenshot("gantt-en-dark.png");
+  await expect(page.locator(".gantt-swatch.is-task").first()).toBeVisible();
+  const bubble = await stable(page, ".message-assistant .message-bubble", "last");
+  await expect(bubble).toHaveScreenshot("gantt-en-dark.png");
   const pageBox = await page.evaluate(() => ({
     client: document.documentElement.clientWidth,
     scroll: document.documentElement.scrollWidth,

@@ -920,17 +920,55 @@ html[dir="rtl"] .message-assistant .message-bubble {
   margin: 12px auto;
 }
 
+.diagram-shell {
+  position: relative;
+  max-width: 100%;
+  min-width: 0;
+}
+
 .diagram-frame {
   max-width: 100%;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #fff;
   color: #111418;
+}
+
+.diagram-fade {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  width: 16px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.diagram-fade.is-start {
+  inset-inline-start: 0;
+  border-start-start-radius: 12px;
+  border-end-start-radius: 12px;
+  background: linear-gradient(to right, rgba(15, 23, 42, 0.14), transparent);
+}
+
+.diagram-fade.is-end {
+  inset-inline-end: 0;
+  border-start-end-radius: 12px;
+  border-end-end-radius: 12px;
+  background: linear-gradient(to left, rgba(15, 23, 42, 0.14), transparent);
+}
+
+html[dir="rtl"] .diagram-fade.is-start {
+  background: linear-gradient(to left, rgba(15, 23, 42, 0.14), transparent);
+}
+
+html[dir="rtl"] .diagram-fade.is-end {
+  background: linear-gradient(to right, rgba(15, 23, 42, 0.14), transparent);
 }
 
 .diagram-frame svg {
@@ -964,9 +1002,10 @@ html[dir="rtl"] .message-assistant .message-bubble {
 
 .diagram-lightbox-stage svg {
   display: block;
-  width: 100%;
-  height: auto;
-  max-width: 720px;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: auto !important;
   margin-inline: auto;
 }
 
@@ -1838,9 +1877,33 @@ svg {
     color: #111418;
   }
 
-  .message-bubble .schedule-scroll {
+  .message-bubble .schedule-scroll,
+  .message-bubble .gantt-board,
+  .message-bubble .gantt-names {
     background: #0b1220;
     border-color: #334155;
+    color: #e2e8f0;
+  }
+
+  .message-bubble .gantt-board-body,
+  .message-bubble .gantt-names {
+    border-color: #334155;
+  }
+
+  .message-bubble .gantt-name.is-group {
+    background: #1e293b;
+  }
+
+  .message-bubble .gantt-swatch.is-task {
+    background: #60a5fa;
+  }
+
+  .message-bubble .gantt-swatch.is-crit {
+    background: #fb923c;
+  }
+
+  .message-bubble .gantt-swatch.is-today {
+    border-inline-start-color: #e2e8f0;
   }
 
   .message-bubble .schedule-figure figcaption {

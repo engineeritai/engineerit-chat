@@ -99,8 +99,8 @@ function extractEdges(line: string): { from: string; to: string }[] {
   return edges;
 }
 
-/** Quote labels and run process flows top to bottom so they fit the message column. */
-export function sanitizeFlowchart(source: string): string | null {
+/** Quote labels and lay process flows out left to right (right to left in Arabic). */
+export function sanitizeFlowchart(source: string, dir: "ltr" | "rtl" = "ltr"): string | null {
   if (!/flowchart|\bgraph\b/i.test(source || "")) return null;
   const nodes = new Map<string, string>();
   const order: string[] = [];
@@ -126,7 +126,7 @@ export function sanitizeFlowchart(source: string): string | null {
     }
   }
   if (order.length < 2) return null;
-  const lines = ["flowchart TD"];
+  const lines = [dir === "rtl" ? "flowchart RL" : "flowchart LR"];
   for (const id of order) lines.push(`  ${id}["${nodes.get(id) || id}"]`);
   const seen = new Set<string>();
   for (const edge of edges) {
@@ -207,7 +207,7 @@ function topicSteps(text: string): string[] {
 }
 
 export function flowchartFromSteps(steps: string[]): string {
-  const lines = ["flowchart TD"];
+  const lines = ["flowchart LR"];
   steps.forEach((step, index) => {
     lines.push(`  n${index + 1}["${escapeLabel(step)}"]`);
   });
@@ -300,7 +300,7 @@ export function ensureReplyCharts(markdown: string, userText: string, prior = ""
 }
 
 /**
- * Keep a valid flowchart, repair a broken one, or append a top-down flowchart
+ * Keep a valid flowchart, repair a broken one, or append a left-to-right flowchart
  * when the user asked for a diagram or the reply claims one.
  * A Gantt or S-curve request never receives this flowchart.
  */
