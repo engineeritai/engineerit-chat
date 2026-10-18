@@ -9,6 +9,8 @@ import { formatDaySeparator } from "@/lib/messageTime";
 import { applyComposerHeight, resetComposerHeight } from "@/lib/fitComposer";
 import MessageMarkdown from "@/app/components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "@/app/components/copyRich";
+import { saveWasToasted } from "@/lib/saveFile";
+import { showToast } from "@/lib/toast";
 import { exportMeta } from "@/lib/messageDocument";
 import {
   exportCapabilities,
@@ -549,8 +551,8 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                         className="msg-action-btn"
                         onClick={async () => {
                           const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
-                          const ok = root ? await copyRichElement(root, message.content) : false;
-                          if (!ok) alert(s.chat.copyFailed);
+                          if (!root) showToast(s.chat.copyFailed, "err");
+                          else await copyRichElement(root, message.content);
                         }}
                       >
                         📋 Copy
@@ -561,7 +563,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                         onClick={async () => {
                           const { url, shared } = await publishAndShare({ title: topic, markdown: message.content, locale });
                           if (!url) {
-                            alert(s.chat.shareFailed);
+                            showToast(s.chat.shareFailed, "err");
                             return;
                           }
                           if (shared) return;
@@ -586,7 +588,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                               await exportPdf(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                             } catch (err) {
                               console.error(err);
-                              alert(s.chat.pdfFailed);
+                              if (!saveWasToasted(err)) showToast(s.chat.pdfFailed, "err");
                             }
                           }}
                         >
@@ -605,7 +607,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                                 await exportWordDocx(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                               } catch (err) {
                                 console.error(err);
-                                alert(s.chat.wordFailed);
+                                if (!saveWasToasted(err)) showToast(s.chat.wordFailed, "err");
                               }
                             }}
                           >
@@ -621,7 +623,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                                 await exportPptx(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                               } catch (err) {
                                 console.error(err);
-                                alert(s.chat.pptFailed);
+                                if (!saveWasToasted(err)) showToast(s.chat.pptFailed, "err");
                               }
                             }}
                           >
@@ -653,7 +655,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                         onClick={async () => {
                           const url = await publishShare({ title: topic, markdown: message.content, locale });
                           if (!url) {
-                            alert(s.chat.shareFailed);
+                            showToast(s.chat.shareFailed, "err");
                             return;
                           }
                           shareToWhatsApp(message.content, url);

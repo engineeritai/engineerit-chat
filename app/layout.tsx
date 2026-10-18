@@ -8,6 +8,8 @@ import { Analytics } from "@vercel/analytics/next";
 import { LocaleProvider } from "@/app/components/LocaleProvider";
 import Attribution from "@/app/components/Attribution";
 import KeyboardInset from "@/app/components/KeyboardInset";
+import ToastHost from "@/app/components/ToastHost";
+import TouchGuard from "@/app/components/TouchGuard";
 import PwaRegister from "@/app/components/PwaRegister";
 import { metaFor } from "@/lib/pageMeta";
 import { requestLocale } from "@/lib/requestLocale";
@@ -123,6 +125,8 @@ export default async function RootLayout({
       <body className={`${inter.variable} ${plexArabic.variable}`}>
         <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
         <KeyboardInset />
+        <ToastHost />
+        <TouchGuard />
         <PwaRegister />
         <Attribution />
         <Analytics />

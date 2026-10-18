@@ -125,3 +125,46 @@ test("home, pricing, advisors, and checkout", async ({ page }) => {
     }
   }
 });
+
+test("fullscreen chart viewer", async ({ page }, info) => {
+  test.setTimeout(180_000);
+  const shots = [
+    { name: "viewer-flow-en.png", path: "/chat?lang=en&fixture=gate-en&planPreview=consultant", dark: false },
+    { name: "viewer-gantt-en.png", path: "/chat?lang=en&fixture=gantt-en&planPreview=consultant", dark: false },
+    { name: "viewer-scurve-en.png", path: "/chat?lang=en&fixture=scurve-en&planPreview=consultant", dark: false },
+  ];
+  if (info.project.name === "phone-390") {
+    shots.push(
+      { name: "viewer-flow-en-dark.png", path: "/chat?lang=en&fixture=gate-en&planPreview=consultant", dark: true },
+      { name: "viewer-flow-ar.png", path: "/chat?lang=ar&fixture=gate-ar&planPreview=consultant", dark: false },
+      { name: "viewer-gantt-ar.png", path: "/chat?lang=ar&fixture=gantt-ar&planPreview=consultant", dark: false }
+    );
+  }
+  for (const shot of shots) {
+    if (shot.dark) await page.emulateMedia({ colorScheme: "dark" });
+    else await page.emulateMedia({ colorScheme: "light" });
+    await openChat(page, shot.path);
+    const tools = page.locator(".diagram-tools").first();
+    await expect(tools).toBeVisible();
+    const row = await tools.boundingBox();
+    expect(row && row.height).toBeLessThan(56);
+    const enlarge = tools.getByRole("button", { name: /Enlarge|تكبير/ });
+    await enlarge.click();
+    const viewer = page.locator(".chart-viewer");
+    await expect(viewer).toBeVisible();
+    const close = page.locator(".chart-viewer-close");
+    const box = await close.boundingBox();
+    expect(box && box.width).toBeGreaterThanOrEqual(44);
+    expect(box && box.height).toBeGreaterThanOrEqual(44);
+    const readable = await page.locator(".chart-viewer-canvas").evaluate((canvas) => {
+      const svg = canvas.querySelector("svg");
+      const scale = Number(/scale\(([^)]+)\)/.exec((canvas as HTMLElement).style.transform)?.[1] || "1");
+      const font = Number(svg?.getAttribute("data-font") || svg?.querySelector("text")?.getAttribute("font-size") || 13);
+      return scale * font;
+    });
+    expect(readable).toBeGreaterThanOrEqual(11.5);
+    await expect(viewer).toHaveScreenshot(shot.name);
+    await close.click();
+    await expect(viewer).toBeHidden();
+  }
+});

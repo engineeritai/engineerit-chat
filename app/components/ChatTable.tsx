@@ -1,9 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { bindVerticalPass } from "@/app/components/verticalPass";
 import { copyTable } from "@/app/components/copyRich";
 import { downloadName, shortTopic } from "@/lib/exportName";
 import { riyadhStamp } from "@/lib/ksaTime";
+import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
+import { showToast } from "@/lib/toast";
 
 type Labels = { copyTable: string; exportExcel: string };
 
@@ -50,48 +53,10 @@ export default function ChatTable({
     sync();
     const observer = new ResizeObserver(() => sync());
     observer.observe(scroll);
-    const onWheel = (event: WheelEvent) => {
-      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-      const scroller = scroll.closest(".conversation") as HTMLElement | null;
-      if (!scroller) return;
-      scroller.scrollTop += event.deltaY;
-      event.preventDefault();
-    };
-    let lastY = 0;
-    let startX = 0;
-    let startY = 0;
-    let axis: "x" | "y" | null = null;
-    const onStart = (event: TouchEvent) => {
-      startX = event.touches[0]?.clientX ?? 0;
-      startY = event.touches[0]?.clientY ?? 0;
-      lastY = startY;
-      axis = null;
-    };
-    const onMove = (event: TouchEvent) => {
-      const touch = event.touches[0];
-      if (!touch) return;
-      const dy = touch.clientY - lastY;
-      lastY = touch.clientY;
-      if (!axis) {
-        const dx = touch.clientX - startX;
-        const travelY = touch.clientY - startY;
-        if (Math.abs(dx) < 8 && Math.abs(travelY) < 8) return;
-        axis = Math.abs(travelY) >= Math.abs(dx) ? "y" : "x";
-      }
-      if (axis !== "y") return;
-      const scroller = scroll.closest(".conversation") as HTMLElement | null;
-      if (!scroller) return;
-      scroller.scrollTop -= dy;
-      event.preventDefault();
-    };
-    scroll.addEventListener("wheel", onWheel, { passive: false });
-    scroll.addEventListener("touchstart", onStart, { passive: true });
-    scroll.addEventListener("touchmove", onMove, { passive: false });
+    const unbind = bindVerticalPass(scroll);
     return () => {
       observer.disconnect();
-      scroll.removeEventListener("wheel", onWheel);
-      scroll.removeEventListener("touchstart", onStart);
-      scroll.removeEventListener("touchmove", onMove);
+      unbind();
     };
   }, [sync, headers, rows]);
 
@@ -109,14 +74,7 @@ export default function ChatTable({
     });
     if (!res.ok) throw new Error(await res.text());
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = downloadName(shortTopic(fileBase || headers[0], locale === "ar" ? "جدول" : "Table"), "xlsx");
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    await deliverBlob(blob, downloadName(shortTopic(fileBase || headers[0], locale === "ar" ? "جدول" : "Table"), "xlsx"));
   }
 
   return (
@@ -129,8 +87,9 @@ export default function ChatTable({
           type="button"
           className="msg-action-btn"
           onClick={() =>
-            void exportExcel().catch(() => {
-              /* the caller surfaces export failures on the message actions */
+            void exportExcel().catch((error) => {
+              if (saveWasToasted(error)) return;
+              showToast(locale === "ar" ? "تعذر تصدير الجدول" : "Couldn't export the table", "err");
             })
           }
         >

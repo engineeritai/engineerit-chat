@@ -11,6 +11,8 @@ import Link from "next/link";
 import MessageMarkdown from "../components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "../components/copyRich";
 import { publishAndShare, publishShare, shareToWhatsApp } from "@/lib/chatActions";
+import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
+import { showToast } from "@/lib/toast";
 import { toWhatsApp } from "@/lib/whatsappText";
 import { downloadName } from "@/lib/exportName";
 import { exportMeta } from "@/lib/messageDocument";
@@ -114,14 +116,9 @@ async function copyAsHtml(aiText: string, title = "Report", locale: "en" | "ar" 
 
 function saveHtml(aiText: string, title = "Report", locale: "en" | "ar" = "en") {
   const { blob } = htmlFileFromText(aiText, title, locale);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = downloadName(title, "html");
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  void deliverBlob(blob, downloadName(title, "html")).catch(() => {
+    /* deliverBlob already confirms or reports the failure */
+  });
 }
 
 /**
@@ -183,15 +180,7 @@ async function exportPdf(aiText: string, extra?: { title?: string; subtitle?: st
 
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = downloadName(extra?.title || "Report", "pdf");
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  await deliverBlob(blob, downloadName(extra?.title || "Report", "pdf"));
 }
 
 
@@ -203,15 +192,7 @@ async function exportWordDocx(aiText: string, extra?: { title?: string; subtitle
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = downloadName(extra?.title || "Report", "docx");
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  await deliverBlob(blob, downloadName(extra?.title || "Report", "docx"));
 }
 
 async function exportPptx(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
@@ -222,15 +203,7 @@ async function exportPptx(aiText: string, extra?: { title?: string; subtitle?: s
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = downloadName(extra?.title || "Report", "pptx");
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  await deliverBlob(blob, downloadName(extra?.title || "Report", "pptx"));
 }
 
 /* ============================
@@ -1093,8 +1066,8 @@ export default function Page() {
                                   className="msg-action-btn"
                                   onClick={async () => {
                                     const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
-                                    const ok = root ? await copyRichElement(root, m.content) : false;
-                                    if (!ok) alert(s.chat.copyFailed);
+                                    if (!root) showToast(s.chat.copyFailed, "err");
+                                    else await copyRichElement(root, m.content);
                                   }}
                                   aria-label={s.chat.copy}
                                   title={s.chat.copy}
@@ -1109,7 +1082,7 @@ export default function Page() {
                                     const title = topic;
                                     const { url, shared } = await publishAndShare({ title, markdown: m.content, locale });
                                     if (!url) {
-                                      alert(s.chat.shareFailed);
+                                      showToast(s.chat.shareFailed, "err");
                                       return;
                                     }
                                     if (shared) return;
@@ -1138,7 +1111,7 @@ export default function Page() {
                                         await exportPdf(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                       } catch (e) {
                                         console.error(e);
-                                        alert(s.chat.pdfFailed);
+                                        if (!saveWasToasted(e)) showToast(s.chat.pdfFailed, "err");
                                       }
                                     }}
                                     title={s.chat.exportPdf}
@@ -1160,7 +1133,7 @@ export default function Page() {
                                           await exportWordDocx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                         } catch (e) {
                                           console.error(e);
-                                          alert(s.chat.wordFailed);
+                                          if (!saveWasToasted(e)) showToast(s.chat.wordFailed, "err");
                                         }
                                       }}
                                       title={s.chat.exportWord}
@@ -1178,7 +1151,7 @@ export default function Page() {
                                           await exportPptx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                         } catch (e) {
                                           console.error(e);
-                                          alert(s.chat.pptFailed);
+                                          if (!saveWasToasted(e)) showToast(s.chat.pptFailed, "err");
                                         }
                                       }}
                                       title={s.chat.exportPpt}
@@ -1222,7 +1195,7 @@ export default function Page() {
                                   onClick={async () => {
                                     const url = await publishShare({ title: topic, markdown: m.content, locale });
                                     if (!url) {
-                                      alert(s.chat.shareFailed);
+                                      showToast(s.chat.shareFailed, "err");
                                       return;
                                     }
                                     shareToWhatsApp(m.content, url);

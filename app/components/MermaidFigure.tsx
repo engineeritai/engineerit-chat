@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { downloadSvgPng, downloadTextFile, svgElementToPng } from "@/app/components/copyRich";
+import ChartActions from "@/app/components/ChartActions";
+import ChartViewer from "@/app/components/ChartViewer";
+import { bindVerticalPass } from "@/app/components/verticalPass";
+import { svgElementToPng } from "@/app/components/copyRich";
 import { sanitizeFlowchart } from "@/lib/diagramReply";
 import { flowSvg } from "@/lib/flowSvg";
+import { copyImageBlob, dataUrlToBlob, deliverBlob } from "@/lib/saveFile";
 
 type Labels = { copy: string; png: string; svg: string; enlarge: string; close: string };
 
@@ -70,9 +74,7 @@ export default function MermaidFigure({
   const [compact, setCompact] = useState(false);
   const [fade, setFade] = useState(false);
   const [open, setOpen] = useState(false);
-  const [scale, setScale] = useState(1);
-  const pinch = useRef<{ dist: number; scale: number } | null>(null);
-  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const visualRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancel = false;
@@ -135,22 +137,14 @@ export default function MermaidFigure({
     fitSvg(svg, frame, shrink);
     setFade(frame.scrollWidth > frame.clientWidth + 1);
     if (!shrink && !compact && svg.dataset.overflow === "1") setCompact(true);
+    return bindVerticalPass(frame);
   }, [markup, compact, source]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
 
   if (!markup) return null;
   return (
     <figure className="schedule-figure mermaid-figure" data-diagram-index={index} dir={dir}>
       <div className="diagram-shell">
-        <div className="diagram-frame" ref={frameRef} dangerouslySetInnerHTML={{ __html: markup }} />
+        <div className="diagram-frame" ref={(node) => { frameRef.current = node; visualRef.current = node; }} dangerouslySetInnerHTML={{ __html: markup }} />
         {fade ? (
           <>
             <span className="diagram-fade is-start" aria-hidden="true" />
@@ -158,73 +152,22 @@ export default function MermaidFigure({
           </>
         ) : null}
       </div>
-      <div className="diagram-tools">
-        <button type="button" className="msg-action-btn" onClick={() => { setScale(1); setOpen(true); }}>
-          {labels.enlarge}
-        </button>
-        <button
-          type="button"
-          className="msg-action-btn"
-          onClick={async (event) => {
-            const node = event.currentTarget.closest("figure")?.querySelector("svg");
-            if (!node) return;
-            const png = await svgElementToPng(node, 3.125);
-            const blob = await (await fetch(png)).blob();
-            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-          }}
-        >
-          {labels.copy}
-        </button>
-        <button
-          type="button"
-          className="msg-action-btn"
-          onClick={(event) => {
-            const node = event.currentTarget.closest("figure")?.querySelector("svg");
-            if (node) void downloadSvgPng(node, "diagram.png");
-          }}
-        >
-          {labels.png}
-        </button>
-        <button type="button" className="msg-action-btn" onClick={() => downloadTextFile("diagram.svg", markup, "image/svg+xml")}>
-          {labels.svg}
-        </button>
-      </div>
-      {open ? (
-        <div className="diagram-lightbox" role="dialog" aria-modal="true" aria-label={labels.enlarge}>
-          <button type="button" className="diagram-lightbox-close" onClick={() => setOpen(false)}>
-            {labels.close}
-          </button>
-          <div
-            className="diagram-lightbox-stage"
-            onWheel={(event) => {
-              event.preventDefault();
-              setScale((current) => Math.min(4, Math.max(1, current * (event.deltaY < 0 ? 1.08 : 0.92))));
-            }}
-            onPointerDown={(event) => {
-              event.currentTarget.setPointerCapture(event.pointerId);
-              pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-              if (pointers.current.size === 2) {
-                const [a, b] = [...pointers.current.values()];
-                pinch.current = { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, scale };
-              }
-            }}
-            onPointerMove={(event) => {
-              if (!pointers.current.has(event.pointerId)) return;
-              pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-              if (pointers.current.size < 2 || !pinch.current) return;
-              const [a, b] = [...pointers.current.values()];
-              const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
-              setScale(Math.min(4, Math.max(1, pinch.current.scale * (dist / pinch.current.dist))));
-            }}
-            onPointerUp={(event) => {
-              pointers.current.delete(event.pointerId);
-              if (pointers.current.size < 2) pinch.current = null;
-            }}
-          >
-            <div style={{ width: "100%", transform: `scale(${scale})`, transformOrigin: "center top" }} dangerouslySetInnerHTML={{ __html: markup }} />
-          </div>
-        </div>
-      ) : null}
+      <ChartActions
+        labels={labels}
+        onEnlarge={() => setOpen(true)}
+        onCopy={() => {
+          const node = visualRef.current?.querySelector("svg");
+          if (!node) return;
+          void svgElementToPng(node, 3.125).then((png) => copyImageBlob(dataUrlToBlob(png), "diagram.png"));
+        }}
+        onPng={() => {
+          const node = visualRef.current?.querySelector("svg");
+          if (!node) return;
+          void svgElementToPng(node, 3.125).then((png) => deliverBlob(dataUrlToBlob(png), "diagram.png"));
+        }}
+        onSvg={() => void deliverBlob(new Blob([markup], { type: "image/svg+xml" }), "diagram.svg")}
+      />
+      <ChartViewer open={open} dir={dir} closeLabel={labels.close} title={labels.enlarge} sourceRef={visualRef} onClose={() => setOpen(false)} />
     </figure>
   );
 }

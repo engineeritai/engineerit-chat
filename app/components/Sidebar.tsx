@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useRef, useState } from "react";
+import { useHistoryOverlay } from "@/app/components/useHistoryOverlay";
 import { InstallTrigger } from "@/app/components/InstallApp";
 import { PlanSummary } from "@/app/components/marketing/AccountMenu";
 import { useAccount } from "@/app/components/marketing/AccountState";
@@ -70,6 +71,7 @@ export default function Sidebar({
   const [pull, setPull] = useState(0);
   const pullStart = useRef<number | null>(null);
   const cancelEdit = React.useRef(false);
+  useHistoryOverlay(isMobileOpen, onCloseMobile);
   const visibleThreads = signedIn
     ? threads
     : threads.filter((thread) => thread.title.toLowerCase().includes(historyQuery.trim().toLowerCase()));

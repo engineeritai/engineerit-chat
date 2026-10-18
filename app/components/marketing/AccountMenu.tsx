@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useHistoryOverlay } from "@/app/components/useHistoryOverlay";
 import Link from "next/link";
 import LanguageToggle from "@/app/components/LanguageToggle";
 import { useAccount } from "@/app/components/marketing/AccountState";
@@ -146,6 +147,7 @@ export default function AccountMenu() {
   const { locale, shell: s } = useMessages();
   const account = useAccount();
   const [open, setOpen] = useState(false);
+  useHistoryOverlay(open, () => setOpen(false));
   const rootRef = useRef<HTMLDivElement | null>(null);
   const theme = PLAN_THEME[account.planId];
   const fullPlan = planById(locale, account.planId).name;

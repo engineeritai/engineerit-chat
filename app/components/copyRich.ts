@@ -1,5 +1,7 @@
 "use client";
 
+import { copyTextPayload, dataUrlToBlob, deliverBlob } from "@/lib/saveFile";
+
 function esc(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -101,19 +103,9 @@ export async function clipboardPayload(root: HTMLElement, plain: string): Promis
 export async function copyRichElement(root: HTMLElement, plain: string): Promise<boolean> {
   try {
     const payload = await clipboardPayload(root, plain);
-    if (navigator.clipboard && window.ClipboardItem) {
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          "text/html": new Blob([payload.html], { type: "text/html" }),
-          "text/plain": new Blob([payload.text], { type: "text/plain" }),
-        }),
-      ]);
-      return true;
-    }
-    await navigator.clipboard.writeText(payload.text);
-    return true;
+    return copyTextPayload(payload.html, payload.text);
   } catch {
-    return false;
+    return copyTextPayload("", plain);
   }
 }
 
@@ -135,25 +127,14 @@ export async function collectDiagramPngs(root: HTMLElement): Promise<{ index: nu
 }
 
 export function downloadTextFile(filename: string, contents: string, type: string) {
-  const blob = new Blob([contents], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  void deliverBlob(new Blob([contents], { type }), filename).catch(() => {
+    /* deliverBlob already confirms or reports the failure */
+  });
 }
 
 export async function downloadSvgPng(svg: SVGSVGElement, filename: string) {
   const png = await svgElementToPng(svg, 3.125);
-  const link = document.createElement("a");
-  link.href = png;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+  await deliverBlob(dataUrlToBlob(png), filename);
 }
 
 export function tableMatrix(table: HTMLTableElement): { headers: string[]; rows: string[][] } {
@@ -169,20 +150,5 @@ export async function copyTable(headers: string[], rows: string[][], dir: "ltr" 
   const html = `<table dir="${esc(dir)}"><thead><tr>${headers.map((cell) => `<th>${esc(cell)}</th>`).join("")}</tr></thead><tbody>${rows
     .map((row) => `<tr>${row.map((cell) => `<td>${esc(cell)}</td>`).join("")}</tr>`)
     .join("")}</tbody></table>`;
-  try {
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        "text/html": new Blob([html], { type: "text/html" }),
-        "text/plain": new Blob([tsv], { type: "text/plain" }),
-      }),
-    ]);
-    return true;
-  } catch {
-    try {
-      await navigator.clipboard.writeText(tsv);
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  return copyTextPayload(html, tsv);
 }
