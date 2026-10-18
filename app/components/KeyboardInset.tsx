@@ -15,6 +15,8 @@ export default function KeyboardInset() {
       }
       const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       root.style.setProperty("--kb", `${Math.round(inset)}px`);
+      root.style.setProperty("--vvh", `${Math.round(vv.height)}px`);
+      root.style.setProperty("--vvt", `${Math.round(vv.offsetTop)}px`);
       root.classList.toggle("kb-open", inset > 80);
     };
     sync();

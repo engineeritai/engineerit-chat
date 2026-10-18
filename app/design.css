@@ -896,6 +896,28 @@ html.kb-open .composer {
   padding-bottom: 8px;
 }
 
+/* Pin the app to the visible viewport so iOS does not scroll the page when the keyboard opens. */
+html.kb-open .mkt-app {
+  position: fixed;
+  top: var(--vvt, 0px);
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: var(--vvh, 100dvh);
+  min-height: 0;
+}
+
+html.kb-open .mkt-app .mkt-column {
+  height: 100%;
+  min-height: 0;
+}
+
+html.kb-open .mkt-chat .composer,
+html.kb-open .mkt-chat .main:not(.is-start) .composer,
+html.kb-open .mkt-app .composer {
+  bottom: 0;
+}
+
 .composer-box {
   width: min(760px, 100%);
   margin: 0 auto;
@@ -919,7 +941,8 @@ html.kb-open .composer {
 .textarea {
   border: 0;
   min-height: 44px;
-  max-height: 180px;
+  max-height: min(154px, 32vh);
+  overflow-y: auto;
   font-size: 16px;
   padding: 10px 4px;
   background: transparent;
@@ -1643,6 +1666,21 @@ svg {
   background: #fff;
   border: 1px solid #e6e8ee;
   line-height: 0;
+}
+
+.message-avatar-mark {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .message-avatar-mark .eit-plate {
+    background: #fff;
+    border-color: #dbe3ef;
+  }
 }
 
 .eit-mark {

@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import ComposerPlus from "@/app/components/ComposerPlus";
+import EitMark from "@/app/components/marketing/EitMark";
+import { applyComposerHeight, resetComposerHeight } from "@/lib/fitComposer";
 import MessageMarkdown from "@/app/components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "@/app/components/copyRich";
 import { exportMeta } from "@/lib/messageDocument";
@@ -77,6 +79,19 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [sending, setSending] = useState(false);
   const sendingRef = useRef(false);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const onResize = () => {
+      const el = composerRef.current;
+      if (el) applyComposerHeight(el);
+    };
+    window.visualViewport?.addEventListener("resize", onResize);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
   const [attachOpen, setAttachOpen] = useState(false);
   const [openShareFor, setOpenShareFor] = useState<string | null>(null);
   const [showGate, setShowGate] = useState(false);
@@ -241,6 +256,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
 
     const userAttachments = attachments;
     setInput("");
+    resetComposerHeight(composerRef.current);
     setAttachments([]);
     setAttachOpen(false);
     if (playbookId) setActivePlaybook(playbookId);
@@ -481,7 +497,13 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                   (message.role === "user" ? "message-user" : "message-assistant")
                 }
               >
-                <div className="message-avatar">{message.role === "user" ? "You" : "AI"}</div>
+                {message.role === "user" ? (
+                  <div className="message-avatar">{s.chat.you}</div>
+                ) : (
+                  <div className="message-avatar message-avatar-mark">
+                    <EitMark size={32} plate="circle" title="eit" />
+                  </div>
+                )}
                 <div className="message-bubble">
                   <div className="msg-content" dir={rtl ? "rtl" : "ltr"} data-message-id={message.id}>
                     <MessageMarkdown
@@ -708,7 +730,9 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
             </div>
 
             <textarea
+              ref={composerRef}
               className="textarea"
+              rows={1}
               placeholder={
                 !live
                   ? m.advisors.comingSoonBody
@@ -720,8 +744,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
               disabled={!unlocked}
               onChange={(e) => {
                 setInput(e.target.value);
-                e.target.style.height = "45px";
-                e.target.style.height = e.target.scrollHeight + "px";
+                applyComposerHeight(e.target);
               }}
               onKeyDown={onKeyDown}
             />
