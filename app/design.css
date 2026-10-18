@@ -988,6 +988,7 @@ html[dir="rtl"] .diagram-fade.is-end {
   z-index: 240;
   color: #111418;
   overscroll-behavior: none;
+  touch-action: none;
 }
 
 .chart-viewer-backdrop {
@@ -1012,7 +1013,14 @@ html[dir="rtl"] .diagram-fade.is-end {
   touch-action: none;
 }
 
+.chart-viewer-stage * {
+  touch-action: none !important;
+}
+
 .chart-viewer-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   transform-origin: 0 0;
   width: max-content;
   max-width: none;
@@ -1045,6 +1053,24 @@ html[dir="rtl"] .diagram-fade.is-end {
   max-width: none !important;
   min-width: 0 !important;
   height: auto !important;
+}
+
+.chart-viewer-hint {
+  position: absolute;
+  z-index: 3;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 140px);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: #111418;
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: center;
+  pointer-events: none;
 }
 
 .chart-viewer-close {

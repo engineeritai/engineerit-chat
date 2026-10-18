@@ -113,10 +113,12 @@ test("android touch targets, drawers, composer, and chart scroll", async ({ page
   const readable = await page.locator(".chart-viewer-canvas").evaluate((canvas) => {
     const svg = canvas.querySelector("svg");
     const scale = Number(/scale\(([^)]+)\)/.exec((canvas as HTMLElement).style.transform)?.[1] || "1");
-    const fontSize = Number(svg?.querySelector("text")?.getAttribute("font-size") || svg?.getAttribute("data-font") || 12);
-    return scale * fontSize;
+    const fontSize = Number(svg?.getAttribute("data-font") || svg?.querySelector("text")?.getAttribute("font-size") || 12);
+    return { scale, text: scale * fontSize };
   });
-  expect(readable).toBeGreaterThanOrEqual(11.5);
+  expect(readable.scale).toBeLessThanOrEqual(2.01);
+  expect(readable.text).toBeGreaterThanOrEqual(12);
+  expect(readable.text).toBeLessThanOrEqual(16.05);
   await page.locator(".chart-viewer-backdrop").click({ position: { x: 12, y: 12 } });
   await expect(viewer).toBeHidden();
 

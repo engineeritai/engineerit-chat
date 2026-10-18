@@ -126,19 +126,76 @@ test("home, pricing, advisors, and checkout", async ({ page }) => {
   }
 });
 
+async function assertViewerFit(page: Page) {
+  const fit = await page.locator(".chart-viewer").evaluate((viewer) => {
+    const stage = viewer.querySelector(".chart-viewer-stage") as HTMLElement;
+    const canvas = viewer.querySelector(".chart-viewer-canvas") as HTMLElement;
+    const stageBox = stage.getBoundingClientRect();
+    const canvasBox = canvas.getBoundingClientRect();
+    const scale = Number(/scale\(([^)]+)\)/.exec(canvas.style.transform)?.[1] || "1");
+    const svg = canvas.querySelector("svg");
+    const font = Number(svg?.getAttribute("data-font") || svg?.querySelector("text")?.getAttribute("font-size") || 13);
+    const rtl = viewer.getAttribute("dir") === "rtl";
+    const nodes = [...canvas.querySelectorAll("svg text, .gantt-name, .gantt-legend li")].filter((node) => (node.textContent || "").trim());
+    const boxes = nodes.map((node) => {
+      const rect = node.getBoundingClientRect();
+      const fully =
+        rect.width > 0 &&
+        rect.left >= stageBox.left - 2 &&
+        rect.right <= stageBox.right + 2 &&
+        rect.top >= stageBox.top - 2 &&
+        rect.bottom <= stageBox.bottom + 2;
+      const fits = rect.width > 0 && rect.width <= stageBox.width + 2 && rect.height <= stageBox.height + 2;
+      return { fully, fits, width: rect.width, left: rect.left, right: rect.right, text: (node.textContent || "").trim().slice(0, 32) };
+    }).filter((box) => box.width > 0);
+    const visible = boxes.filter((box) => box.fully);
+    const start = rtl
+      ? boxes.reduce((best, box) => (box.right > best.right ? box : best), boxes[0])
+      : boxes.reduce((best, box) => (box.left < best.left ? box : best), boxes[0]);
+    const intersects =
+      canvasBox.right > stageBox.left + 8 &&
+      canvasBox.left < stageBox.right - 8 &&
+      canvasBox.bottom > stageBox.top + 8 &&
+      canvasBox.top < stageBox.bottom - 8;
+    const contained =
+      canvasBox.left >= stageBox.left - 2 &&
+      canvasBox.right <= stageBox.right + 2 &&
+      canvasBox.top >= stageBox.top - 2 &&
+      canvasBox.bottom <= stageBox.bottom + 2;
+    return {
+      scale,
+      textPx: scale * font,
+      count: boxes.length,
+      allFit: boxes.every((box) => box.fits),
+      someOnScreen: visible.length > 0,
+      startOnScreen: Boolean(start?.fully),
+      startText: start?.text || "",
+      chartOk: contained || intersects,
+      offscreen: boxes.filter((box) => !box.fits).map((box) => box.text),
+    };
+  });
+  expect(fit.count).toBeGreaterThan(0);
+  expect(fit.scale).toBeLessThanOrEqual(2.01);
+  expect(fit.textPx).toBeGreaterThanOrEqual(12);
+  expect(fit.textPx).toBeLessThanOrEqual(16.05);
+  expect(fit.allFit, `text larger than the stage: ${fit.offscreen.join(", ")}`).toBe(true);
+  expect(fit.someOnScreen).toBe(true);
+  expect(fit.startOnScreen, `start text off-screen: ${fit.startText}`).toBe(true);
+  expect(fit.chartOk).toBe(true);
+}
+
 test("fullscreen chart viewer", async ({ page }, info) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   const shots = [
     { name: "viewer-flow-en.png", path: "/chat?lang=en&fixture=gate-en&planPreview=consultant", dark: false },
+    { name: "viewer-flow-ar.png", path: "/chat?lang=ar&fixture=gate-ar&planPreview=consultant", dark: false },
     { name: "viewer-gantt-en.png", path: "/chat?lang=en&fixture=gantt-en&planPreview=consultant", dark: false },
+    { name: "viewer-gantt-ar.png", path: "/chat?lang=ar&fixture=gantt-ar&planPreview=consultant", dark: false },
     { name: "viewer-scurve-en.png", path: "/chat?lang=en&fixture=scurve-en&planPreview=consultant", dark: false },
+    { name: "viewer-scurve-ar.png", path: "/chat?lang=ar&fixture=scurve-ar&planPreview=consultant", dark: false },
   ];
   if (info.project.name === "phone-390") {
-    shots.push(
-      { name: "viewer-flow-en-dark.png", path: "/chat?lang=en&fixture=gate-en&planPreview=consultant", dark: true },
-      { name: "viewer-flow-ar.png", path: "/chat?lang=ar&fixture=gate-ar&planPreview=consultant", dark: false },
-      { name: "viewer-gantt-ar.png", path: "/chat?lang=ar&fixture=gantt-ar&planPreview=consultant", dark: false }
-    );
+    shots.push({ name: "viewer-flow-en-dark.png", path: "/chat?lang=en&fixture=gate-en&planPreview=consultant", dark: true });
   }
   for (const shot of shots) {
     if (shot.dark) await page.emulateMedia({ colorScheme: "dark" });
@@ -156,15 +213,20 @@ test("fullscreen chart viewer", async ({ page }, info) => {
     const box = await close.boundingBox();
     expect(box && box.width).toBeGreaterThanOrEqual(44);
     expect(box && box.height).toBeGreaterThanOrEqual(44);
-    const readable = await page.locator(".chart-viewer-canvas").evaluate((canvas) => {
-      const svg = canvas.querySelector("svg");
-      const scale = Number(/scale\(([^)]+)\)/.exec((canvas as HTMLElement).style.transform)?.[1] || "1");
-      const font = Number(svg?.getAttribute("data-font") || svg?.querySelector("text")?.getAttribute("font-size") || 13);
-      return scale * font;
-    });
-    expect(readable).toBeGreaterThanOrEqual(11.5);
+    await assertViewerFit(page);
     await expect(viewer).toHaveScreenshot(shot.name);
     await close.click();
     await expect(viewer).toBeHidden();
+  }
+  if (info.project.name === "phone-390") {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await openChat(page, "/chat?lang=en&fixture=gate-en&planPreview=consultant");
+    await page.locator(".diagram-tools").first().getByRole("button", { name: "Enlarge" }).click();
+    const viewer = page.locator(".chart-viewer");
+    await expect(viewer).toBeVisible();
+    await expect(page.locator(".chart-viewer-hint")).toBeHidden();
+    await assertViewerFit(page);
+    await expect(viewer).toHaveScreenshot("viewer-flow-en-landscape.png");
+    await page.setViewportSize({ width: 390, height: 844 });
   }
 });
