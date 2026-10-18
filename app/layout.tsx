@@ -63,19 +63,19 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     icons: {
       icon: [
-        { url: "/favicon.svg", type: "image/svg+xml", media: "(prefers-color-scheme: light)" },
-        { url: "/favicon.png", type: "image/png", media: "(prefers-color-scheme: light)" },
-        { url: "/icon.png", sizes: "32x32", type: "image/png", media: "(prefers-color-scheme: light)" },
-        { url: "/icon-192.png", sizes: "192x192", type: "image/png", media: "(prefers-color-scheme: light)" },
-        { url: "/icon-512.png", sizes: "512x512", type: "image/png", media: "(prefers-color-scheme: light)" },
-        { url: "/favicon-dark.svg", type: "image/svg+xml", media: "(prefers-color-scheme: dark)" },
-        { url: "/favicon-dark.png", type: "image/png", media: "(prefers-color-scheme: dark)" },
-        { url: "/icon-192-dark.png", sizes: "192x192", type: "image/png", media: "(prefers-color-scheme: dark)" },
-        { url: "/icon-512-dark.png", sizes: "512x512", type: "image/png", media: "(prefers-color-scheme: dark)" },
-        { url: "/favicon.ico" },
+        { url: "/favicon.svg?v=2", type: "image/svg+xml", media: "(prefers-color-scheme: light)" },
+        { url: "/favicon.png?v=2", type: "image/png", media: "(prefers-color-scheme: light)" },
+        { url: "/icon.png?v=2", sizes: "32x32", type: "image/png", media: "(prefers-color-scheme: light)" },
+        { url: "/icon-192.png?v=2", sizes: "192x192", type: "image/png", media: "(prefers-color-scheme: light)" },
+        { url: "/icon-512.png?v=2", sizes: "512x512", type: "image/png", media: "(prefers-color-scheme: light)" },
+        { url: "/favicon-dark.svg?v=2", type: "image/svg+xml", media: "(prefers-color-scheme: dark)" },
+        { url: "/favicon-dark.png?v=2", type: "image/png", media: "(prefers-color-scheme: dark)" },
+        { url: "/icon-192-dark.png?v=2", sizes: "192x192", type: "image/png", media: "(prefers-color-scheme: dark)" },
+        { url: "/icon-512-dark.png?v=2", sizes: "512x512", type: "image/png", media: "(prefers-color-scheme: dark)" },
+        { url: "/favicon.ico?v=2" },
       ],
-      shortcut: "/favicon.png",
-      apple: [{ url: "/apple-touch-icon-eit.png", sizes: "180x180", type: "image/png" }],
+      shortcut: "/favicon.png?v=2",
+      apple: [{ url: "/apple-touch-icon-eit.png?v=2", sizes: "180x180", type: "image/png" }],
     },
     appleWebApp: {
       capable: true,
@@ -105,11 +105,11 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="engineer it" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" media="(prefers-color-scheme: light)" />
-        <link rel="icon" href="/favicon.png" type="image/png" media="(prefers-color-scheme: light)" />
-        <link rel="icon" href="/favicon-dark.svg" type="image/svg+xml" media="(prefers-color-scheme: dark)" />
-        <link rel="icon" href="/favicon-dark.png" type="image/png" media="(prefers-color-scheme: dark)" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon-eit.png" sizes="180x180" />
+        <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" media="(prefers-color-scheme: light)" />
+        <link rel="icon" href="/favicon.png?v=2" type="image/png" media="(prefers-color-scheme: light)" />
+        <link rel="icon" href="/favicon-dark.svg?v=2" type="image/svg+xml" media="(prefers-color-scheme: dark)" />
+        <link rel="icon" href="/favicon-dark.png?v=2" type="image/png" media="(prefers-color-scheme: dark)" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon-eit.png?v=2" sizes="180x180" />
         <script
           type="text/javascript"
           id="hs-script-loader"

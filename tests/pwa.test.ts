@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { inflateSync } from "node:zlib";
 import { describe, it } from "node:test";
 import manifest from "../app/manifest";
@@ -60,6 +60,73 @@ function readRgbaPng(file: string) {
   return { width, height, pixels };
 }
 
+function alphaBox(png: { width: number; height: number; pixels: Buffer }) {
+  let l = png.width;
+  let t = png.height;
+  let r = -1;
+  let b = -1;
+  for (let y = 0; y < png.height; y++) {
+    for (let x = 0; x < png.width; x++) {
+      if (png.pixels[(y * png.width + x) * 4 + 3] > 0) {
+        if (x < l) l = x;
+        if (y < t) t = y;
+        if (x > r) r = x;
+        if (y > b) b = y;
+      }
+    }
+  }
+  return { l, t, r, b, w: r - l + 1, h: b - t + 1 };
+}
+
+function solidDot(png: { width: number; height: number; pixels: Buffer }, box: { l: number; t: number; r: number; b: number }) {
+  const opaque = new Set<string>();
+  for (let y = box.t; y <= box.b; y++) {
+    for (let x = box.l; x <= box.r; x++) {
+      if (png.pixels[(y * png.width + x) * 4 + 3] > 200) opaque.add(`${x},${y}`);
+    }
+  }
+  let topX = box.l;
+  let topY = box.b;
+  for (const key of opaque) {
+    const [x, y] = key.split(",").map(Number);
+    if (y < topY) {
+      topX = x;
+      topY = y;
+    }
+  }
+  const seen = new Set<string>([`${topX},${topY}`]);
+  const stack = [[topX, topY]];
+  const comp: number[][] = [];
+  while (stack.length) {
+    const [x, y] = stack.pop()!;
+    comp.push([x, y]);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const key = `${x + dx},${y + dy}`;
+      if (opaque.has(key) && !seen.has(key)) {
+        seen.add(key);
+        stack.push([x + dx, y + dy]);
+      }
+    }
+  }
+  let minX = png.width;
+  let minY = png.height;
+  let maxX = 0;
+  let maxY = 0;
+  for (const [x, y] of comp) {
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  }
+  const cx = Math.round((minX + maxX) / 2);
+  const cy = Math.round((minY + maxY) / 2);
+  const i = (cy * png.width + cx) * 4;
+  return {
+    fill: comp.length / ((maxX - minX + 1) * (maxY - minY + 1)),
+    center: [png.pixels[i], png.pixels[i + 1], png.pixels[i + 2], png.pixels[i + 3]],
+  };
+}
+
 describe("android pwa", () => {
   it("publishes the install manifest the Trusted Web Activity expects", () => {
     const web = manifest();
@@ -70,10 +137,10 @@ describe("android pwa", () => {
     assert.equal(web.background_color, "#f6f7f9");
     assert.equal(web.theme_color, "#1a56ff");
     const icons = web.icons ?? [];
-    assert.ok(icons.some((icon) => icon.src === "/icon-192-maskable.png" && icon.purpose === "maskable"));
-    assert.ok(icons.some((icon) => icon.src === "/icon-512-maskable.png" && icon.purpose === "maskable"));
-    assert.ok(icons.some((icon) => icon.src === "/icon-eit-192.png" && icon.purpose === "any"));
-    assert.ok(icons.some((icon) => icon.src === "/icon-eit-512.png" && icon.purpose === "any"));
+    assert.ok(icons.some((icon) => icon.src === "/icon-192-maskable.png?v=2" && icon.purpose === "maskable"));
+    assert.ok(icons.some((icon) => icon.src === "/icon-512-maskable.png?v=2" && icon.purpose === "maskable"));
+    assert.ok(icons.some((icon) => icon.src === "/icon-eit-192.png?v=2" && icon.purpose === "any"));
+    assert.ok(icons.some((icon) => icon.src === "/icon-eit-512.png?v=2" && icon.purpose === "any"));
     assert.equal(icons.filter((icon) => icon.purpose === "any").length, 2);
   });
 
@@ -96,7 +163,45 @@ describe("android pwa", () => {
         }
       }
       assert.equal(blue, true, file);
+      const box = alphaBox(png);
+      const targetW = Math.round(png.width * 0.8);
+      assert.ok(Math.abs(box.w - targetW) <= 1, `${file} width ${box.w} vs ${targetW}`);
+      const midX = (box.l + box.r) / 2;
+      const midY = (box.t + box.b) / 2;
+      assert.ok(Math.abs(midX - (png.width - 1) / 2) <= 0.51, file);
+      assert.ok(Math.abs(midY - (png.height - 1) / 2) <= 0.51, file);
+      assert.ok(Math.abs(box.l - (png.width - 1 - box.r)) <= 1, file);
+      assert.ok(Math.abs(box.t - (png.height - 1 - box.b)) <= 1, file);
+      const dot = solidDot(png, box);
+      assert.ok(dot.fill > 0.7, `${file} dot fill ${dot.fill}`);
+      assert.deepEqual(dot.center, [13, 96, 228, 255], file);
     });
+  });
+
+  it("keeps the white Home Screen variant on disk and unwired", () => {
+    assert.equal(existsSync("public/apple-touch-icon-eit-white.png"), true);
+    const white = readRgbaPng("public/apple-touch-icon-eit-white.png");
+    assert.equal(white.width, 180);
+    const corner = (x: number, y: number) => {
+      const i = (white.width * y + x) * 4;
+      return [white.pixels[i], white.pixels[i + 1], white.pixels[i + 2], white.pixels[i + 3]];
+    };
+    assert.deepEqual(corner(0, 0), [255, 255, 255, 255]);
+    const sources = ["app/layout.tsx", "app/manifest.ts", "public/sw.js"]
+      .map((file) => readFileSync(file, "utf8"))
+      .join("\n");
+    assert.equal(sources.includes("apple-touch-icon-eit-white"), false);
+  });
+
+  it("uses a solid i-dot on the eit mark and leaves the wordmark hollow", () => {
+    const mark = readFileSync("public/eit.svg", "utf8");
+    const path = readFileSync("app/components/marketing/eitPath.ts", "utf8");
+    const wordmark = readFileSync("public/wordmark.svg", "utf8");
+    assert.equal(mark.includes("M129.59 22.25"), false);
+    assert.equal(path.includes("M129.59 22.25"), false);
+    assert.equal(mark.includes("M113.05 29.86"), true);
+    assert.equal(wordmark.includes("M739.75 22.25"), true);
+    assert.equal(wordmark.includes("M723.21 29.86"), true);
   });
 
   it("keeps a fetch handler and lists the upload key plus the Play signing TODO", () => {
@@ -118,9 +223,10 @@ describe("android pwa", () => {
     assert.match(layout, /applicationName: "engineer it"/);
     assert.match(layout, /name="application-name" content="engineer it"/);
     assert.match(layout, /appleWebApp:\s*\{[^}]*title: "engineer it"/);
-    assert.match(layout, /rel="apple-touch-icon" href="\/apple-touch-icon-eit.png"/);
+    assert.match(layout, /rel="apple-touch-icon" href="\/apple-touch-icon-eit\.png\?v=2"/);
     assert.doesNotMatch(layout, /apple-touch-icon-dark/);
-    assert.match(layout, /url: "\/apple-touch-icon-eit.png"/);
+    assert.match(layout, /url: "\/apple-touch-icon-eit\.png\?v=2"/);
+    assert.match(worker, /engineerit-shell-v4/);
     const android = readFileSync("android/app/src/main/res/values/strings.xml", "utf8");
     const androidAr = readFileSync("android/app/src/main/res/values-ar/strings.xml", "utf8");
     assert.match(android, /<string name="app_name">engineer it<\/string>/);

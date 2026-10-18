@@ -1,5 +1,5 @@
 /* App shell only. Never cache API, auth, checkout, or payment hosts. */
-const CACHE = "engineerit-shell-v3";
+const CACHE = "engineerit-shell-v4";
 const OFFLINE = "/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -7,11 +7,11 @@ self.addEventListener("install", (event) => {
     caches.open(CACHE).then((cache) =>
       cache.addAll([
         OFFLINE,
-        "/apple-touch-icon-eit.png",
-        "/icon-eit-192.png",
-        "/icon-eit-512.png",
-        "/icon-192-maskable.png",
-        "/icon-512-maskable.png",
+        "/apple-touch-icon-eit.png?v=2",
+        "/icon-eit-192.png?v=2",
+        "/icon-eit-512.png?v=2",
+        "/icon-192-maskable.png?v=2",
+        "/icon-512-maskable.png?v=2",
       ])
     )
   );
