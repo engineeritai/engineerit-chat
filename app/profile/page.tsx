@@ -14,6 +14,7 @@ import { displayFeatures, formatSar, formatUsdApprox, planPriceLabel } from "@/l
 import { FeatureLine, SarText } from "@/app/components/RiyalAmount";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
 import { downloadInvoicePdf } from "@/lib/invoiceDownload";
+import { statusPillClass, usdApproxLine } from "@/lib/invoiceTable";
 import AvatarCropper from "@/app/components/AvatarCropper";
 import { DISCIPLINES } from "@/lib/disciplines";
 import { disciplineLabel } from "@/lib/labels";
@@ -124,6 +125,36 @@ function formatDate(value: string | null | undefined, locale: Locale) {
     month: "short",
     year: "numeric",
   });
+}
+
+function StatusPill({ status }: { status: string | null | undefined }) {
+  const label = status && status.trim() ? status : "—";
+  return <span className={statusPillClass(status)}>{label}</span>;
+}
+
+function HistoryAmount({
+  price,
+  currency,
+  locale,
+}: {
+  price: number | null;
+  currency: string | null;
+  locale: Locale;
+}) {
+  if (price === null || !currency) return <>—</>;
+  if (currency !== "SAR") {
+    return (
+      <span className="cell-value">
+        {price} {currency}
+      </span>
+    );
+  }
+  return (
+    <span className="amount-stack cell-value">
+      <SarText>{locale === "ar" ? formatMoney(price, "ar") : formatSar(price)}</SarText>
+      {locale === "en" ? <span className="amount-usd">{usdApproxLine(formatUsdApprox(price))}</span> : null}
+    </span>
+  );
 }
 
 export default function ProfilePage() {
@@ -1065,60 +1096,40 @@ export default function ProfilePage() {
                 {s.profile.noPayments}
               </p>
             ) : (
-              <div style={{ marginTop: 8, fontSize: 13, color: "#374151" }}>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1fr)",
-                    gap: 8,
-                    fontWeight: 600,
-                    borderBottom: "1px solid #e5e7eb",
-                    paddingBottom: 6,
-                    marginBottom: 6,
-                  }}
-                >
-                  <span>{s.profile.plan}</span>
-                  <span>{s.profile.amount}</span>
-                  <span>{s.profile.status}</span>
-                  <span>{s.profile.date}</span>
-                </div>
-
-                {subHistory.map((row, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1fr)",
-                      gap: 8,
-                      padding: "4px 0",
-                      borderBottom:
-                        idx === subHistory.length - 1 ? "none" : "1px solid #f3f4f6",
-                    }}
-                  >
-                    <span>{planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}</span>
-                    <span>
-                      {row.price !== null && row.currency
-                        ? row.currency === "SAR"
-                          ? (
-                            <SarText>
-                              {locale === "ar"
-                                ? formatMoney(row.price, "ar")
-                                : `${formatSar(row.price)} (approx. ${formatUsdApprox(row.price)})`}
-                            </SarText>
-                          )
-                          : `${row.price} ${row.currency}`
-                        : "-"}
-                    </span>
-                    <span>{row.status || "-"}</span>
-                    <span>{formatDate(row.start_date, locale)}</span>
-                  </div>
-                ))}
-
-                <p style={{ marginTop: 8, fontSize: 12, color: "#9ca3af" }}>
-                  {s.profile.invoiceNote}
-                </p>
+              <div className="profile-table-wrap">
+                <table className="profile-table stack-phone">
+                  <thead>
+                    <tr>
+                      <th className="col-plan">{s.profile.plan}</th>
+                      <th className="col-amount">{s.profile.amount}</th>
+                      <th className="col-status">{s.profile.status}</th>
+                      <th className="col-date">{s.profile.date}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subHistory.map((row, idx) => (
+                      <tr key={idx}>
+                        <td className="col-plan" data-label={s.profile.plan}>
+                          <span className="cell-value">
+                            {planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}
+                          </span>
+                        </td>
+                        <td className="col-amount" data-label={s.profile.amount}>
+                          <HistoryAmount price={row.price} currency={row.currency} locale={locale} />
+                        </td>
+                        <td className="col-status" data-label={s.profile.status}>
+                          <span className="cell-value">
+                            <StatusPill status={row.status} />
+                          </span>
+                        </td>
+                        <td className="col-date" data-label={s.profile.date}>
+                          <span className="cell-value">{formatDate(row.start_date, locale)}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p style={{ marginTop: 8, fontSize: 12, color: "#9ca3af" }}>{s.profile.invoiceNote}</p>
               </div>
             )}
           </div>
@@ -1128,26 +1139,41 @@ export default function ProfilePage() {
               <p className="page-subtitle">{s.profile.noPayments}</p>
             ) : (
               <div className="profile-table-wrap">
-                <table className="profile-table">
+                <table className="profile-table stack-phone">
                   <thead>
                     <tr>
-                      <th>{s.profile.plan}</th>
-                      <th>{s.profile.amount}</th>
-                      <th>{s.profile.status}</th>
-                      <th>{s.profile.date}</th>
-                      <th>{s.profile.invoices}</th>
+                      <th className="col-plan">{s.profile.plan}</th>
+                      <th className="col-amount">{s.profile.amount}</th>
+                      <th className="col-status">{s.profile.status}</th>
+                      <th className="col-date">{s.profile.date}</th>
+                      <th className="col-invoice">{s.profile.invoices}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {planHistory.map((row) => (
                       <tr key={row.id}>
-                        <td>{planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}</td>
-                        <td>
-                          <SarText>{formatMoney(Number(row.amount_sar), locale)}</SarText>
+                        <td className="col-plan" data-label={s.profile.plan}>
+                          <span className="cell-value">
+                            {planById(locale, isPlanId(row.plan) ? row.plan : "assistant").name}
+                          </span>
                         </td>
-                        <td>{row.status}</td>
-                        <td>{formatDate(row.paid_at || row.current_period_start || row.created_at, locale)}</td>
-                        <td>
+                        <td className="col-amount" data-label={s.profile.amount}>
+                          <span className="amount-stack cell-value">
+                            <SarText>{formatMoney(Number(row.amount_sar), locale)}</SarText>
+                          </span>
+                        </td>
+                        <td className="col-status" data-label={s.profile.status}>
+                          <span className="cell-value">
+                            <StatusPill status={row.status} />
+                          </span>
+                        </td>
+                        <td className="col-date" data-label={s.profile.date}>
+                          <span className="cell-value">
+                            {formatDate(row.paid_at || row.current_period_start || row.created_at, locale)}
+                          </span>
+                        </td>
+                        <td className="col-invoice" data-label={s.profile.invoices}>
+                          <span className="cell-value">
                           {row.paid_at ? (
                             <button
                               className="btn"
@@ -1169,6 +1195,7 @@ export default function ProfilePage() {
                           ) : (
                             "—"
                           )}
+                          </span>
                         </td>
                       </tr>
                     ))}
