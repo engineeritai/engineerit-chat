@@ -77,6 +77,16 @@ describe("diagram replies", () => {
     assert.equal(hasRenderableFlow(fixed), true);
   });
 
+  it("draws an Arabic flowchart when the model only returns an S-curve", () => {
+    const reply = "وصف قصير.\n\n```scurve\ntitle S-curve\nStart | 0 | 0\nWk1 | 20 | 10\n```";
+    const user = "ارسم مخطط عملية وحدة التكسير الهيدروجيني. ثم اعرض منحنى S كاتجاه.";
+    const fixed = ensureDiagramMarkdown(reply, user, true);
+    assert.match(fixed, /```scurve/);
+    assert.match(fixed, /flowchart TD/);
+    assert.match(fixed, /التكسير الهيدروجيني/);
+    assert.equal(hasRenderableFlow(fixed), true);
+  });
+
   it("leaves an ordinary answer unchanged", () => {
     const text = "The pump is API 610. Confirm the nozzle loads.";
     assert.equal(claimsDiagram(text), false);

@@ -157,15 +157,28 @@ export function stepsFromMarkdown(markdown: string): string[] {
 }
 
 function topicSteps(text: string): string[] {
-  const of = /(?:\bof|\bfor|ل)\s+([^.:\n]+)/i.exec(text || "");
+  const source = text || "";
+  if (/[\u0600-\u06FF]/.test(source)) {
+    const sentence =
+      source
+        .split(/[\n.؟?]/)
+        .map((part) => part.trim())
+        .find((part) => /ارسم|مخطط|رسم/.test(part)) || source;
+    const topic = sentence
+      .replace(/ارسم|رسم تخطيطي|مخطط|عملية|وحدة|ثم|اعرض|أعرض|منحنى/g, " ")
+      .replace(/[^\u0600-\u06FF\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 60);
+    return ["التغذية", topic.length >= 3 ? topic : "المعالجة", "المفاعل", "الفصل", "المنتجات"];
+  }
+  const of = /(?:\bof|\bfor)\s+([^.:\n]+)/i.exec(source);
   const topic = (of?.[1] || "")
     .replace(/\bthen\b[\s\S]*$/i, "")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 60);
   if (topic.length < 3) return [];
-  const arabic = /[\u0600-\u06FF]/.test(text);
-  if (arabic) return ["التغذية", topic, "المفاعل", "الفصل", "المنتجات"];
   return [`Feed to ${topic}`, "Reactor", "Separator", "Products"];
 }
 

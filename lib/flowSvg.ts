@@ -62,7 +62,7 @@ export function flowSvg(source: string, dir: "ltr" | "rtl"): string | null {
 <text x="${box.x + boxW / 2}" y="${box.y + 32}" text-anchor="middle" font-size="13" font-family="${dir === "rtl" ? "Noto Sans Arabic" : "Inter, 'Noto Sans Arabic', 'Segoe UI', sans-serif"}" fill="#0f172a"${dir === "rtl" ? ' direction="rtl"' : ""}>${escapeXml(text)}</text>`;
     })
     .join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" width="100%">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" width="${width}" style="display:block;width:100%;max-width:${width}px;height:auto;margin-inline:auto">
 <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1a56ff"/></marker></defs>
 ${arrows}${shapes}
 </svg>`;
