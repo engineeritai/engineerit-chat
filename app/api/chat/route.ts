@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { gateAdvisor } from "@/lib/advisorGate";
 import { assistantRules } from "@/lib/assistantRules";
+import { asksForDiagram, diagramRetryNeeded, ensureDiagramMarkdown } from "@/lib/diagramReply";
 import { appendSources, sourcesFromResponse, type SearchResponse } from "@/lib/citations";
 import { replyLanguageRule, uiLocale } from "@/lib/replyLanguage";
 
@@ -182,9 +183,13 @@ export async function POST(req: NextRequest) {
       ],
     });
     const parsed = sourcesFromResponse(response as SearchResponse);
-    const reply =
+    const reply = await finishDiagramReply(
       appendSources(parsed.text, parsed.sources, locale) ||
-      (locale === "ar" ? "تعذر إنشاء رد هذه المرة." : "I couldn't generate a response this time.");
+        (locale === "ar" ? "تعذر إنشاء رد هذه المرة." : "I couldn't generate a response this time."),
+      messages,
+      systemPrompt,
+      locale
+    );
     return NextResponse.json({ reply, sources: parsed.sources });
   } catch (err) {
     console.error("web search response failed", err);
@@ -192,9 +197,54 @@ export async function POST(req: NextRequest) {
       model: "gpt-4o-mini",
       messages: [{ role: "system", content: systemPrompt }, ...messages.map((message) => ({ role: message.role, content: message.content }))],
     });
-    const reply =
+    const reply = await finishDiagramReply(
       completion.choices[0]?.message?.content ||
-      (locale === "ar" ? "تعذر إنشاء رد هذه المرة." : "I couldn't generate a response this time.");
+        (locale === "ar" ? "تعذر إنشاء رد هذه المرة." : "I couldn't generate a response this time."),
+      messages,
+      systemPrompt,
+      locale
+    );
     return NextResponse.json({ reply, sources: [] });
   }
+}
+
+async function finishDiagramReply(
+  reply: string,
+  messages: { role: "user" | "assistant"; content: string }[],
+  systemPrompt: string,
+  locale: "en" | "ar"
+) {
+  const userText = [...messages].reverse().find((message) => message.role === "user")?.content || "";
+  const prior = messages
+    .filter((message) => message.role === "assistant")
+    .map((message) => message.content)
+    .join("\n\n");
+  let next = reply;
+  if (diagramRetryNeeded(next, userText)) {
+    try {
+      const retry = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `${systemPrompt}\n\nThe user asked for a diagram. Reply with a fenced mermaid flowchart TD built from the conversation. Quote every label. Do not say a diagram is shown unless that fence is in the answer.`,
+          },
+          ...messages.map((message) => ({ role: message.role, content: message.content })),
+          { role: "assistant", content: next },
+          {
+            role: "user",
+            content:
+              locale === "ar"
+                ? "أضف الآن مخطط mermaid بسياج flowchart TD مبنيًا من الجواب السابق. لا تكتفِ بوصف المخطط."
+                : "Include the fenced mermaid flowchart TD now, built from the previous answer. Do not only describe the diagram.",
+          },
+        ],
+      });
+      const retried = retry.choices[0]?.message?.content;
+      if (retried) next = retried;
+    } catch (err) {
+      console.error("diagram retry failed", err);
+    }
+  }
+  return ensureDiagramMarkdown(next, prior, asksForDiagram(userText));
 }

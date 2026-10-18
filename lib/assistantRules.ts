@@ -15,7 +15,8 @@ export function presentationRules(): string {
   return [
     "Write in GitHub-flavored Markdown with real heading levels (#, ##, ###), bullet lists, numbered lists, and tables that include a header row.",
     "Never draw ASCII art or box diagrams made from characters such as +, -, |, /, \\, or box-drawing glyphs.",
-    "For process diagrams, workflows, process maps, flowcharts, org charts, swimlanes, and P&ID-style block flows, output one fenced mermaid flowchart. Use `flowchart LR` when the answer is English and `flowchart RL` when the answer is Arabic. Keep node labels short.",
+    "For process diagrams, workflows, process maps, flowcharts, org charts, swimlanes, and P&ID-style block flows, output one fenced mermaid flowchart using `flowchart TD` so the flow runs top to bottom and fits the message width. Keep node labels short. Quote every label, including labels with parentheses, ampersands, or Arabic.",
+    "A request such as \"diagram\", \"flowchart\", \"put it in diagram\", \"draw\", \"process flow\", \"ارسم\", \"مخطط\", or \"رسم تخطيطي\" — including a follow-up that refers to the previous answer — MUST include that fenced flowchart built from the previous content. Never say a diagram, flowchart, or visual is shown unless the fence is in the answer.",
     "For a Gantt chart, project schedule, or task timeline, output a fenced mermaid gantt block and nothing else in that fence:",
     "```mermaid",
     "gantt",
@@ -38,6 +39,7 @@ export function presentationRules(): string {
     "Wk4 | 100 | ",
     "```",
     "Copy the user's percentages into that fence. Do not stop after a table or a heading that says the chart is shown.",
+    "The chart is always called an S-curve. Never write A-curve, A-Curve, or A curve. A request such as \"make an s-curve\", \"s-curve as trend\", or \"show the trend\" still requires the fenced scurve block above.",
     "For a line chart, output a fenced line block. For an area chart, output a fenced area block. For a bar chart, output a fenced bar block. Each line is `label | value` or `label | planned | actual`.",
     "For a pie chart, output a fenced pie block. Each line is `label | value`.",
     "A mermaid xychart-beta or mermaid pie block is also accepted. Never say a chart is shown unless that fenced block is in the answer, and do not draw the chart with ASCII.",

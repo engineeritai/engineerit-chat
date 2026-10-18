@@ -1,0 +1,85 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { describe, it } from "node:test";
+import { assistantRules } from "../lib/assistantRules";
+import {
+  asksForDiagram,
+  claimsDiagram,
+  diagramRetryNeeded,
+  ensureDiagramMarkdown,
+  hasRenderableFlow,
+  hydroReplyEn,
+  sanitizeFlowchart,
+  stageGateReplyAr,
+  stageGateReplyEn,
+} from "../lib/diagramReply";
+import { parseMessage } from "../lib/messageDocument";
+
+const prior = `## Project stage-gate workflow
+
+1. Identify the opportunity
+2. Feasibility and concept select
+3. Define the scope and basis
+4. Execute the project
+5. Start up and handover
+6. Operate and close`;
+
+describe("diagram replies", () => {
+  it("recognises English and Arabic diagram requests", () => {
+    for (const phrase of ["Put it in diagram", "Draw a process diagram of a hydrocracker plant", "flowchart", "process flow", "ارسم", "مخطط", "رسم تخطيطي"]) {
+      assert.equal(asksForDiagram(phrase), true, phrase);
+    }
+    assert.equal(asksForDiagram("Show the weekly S-curve"), false);
+  });
+
+  it("turns the stage-gate follow-up into a top-down flowchart", () => {
+    assert.equal(diagramRetryNeeded(stageGateReplyEn, "Put it in diagram"), true);
+    const repaired = ensureDiagramMarkdown(stageGateReplyEn, prior, true);
+    assert.match(repaired, /```mermaid/);
+    assert.match(repaired, /flowchart TD/);
+    assert.match(repaired, /Identify the opportunity/);
+    assert.match(repaired, /Operate and close/);
+    const blocks = parseMessage(stageGateReplyEn);
+    const diagram = blocks.find((block) => block.type === "diagram");
+    assert.ok(diagram && diagram.type === "diagram");
+    if (diagram?.type === "diagram") assert.match(diagram.source, /flowchart TD/);
+    const arabic = parseMessage(stageGateReplyAr);
+    const arDiagram = arabic.find((block) => block.type === "diagram");
+    assert.ok(arDiagram && arDiagram.type === "diagram");
+    if (arDiagram?.type === "diagram") {
+      assert.match(arDiagram.source, /flowchart TD/);
+      assert.match(arDiagram.source, /تحديد الفرصة/);
+    }
+  });
+
+  it("quotes parentheses and ampersands and stacks a long flow", () => {
+    const fence = hydroReplyEn.match(/```mermaid\n([\s\S]*?)```/)?.[1] || "";
+    const clean = sanitizeFlowchart(fence);
+    assert.ok(clean);
+    assert.match(clean || "", /flowchart TD/);
+    assert.match(clean || "", /Feed\["Feedstock \(Vacuum Gas Oil\)"\]/);
+    assert.match(clean || "", /Separator\["HP Separator & Recycle"\]/);
+    assert.equal(hasRenderableFlow(ensureDiagramMarkdown(hydroReplyEn)), true);
+    const blocks = parseMessage(hydroReplyEn);
+    const diagram = blocks.find((block) => block.type === "diagram");
+    assert.ok(diagram && diagram.type === "diagram");
+    if (diagram?.type === "diagram") assert.doesNotMatch(diagram.source, /flowchart LR/);
+  });
+
+  it("leaves an ordinary answer unchanged", () => {
+    const text = "The pump is API 610. Confirm the nozzle loads.";
+    assert.equal(claimsDiagram(text), false);
+    assert.equal(ensureDiagramMarkdown(text), text);
+  });
+
+  it("tells the model to emit flowchart TD and not to claim a missing diagram", () => {
+    const rules = assistantRules({ locale: "en" });
+    assert.match(rules, /flowchart TD/);
+    assert.match(rules, /put it in diagram/);
+    assert.match(rules, /ارسم/);
+    assert.match(rules, /رسم تخطيطي/);
+    assert.match(rules, /Never say a diagram/);
+    assert.match(readFileSync("app/api/chat/route.ts", "utf8"), /diagramRetryNeeded/);
+    assert.match(readFileSync("app/design.css", "utf8"), /\.diagram-frame svg[\s\S]*min-width:\s*0/);
+  });
+});

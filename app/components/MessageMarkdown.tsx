@@ -58,7 +58,13 @@ export default function MessageMarkdown({
   fileBase?: string;
 }) {
   const blocks = parseMessage(markdown);
-  const diagramLabels = { copy: labels.diagramCopy, png: labels.diagramPng, svg: labels.diagramSvg };
+  const diagramLabels = {
+    copy: labels.diagramCopy,
+    png: labels.diagramPng,
+    svg: labels.diagramSvg,
+    enlarge: locale === "ar" ? "تكبير" : "Enlarge",
+    close: locale === "ar" ? "إغلاق" : "Close",
+  };
   return (
     <>
       {blocks.map((block, index) => {

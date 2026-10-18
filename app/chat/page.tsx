@@ -19,6 +19,9 @@ import { chartCaseAr, chartCaseEn, sampleAr, sampleEn } from "@/lib/richSamples"
 import MarketingShell from "../components/marketing/MarketingShell";
 import ComposerPlus from "../components/ComposerPlus";
 import EitMark from "../components/marketing/EitMark";
+import { DaySeparator, MessageTime, useMessageTimeZone } from "../components/MessageTime";
+import { hydroReplyAr, hydroReplyEn, stageGateReplyAr, stageGateReplyEn } from "@/lib/diagramReply";
+import { formatDaySeparator, isoOnDay } from "@/lib/messageTime";
 import { applyComposerHeight, resetComposerHeight } from "@/lib/fitComposer";
 import { localPlanPreview } from "../components/marketing/AccountState";
 import ToolGlyph, { ToolLockIcon } from "../components/ToolGlyph";
@@ -296,6 +299,7 @@ export default function Page() {
   const [planId, setPlanId] = useState<PlanId>("assistant");
   const [advisorPlan, setAdvisorPlan] = useState("guest");
   const { locale, shell: s, m } = useMessages();
+  const timeZone = useMessageTimeZone();
   const history = useChatHistory({
     locale,
     discipline,
@@ -438,28 +442,85 @@ export default function Page() {
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     const kind = new URLSearchParams(window.location.search).get("fixture");
-    if (kind !== "en" && kind !== "ar" && kind !== "charts-en" && kind !== "charts-ar" && kind !== "scurve-en" && kind !== "scurve-ar") return;
+    const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar"]);
+    if (!kind || !kinds.has(kind)) return;
     const scurveEn = `Based on the provided weekly progress data, here's how the S-Curve would look:\n\n## Weekly Progress Data\n\n| Week | Cumulative Progress (%) |\n| --- | --- |\n| Wk1 | 10% |\n| Wk2 | 25% |\n| Wk3 | 67% |\n| Wk4 | 89% |\n| Wk5 | 100% |\n\n## S-Curve Chart\n\nThe curve starts slowly, accelerates in week 3, and reaches 100% in week 5.`;
     const scurveAr = `بناءً على نسب التقدم الأسبوعية، هذا منحنى التقدم:\n\n## بيانات التقدم\n\n| الأسبوع | التقدم التراكمي |\n| --- | --- |\n| أسبوع 1 | 10٪ |\n| أسبوع 2 | 25٪ |\n| أسبوع 3 | 67٪ |\n| أسبوع 4 | 89٪ |\n| أسبوع 5 | 100٪ |\n\n## منحنى التقدم\n\nيبدأ المنحنى ببطء، يتسارع في الأسبوع 3، ويصل إلى 100٪ في الأسبوع 5.`;
-    const content = kind === "ar" ? sampleAr : kind === "charts-ar" ? chartCaseAr : kind === "charts-en" ? chartCaseEn : kind === "scurve-ar" ? scurveAr : kind === "scurve-en" ? scurveEn : sampleEn;
-    const prompt =
-      kind === "scurve-en" || kind === "scurve-ar"
-        ? "Wk1 10%, Wk2 25%, Wk3 67%, Wk4 89%, Wk5 100%. Make now the chart of S-Curve"
-        : kind === "charts-ar"
-        ? "اعرض منحنى التقدم المخطط مقابل الفعلي لمشروع طريق مدته 12 شهراً وعلّق على الاتجاه."
-        : kind === "charts-en"
-          ? "Show a chart of planned vs actual progress (S-curve) for a 12-month road project and comment on the trend."
+    if (kind === "gate-en" || kind === "gate-ar") {
+      const ar = kind === "gate-ar";
+      setFixture([
+        {
+          id: "fixture-user-1",
+          role: "user",
+          content: ar ? "اشرح سير عمل بوابات المرحلة للمشروع" : "Explain the project stage-gate workflow",
+          attachments: [],
+          createdAt: isoOnDay(-1, 16, 32),
+        },
+        {
+          id: "fixture-ai-1",
+          role: "assistant",
+          content: ar
+            ? "سير العمل يمر بست بوابات، من تحديد الفرصة حتى التشغيل والإغلاق."
+            : "The workflow passes six gates, from the opportunity through start-up and close-out.",
+          attachments: [],
+          createdAt: isoOnDay(-1, 16, 40),
+        },
+        {
+          id: "fixture-user-2",
+          role: "user",
+          content: ar ? "ضعه في مخطط" : "Put it in diagram",
+          attachments: [],
+          createdAt: isoOnDay(0, 16, 20),
+        },
+        {
+          id: "fixture-ai",
+          role: "assistant",
+          content: ar ? stageGateReplyAr : stageGateReplyEn,
+          attachments: [],
+          createdAt: isoOnDay(0, 16, 32),
+        },
+      ]);
+      return;
+    }
+    const content =
+      kind === "flow-en"
+        ? hydroReplyEn
+        : kind === "flow-ar"
+          ? hydroReplyAr
           : kind === "ar"
-            ? "اعرض الجدول الزمني والمقارنة."
-            : "Show the schedule and the comparison table.";
+            ? sampleAr
+            : kind === "charts-ar"
+              ? chartCaseAr
+              : kind === "charts-en"
+                ? chartCaseEn
+                : kind === "scurve-ar"
+                  ? scurveAr
+                  : kind === "scurve-en"
+                    ? scurveEn
+                    : sampleEn;
+    const prompt =
+      kind === "flow-en"
+        ? "Draw a process diagram of a hydrocracker plant"
+        : kind === "flow-ar"
+          ? "ارسم مخطط عملية وحدة التكسير الهيدروجيني"
+          : kind === "scurve-en" || kind === "scurve-ar"
+            ? "Wk1 10%, Wk2 25%, Wk3 67%, Wk4 89%, Wk5 100%. Make now the chart of S-Curve"
+            : kind === "charts-ar"
+              ? "اعرض منحنى التقدم المخطط مقابل الفعلي لمشروع طريق مدته 12 شهراً وعلّق على الاتجاه."
+              : kind === "charts-en"
+                ? "Show a chart of planned vs actual progress (S-curve) for a 12-month road project and comment on the trend."
+                : kind === "ar"
+                  ? "اعرض الجدول الزمني والمقارنة."
+                  : "Show the schedule and the comparison table.";
     setFixture([
       {
         id: "fixture-user",
         role: "user",
         content: prompt,
         attachments: [],
+        createdAt: isoOnDay(-1, 16, 32),
       },
-      { id: "fixture-ai", role: "assistant", content, attachments: [] },
+      { id: "fixture-ai", role: "assistant", content, attachments: [], createdAt: isoOnDay(0, 16, 32) },
     ]);
   }, []);
 
@@ -691,6 +752,7 @@ export default function Page() {
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
+      createdAt: new Date().toISOString(),
       content: userText || s.chat.attachmentOnly,
       attachments: userAttachments.map((item) => ({
         ...item,
@@ -705,6 +767,7 @@ export default function Page() {
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
+        createdAt: new Date().toISOString(),
         content,
       };
       history.appendLocal(assistantMessage);
@@ -886,8 +949,13 @@ export default function Page() {
               </button>
             </div>
           )}
-            {messages.map((m) => {
+            {messages.map((m, index) => {
               const rtl = isArabicText(m.content);
+              const dayLabel = formatDaySeparator(m.createdAt, locale, new Date(), timeZone);
+              const previous = messages[index - 1];
+              const previousDay = previous
+                ? formatDaySeparator(previous.createdAt, locale, new Date(), timeZone)
+                : null;
               const hasAtt = (m.attachments?.length || 0) > 0;
               const meta = exportMeta(
                 m.content,
@@ -898,8 +966,9 @@ export default function Page() {
               const topic = meta.title;
 
               return (
+                <div key={m.id}>
+                  {dayLabel && dayLabel !== previousDay ? <DaySeparator label={dayLabel} /> : null}
                 <div
-                  key={m.id}
                   className={
                     "message-row " +
                     (m.role === "user" ? "message-user" : "message-assistant")
@@ -914,6 +983,7 @@ export default function Page() {
                   )}
 
                   <div className="message-bubble">
+                    <MessageTime iso={m.createdAt} locale={locale} zone={timeZone} />
                     <div className="msg-content" dir={rtl ? "rtl" : "ltr"} data-message-id={m.id}>
                       <MessageMarkdown
                         markdown={m.content}
@@ -1170,6 +1240,7 @@ export default function Page() {
                       </div>
                     )}
                   </div>
+                </div>
                 </div>
               );
             })}

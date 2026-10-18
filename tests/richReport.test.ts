@@ -28,7 +28,7 @@ test("riyadh stamp and prompt forbid a cutoff and require mermaid schedules", ()
   const rules = assistantRules({ now, locale: "en" });
   assert.match(rules, /Asia\/Riyadh/);
   assert.match(rules, /Never mention a training cutoff/);
-  assert.match(rules, /flowchart RL/);
+  assert.match(rules, /flowchart TD/);
   assert.match(rules, /crit/);
   assert.match(freshnessRules(now, "ar"), /بتوقيت السعودية/);
 });

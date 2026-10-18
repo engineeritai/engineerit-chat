@@ -113,6 +113,7 @@ export async function saveHistoryMessages(
     id: string;
     role: "user" | "assistant";
     content: string;
+    createdAt?: string;
     attachments?: StoredAttachment[];
   }[]
 ) {

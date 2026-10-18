@@ -116,10 +116,15 @@ describe("s-curve fallback", () => {
     const rules = assistantRules({ locale: "en" });
     assert.match(rules, /MUST include a fenced scurve block/);
     assert.match(rules, /Start \| 0 \| 0/);
+    assert.match(rules, /The chart is always called an S-curve/);
+    assert.match(rules, /Never write A-curve, A-Curve, or A curve/);
+    assert.match(rules, /s-curve as trend/);
     const advisor = getAdvisor("pmo");
     assert.ok(advisor);
     const prompt = buildAdvisorSystemPrompt(advisor!, "en", "schedule");
     assert.match(prompt, /S-curves are a core PMO product/);
+    assert.match(prompt, /Never write A-curve, A-Curve, or A curve/);
+    assert.match(prompt, /s-curve as a trend/);
     assert.match(prompt, /fenced scurve block/);
     assert.match(prompt, /even while a playbook template is active/);
     assert.match(readFileSync("lib/advisorPrompts.ts", "utf8"), /S-curves are a core PMO product/);

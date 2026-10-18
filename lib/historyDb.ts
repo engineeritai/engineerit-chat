@@ -1,3 +1,4 @@
+import { parseCreatedAt } from "@/lib/messageTime";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sanitizeAttachments, type StoredAttachment } from "@/lib/attachmentMeta";
 import { isUuid, type HistoryAccount } from "@/lib/historyAccess";
@@ -319,6 +320,8 @@ export type IncomingMessage = {
   role?: unknown;
   content?: unknown;
   attachments?: unknown;
+  createdAt?: unknown;
+  created_at?: unknown;
 };
 
 export async function appendMessages(args: {
@@ -336,6 +339,7 @@ export async function appendMessages(args: {
     const content = cleanContent(message.content);
     const attachments = sanitizeAttachments(message.attachments);
     if (!content.trim() && attachments.length === 0) continue;
+    const createdAt = parseCreatedAt(message.createdAt ?? message.created_at);
     rows.push({
       id: isUuid(message.id) ? message.id : crypto.randomUUID(),
       conversation_id: conversation.id,
@@ -343,6 +347,7 @@ export async function appendMessages(args: {
       role,
       content,
       attachments,
+      ...(createdAt ? { created_at: createdAt } : {}),
     });
   }
   if (rows.length === 0) return true;

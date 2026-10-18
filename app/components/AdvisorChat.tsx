@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } fro
 import Link from "next/link";
 import ComposerPlus from "@/app/components/ComposerPlus";
 import EitMark from "@/app/components/marketing/EitMark";
+import { DaySeparator, MessageTime, useMessageTimeZone } from "@/app/components/MessageTime";
+import { formatDaySeparator } from "@/lib/messageTime";
 import { applyComposerHeight, resetComposerHeight } from "@/lib/fitComposer";
 import MessageMarkdown from "@/app/components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "@/app/components/copyRich";
@@ -54,6 +56,7 @@ type Message = {
   role: Role;
   content: string;
   attachments?: Attachment[];
+  createdAt?: string;
 };
 
 function uuid() {
@@ -63,6 +66,7 @@ function uuid() {
 export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
   const advisor = getAdvisor(advisorId);
   const { locale, m, dir, shell: s } = useMessages();
+  const timeZone = useMessageTimeZone();
   const { ready, isGuest, userId, tier } = useSubscriptionTier();
   const copy = m.advisors.items[advisorId];
   const live = advisorsAreLive();
@@ -269,6 +273,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         role: "user",
         content: userText || "[Attachment-only message]",
         attachments: userAttachments,
+        createdAt: new Date().toISOString(),
       },
     ]);
     sendingRef.current = true;
@@ -316,6 +321,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
               id: uuid(),
               role: "assistant",
               content: data?.error || m.gating.sendLocked,
+              createdAt: new Date().toISOString(),
             },
           ]);
           return;
@@ -325,7 +331,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         reply = data.reply || "";
       }
 
-      setMessages((prev) => [...prev, { id: uuid(), role: "assistant", content: reply }]);
+      setMessages((prev) => [...prev, { id: uuid(), role: "assistant", content: reply, createdAt: new Date().toISOString() }]);
       setLocalCount(check.key, check.cur + 1);
     } catch (err) {
       if (err instanceof Error && err.message === "locked") return;
@@ -334,7 +340,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         err instanceof UploadError
           ? err.message
           : s.chat.sorry;
-      setMessages((prev) => [...prev, { id: uuid(), role: "assistant", content }]);
+      setMessages((prev) => [...prev, { id: uuid(), role: "assistant", content, createdAt: new Date().toISOString() }]);
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -485,13 +491,19 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
             </p>
           </div>
         ) : (
-          messages.map((message) => {
+          messages.map((message, index) => {
             const rtl = isArabicText(message.content);
+            const dayLabel = formatDaySeparator(message.createdAt, locale, new Date(), timeZone);
+            const previous = messages[index - 1];
+            const previousDay = previous
+              ? formatDaySeparator(previous.createdAt, locale, new Date(), timeZone)
+              : null;
             const meta = exportMeta(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content);
             const topic = meta.title;
             return (
+              <div key={message.id}>
+                {dayLabel && dayLabel !== previousDay ? <DaySeparator label={dayLabel} /> : null}
               <div
-                key={message.id}
                 className={
                   "message-row " +
                   (message.role === "user" ? "message-user" : "message-assistant")
@@ -505,6 +517,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                   </div>
                 )}
                 <div className="message-bubble">
+                  <MessageTime iso={message.createdAt} locale={locale} zone={timeZone} />
                   <div className="msg-content" dir={rtl ? "rtl" : "ltr"} data-message-id={message.id}>
                     <MessageMarkdown
                       markdown={message.content}
@@ -658,6 +671,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                     </div>
                   )}
                 </div>
+              </div>
               </div>
             );
           })

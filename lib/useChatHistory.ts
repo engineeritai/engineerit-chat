@@ -30,6 +30,7 @@ export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   attachments?: ChatAttachment[];
+  createdAt?: string;
 };
 
 export type ChatThread = {
@@ -235,6 +236,7 @@ export function useChatHistory(opts: { locale: Locale; discipline: string; draft
                 id: message.id,
                 role: message.role,
                 content: message.content,
+                createdAt: message.createdAt,
                 attachments: message.attachments.map((item, index) => ({
                   id: `${message.id}-${index}`,
                   name: item.name,
@@ -316,6 +318,7 @@ export function useChatHistory(opts: { locale: Locale; discipline: string; draft
         id: message.id,
         role: message.role,
         content: message.content,
+        createdAt: message.createdAt,
         attachments: attachmentMeta(message),
       }))
     );
