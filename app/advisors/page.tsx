@@ -9,9 +9,10 @@ import { advisorsAreLive, advisorsNowLive } from "@/lib/advisorLaunch";
 import { groupedPlaybooks } from "@/lib/playbooks";
 import { useMessages } from "@/lib/useMessages";
 import { useSubscriptionTier } from "@/lib/useSubscriptionTier";
+import { operationsCardCopy } from "@/lib/operationsCardCopy";
 
 export default function AdvisorsPage() {
-  const { m } = useMessages();
+  const { locale, m } = useMessages();
   const { ready, isGuest, tier } = useSubscriptionTier();
   const live = advisorsAreLive();
   const nowLive = advisorsNowLive();
@@ -65,6 +66,10 @@ export default function AdvisorsPage() {
               const advisor = getAdvisor(id);
               if (!advisor) return null;
               const copy = m.advisors.items[advisor.id];
+              const card =
+                advisor.id === "operations"
+                  ? operationsCardCopy(locale, copy.summary, copy.capabilities)
+                  : { summary: copy.summary, capabilities: copy.capabilities };
               const entitled = ready && hasAdvisorAccess(tier, advisor.id, isGuest);
               const unlocked = live && entitled;
               return (
@@ -84,16 +89,16 @@ export default function AdvisorsPage() {
                   </div>
                   <h2>{copy.name}</h2>
                   <p className="advisor-included-on">{m.advisors.includedOn[advisor.id]}</p>
-                  <p>{copy.summary}</p>
+                  <p>{card.summary}</p>
                   {unlocked ? (
                     <ul className="advisor-capabilities">
-                      {copy.capabilities.map((item) => (
+                      {card.capabilities.map((item) => (
                         <li key={item}>{item}</li>
                       ))}
                     </ul>
                   ) : (
                     <ul className="advisor-capabilities">
-                      {copy.capabilities.slice(0, 2).map((item) => (
+                      {card.capabilities.slice(0, 2).map((item) => (
                         <li key={item}>{item}</li>
                       ))}
                     </ul>
