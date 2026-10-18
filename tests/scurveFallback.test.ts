@@ -63,6 +63,10 @@ describe("s-curve fallback", () => {
     assert.match(svg, />0</);
     assert.match(svg, />100</);
     assert.match(svg, /data-kind="increment"/);
+    assert.match(svg, /Cumulative progress/);
+    assert.match(svg, /Weekly progress/);
+    assert.match(svg, />10%</);
+    assert.match(svg, />100%</);
     assert.equal(svg.includes("data-kind=\"actual\""), false);
   });
 
@@ -79,6 +83,10 @@ describe("s-curve fallback", () => {
     assert.match(svg, /data-kind="data-date"/);
     assert.match(svg, /Behind plan: -15%/);
     assert.match(svg, /SPI ≈ 0\.67/);
+    assert.match(svg, /Planned \(baseline\)/);
+    assert.match(svg, /Actual \(to date\)/);
+    assert.match(svg, /Data date \(Wk2\)/);
+    assert.match(svg, /#dc2626/);
     const rtl = renderChartSvg(parseMessage(arabicTable).find((block) => block.type === "chart")!.type === "chart"
       ? (parseMessage(arabicTable).find((block) => block.type === "chart") as { type: "chart"; model: typeof chart.model }).model
       : chart.model, "rtl");
