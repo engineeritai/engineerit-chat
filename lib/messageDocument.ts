@@ -165,18 +165,18 @@ export function parseMessage(markdown: string, today = riyadhIsoDate()): Block[]
       i += 1;
       const source = body.join("\n").trim();
       if (!source) continue;
+      const chart = parseChart(lang || "mermaid", source, today);
+      if (chart) {
+        blocks.push({ type: "chart", model: chart, index });
+        index += 1;
+        continue;
+      }
       if (isAsciiArt(source)) {
         const mermaid = asciiToMermaid(source, "ltr");
         if (mermaid) {
           blocks.push({ type: "diagram", source: mermaid, index });
           index += 1;
         }
-        continue;
-      }
-      const chart = parseChart(lang || "mermaid", source, today);
-      if (chart) {
-        blocks.push({ type: "chart", model: chart, index });
-        index += 1;
         continue;
       }
       if (lang === "mermaid") {
