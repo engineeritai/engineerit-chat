@@ -156,6 +156,19 @@ export function stepsFromMarkdown(markdown: string): string[] {
   return heads.length >= 2 ? heads.slice(0, 10) : steps;
 }
 
+function topicSteps(text: string): string[] {
+  const of = /(?:\bof|\bfor|ل)\s+([^.:\n]+)/i.exec(text || "");
+  const topic = (of?.[1] || "")
+    .replace(/\bthen\b[\s\S]*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60);
+  if (topic.length < 3) return [];
+  const arabic = /[\u0600-\u06FF]/.test(text);
+  if (arabic) return ["التغذية", topic, "المفاعل", "الفصل", "المنتجات"];
+  return [`Feed to ${topic}`, "Reactor", "Separator", "Products"];
+}
+
 export function flowchartFromSteps(steps: string[]): string {
   const lines = ["flowchart TD"];
   steps.forEach((step, index) => {
@@ -176,15 +189,17 @@ function replaceFence(text: string, fence: { start: number; end: number }, sourc
 export function ensureDiagramMarkdown(markdown: string, context = "", force = false): string {
   const text = markdown || "";
   const fence = mermaidFence(text);
-  if (fence && !/flowchart|\bgraph\b/i.test(fence.source)) return text;
-  if (fence) {
+  if (fence && /flowchart|\bgraph\b/i.test(fence.source)) {
     const clean = sanitizeFlowchart(fence.source);
     if (clean) return replaceFence(text, fence, clean);
+  } else if (fence && !force && !asksForDiagram(context)) {
+    return text;
   }
   const wanted = force || asksForDiagram(text) || asksForDiagram(context) || claimsDiagram(text);
   if (!wanted) return text;
   const own = stepsFromMarkdown(text);
-  const steps = own.length >= 2 ? own : stepsFromMarkdown(context);
+  const fromContext = stepsFromMarkdown(context);
+  const steps = own.length >= 2 ? own : fromContext.length >= 2 ? fromContext : topicSteps(`${context}\n${text}`);
   if (steps.length < 2) return text;
   const withoutBroken = fence ? `${text.slice(0, fence.start)}${text.slice(fence.end)}`.trim() : text.trim();
   return `${withoutBroken}\n\n\`\`\`mermaid\n${flowchartFromSteps(steps)}\n\`\`\`\n`;

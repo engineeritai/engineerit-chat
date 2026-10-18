@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { gateAdvisor } from "@/lib/advisorGate";
 import { assistantRules } from "@/lib/assistantRules";
-import { asksForDiagram, diagramRetryNeeded, ensureDiagramMarkdown } from "@/lib/diagramReply";
+import { asksForDiagram, diagramRetryNeeded, ensureDiagramMarkdown, hasRenderableFlow, mermaidFence, sanitizeFlowchart } from "@/lib/diagramReply";
 import { appendSources, sourcesFromResponse, type SearchResponse } from "@/lib/citations";
 import { replyLanguageRule, uiLocale } from "@/lib/replyLanguage";
 
@@ -240,11 +240,13 @@ async function finishDiagramReply(
           },
         ],
       });
-      const retried = retry.choices[0]?.message?.content;
-      if (retried) next = retried;
+      const retried = retry.choices[0]?.message?.content || "";
+      const fence = mermaidFence(retried);
+      const clean = fence ? sanitizeFlowchart(fence.source) : null;
+      if (clean && !hasRenderableFlow(next)) next = `${next.trim()}\n\n\`\`\`mermaid\n${clean}\n\`\`\`\n`;
     } catch (err) {
       console.error("diagram retry failed", err);
     }
   }
-  return ensureDiagramMarkdown(next, prior, asksForDiagram(userText));
+  return ensureDiagramMarkdown(next, `${prior}\n${userText}`, asksForDiagram(userText));
 }

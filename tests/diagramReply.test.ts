@@ -66,6 +66,17 @@ describe("diagram replies", () => {
     if (diagram?.type === "diagram") assert.doesNotMatch(diagram.source, /flowchart LR/);
   });
 
+  it("still draws a flowchart when the model only returns an S-curve", () => {
+    const reply = "Cumulative progress is below.\n\n```scurve\ntitle S-curve\nWk1 | 10\nWk2 | 25\n```";
+    const user = "Draw a process diagram of a hydrocracker plant. Then an S-curve.";
+    const fixed = ensureDiagramMarkdown(reply, user, true);
+    assert.match(fixed, /```scurve/);
+    assert.match(fixed, /flowchart TD/);
+    assert.match(fixed, /hydrocracker plant/);
+    assert.equal(diagramRetryNeeded(reply, user), true);
+    assert.equal(hasRenderableFlow(fixed), true);
+  });
+
   it("leaves an ordinary answer unchanged", () => {
     const text = "The pump is API 610. Confirm the nozzle loads.";
     assert.equal(claimsDiagram(text), false);
