@@ -60,56 +60,66 @@ export default function MermaidFigure({
 }) {
   const reactId = useId().replace(/:/g, "");
   const frameRef = useRef<HTMLDivElement>(null);
-  const [markup, setMarkup] = useState("");
+  const source = sanitizeFlowchart(code) || code;
+  const painted = flowSvg(source, dir) || "";
+  const [markup, setMarkup] = useState(painted);
   const [compact, setCompact] = useState(false);
   const [open, setOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const source = sanitizeFlowchart(code) || code;
 
   useEffect(() => {
     let cancel = false;
+    let timer = 0;
+    if (painted) setMarkup(painted);
     (async () => {
-      const mermaid = (await import("mermaid")).default;
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "strict",
-        theme: "base",
-        htmlLabels: false,
-        fontFamily: "IBM Plex Sans Arabic, Noto Sans Arabic, Inter, sans-serif",
-        flowchart: {
-          htmlLabels: false,
-          useMaxWidth: false,
-          wrappingWidth: 200,
-          padding: 8,
-          nodeSpacing: 28,
-          rankSpacing: 32,
-        },
-        themeVariables: {
-          fontSize: "13px",
-          primaryColor: "#e7eeff",
-          primaryTextColor: "#111418",
-          primaryBorderColor: "#1a56ff",
-          lineColor: "#1a56ff",
-          background: "#ffffff",
-        },
-      });
-      if (compact) {
-        if (!cancel) setMarkup(flowSvg(source, dir) || "");
-        return;
-      }
       try {
-        const rendered = await mermaid.render(`mmd-${reactId}`, source);
+        const mermaid = (await import("mermaid")).default;
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "strict",
+          theme: "base",
+          htmlLabels: false,
+          fontFamily: "IBM Plex Sans Arabic, Noto Sans Arabic, Inter, sans-serif",
+          flowchart: {
+            htmlLabels: false,
+            useMaxWidth: false,
+            wrappingWidth: 200,
+            padding: 8,
+            nodeSpacing: 28,
+            rankSpacing: 32,
+          },
+          themeVariables: {
+            fontSize: "13px",
+            primaryColor: "#e7eeff",
+            primaryTextColor: "#111418",
+            primaryBorderColor: "#1a56ff",
+            lineColor: "#1a56ff",
+            background: "#ffffff",
+          },
+        });
+        if (compact) {
+          if (!cancel && painted) setMarkup(painted);
+          return;
+        }
+        const rendered = await Promise.race([
+          mermaid.render(`mmd-${reactId}`, source),
+          new Promise<never>((_, reject) => {
+            timer = window.setTimeout(() => reject(new Error("diagram-timeout")), 4000);
+          }),
+        ]);
+        window.clearTimeout(timer);
         if (!cancel) setMarkup(rendered.svg);
       } catch {
-        if (!cancel) setMarkup(flowSvg(source, dir) || "");
+        if (!cancel && painted) setMarkup(painted);
       }
     })();
     return () => {
       cancel = true;
+      window.clearTimeout(timer);
     };
-  }, [source, dir, reactId, compact]);
+  }, [source, dir, reactId, compact, painted]);
 
   useEffect(() => {
     const frame = frameRef.current;
