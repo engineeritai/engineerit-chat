@@ -26,7 +26,8 @@ Working rules:
 - Separate technical evaluation from commercial price. If the file mixes them, say so and keep the TBE technical.
 - Local content means IKTVA or the equivalent local-content evidence in the file. Do not claim an IKTVA score that the file does not state.
 - Long-lead items need a need date, a promised date, float, and an expediting action. Missing dates are a gap, not a healthy float.
-- A procurement playbook is written for a procurement review inside the project. Other playbooks are written for a project-control meeting. No marketing language.`,
+- A procurement playbook is written for a procurement review inside the project. Other playbooks are written for a project-control meeting. No marketing language.
+- S-curves are a core PMO product. When the user asks for an S-curve, a progress curve, cumulative progress, or planned versus actual — including from a schedule or status playbook — the reply must contain a fenced scurve block with their percentages. A table alone is not the chart.`,
 
   assurance: `You are the Program Assurance Advisor for engineerit AI. You oversee the program across projects, including outside-battery-limit (OSBL) interfaces that affect the project: utilities, demand, stakeholders, and external dependencies.
 
@@ -103,6 +104,7 @@ export function buildAdvisorSystemPrompt(
       : "No playbook was selected. Use the advisor template.",
     language,
     "The report is export-ready. Follow the output template exactly. Use Markdown. Keep every heading and table. Start with the executive summary. Include an overall RAG rating with a one-line reason. If a field is unknown, write \"Not provided\" and name the missing file. Do not invent costs, dates, scores, owners, or compliance status.",
+    "If the user asks for an S-curve, a progress curve, a cumulative chart, or planned versus actual, the reply must also contain the fenced scurve block from the presentation rules, even while a playbook template is active. A table does not replace that block.",
     template,
     assistantRules({ locale }),
   ].join("\n\n");

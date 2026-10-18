@@ -268,8 +268,9 @@ body {
   padding: 8px 10px;
   font: inherit;
   resize: none;
-  min-height: 45px;
-  max-height: 200px;
+  min-height: 44px;
+  max-height: min(154px, 32vh);
+  overflow-y: auto;
   font-size: 14px;
   outline: none;
   background: transparent;
@@ -3609,6 +3610,10 @@ button.advisor-card-link {
   width: 100%;
   height: auto;
   min-width: 640px;
+}
+
+.schedule-scroll svg[data-chart="scurve"] {
+  min-width: 0;
 }
 
 .share-page {

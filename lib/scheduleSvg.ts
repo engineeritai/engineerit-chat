@@ -187,7 +187,169 @@ function timelineSvg(model: TimelineModel, rtl: boolean, theme: ChartTheme): str
   return parts.join("");
 }
 
+function monotonePath(xs: number[], ys: number[]) {
+  const n = xs.length;
+  if (!n) return "";
+  if (n === 1) return `M${xs[0].toFixed(1)},${ys[0].toFixed(1)}`;
+  const dx: number[] = [];
+  const slope: number[] = [];
+  for (let i = 0; i < n - 1; i += 1) {
+    dx[i] = xs[i + 1] - xs[i] || 1;
+    slope[i] = (ys[i + 1] - ys[i]) / dx[i];
+  }
+  const tangent = new Array<number>(n);
+  tangent[0] = slope[0];
+  tangent[n - 1] = slope[n - 2];
+  for (let i = 1; i < n - 1; i += 1) {
+    tangent[i] = slope[i - 1] * slope[i] <= 0 ? 0 : (slope[i - 1] + slope[i]) / 2;
+  }
+  for (let i = 0; i < n - 1; i += 1) {
+    if (Math.abs(slope[i]) < 1e-6) {
+      tangent[i] = 0;
+      tangent[i + 1] = 0;
+      continue;
+    }
+    const a = tangent[i] / slope[i];
+    const b = tangent[i + 1] / slope[i];
+    const hypot = a * a + b * b;
+    if (hypot > 9) {
+      const scale = 3 / Math.sqrt(hypot);
+      tangent[i] = scale * a * slope[i];
+      tangent[i + 1] = scale * b * slope[i];
+    }
+  }
+  let path = `M${xs[0].toFixed(1)},${ys[0].toFixed(1)}`;
+  for (let i = 0; i < n - 1; i += 1) {
+    const c1x = xs[i] + dx[i] / 3;
+    const c1y = ys[i] + (tangent[i] * dx[i]) / 3;
+    const c2x = xs[i + 1] - dx[i] / 3;
+    const c2y = ys[i + 1] - (tangent[i + 1] * dx[i]) / 3;
+    path += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${xs[i + 1].toFixed(1)},${ys[i + 1].toFixed(1)}`;
+  }
+  return path;
+}
+
+function axisTick(label: string) {
+  const text = label.trim();
+  if (text === "Start" || text === "البداية") return text;
+  const latin = /^(?:wk|week|w)\s*(\d+)$/i.exec(text);
+  if (latin) return `W${latin[1]}`;
+  const arabicWeek = /^(?:أسبوع|شهر|فترة|يوم)\s*(\d+)$/.exec(text);
+  if (arabicWeek) {
+    const digits = "٠١٢٣٤٥٦٧٨٩";
+    return `أ${[...arabicWeek[1]].map((ch) => digits[Number(ch)] ?? ch).join("")}`;
+  }
+  return clip(label, 6);
+}
+
+function scurveSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string {
+  const colors = palette[theme];
+  const blue = theme === "dark" ? "#93c5fd" : "#0d60e4";
+  const orange = theme === "dark" ? "#fdba74" : "#ea580c";
+  const width = 420;
+  const height = 280;
+  const arabic = rtl || model.points.some((point) => /[\u0600-\u06FF]/.test(point.label));
+  const startLabel = arabic ? "البداية" : "Start";
+  const points = model.points[0] && model.points[0].planned <= 0.5 && (model.points[0].actual == null || model.points[0].actual <= 0.5)
+    ? model.points
+    : [{ label: startLabel, planned: 0, actual: model.points.some((point) => point.actual != null) ? 0 : null }, ...model.points];
+  const grouped = points.some((point) => point.actual != null);
+  const dataDate = grouped ? points.reduce((found, point, index) => (point.actual != null ? index : found), -1) : -1;
+  const padL = 50;
+  const padR = 50;
+  const top = grouped && dataDate >= 0 ? 74 : 56;
+  const bottom = 228;
+  const plotW = width - padL - padR;
+  const yOf = (value: number) => bottom - (Math.max(0, Math.min(100, value)) / 100) * (bottom - top);
+  const xOf = (index: number) => {
+    const t = points.length === 1 ? 0.5 : index / (points.length - 1);
+    return rtl ? padL + plotW - t * plotW : padL + t * plotW;
+  };
+  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg data-chart="scurve" `)];
+  const legendX = rtl ? width - 12 : 12;
+  const legendAnchor = rtl ? "end" : "start";
+  const names = model.seriesNames?.filter(Boolean) || [];
+  const legend = names.length >= 2 ? names.slice(0, 2) : grouped ? (arabic ? ["المخطط", "الفعلي"] : ["Planned", "Actual"]) : [names[0] || (arabic ? "التقدم" : "Progress")];
+  legend.forEach((name, index) => {
+    const color = index === 0 ? blue : orange;
+    const x = rtl ? legendX - index * 96 : legendX + index * 108;
+    const mark = rtl ? x - 8 : x + 6;
+    parts.push(`<circle data-kind="legend" cx="${mark.toFixed(1)}" cy="16" r="4" fill="${color}"/>`);
+    parts.push(text(rtl ? x - 16 : x + 14, 20, name, { size: 12, fill: colors.ink, weight: 650, rtl, anchor: legendAnchor }));
+  });
+  if (grouped && dataDate >= 0) {
+    const planned = points[dataDate].planned;
+    const actual = points[dataDate].actual ?? planned;
+    const delta = Math.round(actual - planned);
+    const spi = planned > 0 ? (actual / planned).toFixed(2) : "";
+    const callout = arabic
+      ? delta < -0.5
+        ? `متأخر عن المخطط: ${delta}٪${spi ? `، SPI ≈ ${spi}` : ""}`
+        : delta > 0.5
+          ? `متقدم على المخطط: +${delta}٪${spi ? `، SPI ≈ ${spi}` : ""}`
+          : `على المخطط${spi ? `، SPI ≈ ${spi}` : ""}`
+      : delta < -0.5
+        ? `Behind plan: ${delta}%${spi ? `, SPI ≈ ${spi}` : ""}`
+        : delta > 0.5
+          ? `Ahead of plan: +${delta}%${spi ? `, SPI ≈ ${spi}` : ""}`
+          : `On plan${spi ? `, SPI ≈ ${spi}` : ""}`;
+    parts.push(text(rtl ? width - 12 : 12, 36, callout, { size: 12, fill: delta < -0.5 ? orange : colors.ink, weight: 700, rtl, anchor: legendAnchor }));
+    parts.push(`<g data-kind="callout"></g>`);
+  }
+  for (const tick of [0, 25, 50, 75, 100]) {
+    const y = yOf(tick);
+    parts.push(`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${padL + plotW}" y2="${y.toFixed(1)}" stroke="${colors.grid}"/>`);
+    parts.push(text(rtl ? width - 8 : 4, y + 4, String(tick), { size: 11, fill: colors.muted, anchor: rtl ? "end" : "start" }));
+  }
+  if (!grouped) {
+    points.forEach((point, index) => {
+      if (index === 0) return;
+      const gain = Math.max(0, point.planned - points[index - 1].planned);
+      const bw = Math.min(18, plotW / points.length * 0.45);
+      const x = xOf(index) - bw / 2;
+      const y = yOf(gain);
+      parts.push(`<rect data-kind="increment" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0, bottom - y).toFixed(1)}" rx="3" fill="${blue}" opacity="0.18"/>`);
+    });
+  }
+  const seriesPath = (key: "planned" | "actual") => {
+    const xs: number[] = [];
+    const ys: number[] = [];
+    points.forEach((point, index) => {
+      if (key === "actual" && dataDate >= 0 && index > dataDate) return;
+      const value = key === "planned" ? point.planned : point.actual;
+      if (value == null) return;
+      xs.push(xOf(index));
+      ys.push(yOf(value));
+    });
+    return monotonePath(xs, ys);
+  };
+  const planned = seriesPath("planned");
+  const actual = grouped ? seriesPath("actual") : "";
+  if (planned) parts.push(`<path data-kind="planned" d="${planned}" fill="none" stroke="${blue}" stroke-width="2.5" stroke-linecap="round"/>`);
+  if (actual) parts.push(`<path data-kind="actual" d="${actual}" fill="none" stroke="${orange}" stroke-width="2.5" stroke-linecap="round"/>`);
+  if (dataDate >= 0) {
+    const x = xOf(dataDate);
+    parts.push(`<line data-kind="data-date" x1="${x.toFixed(1)}" y1="${top}" x2="${x.toFixed(1)}" y2="${bottom}" stroke="${orange}" stroke-dasharray="4 3" stroke-width="1.5"/>`);
+  }
+  points.forEach((point, index) => {
+    const x = xOf(index);
+    parts.push(`<circle cx="${x.toFixed(1)}" cy="${yOf(point.planned).toFixed(1)}" r="3.5" fill="${blue}" stroke="${colors.bg}" stroke-width="1"/>`);
+    const labelValue = point.actual != null && index === dataDate ? point.actual : point.planned;
+    const percent = arabic ? `${Math.round(labelValue)}٪` : `${Math.round(labelValue)}%`;
+    const above = yOf(labelValue) - 12;
+    const labelY = above >= 30 ? above : yOf(labelValue) + 14;
+    parts.push(text(x, labelY, percent, { size: 11, fill: colors.ink, weight: 650, anchor: "middle" }));
+    if (point.actual != null && index <= dataDate) {
+      parts.push(`<circle cx="${x.toFixed(1)}" cy="${yOf(point.actual).toFixed(1)}" r="3.5" fill="${orange}" stroke="${colors.bg}" stroke-width="1"/>`);
+    }
+    parts.push(text(x, bottom + 18, axisTick(point.label), { size: 11, fill: colors.muted, anchor: "middle", rtl }));
+  });
+  parts.push("</svg>");
+  return parts.join("");
+}
+
 function seriesSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string {
+  if (model.kind === "scurve") return scurveSvg(model, rtl, theme);
   const colors = palette[theme];
   const width = 1400;
   const height = 460;
@@ -227,8 +389,7 @@ function seriesSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
       parts.push(text(cx, bottom + 24, clip(point.label, 12), { size: 12, fill: colors.muted, anchor: "middle", rtl }));
     });
   } else {
-    const fillArea = model.kind === "area" || model.kind === "scurve";
-    const dashedPlanned = model.kind === "scurve" && grouped;
+    const fillArea = model.kind === "area";
     const line = (key: "planned" | "actual") => {
       const cmds: string[] = [];
       model.points.forEach((point, index) => {
@@ -249,10 +410,7 @@ function seriesSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
     };
     if (fillArea && model.kind === "area" && planned) parts.push(`<path data-kind="area" d="${areaFor(planned, "planned")}" fill="${colors.bar}" opacity="0.16"/>`);
     if (fillArea && actual) parts.push(`<path data-kind="area" d="${areaFor(actual, "actual")}" fill="${colors.actual}" opacity="0.16"/>`);
-    if (planned) {
-      const dash = dashedPlanned ? ` stroke-dasharray="7 5"` : "";
-      parts.push(`<path data-kind="planned" d="${planned}" fill="none" stroke="${colors.bar}" stroke-width="3"${dash}/>`);
-    }
+    if (planned) parts.push(`<path data-kind="planned" d="${planned}" fill="none" stroke="${colors.bar}" stroke-width="3"/>`);
     if (actual) parts.push(`<path data-kind="actual" d="${actual}" fill="none" stroke="${colors.actual}" stroke-width="3.5"/>`);
     model.points.forEach((point, index) => {
       const x = xOf(index);

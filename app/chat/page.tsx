@@ -19,6 +19,7 @@ import { chartCaseAr, chartCaseEn, sampleAr, sampleEn } from "@/lib/richSamples"
 import MarketingShell from "../components/marketing/MarketingShell";
 import ComposerPlus from "../components/ComposerPlus";
 import EitMark from "../components/marketing/EitMark";
+import { applyComposerHeight, resetComposerHeight } from "@/lib/fitComposer";
 import { localPlanPreview } from "../components/marketing/AccountState";
 import ToolGlyph, { ToolLockIcon } from "../components/ToolGlyph";
 import AdvisorGlyph, { AdvisorsMenuGlyph } from "../components/AdvisorGlyph";
@@ -410,6 +411,19 @@ export default function Page() {
     }
   }, []);
 
+  useEffect(() => {
+    const onResize = () => {
+      const el = composerRef.current;
+      if (el) applyComposerHeight(el);
+    };
+    window.visualViewport?.addEventListener("resize", onResize);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
   const handleCloseLanding = () => {
     try {
       const KEY = "engineerit_landing_seen_v1";
@@ -424,10 +438,14 @@ export default function Page() {
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     const kind = new URLSearchParams(window.location.search).get("fixture");
-    if (kind !== "en" && kind !== "ar" && kind !== "charts-en" && kind !== "charts-ar") return;
-    const content = kind === "ar" ? sampleAr : kind === "charts-ar" ? chartCaseAr : kind === "charts-en" ? chartCaseEn : sampleEn;
+    if (kind !== "en" && kind !== "ar" && kind !== "charts-en" && kind !== "charts-ar" && kind !== "scurve-en" && kind !== "scurve-ar") return;
+    const scurveEn = `Based on the provided weekly progress data, here's how the S-Curve would look:\n\n## Weekly Progress Data\n\n| Week | Cumulative Progress (%) |\n| --- | --- |\n| Wk1 | 10% |\n| Wk2 | 25% |\n| Wk3 | 67% |\n| Wk4 | 89% |\n| Wk5 | 100% |\n\n## S-Curve Chart\n\nThe curve starts slowly, accelerates in week 3, and reaches 100% in week 5.`;
+    const scurveAr = `بناءً على نسب التقدم الأسبوعية، هذا منحنى التقدم:\n\n## بيانات التقدم\n\n| الأسبوع | التقدم التراكمي |\n| --- | --- |\n| أسبوع 1 | 10٪ |\n| أسبوع 2 | 25٪ |\n| أسبوع 3 | 67٪ |\n| أسبوع 4 | 89٪ |\n| أسبوع 5 | 100٪ |\n\n## منحنى التقدم\n\nيبدأ المنحنى ببطء، يتسارع في الأسبوع 3، ويصل إلى 100٪ في الأسبوع 5.`;
+    const content = kind === "ar" ? sampleAr : kind === "charts-ar" ? chartCaseAr : kind === "charts-en" ? chartCaseEn : kind === "scurve-ar" ? scurveAr : kind === "scurve-en" ? scurveEn : sampleEn;
     const prompt =
-      kind === "charts-ar"
+      kind === "scurve-en" || kind === "scurve-ar"
+        ? "Wk1 10%, Wk2 25%, Wk3 67%, Wk4 89%, Wk5 100%. Make now the chart of S-Curve"
+        : kind === "charts-ar"
         ? "اعرض منحنى التقدم المخطط مقابل الفعلي لمشروع طريق مدته 12 شهراً وعلّق على الاتجاه."
         : kind === "charts-en"
           ? "Show a chart of planned vs actual progress (S-curve) for a 12-month road project and comment on the trend."
@@ -667,6 +685,7 @@ export default function Page() {
 
     const userAttachments = attachments;
     setInput("");
+    resetComposerHeight(composerRef.current);
     setAttachments([]);
 
     const userMessage: Message = {
@@ -886,7 +905,13 @@ export default function Page() {
                     (m.role === "user" ? "message-user" : "message-assistant")
                   }
                 >
-                  <div className="message-avatar">{m.role === "user" ? s.chat.you : s.chat.ai}</div>
+                  {m.role === "user" ? (
+                    <div className="message-avatar">{s.chat.you}</div>
+                  ) : (
+                    <div className="message-avatar message-avatar-mark">
+                      <EitMark size={32} plate="circle" title="eit" />
+                    </div>
+                  )}
 
                   <div className="message-bubble">
                     <div className="msg-content" dir={rtl ? "rtl" : "ltr"} data-message-id={m.id}>
@@ -1348,8 +1373,7 @@ export default function Page() {
                 rows={1}
                 onChange={(e) => {
                   setInput(e.target.value);
-                  e.target.style.height = "44px";
-                  e.target.style.height = Math.min(e.target.scrollHeight, 180) + "px";
+                  applyComposerHeight(e.target);
                 }}
                 onKeyDown={onKeyDown}
               />

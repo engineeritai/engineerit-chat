@@ -1,5 +1,6 @@
 import { coverSubtitle, pickTopicSource, shortTopic } from "@/lib/exportName";
 import { riyadhIsoDate } from "@/lib/ksaTime";
+import { scurveFromTable } from "@/lib/scurveFromTable";
 import { inclusiveDays, parseChart, type ChartModel, type GanttModel } from "@/lib/scheduleModel";
 import type { UiLocale } from "@/lib/ksaTime";
 
@@ -239,7 +240,26 @@ export function parseMessage(markdown: string, today = riyadhIsoDate()): Block[]
     i += 1;
   }
   pushParagraph(paragraph);
-  return blocks;
+  return withScurveFallback(blocks);
+}
+
+function withScurveFallback(blocks: Block[]): Block[] {
+  if (blocks.some((block) => block.type === "chart" && block.model.kind === "scurve")) return blocks;
+  const title = blocks.find((block) => block.type === "heading" && /s-?\s*curve|progress curve|منحنى/i.test(block.text));
+  const heading = title && title.type === "heading" ? title.text : "S-curve";
+  let chartIndex = blocks.reduce((max, block) => (block.type === "chart" || block.type === "diagram" ? Math.max(max, block.index + 1) : max), 0);
+  const next: Block[] = [];
+  let added = false;
+  for (const block of blocks) {
+    next.push(block);
+    if (added || block.type !== "table") continue;
+    const model = scurveFromTable(block.headers, block.rows, heading);
+    if (!model) continue;
+    next.push({ type: "chart", model, index: chartIndex });
+    chartIndex += 1;
+    added = true;
+  }
+  return next;
 }
 
 export function ganttAppendix(blocks: Block[], locale: UiLocale): { headers: string[]; rows: string[][] } | null {
