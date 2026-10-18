@@ -440,7 +440,6 @@ export default function Page() {
   const messages: Message[] = fixture ?? thread?.messages ?? [];
 
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
     const kind = new URLSearchParams(window.location.search).get("fixture");
     const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar"]);
     if (!kind || !kinds.has(kind)) return;

@@ -75,44 +75,45 @@ function edgeAnchor(value: string, edge: "left" | "right"): "start" | "end" {
   return flips ? "start" : "end";
 }
 
-function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme): string {
-  const colors = palette[theme];
-  const labelW = 210;
-  const pad = 16;
-  const dayMs = 86_400_000;
-  const starts = model.tasks.map((task) => parseIso(task.start)!);
-  const ends = model.tasks.map((task) => parseIso(task.end)!);
-  const min = Math.min(...starts) - 2 * dayMs;
-  const max = Math.max(...ends) + 3 * dayMs;
-  const span = Math.max(max - min, dayMs);
-  const spanDays = Math.max(1, Math.round(span / dayMs));
-  const axisW = Math.max(420, spanDays * 18);
-  const width = pad * 2 + labelW + axisW;
-  const axisX = rtl ? pad : pad + labelW;
-  const labelX = rtl ? width - pad : pad;
-  const xOf = (ms: number) => {
-    const t = (ms - min) / span;
-    return rtl ? axisX + axisW - t * axisW : axisX + t * axisW;
-  };
-  const rows: { kind: "group" | "task"; label: string; task?: GanttModel["tasks"][number] }[] = [];
+export const GANTT_HEADER = 36;
+export const GANTT_ROW = 34;
+
+export function ganttRows(model: GanttModel): { kind: "group" | "task"; label: string }[] {
+  const rows: { kind: "group" | "task"; label: string }[] = [];
   let lastGroup = "";
   for (const task of model.tasks) {
     if (task.group && task.group !== lastGroup) {
       rows.push({ kind: "group", label: task.group });
       lastGroup = task.group;
     }
-    rows.push({ kind: "task", label: task.name, task });
+    rows.push({ kind: "task", label: task.name });
   }
-  const headerH = 78;
-  const rowH = 36;
-  const height = headerH + rows.length * rowH + 28;
-  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg data-chart="gantt" `)];
+  return rows;
+}
+
+function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme): string {
+  const colors = palette[theme];
+  const pad = 12;
+  const dayMs = 86_400_000;
+  const starts = model.tasks.map((task) => parseIso(task.start)!);
+  const ends = model.tasks.map((task) => parseIso(task.end)!);
+  const min = Math.min(...starts) - dayMs;
+  const max = Math.max(...ends) + 2 * dayMs;
+  const span = Math.max(max - min, dayMs);
+  const spanDays = Math.max(1, Math.round(span / dayMs));
+  const axisW = Math.max(280, spanDays * 22);
+  const width = pad * 2 + axisW;
+  const axisX = pad;
+  const xOf = (ms: number) => {
+    const t = (ms - min) / span;
+    return rtl ? axisX + axisW - t * axisW : axisX + t * axisW;
+  };
+  const rows = ganttRows(model);
+  const headerH = GANTT_HEADER;
+  const rowH = GANTT_ROW;
+  const height = headerH + rows.length * rowH;
+  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg data-chart="gantt" style="width:${width}px;max-width:none;height:${height}px" `)];
   parts.push(`<defs><marker id="gantt-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="${colors.muted}"/></marker></defs>`);
-  parts.push(text(rtl ? width - pad : pad, 22, model.title, { size: 13, weight: 700, fill: colors.ink, rtl, anchor: rtl ? "end" : "start" }));
-  const legend = rtl
-    ? "مهمة  ·  مسار حرج  ·  معلم  ·  اليوم"
-    : "Task   Critical   Milestone   Today";
-  parts.push(text(rtl ? width - pad : pad, 42, legend, { size: 12, fill: colors.muted, rtl, anchor: rtl ? "end" : "start" }));
 
   let cursor = min;
   const week = 7 * 86_400_000;
@@ -120,25 +121,26 @@ function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme): string {
     const x = xOf(cursor);
     const date = new Date(cursor);
     const monthStart = date.getUTCDate() <= 7;
-    parts.push(`<line x1="${x.toFixed(1)}" y1="58" x2="${x.toFixed(1)}" y2="${height - 16}" stroke="${monthStart ? colors.month : colors.grid}" stroke-width="${monthStart ? 1.4 : 1}"/>`);
+    parts.push(`<line x1="${x.toFixed(1)}" y1="${headerH - 4}" x2="${x.toFixed(1)}" y2="${height - 8}" stroke="${monthStart ? colors.month : colors.grid}" stroke-width="${monthStart ? 1.4 : 1}"/>`);
     if (monthStart) {
       const label = date.toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
-      parts.push(text(x + (rtl ? -6 : 6), 68, label, { size: 12, fill: colors.muted, weight: 700, anchor: rtl ? "end" : "start" }));
+      parts.push(text(x + (rtl ? -4 : 4), 16, label, { size: 12, fill: colors.muted, weight: 700, anchor: rtl ? "end" : "start" }));
     }
     cursor += week;
   }
 
   const todayMs = parseIso(model.today);
   const bars = new Map<string, { x1: number; x2: number; y: number }>();
+  let taskCursor = 0;
   rows.forEach((row, index) => {
     const y = headerH + index * rowH;
     if (row.kind === "group") {
-      parts.push(`<rect x="${pad}" y="${y}" width="${width - pad * 2}" height="${rowH - 4}" rx="8" fill="${colors.group}"/>`);
-      parts.push(text(rtl ? width - pad - 12 : pad + 12, y + 22, row.label, { size: 13, weight: 700, fill: colors.ink, rtl, anchor: rtl ? "end" : "start" }));
+      parts.push(`<rect x="0" y="${y}" width="${width}" height="${rowH}" fill="${colors.group}"/>`);
       return;
     }
-    const task = row.task!;
-    parts.push(text(rtl ? labelX - 8 : labelX, y + 22, clip(task.name, 32), { size: 13, fill: colors.ink, rtl, anchor: rtl ? "end" : "start" }));
+    const task = model.tasks[taskCursor];
+    taskCursor += 1;
+    if (!task) return;
     const start = parseIso(task.start)!;
     const end = parseIso(task.end)! + 86_400_000;
     if (task.milestone) {
@@ -177,8 +179,8 @@ function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme): string {
 
   if (todayMs != null && todayMs >= min && todayMs <= max) {
     const x = xOf(todayMs);
-    parts.push(`<line data-kind="today" x1="${x.toFixed(1)}" y1="52" x2="${x.toFixed(1)}" y2="${height - 12}" stroke="${colors.ink}" stroke-width="1.5" stroke-dasharray="4 4"/>`);
-    parts.push(text(x, 50, rtl ? "اليوم" : "Today", { size: 12, fill: colors.ink, weight: 700, anchor: "middle" }));
+    parts.push(`<line data-kind="today" x1="${x.toFixed(1)}" y1="4" x2="${x.toFixed(1)}" y2="${height - 2}" stroke="${colors.ink}" stroke-width="1.5" stroke-dasharray="4 4"/>`);
+    parts.push(text(x, 14, rtl ? "اليوم" : "Today", { size: 12, fill: colors.ink, weight: 700, anchor: "middle" }));
   }
   parts.push("</svg>");
   return parts.join("");

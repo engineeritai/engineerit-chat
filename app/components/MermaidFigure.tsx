@@ -7,7 +7,13 @@ import { flowSvg } from "@/lib/flowSvg";
 
 type Labels = { copy: string; png: string; svg: string; enlarge: string; close: string };
 
-function fitSvg(svg: SVGSVGElement, frame: HTMLElement) {
+function nodeCount(source: string): number {
+  const ids = new Set<string>();
+  for (const match of source.matchAll(/(?:^|[\s;])([A-Za-z_][\w]*)\s*\[/g)) ids.add(match[1]);
+  return ids.size;
+}
+
+function fitSvg(svg: SVGSVGElement, frame: HTMLElement, shrink: boolean) {
   const box = svg.viewBox.baseVal;
   let width = box?.width || 0;
   let height = box?.height || 0;
@@ -32,6 +38,13 @@ function fitSvg(svg: SVGSVGElement, frame: HTMLElement) {
   }
   const natural = Math.ceil(width);
   svg.setAttribute("width", String(natural));
+  if (shrink) {
+    svg.style.width = "100%";
+    svg.style.maxWidth = `${natural}px`;
+    svg.style.minWidth = "0";
+    delete svg.dataset.overflow;
+    return;
+  }
   svg.style.width = `${natural}px`;
   svg.style.maxWidth = "none";
   svg.style.minWidth = `${natural}px`;
@@ -51,10 +64,11 @@ export default function MermaidFigure({
 }) {
   const reactId = useId().replace(/:/g, "");
   const frameRef = useRef<HTMLDivElement>(null);
-  const source = sanitizeFlowchart(code) || code;
+  const source = sanitizeFlowchart(code, dir) || code;
   const painted = flowSvg(source, dir) || "";
   const [markup, setMarkup] = useState(painted);
   const [compact, setCompact] = useState(false);
+  const [fade, setFade] = useState(false);
   const [open, setOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
@@ -116,9 +130,12 @@ export default function MermaidFigure({
     const frame = frameRef.current;
     const svg = frame?.querySelector("svg");
     if (!frame || !svg) return;
-    fitSvg(svg, frame);
-    if (!compact && svg.dataset.overflow === "1") setCompact(true);
-  }, [markup, compact]);
+    const count = Number(svg.getAttribute("data-nodes") || "") || nodeCount(source);
+    const shrink = count > 0 && count <= 3;
+    fitSvg(svg, frame, shrink);
+    setFade(frame.scrollWidth > frame.clientWidth + 1);
+    if (!shrink && !compact && svg.dataset.overflow === "1") setCompact(true);
+  }, [markup, compact, source]);
 
   useEffect(() => {
     if (!open) return;
@@ -132,7 +149,15 @@ export default function MermaidFigure({
   if (!markup) return null;
   return (
     <figure className="schedule-figure mermaid-figure" data-diagram-index={index} dir={dir}>
-      <div className="diagram-frame" ref={frameRef} dangerouslySetInnerHTML={{ __html: markup }} />
+      <div className="diagram-shell">
+        <div className="diagram-frame" ref={frameRef} dangerouslySetInnerHTML={{ __html: markup }} />
+        {fade ? (
+          <>
+            <span className="diagram-fade is-start" aria-hidden="true" />
+            <span className="diagram-fade is-end" aria-hidden="true" />
+          </>
+        ) : null}
+      </div>
       <div className="diagram-tools">
         <button type="button" className="msg-action-btn" onClick={() => { setScale(1); setOpen(true); }}>
           {labels.enlarge}
@@ -196,7 +221,7 @@ export default function MermaidFigure({
               if (pointers.current.size < 2) pinch.current = null;
             }}
           >
-            <div style={{ transform: `scale(${scale})`, transformOrigin: "center top" }} dangerouslySetInnerHTML={{ __html: markup }} />
+            <div style={{ width: "100%", transform: `scale(${scale})`, transformOrigin: "center top" }} dangerouslySetInnerHTML={{ __html: markup }} />
           </div>
         </div>
       ) : null}
