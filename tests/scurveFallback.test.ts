@@ -84,6 +84,13 @@ describe("s-curve fallback", () => {
     assert.match(svg, /Behind plan: -15%/);
     assert.match(svg, /SPI ≈ 0\.67/);
     assert.match(svg, /Planned \(baseline\)/);
+    assert.match(svg, /font-size="12"/);
+    const plotBottom = Number(svg.match(/data-plot-bottom="([\d.]+)"/)?.[1]);
+    const legendY = Number(svg.match(/data-kind="legend"[^>]* y="([\d.]+)"/)?.[1]);
+    assert.ok(legendY > plotBottom, `legend ${legendY} overlaps plot ${plotBottom}`);
+    const wide = renderChartSvg(chart.model, "ltr", "light", 640);
+    assert.match(wide, /viewBox="0 0 640 /);
+    assert.match(wide, /font-size="12"/);
     assert.match(svg, /Actual \(to date\)/);
     assert.match(svg, /Data date \(Wk2\)/);
     assert.match(svg, /#dc2626/);

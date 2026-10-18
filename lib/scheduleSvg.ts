@@ -60,13 +60,13 @@ text { font-family: "Noto Sans Arabic", Inter, sans-serif; }
 </style>`;
 }
 
-function text(x: number, y: number, value: string, opts: { size?: number; fill?: string; anchor?: "start" | "end" | "middle"; weight?: number; rtl?: boolean; halo?: string }) {
+function text(x: number, y: number, value: string, opts: { size?: number; fill?: string; anchor?: "start" | "end" | "middle"; weight?: number; rtl?: boolean; halo?: string; haloWidth?: number }) {
   const anchor = opts.anchor ?? (opts.rtl ? "end" : "start");
   const arabic = opts.rtl || containsArabic(value);
   const direction = arabic ? ` direction="rtl"` : "";
   const family = arabic ? "Noto Sans Arabic" : "Inter";
-  const halo = opts.halo ? ` stroke="${opts.halo}" stroke-width="3" paint-order="stroke" stroke-linejoin="round"` : "";
-  return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${opts.fill ?? "#0f172a"}" font-size="${opts.size ?? 13}" font-weight="${opts.weight ?? 500}" font-family="${family}" text-anchor="${anchor}"${direction}${halo}>${esc(value)}</text>`;
+  const halo = opts.halo ? ` stroke="${opts.halo}" stroke-width="${opts.haloWidth ?? 2}" paint-order="stroke" stroke-linejoin="round"` : "";
+  return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${opts.fill ?? "#0f172a"}" font-size="${opts.size ?? 12}" font-weight="${opts.weight ?? 500}" font-family="${family}" text-anchor="${anchor}"${direction}${halo}>${esc(value)}</text>`;
 }
 
 function edgeAnchor(value: string, edge: "left" | "right"): "start" | "end" {
@@ -249,12 +249,11 @@ function axisTick(label: string) {
   return clip(label, 6);
 }
 
-function scurveSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string {
+function scurveSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme, pixelWidth = 420): string {
   const colors = palette[theme];
   const blue = theme === "dark" ? "#93c5fd" : "#0d60e4";
   const orange = theme === "dark" ? "#fdba74" : "#ea580c";
-  const width = 420;
-  const height = 300;
+  const width = Math.round(Math.max(280, Math.min(720, pixelWidth || 420)));
   const arabic = rtl || model.points.some((point) => /[\u0600-\u06FF]/.test(point.label));
   const startLabel = arabic ? "البداية" : "Start";
   const points = model.points[0] && model.points[0].planned <= 0.5 && (model.points[0].actual == null || model.points[0].actual <= 0.5)
@@ -262,28 +261,29 @@ function scurveSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
     : [{ label: startLabel, planned: 0, actual: model.points.some((point) => point.actual != null) ? 0 : null }, ...model.points];
   const grouped = points.some((point) => point.actual != null);
   const dataDate = grouped ? points.reduce((found, point, index) => (point.actual != null ? index : found), -1) : -1;
-  const padL = rtl ? 46 : 34;
-  const padR = rtl ? 34 : 28;
-  const top = 32;
-  const bottom = 214;
+  const padL = rtl ? 40 : 32;
+  const padR = rtl ? 28 : 20;
+  const top = 16;
+  const bottom = 188;
+  const legend = grouped
+    ? (arabic ? ["المخطط", "الفعلي"] : ["Planned (baseline)", "Actual (to date)"])
+    : (arabic ? ["التقدم التراكمي", "التقدم الأسبوعي"] : ["Cumulative progress", "Weekly progress"]);
+  const legendW = Math.min(width - padL - padR, grouped ? (arabic ? 148 : 188) : arabic ? 188 : 196);
+  const legendH = 12 + legend.length * 18;
+  const legendX = rtl ? width - padR - legendW : padL;
+  const legendY = bottom + 46;
+  const height = legendY + legendH + 10;
   const plotW = width - padL - padR;
   const yOf = (value: number) => bottom - (Math.max(0, Math.min(100, value)) / 100) * (bottom - top);
   const xOf = (index: number) => {
     const t = points.length === 1 ? 0.5 : index / (points.length - 1);
     return rtl ? padL + plotW - t * plotW : padL + t * plotW;
   };
-  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg data-chart="scurve" `)];
-  const legend = grouped
-    ? (arabic ? ["المخطط", "الفعلي"] : ["Planned (baseline)", "Actual (to date)"])
-    : (arabic ? ["التقدم التراكمي", "التقدم الأسبوعي"] : ["Cumulative progress", "Weekly progress"]);
-  const legendW = grouped ? (arabic ? 132 : 168) : arabic ? 168 : 176;
-  const legendH = 52;
-  const legendX = rtl ? width - padR - legendW - 6 : padL + 2;
-  const legendY = 6;
+  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg data-chart="scurve" data-plot-bottom="${bottom}" `)];
   for (const tick of [0, 20, 40, 60, 80, 100]) {
     const y = yOf(tick);
     parts.push(`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${padL + plotW}" y2="${y.toFixed(1)}" stroke="${colors.grid}"/>`);
-    parts.push(text(rtl ? width - 10 : 6, y + 4, String(tick), { size: 11, fill: colors.muted, anchor: rtl ? "end" : "start" }));
+    parts.push(text(rtl ? width - 8 : 4, y + 4, String(tick), { size: 12, fill: colors.muted, anchor: rtl ? "end" : "start" }));
   }
   if (!grouped) {
     const bw = Math.min(28, (plotW / Math.max(points.length - 1, 1)) * 0.4);
@@ -317,7 +317,7 @@ function scurveSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
     if (point.actual != null && index <= dataDate) {
       parts.push(`<circle cx="${x.toFixed(1)}" cy="${yOf(point.actual).toFixed(1)}" r="3.5" fill="${orange}" stroke="${colors.bg}" stroke-width="1.5"/>`);
     }
-    parts.push(text(x, bottom + 16, axisTick(point.label), { size: 11, fill: colors.muted, anchor: "middle", rtl }));
+    parts.push(text(x, bottom + 16, axisTick(point.label), { size: 12, fill: colors.muted, anchor: "middle", rtl }));
   });
   if (dataDate >= 0) {
     const x = xOf(dataDate);
@@ -326,7 +326,7 @@ function scurveSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
     const caption = arabic ? `تاريخ البيانات (${axisTick(points[dataDate].label)})` : `Data date (${axisTick(points[dataDate].label)})`;
     const captionW = [...caption].length * (arabic ? 6.2 : 5.4);
     const captionX = Math.max(captionW / 2 + 2, Math.min(width - captionW / 2 - 2, x));
-    parts.push(text(captionX, bottom + 40, caption, { size: 10, fill: guide, weight: 650, anchor: "middle", rtl, halo: colors.bg }));
+    parts.push(text(captionX, bottom + 32, caption, { size: 12, fill: guide, weight: 600, anchor: "middle", rtl, halo: colors.bg, haloWidth: 2 }));
   }
   points.forEach((point, index) => {
     if (grouped || Math.round(point.planned) <= 0) return;
@@ -336,11 +336,11 @@ function scurveSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
     const labelY = above >= 12 ? above : yOf(point.planned) + 16;
     const labelW = [...percent].length * 7;
     const hitsLegend = x + labelW / 2 > legendX && x - labelW / 2 < legendX + legendW && labelY > legendY && labelY - 12 < legendY + legendH;
-    if (!hitsLegend) parts.push(text(x, labelY, percent, { size: 11, fill: colors.ink, weight: 700, anchor: "middle", halo: colors.bg }));
+    if (!hitsLegend) parts.push(text(x, labelY, percent, { size: 12, fill: colors.ink, weight: 600, anchor: "middle", halo: colors.bg, haloWidth: 2 }));
   });
   parts.push(`<rect data-kind="legend" x="${legendX}" y="${legendY}" width="${legendW}" height="${legendH}" rx="6" fill="${colors.card}" stroke="${colors.grid}" stroke-width="1"/>`);
   legend.forEach((name, index) => {
-    const y = legendY + 18 + index * 20;
+    const y = legendY + 16 + index * 18;
     const markX = rtl ? legendX + legendW - 16 : legendX + 16;
     const labelX = rtl ? markX - 12 : markX + 12;
     if (!grouped && index === 1) {
@@ -349,7 +349,7 @@ function scurveSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
       const color = index === 0 ? blue : orange;
       parts.push(`<line x1="${(markX - 7).toFixed(1)}" y1="${y - 4}" x2="${(markX + 7).toFixed(1)}" y2="${y - 4}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`);
     }
-    parts.push(text(labelX, y, name, { size: 11, fill: colors.ink, weight: 650, rtl, anchor: rtl ? edgeAnchor(name, "right") : "start" }));
+    parts.push(text(labelX, y, name, { size: 12, fill: colors.ink, weight: 600, rtl, anchor: rtl ? edgeAnchor(name, "right") : "start" }));
   });
   if (grouped && dataDate >= 0) {
     const plannedAt = points[dataDate].planned;
@@ -430,16 +430,16 @@ function scurveSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string 
     const y1 = placed.top + 9;
     const y2 = y1 + lead;
     parts.push(`<g data-kind="callout">`);
-    parts.push(text(placed.x, y1, line1, { size: 11, fill: tone, weight: 700, anchor: placed.toLeft ? edgeAnchor(line1, "right") : edgeAnchor(line1, "left"), halo: colors.bg }));
-    if (line2) parts.push(text(placed.x, y2, line2, { size: 11, fill: tone, weight: 700, anchor: placed.toLeft ? edgeAnchor(line2, "right") : edgeAnchor(line2, "left"), halo: colors.bg }));
+    parts.push(text(placed.x, y1, line1, { size: 12, fill: tone, weight: 600, anchor: placed.toLeft ? edgeAnchor(line1, "right") : edgeAnchor(line1, "left"), halo: colors.bg, haloWidth: 2 }));
+    if (line2) parts.push(text(placed.x, y2, line2, { size: 12, fill: tone, weight: 600, anchor: placed.toLeft ? edgeAnchor(line2, "right") : edgeAnchor(line2, "left"), halo: colors.bg, haloWidth: 2 }));
     parts.push(`</g>`);
   }
   parts.push("</svg>");
   return parts.join("");
 }
 
-function seriesSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string {
-  if (model.kind === "scurve") return scurveSvg(model, rtl, theme);
+function seriesSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme, pixelWidth?: number): string {
+  if (model.kind === "scurve") return scurveSvg(model, rtl, theme, pixelWidth);
   const colors = palette[theme];
   const width = 1400;
   const height = 460;
@@ -559,10 +559,10 @@ function pieSvg(model: SeriesModel, rtl: boolean, theme: ChartTheme): string {
   return parts.join("");
 }
 
-export function renderChartSvg(model: ChartModel, dir: "ltr" | "rtl", theme: ChartTheme = "light"): string {
+export function renderChartSvg(model: ChartModel, dir: "ltr" | "rtl", theme: ChartTheme = "light", pixelWidth?: number): string {
   const rtl = dir === "rtl";
   if (model.kind === "gantt") return ganttSvg(model, rtl, theme);
   if (model.kind === "timeline") return timelineSvg(model, rtl, theme);
   if (model.kind === "pie") return pieSvg(model, rtl, theme);
-  return seriesSvg(model, rtl, theme);
+  return seriesSvg(model, rtl, theme, pixelWidth);
 }

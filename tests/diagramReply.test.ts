@@ -13,6 +13,7 @@ import {
   stageGateReplyAr,
   stageGateReplyEn,
 } from "../lib/diagramReply";
+import { flowSvg } from "../lib/flowSvg";
 import { parseMessage } from "../lib/messageDocument";
 
 const prior = `## Project stage-gate workflow
@@ -118,6 +119,30 @@ describe("diagram replies", () => {
       assert.match(diagram.source, /Feed Preparation/);
       assert.match(diagram.source, /Recycled Hydrogen/);
     }
+  });
+
+  it("draws both outputs of a branch beside each other", () => {
+    const svg = flowSvg(`flowchart TD
+  Sep["Product Separation"]
+  Light["Light Products"]
+  Heavy["Heavy Products"]
+  Sep --> Light
+  Sep --> Heavy`, "ltr");
+    assert.ok(svg);
+    assert.match(svg || "", /data-edge="Sep-Light"/);
+    assert.match(svg || "", /data-edge="Sep-Heavy"/);
+    const box = (id: string) => {
+      const match = svg?.match(new RegExp(`data-node="${id}" x="([\\d.]+)" y="([\\d.]+)"`));
+      assert.ok(match, id);
+      return { x: Number(match?.[1]), y: Number(match?.[2]) };
+    };
+    const parent = box("Sep");
+    const light = box("Light");
+    const heavy = box("Heavy");
+    assert.equal(light.y, heavy.y);
+    assert.notEqual(light.x, heavy.x);
+    assert.ok(light.y > parent.y);
+    assert.match(svg || "", /viewBox="0 0 272 /);
   });
 
   it("leaves an ordinary answer unchanged", () => {

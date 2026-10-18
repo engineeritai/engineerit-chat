@@ -3613,6 +3613,9 @@ button.advisor-card-link {
 }
 
 .schedule-scroll svg[data-chart="scurve"] {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
   min-width: 0;
 }
 
