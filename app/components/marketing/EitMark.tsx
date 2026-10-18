@@ -1,4 +1,5 @@
 import { EIT_PATH, EIT_VIEWBOX } from "@/app/components/marketing/eitPath";
+import { eitPlateMarkSize } from "@/lib/eitPlateSize";
 
 const [, , vbW, vbH] = EIT_VIEWBOX.split(" ").map(Number);
 
@@ -15,9 +16,9 @@ export default function EitMark({
   /** White circle behind the blue mark. Used for the assistant avatar. */
   plate?: "circle";
 }) {
-  const markHeight = plate === "circle" ? Math.round(size * 0.62) : size;
-  const height = markHeight;
-  const width = Math.round((markHeight * vbW) / vbH);
+  const plated = plate === "circle" ? eitPlateMarkSize(size, vbW, vbH) : null;
+  const height = plated ? plated.height : size;
+  const width = plated ? plated.width : Math.round((size * vbW) / vbH);
   const svg = (
     <svg
       className="eit-mark"

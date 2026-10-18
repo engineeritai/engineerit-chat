@@ -25,11 +25,11 @@ export function flowSvg(source: string, dir: "ltr" | "rtl"): string | null {
   for (const id of nodes.keys()) push(id);
   const vertical = !/flowchart\s+(LR|RL)/i.test(source);
   const rtl = dir === "rtl" || /flowchart\s+RL/i.test(source);
-  const boxW = 280;
-  const boxH = 54;
-  const gap = 36;
-  const width = vertical ? 360 : order.length * (boxW + gap) + 40;
-  const height = vertical ? order.length * (boxH + gap) + 24 : 120;
+  const boxW = 240;
+  const boxH = 52;
+  const gap = 28;
+  const width = vertical ? boxW + 36 : order.length * (boxW + gap) + 40;
+  const height = vertical ? order.length * (boxH + gap) + 16 : 120;
   const boxes = order.map((id, index) => {
     const x = vertical ? (width - boxW) / 2 : (rtl ? order.length - 1 - index : index) * (boxW + gap) + 20;
     const y = vertical ? 16 + index * (boxH + gap) : 28;
@@ -43,8 +43,11 @@ export function flowSvg(source: string, dir: "ltr" | "rtl"): string | null {
       const b = byId.get(to);
       if (!a || !b) return "";
       if (vertical) {
+        const ai = order.indexOf(from);
+        const bi = order.indexOf(to);
+        if (Math.abs(ai - bi) !== 1) return "";
         const x = a.x + boxW / 2;
-        return `<line x1="${x}" y1="${a.y + boxH}" x2="${x}" y2="${b.y - 8}" stroke="#1a56ff" stroke-width="2" marker-end="url(#arrow)"/>`;
+        return `<line x1="${x}" y1="${a.y + boxH}" x2="${x}" y2="${b.y - 6}" stroke="#1a56ff" stroke-width="2" marker-end="url(#arrow)"/>`;
       }
       const y = a.y + boxH / 2;
       const x1 = a.x < b.x ? a.x + boxW : a.x;
@@ -56,7 +59,7 @@ export function flowSvg(source: string, dir: "ltr" | "rtl"): string | null {
     .map((box) => {
       const text = box.label.length > 42 ? `${box.label.slice(0, 41)}…` : box.label;
       return `<rect x="${box.x}" y="${box.y}" width="${boxW}" height="${boxH}" rx="12" fill="#e7eeff" stroke="#1a56ff" stroke-width="1.5"/>
-<text x="${box.x + boxW / 2}" y="${box.y + 32}" text-anchor="middle" font-size="14" font-family="${dir === "rtl" ? "Noto Sans Arabic" : "Inter, 'Noto Sans Arabic', 'Segoe UI', sans-serif"}" fill="#0f172a"${dir === "rtl" ? ' direction="rtl"' : ""}>${escapeXml(text)}</text>`;
+<text x="${box.x + boxW / 2}" y="${box.y + 32}" text-anchor="middle" font-size="13" font-family="${dir === "rtl" ? "Noto Sans Arabic" : "Inter, 'Noto Sans Arabic', 'Segoe UI', sans-serif"}" fill="#0f172a"${dir === "rtl" ? ' direction="rtl"' : ""}>${escapeXml(text)}</text>`;
     })
     .join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" width="100%">

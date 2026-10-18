@@ -1,3 +1,4 @@
+import { claimsDiagram, sanitizeFlowchart, stepsFromMarkdown, flowchartFromSteps } from "@/lib/diagramReply";
 import { coverSubtitle, pickTopicSource, shortTopic } from "@/lib/exportName";
 import { riyadhIsoDate } from "@/lib/ksaTime";
 import { scurveFromTable } from "@/lib/scurveFromTable";
@@ -240,7 +241,25 @@ export function parseMessage(markdown: string, today = riyadhIsoDate()): Block[]
     i += 1;
   }
   pushParagraph(paragraph);
-  return withScurveFallback(blocks);
+  return withDiagramFallback(withScurveFallback(blocks), markdown);
+}
+
+function withDiagramFallback(blocks: Block[], markdown: string): Block[] {
+  let chartIndex = blocks.reduce(
+    (max, block) => (block.type === "chart" || block.type === "diagram" ? Math.max(max, block.index + 1) : max),
+    0
+  );
+  const next = blocks.map((block) => {
+    if (block.type !== "diagram") return block;
+    const clean = sanitizeFlowchart(block.source);
+    return clean ? { ...block, source: clean } : block;
+  });
+  if (next.some((block) => block.type === "diagram")) return next;
+  if (!claimsDiagram(markdown)) return next;
+  const steps = stepsFromMarkdown(markdown);
+  if (steps.length < 2) return next;
+  next.push({ type: "diagram", source: flowchartFromSteps(steps), index: chartIndex });
+  return next;
 }
 
 function withScurveFallback(blocks: Block[]): Block[] {
