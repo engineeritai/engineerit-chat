@@ -1,4 +1,5 @@
 import { downloadName } from "@/lib/exportName";
+import { deliverBlob } from "@/lib/saveFile";
 import { buildShareHtml } from "@/lib/shareDocument";
 import { toWhatsApp } from "@/lib/whatsappText";
 
@@ -42,14 +43,9 @@ export async function copyAsHtml(aiText: string, title = "Report") {
 
 export function saveHtml(aiText: string, title = "Report", locale?: string) {
   const { blob } = htmlFileFromText(aiText, title, locale);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = downloadName(title, "html");
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  void deliverBlob(blob, downloadName(title, "html")).catch(() => {
+    /* deliverBlob already confirms or reports the failure */
+  });
 }
 
 export function printHtml(aiText: string, title = "Report", locale?: string) {
@@ -105,7 +101,7 @@ export async function exportPdf(
 
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
-  downloadBlob(blob, downloadName(options?.title || filename, "pdf"));
+  await downloadBlob(blob, downloadName(options?.title || filename, "pdf"));
 }
 
 export async function nativeShareHtml(aiText: string, title = "Report", locale?: string, link?: string) {
@@ -167,7 +163,7 @@ export async function exportWordDocx(
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
-  downloadBlob(blob, downloadName(options?.title || filename, "docx"));
+  await downloadBlob(blob, downloadName(options?.title || filename, "docx"));
 }
 
 export async function exportPptx(
@@ -189,18 +185,11 @@ export async function exportPptx(
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
-  downloadBlob(blob, downloadName(options?.title || filename, "pptx"));
+  await downloadBlob(blob, downloadName(options?.title || filename, "pptx"));
 }
 
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+async function downloadBlob(blob: Blob, filename: string) {
+  await deliverBlob(blob, filename);
 }
 
 export async function publishShare(args: { title: string; markdown: string; locale: string }): Promise<string | null> {

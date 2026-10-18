@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useHistoryOverlay } from "@/app/components/useHistoryOverlay";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PlanSummary } from "@/app/components/marketing/AccountMenu";
@@ -18,6 +19,7 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
   const account = useAccount();
   const content = getMarketingContent(locale);
   const startX = useRef<number | null>(null);
+  useHistoryOverlay(open, onClose);
 
   useEffect(() => {
     if (!open) return;

@@ -366,8 +366,9 @@ a,
   inset-inline-end: 8px;
   top: 50%;
   transform: translateY(-50%);
-  min-height: 32px;
-  padding: 0 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
   border: 0;
   background: transparent;
   color: var(--brand-ink);
@@ -427,6 +428,7 @@ a,
 
 .mkt-account-btn,
 .lang-toggle button {
+  min-width: 44px;
   min-height: 44px;
 }
 
@@ -933,7 +935,7 @@ html[dir="rtl"] .message-assistant .message-bubble {
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pinch-zoom;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #fff;
@@ -980,47 +982,91 @@ html[dir="rtl"] .diagram-fade.is-end {
   margin-inline: auto;
 }
 
-.diagram-lightbox {
+.chart-viewer {
   position: fixed;
   inset: 0;
-  z-index: 80;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: rgba(15, 23, 42, 0.72);
+  z-index: 240;
+  color: #111418;
+  overscroll-behavior: none;
 }
 
-.diagram-lightbox-stage {
-  width: min(960px, 100%);
-  max-height: calc(100vh - 72px);
-  overflow: auto;
-  background: #fff;
-  border-radius: 16px;
+.chart-viewer-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.82);
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.chart-viewer-stage {
+  position: absolute;
+  z-index: 1;
+  top: calc(env(safe-area-inset-top, 0px) + 60px);
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  left: 0;
+  overflow: hidden;
   touch-action: none;
 }
 
-.diagram-lightbox-stage svg {
-  display: block;
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  height: auto !important;
-  margin-inline: auto;
+.chart-viewer-canvas {
+  transform-origin: 0 0;
+  width: max-content;
+  max-width: none;
 }
 
-.diagram-lightbox-close {
+.chart-viewer-canvas .gantt-board,
+.chart-viewer-canvas .gantt-board-body,
+.chart-viewer-canvas .diagram-frame,
+.chart-viewer-canvas .schedule-scroll,
+.chart-viewer-canvas .gantt-scroll {
+  overflow: visible;
+  max-width: none;
+  width: max-content;
+  border: 0;
+}
+
+.chart-viewer-canvas .gantt-scroll {
+  flex: 0 0 auto;
+  min-width: max-content;
+}
+
+.chart-viewer-canvas .gantt-board {
+  background: #fff;
+  border-radius: 12px;
+}
+
+.chart-viewer-canvas svg {
+  display: block;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  height: auto !important;
+}
+
+.chart-viewer-close {
   position: fixed;
-  top: 16px;
-  inset-inline-end: 16px;
-  z-index: 81;
-  height: 36px;
-  padding: 0 12px;
+  z-index: 3;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  inset-inline-end: calc(env(safe-area-inset-end, 0px) + 8px);
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border: 0;
   border-radius: 999px;
   background: #fff;
   color: #111418;
-  font-weight: 600;
+  font-size: 28px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  cursor: pointer;
 }
 
 .msg-actions {
@@ -1134,15 +1180,15 @@ html.kb-open .mkt-app .composer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 10px;
   background: transparent;
   color: #333;
-  flex: 0 0 36px;
+  flex: 0 0 44px;
 }
 
 .chat-input-icon-btn.is-plus:hover,
@@ -1911,9 +1957,20 @@ svg {
   }
 
   .diagram-frame,
-  .diagram-lightbox-stage {
+  .chart-viewer-canvas .diagram-frame,
+  .chart-viewer-canvas .schedule-scroll {
     background: #fff;
     color: #111418;
+  }
+
+  .chart-viewer-canvas .gantt-board,
+  .chart-viewer-canvas .gantt-names {
+    background: #0b1220;
+    color: #e2e8f0;
+  }
+
+  .chart-viewer-canvas .gantt-name.is-group {
+    background: #1e293b;
   }
 }
 
@@ -1932,7 +1989,8 @@ svg {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 36px;
+  min-height: 44px;
+  height: auto;
   padding: 0;
   border: 0;
   background: transparent;
@@ -2202,9 +2260,9 @@ body.acct-open .mkt-header {
   }
 
   .mkt-menu-btn {
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
   }
 }
 
@@ -2411,7 +2469,9 @@ body.acct-open .mkt-header {
 @media (max-width: 1023px) {
   .mkt-menu-btn {
     display: inline-flex;
-    flex: 0 0 40px;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
   }
 
   .eit-chat {
@@ -3238,9 +3298,9 @@ body.acct-open .mkt-header {
 
 .chat-page .chat-voice-btn,
 .chat-page .chat-input-send-btn {
-  width: 40px;
-  min-width: 40px;
-  height: 40px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
   padding: 0;
   border-radius: 999px;
 }
@@ -3465,4 +3525,159 @@ button.app-side-link.install-menu {
   padding: 0 8px;
   font-size: 14px;
   font-weight: 500;
+}
+
+/* Android touch: 44px targets, one-row chart actions, no pull-to-refresh, no sticky hover. */
+.input,
+.textarea,
+select,
+.hero-composer-input,
+.chat-page .textarea,
+.composer .textarea {
+  font-size: 16px;
+}
+
+button,
+a,
+summary,
+label,
+.chart-action,
+.msg-action-btn,
+.acct-chip,
+.chart-viewer-close,
+.chart-viewer-backdrop,
+.mkt-menu-btn,
+.lang-toggle button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.diagram-tools,
+.chat-table-tools,
+.msg-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pinch-zoom;
+}
+
+.chart-action,
+.msg-action-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #5c6570;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chart-action svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.mkt-chat .main:not(.is-start) .conversation,
+.chat-page .conversation,
+.mkt-chat .conversation {
+  height: auto;
+  max-height: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.checkout-consent {
+  min-height: 44px;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.checkout-consent input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+}
+
+.eit-toasts {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--kb, 0px) + env(safe-area-inset-bottom, 0px) + 88px);
+  transform: translateX(-50%);
+  z-index: 260;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(420px, calc(100% - 24px));
+  pointer-events: none;
+}
+
+.eit-toast {
+  background: #111418;
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(17, 20, 24, 0.24);
+}
+
+.eit-toast.is-err {
+  background: #9f1239;
+}
+
+@media (hover: none) {
+  .msg-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .mkt-menu-btn:hover,
+  .lang-toggle button:hover,
+  .acct-chip:hover,
+  .chart-action:hover,
+  .msg-action-btn:hover,
+  .chat-input-icon-btn:hover,
+  .hero-plus:hover,
+  .prompt-card:hover,
+  .mkt-nav a:hover,
+  .app-side-link:hover {
+    background: transparent;
+    color: inherit;
+  }
+
+  .mkt-nav a.mkt-nav-active:hover {
+    background: #f2f4f8;
+    color: var(--ink);
+  }
+
+  .chat-page .chat-voice-btn:hover {
+    background: #111418;
+    color: #fff;
+  }
+
+  .chat-input-send-btn:hover {
+    background: var(--brand);
+    color: #fff;
+  }
 }

@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { downloadSvgPng, downloadTextFile, svgElementToPng } from "@/app/components/copyRich";
+import ChartActions from "@/app/components/ChartActions";
+import ChartViewer from "@/app/components/ChartViewer";
+import { svgElementToPng } from "@/app/components/copyRich";
+import { bindVerticalPass } from "@/app/components/verticalPass";
 import type { ChartModel } from "@/lib/scheduleModel";
 import { GANTT_HEADER, GANTT_ROW, ganttRows, renderChartSvg, type ChartTheme } from "@/lib/scheduleSvg";
+import { copyImageBlob, dataUrlToBlob, deliverBlob } from "@/lib/saveFile";
 
-type Labels = { copy: string; png: string; svg: string };
+type Labels = { copy: string; png: string; svg: string; enlarge: string; close: string };
 
 export default function ScheduleFigure({
   model,
@@ -20,8 +24,10 @@ export default function ScheduleFigure({
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const visualRef = useRef<HTMLDivElement>(null);
   const [theme, setTheme] = useState<ChartTheme>("light");
   const [width, setWidth] = useState(420);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => setTheme(media.matches ? "dark" : "light");
@@ -55,6 +61,11 @@ export default function ScheduleFigure({
     const delta = bar.getBoundingClientRect().left - port.getBoundingClientRect().left - 12;
     if (Math.abs(delta) > 1) port.scrollLeft += delta;
   }, [svg, gantt, dir]);
+  useEffect(() => {
+    const node = gantt ? scrollRef.current : frameRef.current;
+    if (!node) return;
+    return bindVerticalPass(node);
+  }, [svg, gantt]);
   const legend = dir === "rtl"
     ? [
         ["task", "مهمة"],
@@ -68,12 +79,13 @@ export default function ScheduleFigure({
         ["milestone", "Milestone"],
         ["today", "Today"],
       ];
+  const chartSvg = () => (visualRef.current || frameRef.current)?.querySelector("svg") || null;
 
   return (
     <figure className="schedule-figure" data-diagram-index={index} dir={dir}>
       <figcaption>{model.title}</figcaption>
       {gantt ? (
-        <div className="gantt-board">
+        <div className="gantt-board" ref={visualRef}>
           <ul className="gantt-legend">
             {legend.map(([kind, label]) => (
               <li key={kind}>
@@ -100,36 +112,31 @@ export default function ScheduleFigure({
           </div>
         </div>
       ) : (
-        <div className="schedule-scroll" ref={frameRef} dangerouslySetInnerHTML={{ __html: svg }} />
+        <div
+          className="schedule-scroll"
+          ref={(node) => {
+            frameRef.current = node;
+            visualRef.current = node;
+          }}
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
       )}
-      <div className="diagram-tools">
-        <button
-          type="button"
-          className="msg-action-btn"
-          onClick={async (event) => {
-            const node = event.currentTarget.closest("figure")?.querySelector("svg");
-            if (!node) return;
-            const png = await svgElementToPng(node, 3.125);
-            const blob = await (await fetch(png)).blob();
-            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-          }}
-        >
-          {labels.copy}
-        </button>
-        <button
-          type="button"
-          className="msg-action-btn"
-          onClick={(event) => {
-            const node = event.currentTarget.closest("figure")?.querySelector("svg");
-            if (node) void downloadSvgPng(node, `${filename}.png`);
-          }}
-        >
-          {labels.png}
-        </button>
-        <button type="button" className="msg-action-btn" onClick={() => downloadTextFile(`${filename}.svg`, svg, "image/svg+xml")}>
-          {labels.svg}
-        </button>
-      </div>
+      <ChartActions
+        labels={labels}
+        onEnlarge={() => setOpen(true)}
+        onCopy={() => {
+          const node = chartSvg();
+          if (!node) return;
+          void svgElementToPng(node, 3.125).then((png) => copyImageBlob(dataUrlToBlob(png), `${filename}.png`));
+        }}
+        onPng={() => {
+          const node = chartSvg();
+          if (!node) return;
+          void svgElementToPng(node, 3.125).then((png) => deliverBlob(dataUrlToBlob(png), `${filename}.png`));
+        }}
+        onSvg={() => void deliverBlob(new Blob([svg], { type: "image/svg+xml" }), `${filename}.svg`)}
+      />
+      <ChartViewer open={open} dir={dir} closeLabel={labels.close} title={labels.enlarge} sourceRef={visualRef} onClose={() => setOpen(false)} />
     </figure>
   );
 }

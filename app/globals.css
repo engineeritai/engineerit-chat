@@ -3552,7 +3552,7 @@ button.advisor-card-link {
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pinch-zoom;
   border: 1px solid #d0d7e2;
   border-radius: 0 0 12px 12px;
   background: #fff;
@@ -3599,7 +3599,7 @@ button.advisor-card-link {
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pinch-zoom;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #fff;
@@ -3713,7 +3713,7 @@ button.advisor-card-link {
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pinch-zoom;
 }
 
 .gantt-scroll svg {

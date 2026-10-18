@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { showToast } from "@/lib/toast";
 
 type Props = {
   role: "user" | "assistant";
@@ -15,9 +16,9 @@ export default function ChatMessage({ role, content }: Props) {
       await navigator.clipboard.writeText(
         `${content}\n\n— engineerit.ai`
       );
-      alert("Copied");
+      showToast("Copied");
     } catch {
-      alert("Copy failed");
+      showToast("Copy failed", "err");
     }
   };
 
