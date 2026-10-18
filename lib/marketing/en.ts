@@ -172,7 +172,7 @@ export const en: MarketingContent = {
   teams: {
     title: "Plans and pricing",
     intro:
-      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing is 10 times the monthly price. Team and Enterprise are bought through Moyasar. Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
+      "Assistant Engineer, Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise use these prices on every page. Annual billing saves you 2 months free. Team and Enterprise are bought through Moyasar. Consultant Engineer includes the PMO Advisor. Team includes PMO and Program Assurance. Enterprise includes PMO, Program Assurance, Operations Readiness, and Decision Support.",
   },
   faq: {
     title: "Questions consultancies ask",
@@ -236,7 +236,7 @@ export const en: MarketingContent = {
     annual: "Annual",
     twoMonthsFree: "2 months free",
     annualExplainer:
-      "Annual price is 10 times the monthly price (2 months free). Paid plans open Moyasar checkout for the period you choose.",
+      "Annual billing saves you 2 months free. Paid plans open Moyasar checkout for the period you choose.",
     usdNote: "US dollar amounts are approximate, at SAR 3.75 per USD 1.",
     vatNote: "",
     rateNote: "Prices in Saudi Riyal. 1 USD = 3.75 SAR. VAT as applicable.",

@@ -672,7 +672,7 @@ const en: ShellCopy = {
     emailConfirmTitle: "Email confirmation required",
     emailConfirmHint: "After confirmation, come back and sign in from the top bar.",
     afterRegister:
-      "After registration, your account starts on the free Assistant Engineer plan. Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise are bought through Moyasar, monthly or annual. Annual price is 10 times the monthly price. Each payment covers the period you choose.",
+      "After registration, your account starts on the free Assistant Engineer plan. Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise are bought through Moyasar, monthly or annual. Annual billing saves you 2 months free. Each payment covers the period you choose.",
     viewPlans: "View plans and subscribe",
     plansOverview: "Plans and engineer tools",
     toolsInPlan: "Engineer tools in this plan",
@@ -1151,7 +1151,7 @@ const ar: ShellCopy = {
     emailConfirmTitle: "يلزم تأكيد البريد",
     emailConfirmHint: "بعد التأكيد، عد وسجّل الدخول من الشريط العلوي.",
     afterRegister:
-      "بعد التسجيل تبدأ على باقة المهندس المساعد المجانية. تُشترى باقات المهندس والمهندس المحترف والمهندس الاستشاري والفريق والمؤسسات عبر Moyasar، شهرياً أو سنوياً. السعر السنوي عشرة أضعاف الشهري. كل دفعة تغطي المدة التي تختارها.",
+      "بعد التسجيل تبدأ على باقة المهندس المساعد المجانية. تُشترى باقات المهندس والمهندس المحترف والمهندس الاستشاري والفريق والمؤسسات عبر Moyasar، شهرياً أو سنوياً. الاشتراك السنوي يوفّر شهرين مجاناً. كل دفعة تغطي المدة التي تختارها.",
     viewPlans: "عرض الباقات والاشتراك",
     plansOverview: "الباقات وأدوات المهندس",
     toolsInPlan: "أدوات المهندس في هذه الباقة",

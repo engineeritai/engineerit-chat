@@ -846,6 +846,19 @@ describe("checkout and invoice regressions", () => {
     assert.ok(logoHeight < 80 && logoHeight > 40, `logo is cropped, not the padded square (${logoWidth}x${logoHeight})`);
   });
 
+  it("sells annual billing as two months free", () => {
+    const ar = readFileSync("lib/marketing/ar.ts", "utf8");
+    const en = readFileSync("lib/marketing/en.ts", "utf8");
+    const shell = readFileSync("lib/shell.ts", "utf8");
+    assert.match(ar, /الاشتراك السنوي يوفّر شهرين مجاناً\. الباقات المدفوعة تفتح دفع Moyasar للمدة التي تختارها\./);
+    assert.match(en, /Annual billing saves you 2 months free\. Paid plans open Moyasar checkout for the period you choose\./);
+    for (const source of [ar, en, shell]) {
+      assert.equal(/عشرة أضعاف|10 times the monthly/.test(source), false);
+    }
+    assert.match(shell, /Annual billing saves you 2 months free/);
+    assert.match(shell, /الاشتراك السنوي يوفّر شهرين مجاناً/);
+  });
+
   it("still charges a renewal on the period end for the cron", () => {
     const periodEnd = new Date("2026-11-16T00:00:00.000Z");
     const decision = decideRenewal({
