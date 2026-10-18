@@ -1,45 +1,60 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
+import { buildAdvisorSystemPrompt } from "../lib/advisorPrompts";
+import { getAdvisor } from "../lib/advisors";
 import ar from "../lib/i18n/ar";
 import en from "../lib/i18n/en";
-import { operationsCardCopy } from "../lib/operationsCardCopy";
+import { getPlaybook } from "../lib/playbooks";
 
-const enOps = en.advisors.items.operations;
-const arOps = ar.advisors.items.operations;
+const STARTUP = /[اإأ]لقلاع/;
 
-describe("operations advisor card copy", () => {
-  it("rewrites only the Arabic card start-up wording", () => {
+function sourceFiles(dir: string): string[] {
+  const files: string[] = [];
+  for (const name of readdirSync(dir)) {
+    if (name.startsWith(".") || name === "node_modules" || name === "test-results") continue;
+    const path = join(dir, name);
+    const stat = statSync(path);
+    if (stat.isDirectory()) files.push(...sourceFiles(path));
+    else if (/\.(ts|tsx|js|jsx|json|md)$/.test(name)) files.push(path);
+  }
+  return files;
+}
+
+describe("Arabic start-up wording", () => {
+  it("uses بدء for commissioning start-up on the operations card", () => {
+    const enOps = en.advisors.items.operations;
+    const arOps = ar.advisors.items.operations;
     assert.match(enOps.summary, /start-up/);
     assert.equal(enOps.capabilities[1], "Start-up and regularisation of operation");
-    assert.match(arOps.summary, /والإقلاع/);
-    assert.equal(arOps.capabilities[1], "الإقلاع وانتظام التشغيل");
-
-    const card = operationsCardCopy("ar", arOps.summary, arOps.capabilities);
-    assert.match(card.summary, /والبدء/);
-    assert.doesNotMatch(card.summary, /الإقلاع/);
-    assert.equal(card.capabilities[1], "بدء وانتظام التشغيل");
-    assert.equal(card.capabilities[0], arOps.capabilities[0]);
-    assert.equal(arOps.summary.includes("والإقلاع"), true);
-    assert.equal(arOps.playbooks.startup.name, "الإقلاع وانتظام التشغيل");
-
-    const english = operationsCardCopy("en", enOps.summary, enOps.capabilities);
-    assert.equal(english.summary, enOps.summary);
-    assert.deepEqual(english.capabilities, enOps.capabilities);
+    assert.match(arOps.summary, /والبدء/);
+    assert.doesNotMatch(arOps.summary, STARTUP);
+    assert.equal(arOps.capabilities[1], "بدء وانتظام التشغيل");
+    assert.equal(arOps.playbooks.startup.name, "بدء وانتظام التشغيل");
+    assert.equal(arOps.playbooks.commissioning.outcome, "التسلسل حتى اكتمال التشغيل التجريبي والجاهزية للبدء.");
   });
 
-  it("applies the rewrite on the advisors card only", () => {
-    const page = readFileSync("app/advisors/page.tsx", "utf8");
-    assert.match(page, /advisor\.id === "operations"/);
-    assert.match(page, /operationsCardCopy/);
-    const chat = readFileSync("app/components/AdvisorChat.tsx", "utf8");
-    assert.doesNotMatch(chat, /operationsCardCopy/);
-    const prompts = readFileSync("lib/advisorPrompts.ts", "utf8");
-    const playbooks = readFileSync("lib/playbooks.ts", "utf8");
-    const templates = readFileSync("lib/advisors.ts", "utf8");
-    assert.doesNotMatch(prompts, /والبدء/);
-    assert.doesNotMatch(playbooks, /والبدء/);
-    assert.doesNotMatch(templates, /والبدء/);
-    assert.match(playbooks, /الإقلاع/);
+  it("keeps بدء in the Arabic playbooks and the advisor prompt", () => {
+    const advisor = getAdvisor("operations");
+    assert.ok(advisor);
+    const prompt = buildAdvisorSystemPrompt(advisor!, "ar", "startup");
+    assert.match(prompt, /بدء وانتظام التشغيل/);
+    assert.match(prompt, /تاريخ البدء/);
+    assert.match(prompt, /Do not write الإقلاع/);
+    assert.doesNotMatch(prompt.replace("Do not write الإقلاع, الاقلاع, or إقلاع.", ""), STARTUP);
+    const commissioning = getPlaybook("operations", "commissioning");
+    assert.match(commissioning?.templates.ar ?? "", /جاهز للبدء/);
+    assert.match(commissioning?.templates.ar ?? "", /الجاهزية للبدء/);
+    const alignment = getPlaybook("operations", "alignment");
+    assert.match(alignment?.templates.ar ?? "", /الأثر على البدء أو التسليم/);
+  });
+
+  it("leaves no start-up الإقلاع in site source", () => {
+    const hits = sourceFiles(".").filter((path) => STARTUP.test(readFileSync(path, "utf8")));
+    assert.deepEqual(
+      hits.filter((path) => path !== "lib/advisorPrompts.ts" && path !== "tests/operationsCardCopy.test.ts"),
+      []
+    );
   });
 });

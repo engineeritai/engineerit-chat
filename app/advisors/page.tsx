@@ -9,10 +9,9 @@ import { advisorsAreLive, advisorsNowLive } from "@/lib/advisorLaunch";
 import { groupedPlaybooks } from "@/lib/playbooks";
 import { useMessages } from "@/lib/useMessages";
 import { useSubscriptionTier } from "@/lib/useSubscriptionTier";
-import { operationsCardCopy } from "@/lib/operationsCardCopy";
 
 export default function AdvisorsPage() {
-  const { locale, m } = useMessages();
+  const { m } = useMessages();
   const { ready, isGuest, tier } = useSubscriptionTier();
   const live = advisorsAreLive();
   const nowLive = advisorsNowLive();
@@ -66,10 +65,7 @@ export default function AdvisorsPage() {
               const advisor = getAdvisor(id);
               if (!advisor) return null;
               const copy = m.advisors.items[advisor.id];
-              const card =
-                advisor.id === "operations"
-                  ? operationsCardCopy(locale, copy.summary, copy.capabilities)
-                  : { summary: copy.summary, capabilities: copy.capabilities };
+              const card = { summary: copy.summary, capabilities: copy.capabilities };
               const entitled = ready && hasAdvisorAccess(tier, advisor.id, isGuest);
               const unlocked = live && entitled;
               return (
