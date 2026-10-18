@@ -2,7 +2,7 @@ import { EIT_PATH, EIT_VIEWBOX } from "@/app/components/marketing/eitPath";
 
 const [, , vbW, vbH] = EIT_VIEWBOX.split(" ").map(Number);
 
-/** Solid e + outlined it, traced from the home-screen wordmark. No bubble or sparkle. */
+/** Solid e, outlined it, solid i-dot. No bubble or sparkle. */
 export default function EitMark({
   size = 72,
   title,
