@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import MarketingShell from "@/app/components/marketing/MarketingShell";
 import PasswordField from "@/app/components/PasswordField";
+import { changePassword } from "@/lib/authEmailClient";
 import { supabase } from "@/lib/supabaseClient";
 import { passwordProblem, passwordStrength } from "@/lib/password";
 import { useMessages } from "@/lib/useMessages";
@@ -106,7 +107,7 @@ export default function ResetPasswordPage() {
     try {
       const { data: before } = await supabase.auth.getUser();
       const email = before.user?.email || "";
-      const { error: updateError } = await supabase.auth.updateUser({ password });
+      const { error: updateError } = await changePassword(password);
       if (updateError) {
         setError(s.password.generic);
         return;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { teamGrantsAccess } from "@/lib/effectivePlan";
-import { appBaseUrl, escapeHtml, getMailer } from "@/lib/mail";
+import { appBaseUrl, deliverMail, escapeHtml } from "@/lib/mail";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
 
 export const runtime = "nodejs";
@@ -121,21 +121,13 @@ export async function POST(req: Request) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const mailer = getMailer();
-    if (!mailer) {
-      return NextResponse.json(
-        { error: "Email server is not configured." },
-        { status: 500 }
-      );
-    }
-
     const link = `${appBaseUrl(req)}/team/join?token=${encodeURIComponent(token)}`;
     const teamName = escapeHtml(String(team.name || "Team"));
 
-    await mailer.transporter.sendMail({
-      from: `"engineerit.ai" <${mailer.from}>`,
+    const mailed = await deliverMail({
       to: email,
       subject: "You are invited to a team on engineerit.ai",
+      headers: req.headers,
       html: `
         <p>You have been invited to the <strong>${teamName}</strong> team on engineerit.ai.</p>
         <p>Sign up or sign in with <strong>${escapeHtml(email)}</strong>, then open this link to join:</p>
@@ -143,8 +135,11 @@ export async function POST(req: Request) {
         <p>The seat includes Consultant-tier access while the team subscription is active.</p>
       `,
     });
+    if (mailed.reason === "not-configured") {
+      return NextResponse.json({ error: "Email server is not configured." }, { status: 500 });
+    }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, sent: mailed.sent });
   } catch (err) {
     console.error("POST /api/team/invite", err);
     return NextResponse.json({ error: "Could not send the invite." }, { status: 500 });

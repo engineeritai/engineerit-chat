@@ -5,7 +5,8 @@ import { useState } from "react";
 import MarketingShell from "../components/marketing/MarketingShell";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import TurnstileField from "@/app/components/TurnstileField";
+import { requestAuthEmail } from "@/lib/authEmailClient";
 import { safeNextPath } from "@/lib/safeNext";
 import { trackProduct } from "@/lib/attribution";
 import { useMessages } from "@/lib/useMessages";
@@ -19,6 +20,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -55,16 +57,15 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { status, data } = await requestAuthEmail("signup", {
         email: e1,
         password,
-        options: {
-          data: { full_name: fullName },
-        },
+        fullName,
+        captchaToken,
       });
 
-      if (error) {
-        setErrorMessage(error.message);
+      if (!data.ok || status >= 400) {
+        setErrorMessage(status === 429 ? s.password.tryLater : data.error || s.auth.genericError);
         return;
       }
 
@@ -88,7 +89,7 @@ export default function RegisterPage() {
       );
 
       // If email confirmation is ON -> session is null
-      if (!data.session) {
+      if (data.needsConfirmation !== false) {
         try {
           if (nextPath !== "/profile") {
             window.localStorage.setItem("engineerit_post_auth_next", nextPath);
@@ -199,6 +200,8 @@ export default function RegisterPage() {
                   />
                 </label>
               </div>
+
+              <TurnstileField onToken={setCaptchaToken} />
 
               <div className="form-row form-checkbox-row">
                 <label className="checkbox-label">

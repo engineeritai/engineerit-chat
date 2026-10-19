@@ -6,7 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import LanguageToggle from "./LanguageToggle";
 import Wordmark from "@/app/components/marketing/Wordmark";
 import { planById } from "@/lib/labels";
-import { RESET_REDIRECT, classifyResetError } from "@/lib/password";
+import TurnstileField from "@/app/components/TurnstileField";
+import { changePassword, requestAuthEmail } from "@/lib/authEmailClient";
 import { useMessages } from "@/lib/useMessages";
 import { supabase } from "@/lib/supabaseClient";
 import { HEADER_PLAN_ABBREV, PLAN_COLORS, type PlanId } from "@/lib/plans";
@@ -41,6 +42,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
   // cooldown to avoid rate limit (UI-side only)
   const [forgotCooldown, setForgotCooldown] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState("");
 
   // reset password (logged-in)
   const [resetOpen, setResetOpen] = useState(false);
@@ -271,19 +273,16 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
     setForgotLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
-        redirectTo: RESET_REDIRECT,
-      });
+      const { status, data } = await requestAuthEmail("reset", { email: loginEmail, captchaToken });
 
-      // start cooldown regardless (prevents spam clicks)
       setForgotCooldown(60);
 
-      if (error && classifyResetError(error.message) === "later") {
+      if (status === 429) {
         setForgotMsg(s.password.tryLater);
         setForgotLoading(false);
         return;
       }
-      if (error && classifyResetError(error.message) === "failed") {
+      if (!data.ok && status >= 400) {
         setForgotMsg(s.password.generic);
         setForgotLoading(false);
         return;
@@ -313,9 +312,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
     setResetLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: resetPass1,
-      });
+      const { error } = await changePassword(resetPass1);
 
       if (error) {
         setResetMsg(error.message);
@@ -590,6 +587,8 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                         {forgotMsg}
                       </div>
                     )}
+
+                    <TurnstileField onToken={setCaptchaToken} />
 
                     <button
                       type="button"

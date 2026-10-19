@@ -3,7 +3,8 @@
 import { useState } from "react";
 import PasswordField from "@/app/components/PasswordField";
 import { supabase } from "@/lib/supabaseClient";
-import { RESET_REDIRECT, classifyResetError, passwordProblem, passwordStrength } from "@/lib/password";
+import { changePassword, requestAuthEmail } from "@/lib/authEmailClient";
+import { passwordProblem, passwordStrength } from "@/lib/password";
 import { useMessages } from "@/lib/useMessages";
 
 export default function ChangePasswordCard() {
@@ -44,7 +45,7 @@ export default function ChangePasswordCard() {
         setError(s.password.currentWrong);
         return;
       }
-      const { error: updateError } = await supabase.auth.updateUser({ password: next });
+      const { error: updateError } = await changePassword(next);
       if (updateError) {
         setError(s.password.generic);
         return;
@@ -71,9 +72,9 @@ export default function ChangePasswordCard() {
         setError(s.profile.notLoggedIn);
         return;
       }
-      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: RESET_REDIRECT });
-      if (error && classifyResetError(error.message) !== "sent") {
-        setError(classifyResetError(error.message) === "later" ? s.password.tryLater : s.password.generic);
+      const { status, data } = await requestAuthEmail("reset", { email });
+      if (status === 429 || (!data.ok && status >= 400)) {
+        setError(status === 429 ? s.password.tryLater : s.password.generic);
         return;
       }
       setInfo(s.password.resetSentYou);

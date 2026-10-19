@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 async function clickWhenHydrated(page: Page, selector: string) {
   await page.waitForFunction((target) => {

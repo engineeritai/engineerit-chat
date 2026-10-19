@@ -4,7 +4,7 @@ import { buildInvoiceDocument } from "@/lib/invoiceDocument";
 import { receiptVatMode, vatFromInclusive } from "@/lib/billingCycle";
 import { renderInvoicePdf } from "@/lib/invoicePdf";
 import { invoiceBccAddress } from "@/lib/invoiceMail";
-import { escapeHtml, getMailer } from "@/lib/mail";
+import { deliverMail, escapeHtml } from "@/lib/mail";
 import type { ReplyLanguage } from "@/lib/replyLanguage";
 
 export type ReceiptInput = {
@@ -184,14 +184,11 @@ function renderArabic(input: {
 }
 
 export async function sendReceipt(to: string, input: ReceiptInput) {
-  const mailer = getMailer();
-  if (!mailer) return false;
   const receipt = buildReceipt({ ...input, locale: input.locale === "ar" ? "ar" : "en" });
   const pdf = await renderInvoicePdf(receipt.document);
   const bcc = invoiceBccAddress();
   const sameInbox = bcc.toLowerCase() === to.trim().toLowerCase();
-  await mailer.transporter.sendMail({
-    from: `"engineerit.ai" <${mailer.from}>`,
+  const result = await deliverMail({
     to,
     ...(sameInbox ? {} : { bcc }),
     subject: receipt.subject,
@@ -205,5 +202,5 @@ export async function sendReceipt(to: string, input: ReceiptInput) {
       },
     ],
   });
-  return true;
+  return result.sent || result.sink === "log" || result.sink === "mailpit";
 }

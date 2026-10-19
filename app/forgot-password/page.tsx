@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import MarketingShell from "@/app/components/marketing/MarketingShell";
-import { supabase } from "@/lib/supabaseClient";
-import { RESET_REDIRECT, classifyResetError } from "@/lib/password";
+import TurnstileField from "@/app/components/TurnstileField";
+import { requestAuthEmail } from "@/lib/authEmailClient";
 import { useMessages } from "@/lib/useMessages";
 
 export default function ForgotPasswordPage() {
@@ -13,6 +13,7 @@ export default function ForgotPasswordPage() {
   const [sending, setSending] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState("");
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -25,14 +26,13 @@ export default function ForgotPasswordPage() {
     }
     setSending(true);
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(address, {
-        redirectTo: RESET_REDIRECT,
-      });
-      if (resetError) {
-        const kind = classifyResetError(resetError.message);
-        if (kind === "later") setError(s.password.tryLater);
-        else if (kind === "failed") setError(s.password.generic);
-        else setInfo(s.password.ifExists);
+      const { status, data } = await requestAuthEmail("reset", { email: address, captchaToken });
+      if (status === 429) {
+        setError(s.password.tryLater);
+        return;
+      }
+      if (!data.ok && status >= 400) {
+        setError(s.password.generic);
         return;
       }
       setInfo(s.password.ifExists);
@@ -63,6 +63,7 @@ export default function ForgotPasswordPage() {
               />
             </label>
           </div>
+          <TurnstileField onToken={setCaptchaToken} />
           {error ? <p className="form-note is-bad">{error}</p> : null}
           {info ? <p className="form-note is-ok" data-testid="reset-result">{info}</p> : null}
           <button className="btn" disabled={sending}>

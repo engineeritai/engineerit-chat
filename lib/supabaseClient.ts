@@ -10,3 +10,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
   },
 });
+
+const blockedAuth = async () => {
+  console.error("[mail-sink] blocked a browser auth email. Use /api/auth/signup, /api/auth/recover, or /api/auth/resend.");
+  return { data: { user: null, session: null }, error: { message: "signup-blocked" } };
+};
+supabase.auth.signUp = blockedAuth as unknown as typeof supabase.auth.signUp;
+supabase.auth.resetPasswordForEmail = blockedAuth as unknown as typeof supabase.auth.resetPasswordForEmail;
+supabase.auth.resend = blockedAuth as unknown as typeof supabase.auth.resend;

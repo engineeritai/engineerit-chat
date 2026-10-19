@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { HEADER_PLAN_ABBREV, type PlanId } from "../../lib/plans";
 
 const PLANS: PlanId[] = ["assistant", "engineer", "professional", "consultant", "team", "enterprise"];
