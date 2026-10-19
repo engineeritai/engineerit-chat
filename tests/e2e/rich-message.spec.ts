@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { sampleAr, sampleEn } from "../../lib/richSamples";
 
 async function openFixture(page: Page, locale: "en" | "ar") {

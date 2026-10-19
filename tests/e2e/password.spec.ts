@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("login links to forgot password and the form does not confirm an account", async ({ page }, info) => {
   test.skip(info.project.name !== "phone-390", "mobile screenshots");
@@ -7,9 +7,6 @@ test("login links to forgot password and the form does not confirm an account", 
   await page.goto("/login?lang=en", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("link", { name: "Forgot password?" })).toHaveAttribute("href", "/forgot-password");
 
-  await page.route("**/auth/v1/recover**", (route) =>
-    route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ msg: "User not found" }) })
-  );
   await page.goto("/forgot-password?lang=en", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Forgot password" })).toBeVisible();
   await page.screenshot({ path: "/opt/cursor/artifacts/password-forgot-en.png" });

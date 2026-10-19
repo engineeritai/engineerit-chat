@@ -11,7 +11,7 @@ import {
   type RenewalDecision,
 } from "@/lib/billingCycle";
 import { downgradeNotice, expireNotice, pastDueNotice } from "@/lib/billingNotices";
-import { appBaseUrl, escapeHtml, getMailer } from "@/lib/mail";
+import { appBaseUrl, deliverMail, escapeHtml } from "@/lib/mail";
 import { createMoyasarTokenPayment, fetchMoyasarPayment } from "@/lib/moyasar";
 import {
   PLAN_LABELS,
@@ -492,16 +492,13 @@ function noticeLocale(sub: OpenSubscription): "en" | "ar" {
 }
 
 async function sendBillingNote(to: string, subject: string, text: string) {
-  const mailer = getMailer();
-  if (!mailer) return false;
-  await mailer.transporter.sendMail({
-    from: `"engineerit.ai" <${mailer.from}>`,
+  const result = await deliverMail({
     to,
     subject: `engineerit.ai — ${subject}`,
     text,
     html: `<p>${escapeHtml(text)}</p>`,
   });
-  return true;
+  return result.sent || result.sink === "log" || result.sink === "mailpit";
 }
 
 export function periodLengthDays(interval: BillingInterval) {

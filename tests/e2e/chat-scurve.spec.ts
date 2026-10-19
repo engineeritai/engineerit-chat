@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const prompt = "Wk1 10%, Wk2 25%, Wk3 67%, Wk4 89%, Wk5 100%. Make now the chart of S-Curve";
 const longText = Array.from({ length: 12 }, (_, index) => `Line ${index + 1}: cumulative progress stays readable on a phone.`).join("\n");

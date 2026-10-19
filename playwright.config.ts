@@ -9,6 +9,7 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:3000",
     channel: "chrome",
+    extraHTTPHeaders: { "x-engineerit-test": "1" },
     trace: "off",
   },
   projects: [

@@ -20,6 +20,7 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:3000",
     channel: "chrome",
+    extraHTTPHeaders: { "x-engineerit-test": "1" },
     locale: "en-US",
     timezoneId: "Asia/Riyadh",
   },
@@ -32,5 +33,6 @@ export default defineConfig({
     url: "http://127.0.0.1:3000",
     reuseExistingServer: true,
     timeout: 120_000,
+    env: { MAIL_TRANSPORT: "log", VERCEL_ENV: "development" },
   },
 });

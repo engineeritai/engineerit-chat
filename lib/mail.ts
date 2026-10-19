@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { isProductionMailRuntime, mailDecision } from "@/lib/mailPolicy";
 
 export function escapeHtml(value: string) {
   return value
@@ -9,7 +10,62 @@ export function escapeHtml(value: string) {
     .replace(/'/g, "&#039;");
 }
 
+export type OutboundMail = {
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+  fromName?: string;
+  bcc?: string;
+  replyTo?: string;
+  attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
+  headers?: { get(name: string): string | null };
+};
+
+export async function deliverMail(message: OutboundMail) {
+  const decision = mailDecision({
+    to: [message.to, message.bcc || ""].filter(Boolean),
+    testHeader: message.headers?.get("x-engineerit-test") || null,
+  });
+  if (decision.deliver !== "smtp") {
+    console.info("[mail-sink]", decision.reason, message.to, message.subject);
+    if (decision.deliver === "mailpit") {
+      const transport = nodemailer.createTransport({
+        host: process.env.MAILPIT_HOST || "127.0.0.1",
+        port: Number(process.env.MAILPIT_PORT || 1025),
+        secure: false,
+      });
+      await transport.sendMail({
+        from: `"${message.fromName || "engineerit.ai"}" <${process.env.MAIL_FROM || "noreply@engineerit.ai"}>`,
+        to: message.to,
+        bcc: message.bcc,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+        attachments: message.attachments,
+      });
+      return { sent: true, sink: "mailpit" as const, reason: decision.reason };
+    }
+    return { sent: false, sink: "log" as const, reason: decision.reason };
+  }
+
+  const mailer = getMailer();
+  if (!mailer) return { sent: false, sink: null, reason: "not-configured" };
+  await mailer.transporter.sendMail({
+    from: `"${message.fromName || "engineerit.ai"}" <${mailer.from}>`,
+    to: message.to,
+    ...(message.bcc ? { bcc: message.bcc } : {}),
+    replyTo: message.replyTo,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+    attachments: message.attachments,
+  });
+  return { sent: true, sink: null, reason: "smtp" };
+}
+
 export function getMailer() {
+  if (!isProductionMailRuntime()) return null;
   const host = process.env.ZSMTP_HOST;
   const port = Number(process.env.ZSMTP_PORT || "465");
   const user = process.env.ZSMTP_USER;

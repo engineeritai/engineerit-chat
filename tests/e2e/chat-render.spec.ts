@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("s-curve, lists, and action tables render in english and arabic", async ({ page }, info) => {
   test.skip(info.project.name === "tablet-768", "covered on phone and desktop");
