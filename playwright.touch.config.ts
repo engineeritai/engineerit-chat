@@ -7,7 +7,7 @@ const samsung =
 
 export default defineConfig({
   testDir: "tests/e2e",
-  testMatch: "touch.spec.ts",
+  testMatch: /touch\.spec\.ts|sidebar-nav\.spec\.ts/,
   timeout: 120_000,
   fullyParallel: false,
   workers: 1,

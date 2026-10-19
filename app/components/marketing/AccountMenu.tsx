@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useHistoryOverlay } from "@/app/components/useHistoryOverlay";
+import { useCloseOnRouteChange, useHistoryOverlay } from "@/app/components/useHistoryOverlay";
 import Link from "next/link";
 import LanguageToggle from "@/app/components/LanguageToggle";
 import { useAccount } from "@/app/components/marketing/AccountState";
@@ -122,7 +122,7 @@ export function PlanSummary({ onNavigate }: { onNavigate?: () => void }) {
           <span style={{ width: `${Math.round((1 - progress.used) * 100)}%`, background: theme.accent }} />
         </div>
       ) : null}
-      <Link className="acct-cta" href={free ? "/pricing" : "/account/billing"} onClick={onNavigate}>
+      <Link className="acct-cta" href={free ? "/pricing" : "/account/billing"} onClick={() => onNavigate?.()}>
         {free ? s.header.upgrade : s.header.renew}
       </Link>
     </div>
@@ -148,6 +148,7 @@ export default function AccountMenu() {
   const account = useAccount();
   const [open, setOpen] = useState(false);
   useHistoryOverlay(open, () => setOpen(false));
+  useCloseOnRouteChange(() => setOpen(false));
   const rootRef = useRef<HTMLDivElement | null>(null);
   const theme = PLAN_THEME[account.planId];
   const fullPlan = planById(locale, account.planId).name;
@@ -203,16 +204,10 @@ export default function AccountMenu() {
         <>
           <button type="button" className="acct-backdrop" aria-label={s.header.accountMenu} onClick={() => setOpen(false)} />
           <div className="acct-sheet" role="menu">
-            <PlanSummary onNavigate={() => setOpen(false)} />
-            <Link href="/profile" onClick={() => setOpen(false)}>
-              {s.header.myProfile}
-            </Link>
-            <Link href="/profile?tab=billing" onClick={() => setOpen(false)}>
-              {s.header.invoicesLink}
-            </Link>
-            <Link href="/profile?tab=topics" onClick={() => setOpen(false)}>
-              {s.header.topicsLink}
-            </Link>
+            <PlanSummary />
+            <Link href="/profile">{s.header.myProfile}</Link>
+            <Link href="/profile?tab=billing">{s.header.invoicesLink}</Link>
+            <Link href="/profile?tab=topics">{s.header.topicsLink}</Link>
             <div className="acct-lang">
               <LanguageToggle compact />
             </div>

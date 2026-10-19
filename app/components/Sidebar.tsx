@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useRef, useState } from "react";
-import { useHistoryOverlay } from "@/app/components/useHistoryOverlay";
+import { useCloseOnRouteChange, useHistoryOverlay } from "@/app/components/useHistoryOverlay";
 import { InstallTrigger } from "@/app/components/InstallApp";
 import { PlanSummary } from "@/app/components/marketing/AccountMenu";
 import { useAccount } from "@/app/components/marketing/AccountState";
@@ -72,6 +72,7 @@ export default function Sidebar({
   const pullStart = useRef<number | null>(null);
   const cancelEdit = React.useRef(false);
   useHistoryOverlay(isMobileOpen, onCloseMobile);
+  useCloseOnRouteChange(onCloseMobile);
   const visibleThreads = signedIn
     ? threads
     : threads.filter((thread) => thread.title.toLowerCase().includes(historyQuery.trim().toLowerCase()));
@@ -88,10 +89,10 @@ export default function Sidebar({
   const panel = (idSuffix: string) => (
     <aside className="sidebar-inner chat-side">
       <div className="chat-side-top">
-        <Link href="/" className="chat-side-brand brand" aria-label={s.nav.home} onClick={onCloseMobile}>
+        <Link href="/" className="chat-side-brand brand" aria-label={s.nav.home}>
           <Wordmark decorative />
         </Link>
-        <Link href="/" className="chat-side-row" onClick={onCloseMobile}>
+        <Link href="/" className="chat-side-row">
           {s.nav.home}
         </Link>
         <button
@@ -122,7 +123,7 @@ export default function Sidebar({
               href={item.href}
               className={pathname === item.href ? "is-active" : undefined}
               aria-current={pathname === item.href ? "page" : undefined}
-              onClick={onCloseMobile}
+              onClick={() => pathname === item.href && onCloseMobile()}
             >
               {item.label}
             </Link>
@@ -272,13 +273,13 @@ export default function Sidebar({
       </div>
 
       <div className="chat-side-foot">
-        <PlanSummary onNavigate={onCloseMobile} />
+        <PlanSummary />
         {account.ready && !account.signedIn ? (
           <div className="acct-guest acct-guest-side">
-            <Link className="mkt-header-link" href="/login" onClick={onCloseMobile}>
+            <Link className="mkt-header-link" href="/login">
               {s.header.signIn}
             </Link>
-            <Link className="mkt-header-link is-accent" href="/register" onClick={onCloseMobile}>
+            <Link className="mkt-header-link is-accent" href="/register">
               {s.header.register}
             </Link>
           </div>

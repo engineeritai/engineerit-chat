@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useHistoryOverlay } from "@/app/components/useHistoryOverlay";
+import { useCloseOnRouteChange, useHistoryOverlay } from "@/app/components/useHistoryOverlay";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PlanSummary } from "@/app/components/marketing/AccountMenu";
@@ -20,6 +20,7 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
   const content = getMarketingContent(locale);
   const startX = useRef<number | null>(null);
   useHistoryOverlay(open, onClose);
+  useCloseOnRouteChange(onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -56,13 +57,17 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
     { href: "/legal/refund", label: content.footer.refunds, active: pathname === "/legal/refund" },
   ];
 
-  function onNavClick(event: React.MouseEvent<HTMLAnchorElement>, hash?: string) {
-    onClose();
-    if (!hash || pathname !== "/") return;
-    event.preventDefault();
-    const next = `${window.location.pathname}${window.location.search}#${hash}`;
-    window.history.pushState(null, "", next);
-    document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  function onNavClick(event: React.MouseEvent<HTMLAnchorElement>, link: { href: string; hash?: string }) {
+    if (link.hash && pathname === "/") {
+      event.preventDefault();
+      const next = `${window.location.pathname}${window.location.search}#${link.hash}`;
+      window.history.pushState(null, "", next);
+      document.getElementById(link.hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      onClose();
+      return;
+    }
+    const dest = link.href.split(/[?#]/)[0] || "/";
+    if (dest === pathname) onClose();
   }
 
   return (
@@ -84,7 +89,7 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
           startX.current = null;
         }}
       >
-        <Link href="/" className="app-side-brand" onClick={onClose}>
+        <Link href="/" className="app-side-brand" onClick={() => pathname === "/" && onClose()}>
           <span className="brand">
             <Wordmark />
           </span>
@@ -97,7 +102,7 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
               href={link.href}
               className={link.active ? "app-side-link is-active" : "app-side-link"}
               aria-current={link.active ? "page" : undefined}
-              onClick={(event) => onNavClick(event, link.hash)}
+              onClick={(event) => onNavClick(event, link)}
             >
               {link.label}
             </Link>
@@ -105,13 +110,13 @@ export default function AppSidebar({ open, onClose }: { open: boolean; onClose: 
           <InstallTrigger variant="sidebar" onDone={onClose} />
         </nav>
         <div className="app-side-foot">
-          <PlanSummary onNavigate={onClose} />
+          <PlanSummary />
           {account.ready && !account.signedIn ? (
             <div className="acct-guest acct-guest-side">
-              <Link className="mkt-header-link" href="/login" onClick={onClose}>
+              <Link className="mkt-header-link" href="/login" onClick={() => pathname === "/login" && onClose()}>
                 {shell.header.signIn}
               </Link>
-              <Link className="mkt-header-link is-accent" href="/register" onClick={onClose}>
+              <Link className="mkt-header-link is-accent" href="/register" onClick={() => pathname === "/register" && onClose()}>
                 {shell.header.register}
               </Link>
             </div>
