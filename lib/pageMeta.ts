@@ -106,7 +106,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/": {
       title: "engineerit.ai | مساعد هندسي بالذكاء الاصطناعي لمكاتب الخليج",
       description:
-        "engineerit.ai يهندس أي فكرة أو موضوع بمنهج منظم. أرفق ملفاتك، واختر أداة، واحصل على إجابات منظمة. اشتراكك يفعّل المحادثات غير المحدودة والأدوات الهندسية ومستشاري الذكاء الاصطناعي.",
+        "engineerit.ai يهندس أي فكرة أو موضوع بمنهج منظم. أرفق ملفاتك، واختر أداة، واحصل على إجابات منظمة. اشتراكك يفتح المحادثات غير المحدودة والأدوات الهندسية ومستشاري الذكاء الاصطناعي.",
     },
     "/faq": {
       title: "الأسئلة الشائعة | engineerit.ai",
@@ -131,11 +131,11 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/pricing": {
       title: "الأسعار | engineerit.ai",
       description:
-        "المهندس المساعد مجاني. المهندس 19 ر.س شهرياً، والمهندس المحترف 41 ر.س، والمهندس الاستشاري 99 ر.س. الفريق 449 ر.س شهرياً لخمسة مقاعد. المؤسسات 3,900 ر.س شهرياً لعشرة مقاعد.",
+        "المهندس المساعد مجاني. المهندس 19 ر.س شهريا، والمهندس المحترف 41 ر.س، والمهندس الاستشاري 99 ر.س. الفريق 449 ر.س شهريا لخمسة مقاعد. المؤسسات 3,900 ر.س شهريا لعشرة مقاعد.",
     },
     "/chat": {
       title: "المحادثة | engineerit.ai",
-      description: "افتح محادثة engineerit.ai. اختر التخصص واسأل سؤالاً هندسياً، أو ابدأ من أداة مهندس.",
+      description: "افتح محادثة engineerit.ai. اختر التخصص واسأل سؤالا هندسيا، أو ابدأ من أداة مهندس.",
     },
     "/advisors": {
       title: "مستشارو الذكاء الاصطناعي | engineerit.ai",
@@ -161,7 +161,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     },
     "/subscription": {
       title: "الاشتراك | engineerit.ai",
-      description: "اختر باقة engineerit.ai أو رقّها.",
+      description: "اختر باقة engineerit.ai أو ارفعها.",
     },
     "/legal/terms": {
       title: "سياسة الاستخدام | engineerit.ai",
@@ -185,7 +185,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     },
     "/reset-password": {
       title: "إعادة تعيين كلمة المرور | engineerit.ai",
-      description: "عيّن كلمة مرور جديدة لحساب engineerit.ai.",
+      description: "ضع كلمة مرور جديدة لحساب engineerit.ai.",
     },
     "/forgot-password": {
       title: "نسيت كلمة المرور | engineerit.ai",

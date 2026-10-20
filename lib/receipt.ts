@@ -160,11 +160,11 @@ function renderArabic(input: {
   if (input.until) lines.push(`الوصول حتى: ${input.until}`);
 
   const subject = `engineerit.ai ${title} — ${input.planLabel} — ${input.amount}`;
-  const text = ["شكراً لدفعتك إلى engineerit.ai.", "", title, ...lines].join("\n");
+  const text = ["شكرا لدفعتك إلى engineerit.ai.", "", title, ...lines].join("\n");
   const html = `
     <div dir="rtl" lang="ar">
     <h2>${escapeHtml(title)}</h2>
-    <p>شكراً لدفعتك إلى engineerit.ai.</p>
+    <p>شكرا لدفعتك إلى engineerit.ai.</p>
     <p><strong>الخطة:</strong> ${escapeHtml(input.planLabel)}</p>
     <p><strong>المدة:</strong> ${escapeHtml(period)}</p>
     <p><strong>المبلغ المدفوع:</strong> ${escapeHtml(input.amount)}</p>

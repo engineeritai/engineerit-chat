@@ -19,7 +19,7 @@ type Props = {
 
 export function buyLabel(planId: PlanId, _verb: "buy" | "upgrade" = "buy", locale: "en" | "ar" = "en") {
   const ar = locale === "ar";
-  if (planId === "assistant") return ar ? "ابدأ مجاناً" : "Start free";
+  if (planId === "assistant") return ar ? "ابدأ مجانا" : "Start free";
   return ar ? "اشترك الآن" : "Subscribe";
 }
 

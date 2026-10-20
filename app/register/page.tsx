@@ -12,7 +12,7 @@ import { trackProduct } from "@/lib/attribution";
 import { useMessages } from "@/lib/useMessages";
 
 export default function RegisterPage() {
-  const { shell: s } = useMessages();
+  const { shell: s, locale } = useMessages();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -116,7 +116,9 @@ export default function RegisterPage() {
     <MarketingShell>
         <div className="page-wrap">
           <h1 className="page-title">{s.auth.registerTitle}</h1>
-          <p className="page-subtitle">{s.auth.registerLead}</p>
+          <p className="page-subtitle">
+            {s.auth.registerLeadBefore}<Link className="page-subtitle-link" href={`/pricing?lang=${locale}`}>{s.auth.registerLeadLink}</Link>{s.auth.registerLeadAfter}
+          </p>
 
           {/* Registration card */}
           <div className="card" style={{ marginBottom: 24 }}>

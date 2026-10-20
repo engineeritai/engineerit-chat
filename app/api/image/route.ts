@@ -154,7 +154,7 @@ async function handleFormImage(req: NextRequest) {
   if ("response" in opened) return opened.response;
 
   if (!(file instanceof File)) {
-    return new Response(locale === "ar" ? "لم تُرفع صورة" : "No image uploaded", { status: 400 });
+    return new Response(locale === "ar" ? "لم ترفع صورة" : "No image uploaded", { status: 400 });
   }
   if (file.size > MAX_UPLOAD_BYTES) {
     return NextResponse.json({ error: fileTooLargeMessage(locale) }, { status: 413 });

@@ -47,8 +47,8 @@ export default function FeedbackPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          category: type,      // كان يُرسل type فقط
-          message: text,       // كان يُرسل text فقط
+          category: type,      // كان يرسل type فقط
+          message: text,       // كان يرسل text فقط
           email: email || undefined,
         }),
       });

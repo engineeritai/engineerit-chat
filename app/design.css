@@ -3108,6 +3108,11 @@ body.acct-open .mkt-header {
   white-space: nowrap;
 }
 
+html[lang="ar"] .brand-headline {
+  line-height: 1.35;
+  margin-bottom: 10px;
+}
+
 .plus-menu button.tool-row {
   display: flex;
   align-items: center;

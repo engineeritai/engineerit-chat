@@ -43,7 +43,7 @@ test("desktop menu opens the install instructions", async ({ page }, info) => {
   await page.getByTestId("install-menu").click();
   await expect(page.getByTestId("install-sheet")).toContainText("Open the browser menu");
   await page.goto("/pricing?lang=ar");
-  await expect(page.getByTestId("install-pricing")).toHaveText("ثبّت التطبيق");
+  await expect(page.getByTestId("install-pricing")).toHaveText("ثبت التطبيق");
   await page.getByTestId("install-pricing").click();
   await expect(page.getByTestId("install-sheet")).toContainText("قائمة المتصفح");
 });
@@ -67,7 +67,7 @@ test("android and iphone install banners stay clear of the composer and pricing 
 
   const androidAr = await openSized(browser, { ua: ANDROID, width: 412, height: 915, lang: "ar" });
   await firePrompt(androidAr.page);
-  await expect(androidAr.page.getByTestId("install-banner")).toContainText("ثبّت التطبيق");
+  await expect(androidAr.page.getByTestId("install-banner")).toContainText("ثبت التطبيق");
   await androidAr.page.screenshot({ path: "/opt/cursor/artifacts/pwa-android-ar-banner.png" });
   await androidAr.page.locator(".mkt-menu-btn").click();
   await expect(androidAr.page.locator(".app-side.is-open").getByTestId("install-menu")).toHaveText("تثبيت التطبيق");

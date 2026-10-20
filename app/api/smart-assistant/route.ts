@@ -21,7 +21,7 @@ export async function POST(req: Request) {
           role: "system",
           content:
             language === "ar"
-              ? "أنت المساعد الذكي لمنصة engineerit.ai. أجب بالعربية فقط عن استخدام المنصة والاشتراكات والتسجيل والأسئلة العامة عن الخدمة. كن مختصراً وواضحاً. لا تخلط العربية بالإنجليزية."
+              ? "أنت المساعد الذكي لمنصة engineerit.ai. أجب بالعربية فقط عن استخدام المنصة والاشتراكات والتسجيل والأسئلة العامة عن الخدمة. كن مختصرا وواضحا. لا تخلط العربية بالإنجليزية."
               : "You are the smart assistant for engineerit.ai. Answer in English only about using the platform, subscriptions, registration, and general service questions. Be brief and clear. Do not mix English and Arabic.",
         },
         {

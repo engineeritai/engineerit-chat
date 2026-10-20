@@ -622,7 +622,7 @@ export default function ProfilePage() {
   const currentPlanLabel = planById(locale, currentPlanId).name;
   const catalogSource = PLANS.find((plan) => plan.id === currentPlanId) ?? PLANS[0];
   const legacyPrice = consultantLegacy && currentPlanId === "consultant";
-  const approx = locale === "ar" ? "تقريباً" : "approx.";
+  const approx = locale === "ar" ? "تقريبا" : "approx.";
   const teamLapsed =
     (storedPlan === "team" || storedPlan === "enterprise") && currentPlan === "assistant";
 

@@ -222,7 +222,7 @@ export default function ChartViewer({ open, dir, closeLabel, title, sourceRef, o
       </div>
       {hint ? (
         <p className="chart-viewer-hint" role="status">
-          {dir === "rtl" ? "أدر الشاشة عرضياً لرؤية المخطط كاملاً" : "Turn sideways for a wider view"}
+          {dir === "rtl" ? "أدر الشاشة عرضيا لرؤية المخطط كاملا" : "Turn sideways for a wider view"}
         </p>
       ) : null}
       <button type="button" className="chart-viewer-close" aria-label={closeLabel} onClick={onClose}>

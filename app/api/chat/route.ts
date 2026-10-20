@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
         error:
           locale === "ar"
             ? limit.plan === "guest"
-              ? "بلغت الحد اليومي (رد واحد في اليوم). سجّل أو ادخل."
+              ? "بلغت الحد اليومي (رد واحد في اليوم). سجل أو ادخل."
               : "بلغت الحد اليومي لباقة المساعد (3 ردود في اليوم). يرجى الترقية."
             : limit.plan === "guest"
               ? "Daily limit reached (1 reply/day). Please register or log in."
@@ -236,14 +236,14 @@ async function finishDiagramReply(
   if (wrongGantt || wrongCurve || wrongFlow) {
     const instruction = wrongGantt
       ? locale === "ar"
-        ? "استبدل أي مخطط انسيابي بمخطط جانت mermaid واحد فيه مهام ومدد واعتماد after ومحور تاريخ وخط today. لا تُخرج flowchart."
+        ? "استبدل أي مخطط انسيابي بمخطط جانت mermaid واحد فيه مهام ومدد واعتماد after ومحور تاريخ وخط today. لا تخرج flowchart."
         : "Replace any flowchart with one mermaid gantt. Include tasks, durations, after dependencies, dateFormat YYYY-MM-DD, and a today line. Do not output a flowchart."
       : wrongCurve
         ? locale === "ar"
-          ? "أضف سياج scurve الآن. لا تُخرج flowchart."
+          ? "أضف سياج scurve الآن. لا تخرج flowchart."
           : "Include a fenced scurve block now. Do not output a flowchart."
         : locale === "ar"
-          ? "أضف الآن مخطط mermaid بسياج flowchart RL مبنيًا من الجواب السابق. لا تكتفي بوصف المخطط."
+          ? "أضف الآن مخطط mermaid بسياج flowchart RL مبنيا من الجواب السابق. لا تكتفي بوصف المخطط."
           : "Include the fenced mermaid flowchart LR now, built from the previous answer. Do not only describe the diagram.";
     try {
       const retry = await client.chat.completions.create({
