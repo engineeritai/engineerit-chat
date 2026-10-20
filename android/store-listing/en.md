@@ -26,4 +26,4 @@ The yearly price is 10 times the monthly price. VAT applies as required by the r
 An account uses your email address. Chats and files you upload are kept so you can open them again. Paid plans can be cancelled from billing.
 
 Privacy policy: https://engineerit.ai/legal/privacy
-Contact: info@engineerit.ai
+Contact: support@engineerit.ai

@@ -108,7 +108,7 @@ export default function TermsPage() {
               of data as described in this section. For any privacy questions or
               requests (such as access, correction, or deletion where
               applicable), you can contact us at{" "}
-              <a href="mailto:info@engineerit.ai">info@engineerit.ai</a>.
+              <a href="mailto:support@engineerit.ai">support@engineerit.ai</a>.
             </p>
 
             {/* 6. Fair Use & Limits */}
@@ -223,7 +223,7 @@ function ArabicTerms() {
       </p>
       <p>
         باستخدام الخدمة فإنك توافق على جمع البيانات ومعالجتها كما هو موضح في هذا القسم. لأسئلة الخصوصية أو طلبات الوصول أو التصحيح أو الحذف حيث ينطبق ذلك، راسلنا على{" "}
-        <a href="mailto:info@engineerit.ai">info@engineerit.ai</a>.
+        <a href="mailto:support@engineerit.ai">support@engineerit.ai</a>.
       </p>
       <h2 className="section-heading">6. الاستخدام العادل والحدود</h2>
       <p>

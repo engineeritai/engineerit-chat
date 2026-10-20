@@ -1,5 +1,5 @@
 /** Public trust and contact details already used on the site. */
-export const CONTACT_EMAIL = "info@engineerit.ai";
+export const CONTACT_EMAIL = "support@engineerit.ai";
 
 export const SAUDI_BUSINESS_AUTH_NO = "0000204877";
 

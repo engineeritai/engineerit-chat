@@ -29,13 +29,13 @@ Service providers only, to run the product:
 
 ## Security and deletion
 
-Data is sent over HTTPS. People can ask for access, correction, or deletion at info@engineerit.ai. The privacy policy is https://engineerit.ai/legal/privacy (https://engineerit.ai/privacy redirects there).
+Data is sent over HTTPS. People can ask for access, correction, or deletion at support@engineerit.ai. The privacy policy is https://engineerit.ai/legal/privacy (https://engineerit.ai/privacy redirects there).
 
 ## Play form ticks
 
 - Collects data: Yes
 - Data is encrypted in transit: Yes
-- Users can request deletion: Yes, by emailing info@engineerit.ai
+- Users can request deletion: Yes, by emailing support@engineerit.ai
 - Committed to Play Families: No
 - Data types: Email, Name, Phone (optional), User-generated content (chats and files), Purchase history, App interactions (page views)
 - Purposes: App functionality, Account management, Analytics

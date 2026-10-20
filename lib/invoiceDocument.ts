@@ -152,7 +152,7 @@ export function buildInvoiceDocument(input: InvoiceDraft): InvoiceDocument {
     totalLabel: ar ? "المبلغ" : "Amount",
     totalValue: amount,
     notes,
-    footer: "engineerit.ai  |  info@engineerit.ai",
+    footer: "engineerit.ai  |  support@engineerit.ai",
   };
 }
 

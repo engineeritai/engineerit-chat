@@ -260,7 +260,7 @@ export default function CheckoutPage() {
                     <li>{s.checkout.cancelAnytime}</li>
                     <li>{s.checkout.cardNotStored}</li>
                     <li>
-                      <a href="mailto:info@engineerit.ai">info@engineerit.ai</a>
+                      <a href="mailto:support@engineerit.ai">support@engineerit.ai</a>
                     </li>
                   </ul>
                   {preview ? (

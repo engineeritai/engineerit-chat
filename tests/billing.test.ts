@@ -337,9 +337,9 @@ describe("Moyasar confirmation and receipts", () => {
     assert.equal(chosenLanguage("Summarize this document"), "en");
   });
 
-  it("BCCs every invoice email to INVOICE_BCC_EMAIL, defaulting to info@engineerit.ai", () => {
-    assert.equal(invoiceBccAddress(undefined), "info@engineerit.ai");
-    assert.equal(invoiceBccAddress("   "), "info@engineerit.ai");
+  it("BCCs every invoice email to INVOICE_BCC_EMAIL, defaulting to support@engineerit.ai", () => {
+    assert.equal(invoiceBccAddress(undefined), "support@engineerit.ai");
+    assert.equal(invoiceBccAddress("   "), "support@engineerit.ai");
     assert.equal(invoiceBccAddress(" finance@engineerit.ai "), "finance@engineerit.ai");
   });
 
@@ -358,6 +358,7 @@ describe("Moyasar confirmation and receipts", () => {
     assert.doesNotMatch(receipt.text, /VAT|tax invoice/i);
     assert.equal(receipt.document.locale, "en");
     assert.match(receipt.document.notes.join("\n"), /VAT as applicable/);
+    assert.equal(receipt.document.footer, "engineerit.ai  |  support@engineerit.ai");
     assert.equal(usesLogicalArabic(receipt.document), true);
     const pdf = Buffer.from(await renderInvoicePdf(receipt.document));
     assert.equal(pdf.subarray(0, 5).toString(), "%PDF-");
@@ -372,6 +373,7 @@ describe("Moyasar confirmation and receipts", () => {
     assert.equal(arabic.document.locale, "ar");
     assert.equal(arabic.document.title, "فاتورة");
     assert.match(arabic.document.notes.join("\n"), /ضريبة القيمة المضافة حسب الأنظمة/);
+    assert.equal(arabic.document.footer, "engineerit.ai  |  support@engineerit.ai");
     assert.equal(usesLogicalArabic(arabic.document), true);
     const arabicPdf = Buffer.from(await renderInvoicePdf(arabic.document));
     const loadedArabic = await PDFDocument.load(arabicPdf);
@@ -379,7 +381,7 @@ describe("Moyasar confirmation and receipts", () => {
     const drawn = pdfStreams(pdf) + pdfStreams(arabicPdf);
     assert.match(drawn, /699\.62/);
     assert.match(drawn, /1085\.73/);
-    assertFontDraws("assets/fonts/Inter-Regular.ttf", ["Invoice", "SAR 41.00", "info@engineerit.ai"]);
+    assertFontDraws("assets/fonts/Inter-Regular.ttf", ["Invoice", "SAR 41.00", "support@engineerit.ai"]);
     assertFontDraws("assets/fonts/NotoSansArabic-Regular.ttf", [
       "فاتورة",
       "المهندس المحترف",
@@ -780,7 +782,7 @@ describe("checkout and invoice regressions", () => {
       paymentSuccessPath("11111111-1111-4111-8111-111111111111", "signed"),
       "/payment/success?checkout=11111111-1111-4111-8111-111111111111&pay=signed"
     );
-    assert.equal(invoiceBccAddress(undefined), "info@engineerit.ai");
+    assert.equal(invoiceBccAddress(undefined), "support@engineerit.ai");
     assert.equal(shellCopy.en.profile.paymentSuccess, "Payment successful");
     assert.equal(shellCopy.en.profile.goToProfile, "Go to profile");
     assert.equal(shellCopy.ar.profile.goToProfile, "الذهاب إلى الملف");
