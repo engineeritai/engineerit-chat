@@ -29,7 +29,7 @@ export default function EmailConfirmedPage() {
         </p>
         <p className="text-xs text-gray-400">
           {arabic
-            ? "سيتم تحويلك إلى صفحة الدخول خلال ثوانٍ."
+            ? "سيتم تحويلك إلى صفحة الدخول خلال ثوان."
             : "You will be redirected to the sign-in page in a few seconds."}
         </p>
       </div>
