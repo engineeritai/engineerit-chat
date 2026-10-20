@@ -23,6 +23,7 @@ export default function LandingView() {
   const content = getMarketingContent(locale);
   const router = useRouter();
   const [draft, setDraft] = useState("");
+  const placeholder = content.hero.askPlaceholder;
 
   function ask(text: string) {
     const q = text.trim();
@@ -62,8 +63,8 @@ export default function LandingView() {
               className="hero-composer-input"
               rows={1}
               value={draft}
-              placeholder={content.hero.askPlaceholder}
-              aria-label={content.hero.askPlaceholder}
+              placeholder={placeholder}
+              aria-label={placeholder}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {

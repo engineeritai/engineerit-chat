@@ -7,16 +7,23 @@ const HIDE_DEV_OVERLAY = "nextjs-portal, [data-nextjs-toast] { display: none !im
 async function prepare(page: Page) {
   await page.clock.install({ time: FIXED });
   await page.addInitScript((css) => {
-    localStorage.setItem("engineerit_landing_seen_v1", "yes");
-    localStorage.setItem("engineerit.install.dismissedAt", String(Date.now()));
+    try {
+      localStorage.setItem("engineerit_landing_seen_v1", "yes");
+      localStorage.setItem("engineerit.install.dismissedAt", String(Date.now()));
+    } catch {
+      // Third-party frames (HubSpot) do not share this origin's storage.
+    }
     // devIndicators: false hides the route indicator, but Next still paints the
     // red "1 Issue" badge whenever it has counted a runtime error. That badge
     // sits on the phone tab bar and is not part of the page. Hide it before
     // first paint so a transient dev error cannot flake a full-page snapshot.
+    // The same init script runs in those frames, where documentElement can be null.
+    const root = document.documentElement;
+    if (!root) return;
     const style = document.createElement("style");
     style.setAttribute("data-visual-test", "hide-next-dev");
     style.textContent = css;
-    document.documentElement.appendChild(style);
+    root.appendChild(style);
   }, HIDE_DEV_OVERLAY);
 }
 
@@ -35,6 +42,10 @@ async function stable(page: Page, selector: string, which: "first" | "last" = "f
 
 async function openChat(page: Page, path: string) {
   await page.goto(path, { waitUntil: "domcontentloaded" });
+  // Screenshots hide the caret by writing inline style. That has to wait until
+  // React has hydrated, or the style is reported as a hydration mismatch and
+  // Next paints the issues badge into the picture.
+  await page.waitForFunction(() => document.documentElement.dataset.hydrated === "1");
   await page.evaluate(() => document.fonts.ready);
   await page.addStyleTag({
     content: `${HIDE_DEV_OVERLAY} .msg-actions { opacity: 0 !important; }`,
@@ -129,6 +140,7 @@ test("home, pricing, advisors, and checkout", async ({ page }) => {
     for (const route of pages) {
       const join = route.path.includes("?") ? "&" : "?";
       await page.goto(`${route.path}${join}lang=${lang}`, { waitUntil: "domcontentloaded" });
+      await page.waitForFunction(() => document.documentElement.dataset.hydrated === "1");
       await page.evaluate(() => document.fonts.ready);
       await expect(page.locator(route.marker).first()).toBeVisible();
       await page.addStyleTag({ content: HIDE_DEV_OVERLAY });

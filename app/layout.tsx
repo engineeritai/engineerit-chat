@@ -3,6 +3,7 @@
 import "./globals.css";
 import "./design.css";
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { LocaleProvider } from "@/app/components/LocaleProvider";
@@ -11,6 +12,7 @@ import KeyboardInset from "@/app/components/KeyboardInset";
 import ToastHost from "@/app/components/ToastHost";
 import TouchGuard from "@/app/components/TouchGuard";
 import PwaRegister from "@/app/components/PwaRegister";
+import HubSpot from "@/app/components/HubSpot";
 import { metaFor } from "@/lib/pageMeta";
 import { requestLocale } from "@/lib/requestLocale";
 import { SITE_NAME, SITE_URL, languageAlternates } from "@/lib/seo";
@@ -100,6 +102,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const locale = await requestLocale();
+  // HubSpot's collected-forms script throws page errors while Playwright is
+  // navigating. Tests already send this header, so they keep the app without it.
+  const isTest = (await headers()).get("x-engineerit-test") === "1";
   return (
     <html lang={locale === "ar" ? "ar" : "en"} dir={locale === "ar" ? "rtl" : "ltr"}>
       <head>
@@ -113,17 +118,11 @@ export default async function RootLayout({
         <link rel="icon" href="/favicon-dark.svg?v=2" type="image/svg+xml" media="(prefers-color-scheme: dark)" />
         <link rel="icon" href="/favicon-dark.png?v=2" type="image/png" media="(prefers-color-scheme: dark)" />
         <link rel="apple-touch-icon" href="/apple-touch-icon-eit.png?v=2" sizes="180x180" />
-        <script
-          type="text/javascript"
-          id="hs-script-loader"
-          async
-          defer
-          src="//js.hs-scripts.com/147368055.js"
-        />
       </head>
 
       <body className={`${inter.variable} ${plexArabic.variable}`}>
         <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
+        {isTest ? null : <HubSpot />}
         <KeyboardInset />
         <ToastHost />
         <TouchGuard />

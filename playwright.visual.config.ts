@@ -41,7 +41,7 @@ export default defineConfig({
     },
     {
       name: "layout-webkit",
-      testMatch: ["table-overlap.spec.ts", "header-inapp.spec.ts"],
+      testMatch: ["table-overlap.spec.ts", "header-inapp.spec.ts", "arabic-kasra.spec.ts", "hero-composer.spec.ts"],
       use: { browserName: "webkit", viewport: { width: 390, height: 844 } },
     },
   ],
