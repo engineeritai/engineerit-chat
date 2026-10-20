@@ -79,9 +79,7 @@ test("gantt, s-curve, diagram, and table stay in their own frames", async ({ pag
     }));
     expect(pageBox.scroll).toBeLessThanOrEqual(pageBox.client + 2);
     await target.evaluate((el) => el.scrollIntoView({ block: "center", inline: "nearest" }));
-    // The s-curve stroke and legend antialias by about 2% between Chrome builds.
-    const tolerance = shot.name.startsWith("scurve") ? { maxDiffPixelRatio: 0.03 } : {};
-    await expect(target).toHaveScreenshot(shot.name, tolerance);
+    await expect(target).toHaveScreenshot(shot.name);
   }
   if (info.project.name === "phone-390") {
     await openChat(page, "/chat?lang=en&fixture=gantt-en&planPreview=consultant");

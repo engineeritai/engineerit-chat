@@ -83,7 +83,7 @@ async function headerLayout(page: Page) {
     if (Math.max(...centers) - Math.min(...centers) > 12) problems.push("header controls are not on one row");
     const word = boxes.find((box) => box.name.includes("wordmark"));
     if (!word) problems.push("missing wordmark");
-    else if (word.width / word.height < 3.4 || word.height < 16) problems.push(`wordmark squashed ${Math.round(word.width)}x${Math.round(word.height)}`);
+    else if (word.width / word.height < 4.4 || word.height < 21 || word.width < 96) problems.push(`wordmark squashed ${Math.round(word.width)}x${Math.round(word.height)}`);
     const br = banner?.getBoundingClientRect();
     if (br) {
       for (const box of boxes) {
