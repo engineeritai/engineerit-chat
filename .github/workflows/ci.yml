@@ -1,0 +1,59 @@
+# Required status check: ci / tests
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: public-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: dummy-key
+      MAIL_TRANSPORT: log
+      VERCEL_ENV: development
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+      ZSMTP_HOST: ""
+      ZSMTP_USER: ""
+      ZSMTP_PASS: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install poppler-utils
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y poppler-utils python3-pil
+          sudo mkdir -p /opt/cursor/artifacts
+          sudo chmod 777 /opt/cursor/artifacts
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit chrome
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Sidebar navigation
+        run: npm run test:sidebar
+
+      - name: Visual tests
+        run: npm run test:visual
+
+      - name: Upload Playwright results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore
