@@ -3,6 +3,7 @@
 import "./globals.css";
 import "./design.css";
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { LocaleProvider } from "@/app/components/LocaleProvider";
@@ -101,6 +102,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const locale = await requestLocale();
+  // HubSpot's collected-forms script throws page errors while Playwright is
+  // navigating. Tests already send this header, so they keep the app without it.
+  const isTest = (await headers()).get("x-engineerit-test") === "1";
   return (
     <html lang={locale === "ar" ? "ar" : "en"} dir={locale === "ar" ? "rtl" : "ltr"}>
       <head>
@@ -118,7 +122,7 @@ export default async function RootLayout({
 
       <body className={`${inter.variable} ${plexArabic.variable}`}>
         <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
-        <HubSpot />
+        {isTest ? null : <HubSpot />}
         <KeyboardInset />
         <ToastHost />
         <TouchGuard />
