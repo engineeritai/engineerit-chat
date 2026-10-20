@@ -2,12 +2,22 @@ import { expect, test, type Page } from "./fixtures";
 
 const FIXED = new Date("2026-10-16T13:32:00Z");
 
+const HIDE_DEV_OVERLAY = "nextjs-portal, [data-nextjs-toast] { display: none !important; }";
+
 async function prepare(page: Page) {
   await page.clock.install({ time: FIXED });
-  await page.addInitScript(() => {
+  await page.addInitScript((css) => {
     localStorage.setItem("engineerit_landing_seen_v1", "yes");
     localStorage.setItem("engineerit.install.dismissedAt", String(Date.now()));
-  });
+    // devIndicators: false hides the route indicator, but Next still paints the
+    // red "1 Issue" badge whenever it has counted a runtime error. That badge
+    // sits on the phone tab bar and is not part of the page. Hide it before
+    // first paint so a transient dev error cannot flake a full-page snapshot.
+    const style = document.createElement("style");
+    style.setAttribute("data-visual-test", "hide-next-dev");
+    style.textContent = css;
+    document.documentElement.appendChild(style);
+  }, HIDE_DEV_OVERLAY);
 }
 
 async function stable(page: Page, selector: string, which: "first" | "last" = "first") {
@@ -27,7 +37,7 @@ async function openChat(page: Page, path: string) {
   await page.goto(path, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => document.fonts.ready);
   await page.addStyleTag({
-    content: "nextjs-portal, [data-nextjs-toast] { display: none !important; } .msg-actions { opacity: 0 !important; }",
+    content: `${HIDE_DEV_OVERLAY} .msg-actions { opacity: 0 !important; }`,
   });
 }
 
@@ -121,6 +131,7 @@ test("home, pricing, advisors, and checkout", async ({ page }) => {
       await page.goto(`${route.path}${join}lang=${lang}`, { waitUntil: "domcontentloaded" });
       await page.evaluate(() => document.fonts.ready);
       await expect(page.locator(route.marker).first()).toBeVisible();
+      await page.addStyleTag({ content: HIDE_DEV_OVERLAY });
       await expect(page).toHaveScreenshot(`${lang}-${route.name}`);
     }
   }
