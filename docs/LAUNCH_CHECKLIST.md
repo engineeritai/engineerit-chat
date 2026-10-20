@@ -53,7 +53,7 @@ Set these on the Vercel project (Production, and Preview if you test there). `NE
 | `ZSMTP_PORT` | Optional. Defaults to `465` (implicit TLS). Set `587` only if the provider requires STARTTLS |
 | `ZSMTP_USER` | SMTP username. This address is also the From address |
 | `ZSMTP_PASS` | SMTP password or app password |
-| `INVOICE_BCC_EMAIL` | Optional. BCC on every invoice email (first payment and each renewal). Unset uses `info@engineerit.ai` |
+| `INVOICE_BCC_EMAIL` | Optional. BCC on every invoice email (first payment and each renewal). Unset uses `support@engineerit.ai` |
 | `SALES_TO_EMAIL` | Optional inbox for non-purchase mail |
 | `FEEDBACK_TO_EMAIL` | Optional feedback inbox |
 | `ADMIN_EMAILS` | Comma-separated emails allowed to open `/admin/subscriptions` |

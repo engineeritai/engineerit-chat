@@ -6,7 +6,7 @@ export async function POST(req: Request) {
 
     console.log("New feedback:", { type, text, email });
 
-    // لاحقاً: يمكن ربطه بإرسال بريد فعلي إلى info@engineerit.ai
+    // لاحقاً: يمكن ربطه بإرسال بريد فعلي إلى support@engineerit.ai
     // أو تخزينه في قاعدة بيانات.
 
     return NextResponse.json({ ok: true });

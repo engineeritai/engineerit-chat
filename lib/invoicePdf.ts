@@ -73,7 +73,7 @@ async function drawHeader(
   const brandX = rtl ? MARGIN : MARGIN + (logoW ? logoW + 14 : 0);
   const brandW = Math.max(120, CONTENT_WIDTH - logoW - 14);
   drawLine(page, fonts, "engineerit.ai", y - 14, brandX, brandW, rtl ? "right" : "left", 13, ink, true);
-  drawLine(page, fonts, "info@engineerit.ai", y - 30, brandX, brandW, rtl ? "right" : "left", 10, muted, false);
+  drawLine(page, fonts, "support@engineerit.ai", y - 30, brandX, brandW, rtl ? "right" : "left", 10, muted, false);
 
   y -= logoHeight + 22;
   drawLine(page, fonts, doc.title, y, MARGIN, CONTENT_WIDTH, rtl ? "right" : "left", 22, ink, true);

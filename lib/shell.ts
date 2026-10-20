@@ -886,7 +886,7 @@ const en: ShellCopy = {
   },
   feedback: {
     title: "Feedback and complaints",
-    lead: "Help us improve engineerit.ai. Your message goes to info@engineerit.ai. You can also ask the smart assistant.",
+    lead: "Help us improve engineerit.ai. Your message goes to support@engineerit.ai. You can also ask the smart assistant.",
     botHello: "Hello. I am the smart assistant for engineerit.ai. How can I help with the platform, subscriptions, or an issue?",
     botUnclear: "I could not understand that. Please try another wording.",
     botError: "The smart assistant could not be reached. Please try again later.",
@@ -1363,7 +1363,7 @@ const ar: ShellCopy = {
   },
   feedback: {
     title: "الملاحظات والشكاوى",
-    lead: "ساعدنا على تحسين engineerit.ai. تُرسل رسالتك إلى info@engineerit.ai. يمكنك أيضاً سؤال المساعد الذكي.",
+    lead: "ساعدنا على تحسين engineerit.ai. تُرسل رسالتك إلى support@engineerit.ai. يمكنك أيضاً سؤال المساعد الذكي.",
     botHello: "مرحباً. أنا المساعد الذكي لـ engineerit.ai. كيف أساعدك في المنصة أو الاشتراكات أو مشكلة؟",
     botUnclear: "لم أفهم ذلك. أعد الصياغة من فضلك.",
     botError: "تعذر الاتصال بالمساعد الذكي. حاول لاحقاً.",

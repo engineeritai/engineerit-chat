@@ -1,7 +1,7 @@
 /** Inbox that receives a BCC of every customer invoice email. */
 export function invoiceBccAddress(raw = process.env.INVOICE_BCC_EMAIL) {
   const trimmed = raw?.trim();
-  return trimmed || "info@engineerit.ai";
+  return trimmed || "support@engineerit.ai";
 }
 
 export function canDownloadInvoice(

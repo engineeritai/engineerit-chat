@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    const toEmail = process.env.FEEDBACK_TO_EMAIL?.trim() || process.env.ZSMTP_USER || "info@engineerit.ai";
+    const toEmail = process.env.FEEDBACK_TO_EMAIL?.trim() || process.env.ZSMTP_USER || "support@engineerit.ai";
     const mailed = await deliverMail({
       to: toEmail,
       fromName: "engineerit.ai Feedback",

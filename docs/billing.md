@@ -48,7 +48,7 @@ The first payment uses the Moyasar payment form with **Save card** after the cus
 | `ADMIN_EMAILS` | yes for the monitor | Comma-separated emails allowed to open `/admin/subscriptions` |
 | `VAT_NUMBER` | no | Leave unset while the business is VAT-exempt. When set, receipts show a VAT-inclusive net and 15% breakdown plus this number. | 
 | `ZATCA_INVOICES_ENABLED` | no | `true` or `1`, and only together with `VAT_NUMBER`, titles the receipt as a tax invoice. This does not generate ZATCA XML. Unset receipts do not use the words “tax invoice”. |
-| `INVOICE_BCC_EMAIL` | no | BCC on every invoice email (first payment and renewals). Defaults to `info@engineerit.ai` when unset. |
+| `INVOICE_BCC_EMAIL` | no | BCC on every invoice email (first payment and renewals). Defaults to `support@engineerit.ai` when unset. |
 
 ## Supabase migrations
 
