@@ -1649,13 +1649,29 @@ html.kb-open .mkt-app .composer {
   outline: none;
 }
 
-/* The full English placeholder wraps inside the 44px field below 414px and the
-   second line is clipped. Keep it on one line; narrow copy is short enough to fit. */
-@media (max-width: 390px) {
+/* "Ask an engineering question…" is 229px at 16px. The field is 154px at a 320px
+   phone, so the placeholder steps down from 16px to 13px below 414px. The input
+   itself stays 16px so iOS does not zoom. Under 360px, 13px still needs about
+   32px more room, which comes from the gaps beside the + and send buttons. */
+@media (max-width: 413px) {
   .hero-composer-input::placeholder {
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: clamp(13px, calc(13px + (100vw - 360px) * 0.0714), 16px);
+  }
+}
+
+@media (max-width: 359px) {
+  .hero-composer {
+    gap: 2px;
+    padding-inline: 6px;
+  }
+
+  .hero-composer .hero-plus,
+  .hero-composer .chat-input-send-btn {
+    width: 34px;
+    min-width: 34px;
+    flex: 0 0 34px;
+    padding-inline: 0;
   }
 }
 
