@@ -37,7 +37,7 @@ export default function BuyPlanButton({
   const [busy, setBusy] = useState(false);
   const label = labelOverride ?? buyLabel(planId, verb, locale);
   const failed = locale === "ar" ? "تعذر بدء الدفع. حاول مرة أخرى." : "Could not start payment. Please try again.";
-  const processing = locale === "ar" ? "جارٍ المعالجة..." : "Processing...";
+  const processing = locale === "ar" ? "جاري المعالجة..." : "Processing...";
 
   if (planId === "assistant") {
     return (

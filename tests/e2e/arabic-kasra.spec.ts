@@ -1,94 +1,62 @@
-import { PNG } from "pngjs";
-import { expect, test } from "./fixtures";
+import { expect, test, type Browser } from "./fixtures";
+import { isScriptConsoleError } from "./fixtures";
 
-/**
- * Ink that sits in a gap under واشترِ, away from the letter bodies.
- * WebKit does this when Inter shapes the kasra (U+0650).
- */
-function separatedKasraInk(png: Buffer, box: { x: number; y: number; w: number; h: number }) {
-  const img = PNG.sync.read(png);
-  const x0 = Math.max(0, Math.floor(box.x));
-  const x1 = Math.min(img.width, Math.ceil(box.x + box.w));
-  const y0 = Math.max(0, Math.floor(box.y));
-  const y1 = Math.min(img.height, Math.ceil(box.y + box.h + 28));
-  const rows: number[] = [];
-  for (let y = y0; y < y1; y++) {
-    let ink = 0;
-    for (let x = x0; x < x1; x++) {
-      const i = (y * img.width + x) * 4;
-      const lum = img.data[i] * 0.3 + img.data[i + 1] * 0.59 + img.data[i + 2] * 0.11;
-      if (lum < 150) ink += 1;
-    }
-    rows.push(ink);
-  }
-  let gap = 0;
-  let seen = false;
-  let split = -1;
-  for (let i = 0; i < rows.length; i++) {
-    if (rows[i] > 0) {
-      if (seen && gap >= 4) {
-        split = i;
-        break;
-      }
-      seen = true;
-      gap = 0;
-    } else if (seen) gap += 1;
-  }
-  if (split < 0) return 0;
-  let ink = 0;
-  let endGap = 0;
-  for (let i = split; i < rows.length; i++) {
-    if (rows[i] === 0) {
-      endGap += 1;
-      if (endGap >= 4) break;
-    } else {
-      endGap = 0;
-      ink += rows[i];
-    }
-  }
-  return ink;
+const IPHONE =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
+
+async function openRegister(browser: Browser, width: number) {
+  const context = await browser.newContext({
+    baseURL: "http://127.0.0.1:3000",
+    viewport: { width, height: 844 },
+    userAgent: IPHONE,
+    isMobile: true,
+    hasTouch: true,
+    locale: "ar-SA",
+    extraHTTPHeaders: { "x-engineerit-test": "1" },
+  });
+  const page = await context.newPage();
+  const problems: string[] = [];
+  page.on("pageerror", (error) => problems.push(`pageerror: ${error.message}`));
+  page.on("console", (message) => {
+    if (isScriptConsoleError(message)) problems.push(`console.error: ${message.text()}`);
+  });
+  await page.goto("/register?lang=ar", { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => document.fonts.ready);
+  return { context, page, problems };
 }
 
-test("Arabic kasra stays on its line in WebKit", async ({ page }) => {
-  await page.goto("/register?lang=ar", { waitUntil: "domcontentloaded" });
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await document.fonts.load('32px "IBM Plex Sans Arabic"');
-  });
-  const subtitle = page.locator(".page-subtitle");
-  await expect(subtitle).toContainText("واشترِ");
-  const font = await subtitle.evaluate((el) => getComputedStyle(el).fontFamily);
-  expect(font.startsWith('"IBM Plex Sans Arabic"')).toBe(true);
-
-  const box = await page.evaluate(() => {
-    const probe = document.createElement("p");
-    probe.id = "kasra-probe";
-    probe.textContent = "أنشئ حسابك، وابدأ بباقة المهندس المساعد المجانية، واشترِ المهندس أو المهندس";
-    const family = getComputedStyle(document.body).fontFamily;
-    probe.style.cssText = [
-      "position:fixed",
-      "top:8px",
-      "left:8px",
-      "width:280px",
-      "margin:0",
-      "padding:0",
-      "background:#fff",
-      "color:#111",
-      "font-size:32px",
-      "line-height:1.4",
-      "z-index:5",
-      `font-family:${family}`,
-    ].join(";");
-    document.body.appendChild(probe);
-    const word = "واشترِ";
-    const idx = probe.textContent.indexOf(word);
-    const range = document.createRange();
-    range.setStart(probe.firstChild, idx);
-    range.setEnd(probe.firstChild, idx + word.length);
-    const rect = range.getBoundingClientRect();
-    const host = probe.getBoundingClientRect();
-    return { x: rect.x - host.x, y: rect.y - host.y, w: rect.width, h: rect.height };
-  });
-  const shot = await page.locator("#kasra-probe").screenshot({ animations: "disabled" });
-  expect(separatedKasraInk(shot, box)).toBeLessThan(40);
+test("Arabic register subtitle lines do not overlap in WebKit", async ({ browser }) => {
+  for (const width of [320, 375]) {
+    const { context, page, problems } = await openRegister(browser, width);
+    const subtitle = page.locator(".page-subtitle");
+    await expect(subtitle).toBeVisible();
+    const text = (await subtitle.innerText()).replace(/\s+/g, " ").trim();
+    expect(text, `${width} copy`).toContain("ثم اشترك في");
+    expect(text, `${width} kasra`).not.toMatch(/[\u064D\u0650]/);
+    const lines = await subtitle.evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const rects = [...range.getClientRects()]
+        .filter((rect) => rect.width > 0 && rect.height > 0)
+        .map((rect) => ({ top: rect.top, bottom: rect.bottom }))
+        .sort((a, b) => a.top - b.top);
+      const bands: { top: number; bottom: number }[] = [];
+      for (const rect of rects) {
+        const last = bands[bands.length - 1];
+        if (last && rect.top < last.bottom - 1) {
+          last.top = Math.min(last.top, rect.top);
+          last.bottom = Math.max(last.bottom, rect.bottom);
+        } else {
+          bands.push({ top: rect.top, bottom: rect.bottom });
+        }
+      }
+      return bands;
+    });
+    expect(lines.length, `${width} lines`).toBeGreaterThan(1);
+    for (let i = 0; i < lines.length - 1; i += 1) {
+      expect(lines[i].bottom, `${width} line ${i} overlaps the next`).toBeLessThanOrEqual(lines[i + 1].top + 1);
+    }
+    expect(problems, `${width} errors`).toEqual([]);
+    await context.close();
+  }
 });

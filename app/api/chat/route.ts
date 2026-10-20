@@ -243,7 +243,7 @@ async function finishDiagramReply(
           ? "أضف سياج scurve الآن. لا تُخرج flowchart."
           : "Include a fenced scurve block now. Do not output a flowchart."
         : locale === "ar"
-          ? "أضف الآن مخطط mermaid بسياج flowchart RL مبنيًا من الجواب السابق. لا تكتفِ بوصف المخطط."
+          ? "أضف الآن مخطط mermaid بسياج flowchart RL مبنيًا من الجواب السابق. لا تكتفي بوصف المخطط."
           : "Include the fenced mermaid flowchart LR now, built from the previous answer. Do not only describe the diagram.";
     try {
       const retry = await client.chat.completions.create({
