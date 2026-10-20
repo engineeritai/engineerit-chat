@@ -57,7 +57,7 @@ const AR_PLANS: Record<
     name: "المهندس المساعد",
     shortName: AR_PLAN_MARK.assistant,
     tagline: "للطلاب والمهندسين المبتدئين.",
-    priceMonthly: "مجاناً",
+    priceMonthly: "مجانا",
     features: [
       "محادثة في كل التخصصات",
       "فهم مخططات التدفق والمخططات الأنابيب والأجهزة والمخططات الصندوقية البسيطة",
@@ -67,22 +67,22 @@ const AR_PLANS: Record<
   engineer: {
     name: "المهندس",
     shortName: AR_PLAN_MARK.engineer,
-    tagline: "للمهندسين الممارسين الذين يحتاجون توثيقاً أسرع.",
-    priceMonthly: `${RIYAL} 19 شهرياً`,
+    tagline: "للمهندسين الممارسين الذين يحتاجون توثيقا أسرع.",
+    priceMonthly: `${RIYAL} 19 شهريا`,
     features: [
       "كل ما في باقة المهندس المساعد",
       "تحليل مستندات وورد وإكسل وباوربوينت",
       "مراجعة التقارير الفنية وتحليلها",
       "مراجعة أوراق الحسابات الهندسية",
       "نسخ ومشاركة المخرجات الهندسية",
-      "دفع آمن عبر Moyasar، شهرياً أو سنوياً",
+      "دفع آمن عبر Moyasar، شهريا أو سنويا",
     ],
   },
   professional: {
     name: "المهندس المحترف",
     shortName: AR_PLAN_MARK.professional,
     tagline: "لكبار المهندسين وقادة التصميم.",
-    priceMonthly: `${RIYAL} 41 شهرياً`,
+    priceMonthly: `${RIYAL} 41 شهريا`,
     features: [
       "كل ما في باقة المهندس",
       "تصاميم ومعادلات وصيغ وفحوصات تصميم متقدمة",
@@ -90,14 +90,14 @@ const AR_PLANS: Record<
       "مراجعة جداول الكميات وحصرها",
       "نسخ ومشاركة المخرجات الهندسية",
       "تصدير إلى بي دي إف",
-      "دفع آمن عبر Moyasar، شهرياً أو سنوياً",
+      "دفع آمن عبر Moyasar، شهريا أو سنويا",
     ],
   },
   consultant: {
     name: "المهندس الاستشاري",
     shortName: AR_PLAN_MARK.consultant,
     tagline: "للاستشاريين والمكاتب التي تدير مشاريع كاملة.",
-    priceMonthly: `${RIYAL} 99 شهرياً`,
+    priceMonthly: `${RIYAL} 99 شهريا`,
     features: [
       "مستشار إدارة المشاريع مشمول",
       "كل ما في باقة المهندس المحترف",
@@ -106,20 +106,20 @@ const AR_PLANS: Record<
       "تقدير الموارد والتكلفة ومراجعة الجدول",
       "لوحات المشروع ونظرة على المحفظة",
       "تصدير إلى بي دي إف وورد وباوربوينت",
-      "دفع آمن عبر Moyasar، شهرياً أو سنوياً",
+      "دفع آمن عبر Moyasar، شهريا أو سنويا",
     ],
   },
   team: {
     name: "الفريق",
     shortName: AR_PLAN_MARK.team,
     tagline: "وصول بمستوى المهندس الاستشاري لمكتب، على اشتراك واحد.",
-    priceMonthly: `${RIYAL} 449 شهرياً`,
+    priceMonthly: `${RIYAL} 449 شهريا`,
     features: [
       "إدارة المشاريع وضمان البرنامج مشمولان",
       "كل ما في باقة المهندس الاستشاري",
       "5 مقاعد مشمولة",
-      `مقعد إضافي ${RIYAL} 89 شهرياً`,
-      "دفع آمن عبر Moyasar، شهرياً أو سنوياً",
+      `مقعد إضافي ${RIYAL} 89 شهريا`,
+      "دفع آمن عبر Moyasar، شهريا أو سنويا",
       "دعوة الزملاء بالبريد",
       "ينتهي الوصول لكل الفريق إذا توقف الاشتراك",
     ],
@@ -128,7 +128,7 @@ const AR_PLANS: Record<
     name: "المؤسسات",
     shortName: AR_PLAN_MARK.enterprise,
     tagline: "وصول بمستوى المهندس الاستشاري لمكتب أكبر، على اشتراك واحد.",
-    priceMonthly: `${RIYAL} 3,900 شهرياً`,
+    priceMonthly: `${RIYAL} 3,900 شهريا`,
     features: [
       "مستشار إدارة المشاريع مشمول",
       "ضمان البرنامج مشمول",
@@ -136,8 +136,8 @@ const AR_PLANS: Record<
       "دعم القرار مشمول",
       "كل ما في باقة المهندس الاستشاري",
       "10 مقاعد مشمولة",
-      `مقعد إضافي ${RIYAL} 299 شهرياً`,
-      "دفع آمن عبر Moyasar، شهرياً أو سنوياً",
+      `مقعد إضافي ${RIYAL} 299 شهريا`,
+      "دفع آمن عبر Moyasar، شهريا أو سنويا",
     ],
   },
 };
@@ -147,7 +147,7 @@ export function featuresForLocale(locale: Locale, plan: Plan, interval: BillingI
   return AR_PLANS[plan.id].features.map((feature) => {
     if ((plan.id === "team" || plan.id === "enterprise") && feature.startsWith("مقعد إضافي")) {
       const amount = (plan.id === "enterprise" ? ENTERPRISE_EXTRA_SEAT_SAR : EXTRA_SEAT_SAR)[interval];
-      const period = interval === "year" ? "سنوياً" : "شهرياً";
+      const period = interval === "year" ? "سنويا" : "شهريا";
       return `مقعد إضافي ${riyalAmount(amount.toLocaleString("en-US"))} ${period}`;
     }
     return feature;

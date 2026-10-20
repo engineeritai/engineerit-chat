@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            body?.locale === "ar" ? "اختر ملفاً للرفع." : "Choose a file to upload.",
+            body?.locale === "ar" ? "اختر ملفا للرفع." : "Choose a file to upload.",
         },
         { status: 400 }
       );

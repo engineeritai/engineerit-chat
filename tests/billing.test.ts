@@ -186,7 +186,7 @@ describe("self-serve prices", () => {
       PLANS.find((item) => item.id === "assistant")?.features.includes(MOYASAR_CHECKOUT_FEATURE),
       false
     );
-    const arabicPayment = "دفع آمن عبر Moyasar، شهرياً أو سنوياً";
+    const arabicPayment = "دفع آمن عبر Moyasar، شهريا أو سنويا";
     for (const id of ["engineer", "professional", "consultant", "team", "enterprise"] as const) {
       const plan = PLANS.find((item) => item.id === id);
       assert.ok(plan);
@@ -731,7 +731,7 @@ describe("checkout and invoice regressions", () => {
     assert.match(shellCopy.en.checkout.securePay, /Moyasar/);
     assert.match(shellCopy.en.checkout.cardNotStored, /never stored/);
     assert.equal(shellCopy.en.billing.renewsOn, "Renews automatically on");
-    assert.equal(shellCopy.ar.billing.renewsOn, "يتجدد تلقائيًا في");
+    assert.equal(shellCopy.ar.billing.renewsOn, "يتجدد تلقائيا في");
     assert.equal(saveCardStartsChecked(), true);
     assert.equal(isSaveCardRejection("Invalid source.save_card"), true);
     const saved = moyasarSaveOptions({
@@ -852,13 +852,13 @@ describe("checkout and invoice regressions", () => {
     const ar = readFileSync("lib/marketing/ar.ts", "utf8");
     const en = readFileSync("lib/marketing/en.ts", "utf8");
     const shell = readFileSync("lib/shell.ts", "utf8");
-    assert.match(ar, /الاشتراك السنوي يوفّر شهرين مجاناً\. الباقات المدفوعة تفتح دفع Moyasar للمدة التي تختارها\./);
+    assert.match(ar, /الاشتراك السنوي يوفر شهرين مجانا\. الباقات المدفوعة تفتح دفع Moyasar للمدة التي تختارها\./);
     assert.match(en, /Annual billing saves you 2 months free\. Paid plans open Moyasar checkout for the period you choose\./);
     for (const source of [ar, en, shell]) {
       assert.equal(/عشرة أضعاف|10 times the monthly/.test(source), false);
     }
     assert.match(shell, /Annual billing saves you 2 months free/);
-    assert.match(shell, /الاشتراك السنوي يوفّر شهرين مجاناً/);
+    assert.match(shell, /الاشتراك السنوي يوفر شهرين مجانا/);
   });
 
   it("still charges a renewal on the period end for the cron", () => {

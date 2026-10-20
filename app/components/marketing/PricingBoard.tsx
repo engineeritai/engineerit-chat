@@ -184,8 +184,8 @@ function PlanCard({
 
 function PlanComparison({ locale, current }: { locale: Locale; current: PlanId | null }) {
   const { shell: s } = useMessages();
-  const monthLabel = locale === "ar" ? "شهرياً" : "Monthly";
-  const yearLabel = locale === "ar" ? "سنوياً" : "Annual";
+  const monthLabel = locale === "ar" ? "شهريا" : "Monthly";
+  const yearLabel = locale === "ar" ? "سنويا" : "Annual";
   const includes = locale === "ar" ? "يشمل" : "Includes";
 
   return (

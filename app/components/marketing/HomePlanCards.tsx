@@ -116,7 +116,7 @@ function HomePlanCard({ planId, interval }: { planId: PlanId; interval: BillingI
       <h3 style={{ color: theme.ink, margin: 0 }}>{plan.name}</h3>
       <div className="home-plan-price sar-amount" dir="ltr">
         {price.amountSar === 0 ? (
-          locale === "ar" ? "مجاناً" : "Free"
+          locale === "ar" ? "مجانا" : "Free"
         ) : (
           <>
             <RiyalMark /> {price.amountSar.toLocaleString("en-US")}

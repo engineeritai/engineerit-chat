@@ -5,7 +5,7 @@ export function pastDueNotice(
   if (locale === "ar") {
     return {
       subject: "تعذر خصم البطاقة",
-      text: `تعذر تجديد ${input.plan}. حدّث البطاقة من ${input.billingUrl}. المحاولة التالية في ${input.retryDate}. يستمر الوصول حتى تفشل محاولة اليوم 3، ثم ينتقل الحساب إلى باقة المهندس المساعد المجانية.`,
+      text: `تعذر تجديد ${input.plan}. استبدل البطاقة من ${input.billingUrl}. المحاولة التالية في ${input.retryDate}. يستمر الوصول حتى تفشل محاولة اليوم 3، ثم ينتقل الحساب إلى باقة المهندس المساعد المجانية.`,
     };
   }
   return {

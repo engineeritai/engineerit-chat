@@ -9,7 +9,7 @@ export const REGION_LABELS: Record<PricingRegion, string> = {
   global: "Global",
 };
 
-// معامل تعديل السعر (مثال مبدئي – عدّله كما تحب)
+// معامل تعديل السعر (مثال مبدئي – عدله كما تحب)
 export const REGION_MULTIPLIER: Record<PricingRegion, number> = {
   sa: 1,      // الأساس بالريال
   gcc: 1.05,  // +5%

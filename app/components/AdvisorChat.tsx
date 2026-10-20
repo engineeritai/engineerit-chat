@@ -186,7 +186,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     try {
       res = await postImage({
         file: imageFile,
-        question: question || (locale === "ar" ? "حلّل صورة المشروع هذه." : "Analyze this project image."),
+        question: question || (locale === "ar" ? "حلل صورة المشروع هذه." : "Analyze this project image."),
         headers: await authHeaders(),
         advisorId,
         locale,

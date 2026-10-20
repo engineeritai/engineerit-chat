@@ -417,7 +417,7 @@ export default function Page() {
     const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "actions-en", "actions-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar"]);
     if (!kind || !kinds.has(kind)) return;
     const scurveEn = `Based on the provided weekly progress data, here's how the S-Curve would look:\n\n## Weekly Progress Data\n\n| Week | Cumulative Progress (%) |\n| --- | --- |\n| Wk1 | 10% |\n| Wk2 | 25% |\n| Wk3 | 67% |\n| Wk4 | 89% |\n| Wk5 | 100% |\n\n## S-Curve Chart\n\nThe curve starts slowly, accelerates in week 3, and reaches 100% in week 5.`;
-    const scurveAr = `بناءً على نسب التقدم الأسبوعية، هذا منحنى التقدم:\n\n## بيانات التقدم\n\n| الأسبوع | التقدم التراكمي |\n| --- | --- |\n| أسبوع 1 | 10٪ |\n| أسبوع 2 | 25٪ |\n| أسبوع 3 | 67٪ |\n| أسبوع 4 | 89٪ |\n| أسبوع 5 | 100٪ |\n\n## منحنى التقدم\n\nيبدأ المنحنى ببطء، يتسارع في الأسبوع 3، ويصل إلى 100٪ في الأسبوع 5.`;
+    const scurveAr = `بناء على نسب التقدم الأسبوعية، هذا منحنى التقدم:\n\n## بيانات التقدم\n\n| الأسبوع | التقدم التراكمي |\n| --- | --- |\n| أسبوع 1 | 10٪ |\n| أسبوع 2 | 25٪ |\n| أسبوع 3 | 67٪ |\n| أسبوع 4 | 89٪ |\n| أسبوع 5 | 100٪ |\n\n## منحنى التقدم\n\nيبدأ المنحنى ببطء، يتسارع في الأسبوع 3، ويصل إلى 100٪ في الأسبوع 5.`;
     if (kind === "gate-en" || kind === "gate-ar") {
       const ar = kind === "gate-ar";
       setFixture([
@@ -488,11 +488,11 @@ export default function Page() {
           : kind === "scurve-en" || kind === "scurve-ar"
             ? "Wk1 10%, Wk2 25%, Wk3 67%, Wk4 89%, Wk5 100%. Make now the chart of S-Curve"
             : kind === "charts-ar"
-              ? "اعرض منحنى التقدم المخطط مقابل الفعلي لمشروع طريق مدته 12 شهراً وعلّق على الاتجاه."
+              ? "اعرض منحنى التقدم المخطط مقابل الفعلي لمشروع طريق مدته 12 شهرا واشرح الاتجاه."
               : kind === "charts-en"
                 ? "Show a chart of planned vs actual progress (S-curve) for a 12-month road project and comment on the trend."
                 : kind === "actions-ar"
-                  ? "حوّل ملاحظات اجتماع الموقع إلى جدول بنود عمل."
+                  ? "انقل ملاحظات اجتماع الموقع إلى جدول بنود عمل."
                   : kind === "actions-en"
                     ? "Turn the site meeting notes into an action items table."
                     : kind === "ar"

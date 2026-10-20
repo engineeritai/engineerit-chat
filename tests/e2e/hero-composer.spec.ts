@@ -78,7 +78,7 @@ test("home composer placeholder stays on one line on a narrow iPhone", async ({ 
   for (const width of [320, 375, 390]) {
     for (const lang of ["en", "ar"] as const) {
       const { context, page, problems } = await openHome(browser, width, lang);
-      const expected = lang === "ar" ? "اسأل سؤالاً هندسياً…" : "Ask an engineering question…";
+      const expected = lang === "ar" ? "اسأل سؤالا هندسيا…" : "Ask an engineering question…";
       await expect(page.locator(".hero-composer-input"), `${width} ${lang}`).toHaveAttribute("placeholder", expected);
       const fit = await placeholderFit(page);
       expect(fit.placeholder, `${width} ${lang}`).toBe(expected);

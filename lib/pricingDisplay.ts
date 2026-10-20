@@ -93,13 +93,13 @@ export function planPriceLabel(
   consultantLegacy = false
 ): { primary: string; usd: string | null; amountSar: number } {
   if (planId === "assistant") {
-    return { primary: locale === "ar" ? "مجاناً" : "Free", usd: null, amountSar: 0 };
+    return { primary: locale === "ar" ? "مجانا" : "Free", usd: null, amountSar: 0 };
   }
   const quote = quoteSelfServe(planId, interval, extraSeats, {
     consultantLegacy: consultantLegacy && planId === "consultant",
   });
   if (locale === "ar") {
-    const period = interval === "year" ? "سنوياً" : "شهرياً";
+    const period = interval === "year" ? "سنويا" : "شهريا";
     const usd = new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,

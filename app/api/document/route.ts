@@ -39,7 +39,7 @@ async function extractOfficeText(buffer: Buffer, filename: string): Promise<stri
       const xml = await mainDoc.async("text");
       texts.push(xmlToPlain(xml));
     }
-    // headers/footers يمكن إضافتها لاحقًا إذا احتجنا
+    // headers/footers يمكن إضافتها لاحقا إذا احتجنا
   } else if (lower.endsWith(".pptx")) {
     // read all slides ppt/slides/slideX.xml
     const files = Object.keys(zip.files).filter(
@@ -68,14 +68,14 @@ async function extractOfficeText(buffer: Buffer, filename: string): Promise<stri
 // Summarize from already-extracted plain text
 function emptyExtract(locale: UiLocale): string {
   if (locale === "ar") {
-    return "لم أستطع استخراج نص مقروء من هذا المستند. قد يكون ملفاً ممسوحاً أو ثنائياً. ارفع نسخة أوضح، أو انسخ النص المهم إلى المحادثة.";
+    return "لم أستطع استخراج نص مقروء من هذا المستند. قد يكون ملفا ممسوحا أو ثنائيا. ارفع نسخة أوضح، أو انسخ النص المهم إلى المحادثة.";
   }
   return "I couldn't extract readable text from this document. It may be a scanned or binary file. Upload a clearer PDF or image, or paste the important text into the chat.";
 }
 
 function summaryOutline(locale: UiLocale): string {
   if (locale === "ar") {
-    return "قدّم الإجابة بماركداون واضح:\n1) عنوان\n2) سياق مختصر\n3) أهم النتائج في نقاط\n4) الأرقام والتواريخ والأسماء المهمة\n5) التوصيات الهندسية الرئيسية";
+    return "اكتب الإجابة بماركداون واضح:\n1) عنوان\n2) سياق مختصر\n3) أهم النتائج في نقاط\n4) الأرقام والتواريخ والأسماء المهمة\n5) التوصيات الهندسية الرئيسية";
   }
   return "Provide the answer in clear Markdown:\n1) Title\n2) Short context\n3) Bullet points for key findings\n4) Important numbers, dates, and names\n5) Key engineering recommendations";
 }
@@ -174,13 +174,13 @@ function requestUiLocale(req: NextRequest, explicit?: unknown): UiLocale {
 
 function documentFailed(locale: UiLocale): string {
   return locale === "ar"
-    ? "تعذرت معالجة المستند. حاول مرة أخرى، أو حوّله إلى PDF أو نص ثم أعد رفعه."
+    ? "تعذرت معالجة المستند. حاول مرة أخرى، أو احفظه كملف PDF أو نص ثم أعد رفعه."
     : "Document processing failed. Please try again, or convert the file to a standard PDF or text file and upload it again.";
 }
 
 function defaultDocumentQuestion(locale: UiLocale): string {
   return locale === "ar"
-    ? "لخّص هذا المستند الهندسي بعناوين ونقاط وأرقام وتواريخ مهمة وتوصيات رئيسية."
+    ? "لخص هذا المستند الهندسي بعناوين ونقاط وأرقام وتواريخ مهمة وتوصيات رئيسية."
     : "Summarize this engineering document with headings, bullet points, important numbers and dates, and key recommendations.";
 }
 
@@ -358,7 +358,7 @@ async function handleFormDocument(req: NextRequest) {
 
   if (!file) {
     return NextResponse.json(
-      { error: locale === "ar" ? "لم يُرفع ملف" : "No file uploaded" },
+      { error: locale === "ar" ? "لم يرفع ملف" : "No file uploaded" },
       { status: 400 }
     );
   }
