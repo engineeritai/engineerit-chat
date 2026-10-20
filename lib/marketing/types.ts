@@ -33,6 +33,8 @@ export type MarketingContent = {
     lead: string;
     primaryCta: string;
     askPlaceholder: string;
+    /** One line on a narrow phone. The full askPlaceholder stays at wider widths. */
+    askPlaceholderShort: string;
     askSend: string;
     chips: readonly [string, string, string, string];
     secondaryCta: string;

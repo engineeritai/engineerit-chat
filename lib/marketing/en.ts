@@ -27,6 +27,7 @@ export const en: MarketingContent = {
       "Attach files, pick a tool, get structured answers. Your subscription unlocks unlimited chats, tools and AI Advisors.",
     primaryCta: "Start chatting",
     askPlaceholder: "Ask an engineering question…",
+    askPlaceholderShort: "Ask a question",
     askSend: "Send",
     chips: [
       "Review a drawing for clashes",

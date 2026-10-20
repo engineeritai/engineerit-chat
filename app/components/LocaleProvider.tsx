@@ -25,6 +25,10 @@ export function LocaleProvider({
   const pathname = usePathname();
 
   useEffect(() => {
+    document.documentElement.dataset.hydrated = "1";
+  }, []);
+
+  useEffect(() => {
     const query = new URLSearchParams(window.location.search).get("lang");
     if (isLocale(query)) {
       if (query !== locale) setLocaleState(query);

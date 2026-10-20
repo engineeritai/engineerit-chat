@@ -39,7 +39,12 @@ body {
 }
 
 html[lang="ar"],
-html[dir="rtl"] {
+html[dir="rtl"],
+html[lang="ar"] body,
+html[dir="rtl"] body {
+  /* body sets Inter first, which overrides the html rule above. WebKit then
+     shapes Arabic from the fallback font and draws a line-end kasra (U+0650),
+     as on "واشترِ", into the next line. The Arabic face has to be primary. */
   font-family: var(--font-arabic), var(--font-inter), system-ui, sans-serif;
 }
 
@@ -1642,6 +1647,16 @@ html.kb-open .mkt-app .composer {
 
 .hero-composer-input:focus {
   outline: none;
+}
+
+/* The full English placeholder wraps inside the 44px field below 414px and the
+   second line is clipped. Keep it on one line; narrow copy is short enough to fit. */
+@media (max-width: 390px) {
+  .hero-composer-input::placeholder {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .hero-chips {

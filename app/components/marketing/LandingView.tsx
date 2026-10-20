@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { DISCIPLINES } from "@/lib/disciplines";
 import { ENGINEER_TOOLS } from "@/lib/engineerTools";
 import { useLocale } from "@/app/components/LocaleProvider";
@@ -17,12 +17,22 @@ import AdvisorEcosystem from "@/app/components/AdvisorEcosystem";
 import StartChatLink from "@/app/components/marketing/StartChatLink";
 import ComposerPlus from "@/app/components/ComposerPlus";
 
+const NARROW_COMPOSER = "(max-width: 390px)";
+
+function subscribeNarrowComposer(onChange: () => void) {
+  const query = window.matchMedia(NARROW_COMPOSER);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
 export default function LandingView() {
   const { locale } = useLocale();
   const { m, shell } = useMessages();
   const content = getMarketingContent(locale);
   const router = useRouter();
   const [draft, setDraft] = useState("");
+  const narrow = useSyncExternalStore(subscribeNarrowComposer, () => window.matchMedia(NARROW_COMPOSER).matches, () => false);
+  const placeholder = narrow ? content.hero.askPlaceholderShort : content.hero.askPlaceholder;
 
   function ask(text: string) {
     const q = text.trim();
@@ -62,8 +72,8 @@ export default function LandingView() {
               className="hero-composer-input"
               rows={1}
               value={draft}
-              placeholder={content.hero.askPlaceholder}
-              aria-label={content.hero.askPlaceholder}
+              placeholder={placeholder}
+              aria-label={placeholder}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {

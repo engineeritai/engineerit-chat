@@ -35,6 +35,10 @@ async function stable(page: Page, selector: string, which: "first" | "last" = "f
 
 async function openChat(page: Page, path: string) {
   await page.goto(path, { waitUntil: "domcontentloaded" });
+  // Screenshots hide the caret by writing inline style. That has to wait until
+  // React has hydrated, or the style is reported as a hydration mismatch and
+  // Next paints the issues badge into the picture.
+  await page.waitForFunction(() => document.documentElement.dataset.hydrated === "1");
   await page.evaluate(() => document.fonts.ready);
   await page.addStyleTag({
     content: `${HIDE_DEV_OVERLAY} .msg-actions { opacity: 0 !important; }`,
@@ -129,6 +133,7 @@ test("home, pricing, advisors, and checkout", async ({ page }) => {
     for (const route of pages) {
       const join = route.path.includes("?") ? "&" : "?";
       await page.goto(`${route.path}${join}lang=${lang}`, { waitUntil: "domcontentloaded" });
+      await page.waitForFunction(() => document.documentElement.dataset.hydrated === "1");
       await page.evaluate(() => document.fonts.ready);
       await expect(page.locator(route.marker).first()).toBeVisible();
       await page.addStyleTag({ content: HIDE_DEV_OVERLAY });
