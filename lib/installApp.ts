@@ -11,7 +11,14 @@ export function dismissIsActive(stored: string | null, now = Date.now()): boolea
   return now - at < DISMISS_MS;
 }
 
-/** iOS browsers other than Safari cannot add a home-screen icon. */
+/**
+ * iOS browsers and in-app webviews other than Safari cannot add a home-screen icon.
+ * X/Twitter and LinkedIn ship a WKWebView with no share sheet, so they must not
+ * be told to tap Share inside that webview.
+ */
+const IOS_WITHOUT_HOME_SCREEN =
+  /CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA|Instagram|FBAN|FBAV|Line\/|Twitter|LinkedInApp/i;
+
 export function installPlatform(
   ua: string,
   opts: { platform?: string; maxTouchPoints?: number } = {}
@@ -23,8 +30,7 @@ export function installPlatform(
     /Safari/i.test(ua) &&
     !/Chrome|Chromium|CriOS|FxiOS|EdgiOS/.test(ua);
   if (classicIos || ipadOs) {
-    const otherBrowser = /CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA|Instagram|FBAN|FBAV|Line\//.test(ua);
-    return otherBrowser ? "ios-other" : "ios-safari";
+    return IOS_WITHOUT_HOME_SCREEN.test(ua) ? "ios-other" : "ios-safari";
   }
   if (/Android/i.test(ua)) return "android";
   return "other";

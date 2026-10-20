@@ -105,8 +105,12 @@ export default function ChatTable({
           </colgroup>
           <thead>
             <tr>
-              {headers.map((header) => (
-                <th key={header}>{header}</th>
+              {headers.map((header, index) => (
+                <th key={`${header}-${index}`}>
+                  <span className="chat-table-text" style={{ maxWidth: widths[index] }}>
+                    {header}
+                  </span>
+                </th>
               ))}
             </tr>
           </thead>
@@ -126,8 +130,12 @@ export default function ChatTable({
           </colgroup>
           <thead>
             <tr>
-              {headers.map((header) => (
-                <th key={header}>{header}</th>
+              {headers.map((header, index) => (
+                <th key={`${header}-${index}`}>
+                  <span className="chat-table-text" style={{ maxWidth: widths[index] }}>
+                    {header}
+                  </span>
+                </th>
               ))}
             </tr>
           </thead>
@@ -135,7 +143,11 @@ export default function ChatTable({
             {rows.map((row, rowIndex) => (
               <tr key={rowIndex}>
                 {headers.map((_, cellIndex) => (
-                  <td key={cellIndex}>{row[cellIndex] ?? ""}</td>
+                  <td key={cellIndex}>
+                    <span className="chat-table-text" style={{ maxWidth: widths[cellIndex] }}>
+                      {row[cellIndex] ?? ""}
+                    </span>
+                  </td>
                 ))}
               </tr>
             ))}

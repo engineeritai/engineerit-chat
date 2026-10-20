@@ -3522,6 +3522,18 @@ button.advisor-card-link {
   overflow-wrap: anywhere;
   word-break: break-word;
   min-width: 0;
+  /* Sticky cells paint over the next column while scrolling. Clip so a
+     long value cannot draw outside its own box. */
+  overflow: hidden;
+}
+
+.chat-table-text {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .chat-table-pin th,

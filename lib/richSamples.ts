@@ -284,3 +284,30 @@ title توزيع التكلفة
 | تحديث مخطط تحويل الحركة عند التقاطع الشمالي | المدني | 2026-10-24 | قيد المراجعة |
 | إغلاق تصريح العمل الليلي عند المحطة 12+400 | السلامة | 2026-10-18 | متوقف |
 `;
+
+/** Site-meeting action table with long cells, including one unbreakable token. */
+export const actionItemsEn = `Here's the action items table based on your site meeting notes:
+
+| Action Item | Owner | Due Date | Priority |
+| --- | --- | --- | --- |
+| Address late rebar delivery | Project Manager | 2026-10-20 | High |
+| Resolve MEP clash on level 3 | MEP Coordinator | 2026-10-18 | Medium |
+| Follow up on RFI for façade anchors | Architect | 2026-10-22 | High |
+| Prepare for safety audit | Safety Officer | 2026-10-17 | High |
+| Confirm Superduperspecificationforfacadeanchorsystem12b before the pour | Architect | 2026-10-23 | High |
+
+Feel free to adjust any details as needed!
+`;
+
+export const actionItemsAr = `هذا جدول بنود العمل من ملاحظات اجتماع الموقع:
+
+| بند العمل | المسؤول | تاريخ الاستحقاق | الأولوية |
+| --- | --- | --- | --- |
+| معالجة تأخر توريد حديد التسليح | مدير المشروع | 2026-10-20 | عالية |
+| حل تعارض الأعمال الكهروميكانيكية في المستوى 3 | منسق الأعمال | 2026-10-18 | متوسطة |
+| متابعة طلب المعلومات عن مثبتات الواجهة للواجهة الشمالية | المعماري | 2026-10-22 | عالية |
+| التحضير لتدقيق السلامة | مسؤول السلامة | 2026-10-17 | عالية |
+| تأكيد مواصفةمثبتاتالواجهةالشماليةالطويلةجداً قبل الصب | المعماري | 2026-10-23 | عالية |
+
+يمكن تعديل أي تفصيل عند الحاجة.
+`;

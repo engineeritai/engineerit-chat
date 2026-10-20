@@ -1824,11 +1824,14 @@ svg {
   overflow: visible;
 }
 
+/* Sidebar brand keeps its own safe-area padding. The header row already
+   pads for that inset, so the wordmark must not add it again. */
 .mkt-header-brand {
   flex: 0 1 auto;
+  align-self: center;
   min-width: 0;
   height: auto;
-  padding-inline: 0;
+  padding: 0;
 }
 
 .mkt-header .brand .word,
@@ -2289,6 +2292,53 @@ body.acct-open .mkt-header {
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
+  }
+}
+
+/* Keep the wordmark's aspect ratio on narrow phones. A shrinking flex item
+   plus max-width: 100% was squashing the letters. Guest links tighten so the
+   menu, wordmark, language toggle, Sign in, and Register stay on one row. */
+@media (max-width: 430px) {
+  .mkt-header .mkt-header-inner {
+    gap: 2px;
+    padding-inline: 4px;
+  }
+
+  .mkt-header-brand {
+    flex: 0 0 auto;
+  }
+
+  .mkt-header .wordmark {
+    height: 18px;
+    width: auto;
+    max-width: none;
+    aspect-ratio: 817 / 176;
+  }
+
+  .mkt-header .mkt-header-link {
+    padding-inline: 6px;
+    font-size: 12px;
+  }
+}
+
+/* 320px cannot fit 44px language buttons, both guest links, and a full
+   wordmark together. Language targets stay 44px from 360px upward. */
+@media (max-width: 340px) {
+  .mkt-header .mkt-header-inner {
+    padding-inline: 2px;
+  }
+
+  .mkt-header .wordmark {
+    height: 16px;
+  }
+
+  .mkt-header .lang-toggle button {
+    min-width: 0;
+    padding-inline: 2px;
+  }
+
+  .mkt-header .mkt-header-link {
+    padding-inline: 4px;
   }
 }
 
