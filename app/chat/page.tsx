@@ -17,7 +17,7 @@ import { toWhatsApp } from "@/lib/whatsappText";
 import { downloadName } from "@/lib/exportName";
 import { exportMeta } from "@/lib/messageDocument";
 import { buildShareHtml } from "@/lib/shareDocument";
-import { chartCaseAr, chartCaseEn, sampleAr, sampleEn } from "@/lib/richSamples";
+import { actionItemsAr, actionItemsEn, chartCaseAr, chartCaseEn, sampleAr, sampleEn } from "@/lib/richSamples";
 import MarketingShell from "../components/marketing/MarketingShell";
 import ComposerPlus from "../components/ComposerPlus";
 import EitMark from "../components/marketing/EitMark";
@@ -414,7 +414,7 @@ export default function Page() {
 
   useEffect(() => {
     const kind = new URLSearchParams(window.location.search).get("fixture");
-    const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar"]);
+    const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "actions-en", "actions-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar"]);
     if (!kind || !kinds.has(kind)) return;
     const scurveEn = `Based on the provided weekly progress data, here's how the S-Curve would look:\n\n## Weekly Progress Data\n\n| Week | Cumulative Progress (%) |\n| --- | --- |\n| Wk1 | 10% |\n| Wk2 | 25% |\n| Wk3 | 67% |\n| Wk4 | 89% |\n| Wk5 | 100% |\n\n## S-Curve Chart\n\nThe curve starts slowly, accelerates in week 3, and reaches 100% in week 5.`;
     const scurveAr = `بناءً على نسب التقدم الأسبوعية، هذا منحنى التقدم:\n\n## بيانات التقدم\n\n| الأسبوع | التقدم التراكمي |\n| --- | --- |\n| أسبوع 1 | 10٪ |\n| أسبوع 2 | 25٪ |\n| أسبوع 3 | 67٪ |\n| أسبوع 4 | 89٪ |\n| أسبوع 5 | 100٪ |\n\n## منحنى التقدم\n\nيبدأ المنحنى ببطء، يتسارع في الأسبوع 3، ويصل إلى 100٪ في الأسبوع 5.`;
@@ -467,15 +467,19 @@ export default function Page() {
           ? hydroReplyAr
           : kind === "ar"
             ? sampleAr
-            : kind === "charts-ar"
-              ? chartCaseAr
-              : kind === "charts-en"
-                ? chartCaseEn
-                : kind === "scurve-ar"
-                  ? scurveAr
-                  : kind === "scurve-en"
-                    ? scurveEn
-                    : sampleEn;
+            : kind === "actions-ar"
+              ? actionItemsAr
+              : kind === "actions-en"
+                ? actionItemsEn
+                : kind === "charts-ar"
+                  ? chartCaseAr
+                  : kind === "charts-en"
+                    ? chartCaseEn
+                    : kind === "scurve-ar"
+                      ? scurveAr
+                      : kind === "scurve-en"
+                        ? scurveEn
+                        : sampleEn;
     const prompt =
       kind === "flow-en"
         ? "Draw a process diagram of a hydrocracker plant"
@@ -487,9 +491,13 @@ export default function Page() {
               ? "اعرض منحنى التقدم المخطط مقابل الفعلي لمشروع طريق مدته 12 شهراً وعلّق على الاتجاه."
               : kind === "charts-en"
                 ? "Show a chart of planned vs actual progress (S-curve) for a 12-month road project and comment on the trend."
-                : kind === "ar"
-                  ? "اعرض الجدول الزمني والمقارنة."
-                  : "Show the schedule and the comparison table.";
+                : kind === "actions-ar"
+                  ? "حوّل ملاحظات اجتماع الموقع إلى جدول بنود عمل."
+                  : kind === "actions-en"
+                    ? "Turn the site meeting notes into an action items table."
+                    : kind === "ar"
+                      ? "اعرض الجدول الزمني والمقارنة."
+                      : "Show the schedule and the comparison table.";
     setFixture([
       {
         id: "fixture-user",

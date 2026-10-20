@@ -252,6 +252,18 @@ describe("android pwa", () => {
       "ios-other"
     );
     assert.equal(
+      installPlatform(
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Twitter for iPhone/10.50"
+      ),
+      "ios-other"
+    );
+    assert.equal(
+      installPlatform(
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [LinkedInApp]/9.29"
+      ),
+      "ios-other"
+    );
+    assert.equal(
       installPlatform("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15", {
         platform: "MacIntel",
         maxTouchPoints: 5,

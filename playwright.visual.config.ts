@@ -2,8 +2,8 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "tests/e2e",
-  testMatch: "visual.spec.ts",
-  timeout: 120_000,
+  testMatch: ["visual.spec.ts", "table-overlap.spec.ts", "header-inapp.spec.ts"],
+  timeout: 180_000,
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -19,14 +19,31 @@ export default defineConfig({
   },
   use: {
     baseURL: "http://127.0.0.1:3000",
-    channel: "chrome",
     extraHTTPHeaders: { "x-engineerit-test": "1" },
     locale: "en-US",
     timezoneId: "Asia/Riyadh",
   },
   projects: [
-    { name: "desktop-1440", use: { viewport: { width: 1440, height: 900 } } },
-    { name: "phone-390", use: { viewport: { width: 390, height: 844 } } },
+    {
+      name: "desktop-1440",
+      testMatch: "visual.spec.ts",
+      use: { channel: "chrome", viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: "phone-390",
+      testMatch: "visual.spec.ts",
+      use: { channel: "chrome", viewport: { width: 390, height: 844 } },
+    },
+    {
+      name: "layout-phone",
+      testMatch: ["table-overlap.spec.ts", "header-inapp.spec.ts"],
+      use: { browserName: "chromium", channel: "chrome", viewport: { width: 390, height: 844 } },
+    },
+    {
+      name: "layout-webkit",
+      testMatch: ["table-overlap.spec.ts", "header-inapp.spec.ts"],
+      use: { browserName: "webkit", viewport: { width: 390, height: 844 } },
+    },
   ],
   webServer: {
     command: "npm run dev -- --hostname 127.0.0.1 --port 3000",

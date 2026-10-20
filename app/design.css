@@ -1824,11 +1824,14 @@ svg {
   overflow: visible;
 }
 
+/* Sidebar brand keeps its own safe-area padding. The header row already
+   pads for that inset, so the wordmark must not add it again. */
 .mkt-header-brand {
   flex: 0 1 auto;
+  align-self: center;
   min-width: 0;
   height: auto;
-  padding-inline: 0;
+  padding: 0;
 }
 
 .mkt-header .brand .word,
@@ -2289,6 +2292,49 @@ body.acct-open .mkt-header {
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
+  }
+}
+
+/* The wordmark is an image inside a shrinking flex row. max-width: 100% was
+   squashing it to a few dozen pixels on a 320px phone. Keep the traced
+   artwork at its normal 22px height and let the language toggle and guest
+   links give up space instead. */
+@media (max-width: 430px) {
+  .mkt-header .mkt-header-inner {
+    gap: 2px;
+    padding-inline: 4px;
+  }
+
+  .mkt-header-brand {
+    flex: 0 0 auto;
+    min-width: calc(22px * 817 / 176);
+  }
+
+  .mkt-header .wordmark {
+    flex: 0 0 auto;
+    height: 22px;
+    width: calc(22px * 817 / 176);
+    min-width: calc(22px * 817 / 176);
+    max-width: none;
+    aspect-ratio: 817 / 176;
+  }
+
+  .mkt-header .mkt-header-link {
+    padding-inline: 4px;
+    font-size: 12px;
+  }
+}
+
+/* 320px cannot fit 44px language buttons, both guest links, and the full
+   wordmark together. Language targets stay 44px from 360px upward. */
+@media (max-width: 340px) {
+  .mkt-header .mkt-header-inner {
+    padding-inline: 2px;
+  }
+
+  .mkt-header .lang-toggle button {
+    min-width: 0;
+    padding-inline: 2px;
   }
 }
 
