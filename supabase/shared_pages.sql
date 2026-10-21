@@ -15,6 +15,9 @@ create table if not exists public.shared_pages (
 
 alter table public.shared_pages enable row level security;
 
+-- Share rows are written by the service role. The public copy is the shares bucket.
+grant all on table public.shared_pages to service_role;
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'shares',

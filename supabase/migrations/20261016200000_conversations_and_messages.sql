@@ -265,6 +265,8 @@ create policy messages_delete_own
 
 grant select, insert, update, delete on public.conversations to authenticated;
 grant select, insert, delete on public.messages to authenticated;
+grant all on table public.conversations to service_role;
+grant all on table public.messages to service_role;
 
 -- Recompute expires_at from the owner's current plan, then delete expired chats.
 -- Messages disappear with the conversation (ON DELETE CASCADE).

@@ -18,6 +18,8 @@ Apply `20261016180000` before deploy. If `profiles.consultant_legacy_price_until
 
 Apply `20261016210000` before deploy. Invoice emails and renewal charges read `locale` from `moyasar_invoices` and `billing_subscriptions`.
 
+Paste `supabase/security/2026-10-21_fix_advisors.sql` in the SQL editor as well. It locks the six objects from the 17 Oct 2026 advisor email. Nothing in this repo applies SQL on deploy. New `public` tables also need explicit grants in the same migration; see `supabase/migrations/README.md`.
+
 ## 2. Moyasar dashboard
 
 Test mode and live mode are separate. Repeat the steps in each mode you will use.
