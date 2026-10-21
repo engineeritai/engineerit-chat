@@ -1,5 +1,6 @@
 import { blockDir, plainInline } from "@/lib/messageDocument";
-import type { PreparedReport, ReportImage } from "@/lib/reportModel";
+import { pngSize } from "@/lib/rasterSvg";
+import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 // pptxgenjs ships a CommonJS build whose default import is unreliable under Next.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -17,6 +18,15 @@ const H = 7.5;
 
 function logoData(report: PreparedReport) {
   return `data:image/png;base64,${Buffer.from(report.logo).toString("base64")}`;
+}
+
+function wordmarkData(report: PreparedReport) {
+  return `data:image/png;base64,${Buffer.from(report.wordmark).toString("base64")}`;
+}
+
+function wordmarkSize(report: PreparedReport, widthIn: number) {
+  const { width, height } = pngSize(report.wordmark);
+  return { w: widthIn, h: widthIn * (height / width) };
 }
 
 function pngData(image: ReportImage) {
@@ -43,45 +53,61 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
   };
 
   const footer = (slide: Slide, page: number, total: number) => {
-    slide.addImage({ data: logoData(report), x: rtl ? W - 0.62 : 0.38, y: 7.08, w: 0.26, h: 0.26 });
-    slide.addText("engineer it · engineerit.ai", {
-      x: rtl ? 7.2 : 0.72,
-      y: 7.08,
-      w: 3.6,
-      h: 0.28,
-      fontFace: face, lang,
-      fontSize: 11,
-      color: "64748B",
-      align: rtl ? "right" : "left",
-      rtlMode: rtl,
-    });
-    slide.addText(report.stamp, {
-      x: 4.4,
-      y: 7.08,
-      w: 4.5,
-      h: 0.28,
-      fontFace: face, lang,
-      fontSize: 11,
-      color: "64748B",
-      align: "center",
-      rtlMode: rtl,
-    });
+    const icon = 0.24;
     const label = rtl ? `شريحة ${page} من ${total}` : `Slide ${page} of ${total}`;
-    slide.addText(label, {
-      x: rtl ? 0.35 : 9.5,
+    if (rtl) {
+      slide.addImage({ data: logoData(report), x: W - 0.38 - icon, y: 7.1, w: icon, h: icon });
+      slide.addText(REPORT_FOOTER_LINE, {
+        x: 4.4,
+        y: 7.08,
+        w: W - 0.38 - icon - 0.1 - 4.4,
+        h: 0.28,
+        fontFace: "Calibri",
+        lang: "en-US",
+        fontSize: 12,
+        color: "64748B",
+        align: "right",
+        rtlMode: false,
+      });
+      slide.addText(label, {
+        x: 0.35,
+        y: 7.08,
+        w: 3.7,
+        h: 0.28,
+        fontFace: face, lang,
+        fontSize: 12,
+        color: "64748B",
+        align: "left",
+        rtlMode: true,
+      });
+      return;
+    }
+    slide.addImage({ data: logoData(report), x: 0.38, y: 7.1, w: icon, h: icon });
+    slide.addText(REPORT_FOOTER_LINE, {
+      x: 0.38 + icon + 0.08,
       y: 7.08,
-      w: 3.4,
+      w: 7.4,
       h: 0.28,
       fontFace: face, lang,
-      fontSize: 11,
+      fontSize: 12,
       color: "64748B",
-      align: rtl ? "left" : "right",
-      rtlMode: rtl,
+      align: "left",
+    });
+    slide.addText(label, {
+      x: 9.5,
+      y: 7.08,
+      w: 3.45,
+      h: 0.28,
+      fontFace: face, lang,
+      fontSize: 12,
+      color: "64748B",
+      align: "right",
     });
   };
 
   const cover = add();
-  cover.addImage({ data: logoData(report), x: (W - 0.7) / 2, y: 1.35, w: 0.7, h: 0.7 });
+  const mark = wordmarkSize(report, 400 / 72);
+  cover.addImage({ data: wordmarkData(report), x: (W - mark.w) / 2, y: 0.82, w: mark.w, h: mark.h });
   cover.addText(report.title, {
     x: 0.8,
     y: 2.3,
@@ -127,6 +153,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
 
   const contentSlide = (title: string) => {
     const slide = add();
+    const icon = 0.28;
     slide.addShape(pptx.ShapeType.rect, {
       x: 0,
       y: 0,
@@ -135,16 +162,17 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       fill: { color: "1A56FF" },
       line: { color: "1A56FF" },
     });
+    slide.addImage({ data: logoData(report), x: rtl ? W - 0.42 - icon : 0.42, y: 0.26, w: icon, h: icon });
     slide.addText(title, {
-      x: 0.5,
-      y: 0.22,
-      w: W - 1,
+      x: rtl ? 0.42 : 0.42 + icon + 0.12,
+      y: 0.2,
+      w: W - 0.84 - icon - 0.12,
       h: 0.42,
       fontFace: face, lang,
       fontSize: 20,
       bold: true,
       color: "0F172A",
-      align: rtl ? "right" : "left",
+      align: rtl ? "left" : "right",
       rtlMode: blockDir(title, report.locale) === "rtl",
     });
     return slide;

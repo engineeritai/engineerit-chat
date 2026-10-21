@@ -19,8 +19,13 @@ export type PreparedReport = {
   stamp: string;
   blocks: Block[];
   images: Map<number, ReportImage>;
+  /** Small eit mark for header and footer corners. */
   logo: Uint8Array;
+  /** Official cover wordmark. Drawn as-is; do not recolor or stretch. */
+  wordmark: Uint8Array;
 };
+
+export const REPORT_FOOTER_LINE = "engineerit.ai · support@engineerit.ai";
 
 export type ReportRequest = {
   title?: string;
@@ -38,11 +43,18 @@ function localeOf(value: string | undefined, markdown: string): UiLocale {
 }
 
 let logoBytes: Uint8Array | null = null;
+let wordmarkBytes: Uint8Array | null = null;
 
 async function loadLogo(): Promise<Uint8Array> {
   if (logoBytes) return logoBytes;
   logoBytes = new Uint8Array(await readFile(path.join(process.cwd(), "public/icon-192.png")));
   return logoBytes;
+}
+
+async function loadWordmark(): Promise<Uint8Array> {
+  if (wordmarkBytes) return wordmarkBytes;
+  wordmarkBytes = new Uint8Array(await readFile(path.join(process.cwd(), "public/brand/engineerit-wordmark.png")));
+  return wordmarkBytes;
 }
 
 export async function prepareReport(input: ReportRequest): Promise<PreparedReport> {
@@ -81,5 +93,6 @@ export async function prepareReport(input: ReportRequest): Promise<PreparedRepor
     blocks,
     images,
     logo: await loadLogo(),
+    wordmark: await loadWordmark(),
   };
 }

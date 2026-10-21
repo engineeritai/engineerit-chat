@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import JSZip from "jszip";
@@ -9,7 +12,7 @@ import { appendSources, sourcesFromResponse } from "../lib/citations";
 import { riyadhStamp } from "../lib/ksaTime";
 import { ganttAppendix, parseMessage } from "../lib/messageDocument";
 import { buildReportDocx } from "../lib/reportDocx";
-import { prepareReport } from "../lib/reportModel";
+import { REPORT_FOOTER_LINE, prepareReport } from "../lib/reportModel";
 import { buildReportPdf } from "../lib/reportPdf";
 import { buildReportPptx } from "../lib/reportPptx";
 import { buildReportXlsx } from "../lib/reportXlsx";
@@ -207,4 +210,48 @@ test("exports build pdf, docx, pptx, and xlsx in english and arabic", async () =
     await writeSamples(`${locale}.pptx`, pptx);
     await writeSamples(`${locale}.xlsx`, xlsx);
   }
+});
+
+test("covers use the official wordmark and footers keep the eit line", async () => {
+  const wordmark = readFileSync("public/brand/engineerit-wordmark.png");
+  const icon = readFileSync("public/icon-192.png");
+  assert.equal(wordmark.readUInt32BE(16), 834);
+  assert.equal(wordmark.readUInt32BE(20), 188);
+  assert.equal(REPORT_FOOTER_LINE, "engineerit.ai · support@engineerit.ai");
+  const report = await prepareReport({ title: "Feed pump installation", markdown: sampleEn, locale: "en", now });
+  assert.ok(Buffer.from(report.wordmark).equals(wordmark));
+  assert.ok(Buffer.from(report.logo).equals(icon));
+
+  const word = await JSZip.loadAsync(await buildReportDocx(report));
+  const footer = await word.file("word/footer1.xml")!.async("string");
+  assert.match(footer, /support@engineerit\.ai/);
+  assert.match(footer, /instrText[^>]*>PAGE</);
+  const wordMedia = Object.keys(word.files).filter((name) => name.startsWith("word/media/") && name.endsWith(".png"));
+  const wordBlobs = await Promise.all(wordMedia.map((name) => word.file(name)!.async("nodebuffer")));
+  assert.ok(wordBlobs.some((blob) => blob.equals(wordmark)));
+  assert.ok(wordBlobs.some((blob) => blob.equals(icon)));
+  const documentXml = await word.file("word/document.xml")!.async("string");
+  const wordmarkCx = Math.round((400 / 72) * 914400);
+  const wordmarkCy = Math.round((wordmarkCx * 188) / 834);
+  assert.match(documentXml, new RegExp(`cx="${wordmarkCx}"`));
+  assert.match(documentXml, new RegExp(`cy="${wordmarkCy}"`));
+
+  const deck = await JSZip.loadAsync(await buildReportPptx(report));
+  const slide = await deck.file("ppt/slides/slide1.xml")!.async("string");
+  assert.match(slide, /support@engineerit\.ai/);
+  assert.match(slide, new RegExp(`cx="${wordmarkCx}"`));
+  assert.match(slide, new RegExp(`cy="${wordmarkCy}"`));
+  const pptMedia = Object.keys(deck.files).filter((name) => name.startsWith("ppt/media/") && name.endsWith(".png"));
+  const pptBlobs = await Promise.all(pptMedia.map((name) => deck.file(name)!.async("nodebuffer")));
+  assert.ok(pptBlobs.some((blob) => blob.equals(wordmark)));
+  assert.ok(pptBlobs.some((blob) => blob.equals(icon)));
+
+  const pdfPath = path.join(tmpdir(), "engineerit-wordmark-footer.pdf");
+  await writeFile(pdfPath, await buildReportPdf(report));
+  const text = execFileSync("pdftotext", ["-layout", "-f", "2", "-l", "2", pdfPath, "-"], { encoding: "utf8" });
+  assert.match(text, /support@engineerit\.ai/);
+  assert.match(text, /Page 2 of \d+/);
+  const listing = execFileSync("pdfimages", ["-list", pdfPath], { encoding: "utf8" });
+  assert.match(listing, /834\s+188/);
+  assert.match(listing, /192\s+192/);
 });
