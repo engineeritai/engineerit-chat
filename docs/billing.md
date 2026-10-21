@@ -62,6 +62,10 @@ Run once, in order. Each file is idempotent (`if not exists` / `add column if no
 
 `saved_cards`, `billing_subscriptions`, and `renewal_attempts` have RLS enabled and no client policies. Only the service role reads or writes them. Card tokens are never returned to the browser.
 
+From 30 October 2026 a new table in `public` is not visible to supabase-js until the same migration enables row level security and grants privileges. Do not grant `anon` on tables that hold user data. The template and the CI rule are in `supabase/migrations/README.md`. SQL is applied by hand in the Supabase SQL editor.
+
+The advisor fix for the six production objects (the two email queues, `daily_usage_limits`, and the three `admin_users_*` views) is `supabase/security/2026-10-21_fix_advisors.sql`. Paste that file. Deploy does not run it.
+
 ## How renewal works
 
 - Attempts run on day 0, 1, 3, and 7 after `current_period_end`.

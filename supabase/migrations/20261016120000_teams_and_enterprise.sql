@@ -252,3 +252,13 @@ create policy team_members_select
 -- No insert/update/delete policies: writes go through the service role.
 -- enterprise_leads and pending_plan_grants have RLS enabled and no policies,
 -- so the anon and authenticated roles cannot read or write them.
+
+-- Explicit Data API grants. From 30 Oct 2026 a new public table is invisible
+-- to supabase-js until granted. No anon grant: these rows are user data.
+-- The browser reads teams and team_members for the signed-in member only.
+grant select on table public.teams to authenticated;
+grant select on table public.team_members to authenticated;
+grant all on table public.teams to service_role;
+grant all on table public.team_members to service_role;
+grant all on table public.enterprise_leads to service_role;
+grant all on table public.pending_plan_grants to service_role;

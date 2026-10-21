@@ -76,3 +76,8 @@ create table if not exists public.renewal_attempts (
 alter table public.saved_cards enable row level security;
 alter table public.billing_subscriptions enable row level security;
 alter table public.renewal_attempts enable row level security;
+
+-- Card tokens and renewal state. Service role only. No anon grant.
+grant all on table public.saved_cards to service_role;
+grant all on table public.billing_subscriptions to service_role;
+grant all on table public.renewal_attempts to service_role;

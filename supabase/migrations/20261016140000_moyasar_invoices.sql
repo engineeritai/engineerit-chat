@@ -34,3 +34,6 @@ alter table public.enterprise_leads
 
 alter table public.enterprise_leads
   add column if not exists moyasar_invoice_id text;
+
+-- Checkout rows hold customer email and payment URLs. Service role only.
+grant all on table public.moyasar_invoices to service_role;

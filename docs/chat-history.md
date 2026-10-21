@@ -18,7 +18,7 @@ Guests still get one temporary chat in the page. It is not written to the databa
 
    `supabase/migrations/20261016200000_conversations_and_messages.sql`
 
-   The history script is safe to re-run. It expects `public.profiles` to already exist, with `profiles.id` equal to `auth.users.id` and a `subscription_tier` column. It does not create `teams` or `team_members` and does not replace their policies. `conversations.team_id` is a foreign key only when `public.teams` already exists (`to_regclass('public.teams')`). Sharing queries `team_members` and `teams.owner_id` only when those tables exist.
+   The history script is safe to re-run. It expects `public.profiles` to already exist, with `profiles.id` equal to `auth.users.id` and a `subscription_tier` column. It does not create `teams` or `team_members` and does not replace their policies. `conversations.team_id` is a foreign key only when `public.teams` already exists (`to_regclass('public.teams')`). Sharing queries `team_members` and `teams.owner_id` only when those tables exist. A new `public` table in any migration also needs row level security and explicit grants in that same file. See `supabase/migrations/README.md`.
 
 2. In the Vercel project, set `CRON_SECRET` to a long random value. Vercel Cron sends it as `Authorization: Bearer <CRON_SECRET>` to `GET /api/cron/history-cleanup` every day at 03:00 UTC (`vercel.json`). The route rejects the call when the secret is missing or wrong.
 
