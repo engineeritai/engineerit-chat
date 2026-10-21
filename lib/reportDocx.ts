@@ -13,12 +13,14 @@ import {
   Table,
   TableCell,
   TableRow,
+  TableLayoutType,
   TextRun,
   VerticalAlign,
   WidthType,
 } from "docx";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
-import type { PreparedReport, ReportImage } from "@/lib/reportModel";
+import { pngSize } from "@/lib/rasterSvg";
+import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 const border = { style: BorderStyle.SINGLE, size: 4, color: "D0D7E2" };
 const borders = { top: border, bottom: border, left: border, right: border };
@@ -66,51 +68,125 @@ function imageRun(image: ReportImage, width: number) {
   });
 }
 
-function makeHeader(title: string, rtl: boolean) {
-  return new Header({
-    children: [
-      new Paragraph({
-        bidirectional: rtl,
-        alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
-        border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: "1A56FF", space: 6 } },
-        children: [textRun(title, { bold: true, size: 20, rtl, color: "0F172A" })],
+const noEdge = { style: BorderStyle.NONE, size: 0, color: "auto" };
+const clearBorders = {
+  top: noEdge,
+  bottom: noEdge,
+  left: noEdge,
+  right: noEdge,
+  insideHorizontal: noEdge,
+  insideVertical: noEdge,
+};
+
+function contentDxa(landscape: boolean) {
+  // docx default page is A4 (11906 x 16838 DXA) and sections use 720 DXA side margins.
+  const page = landscape ? 16838 : 11906;
+  return page - 720 - 720;
+}
+
+function eitRun(logo: Uint8Array, px: number) {
+  return new ImageRun({
+    type: "png",
+    data: logo,
+    transformation: { width: px, height: px },
+    altText: { title: "eit", description: "engineer it", name: "eit" },
+  });
+}
+
+function chromeTable(total: number, widths: number[], edge: "top" | "bottom", rule: { style: (typeof BorderStyle)[keyof typeof BorderStyle]; size: number; color: string; space: number }, paragraphs: Paragraph[]) {
+  const cellBorders = {
+    top: edge === "top" ? rule : noEdge,
+    bottom: edge === "bottom" ? rule : noEdge,
+    left: noEdge,
+    right: noEdge,
+  };
+  return new Table({
+    width: { size: total, type: WidthType.DXA },
+    columnWidths: widths,
+    layout: TableLayoutType.FIXED,
+    borders: clearBorders,
+    rows: [
+      new TableRow({
+        cantSplit: true,
+        children: widths.map(
+          (width, index) =>
+            new TableCell({
+              borders: cellBorders,
+              width: { size: width, type: WidthType.DXA },
+              margins: { top: edge === "top" ? 80 : 40, bottom: edge === "bottom" ? 60 : 0, left: 0, right: 0 },
+              verticalAlign: VerticalAlign.CENTER,
+              children: [paragraphs[index]],
+            })
+        ),
       }),
     ],
   });
 }
 
-function makeFooter(report: PreparedReport) {
+function makeHeader(title: string, rtl: boolean, logo: Uint8Array, landscape: boolean) {
+  const total = contentDxa(landscape);
+  const iconCol = 520;
+  const titleCol = total - iconCol;
+  const icon = new Paragraph({
+    spacing: { before: 0, after: 0 },
+    alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+    children: [eitRun(logo, 16)],
+  });
+  const heading = new Paragraph({
+    bidirectional: rtl,
+    spacing: { before: 0, after: 0 },
+    alignment: rtl ? AlignmentType.LEFT : AlignmentType.RIGHT,
+    children: [textRun(title, { bold: true, size: 20, rtl, color: "0F172A" })],
+  });
+  const rule = { style: BorderStyle.SINGLE, size: 12, color: "1A56FF", space: 1 };
+  // Keep the Arabic title in a left column so bidi alignment cannot slide it into the icon.
+  if (rtl) {
+    const titleWidth = Math.round(total * 0.62);
+    const gap = new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun("")] });
+    return new Header({
+      children: [chromeTable(total, [titleWidth, total - titleWidth - iconCol, iconCol], "bottom", rule, [heading, gap, icon])],
+    });
+  }
+  return new Header({
+    children: [chromeTable(total, [iconCol, titleCol], "bottom", rule, [icon, heading])],
+  });
+}
+
+function makeFooter(report: PreparedReport, landscape: boolean) {
   const rtl = report.locale === "ar";
+  const total = contentDxa(landscape);
+  const pageCol = 3200;
+  const brandCol = total - pageCol;
   const pageLabel = rtl
     ? ["صفحة ", PageNumber.CURRENT, " من ", PageNumber.TOTAL_PAGES]
     : ["Page ", PageNumber.CURRENT, " of ", PageNumber.TOTAL_PAGES];
+  const brand = new Paragraph({
+    spacing: { before: 0, after: 0 },
+    alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+    children: rtl
+      ? [textRun(`${REPORT_FOOTER_LINE}  `, { size: 16, rtl: false, color: "64748B" }), eitRun(report.logo, 14)]
+      : [eitRun(report.logo, 14), textRun(`  ${REPORT_FOOTER_LINE}`, { size: 16, rtl: false, color: "64748B" })],
+  });
+  const pages = new Paragraph({
+    bidirectional: rtl,
+    spacing: { before: 0, after: 0 },
+    alignment: rtl ? AlignmentType.LEFT : AlignmentType.RIGHT,
+    children: [
+      new TextRun({
+        children: pageLabel,
+        font: runFont(rtl),
+        size: 16,
+        sizeComplexScript: 16,
+        color: "64748B",
+        rightToLeft: rtl,
+        language: rtl ? { value: "ar-SA", bidirectional: "ar-SA" } : { value: "en-US" },
+      }),
+    ],
+  });
+  const rule = { style: BorderStyle.SINGLE, size: 6, color: "D0D7E2", space: 1 };
   return new Footer({
     children: [
-      new Paragraph({
-        bidirectional: rtl,
-        alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
-        border: { top: { style: BorderStyle.SINGLE, size: 6, color: "D0D7E2", space: 8 } },
-        children: [
-          new ImageRun({
-            type: "png",
-            data: report.logo,
-            transformation: { width: 14, height: 14 },
-            altText: { title: "eit", description: "engineer it", name: "eit" },
-          }),
-          textRun("  engineer it · engineerit.ai    ", { size: 16, rtl: false, color: "64748B" }),
-          textRun(report.stamp, { size: 16, rtl, color: "64748B" }),
-          textRun("    ", { size: 16, rtl: false }),
-          new TextRun({
-            children: pageLabel,
-            font: runFont(rtl),
-            size: 16,
-            sizeComplexScript: 16,
-            color: "64748B",
-            rightToLeft: rtl,
-            language: rtl ? { value: "ar-SA", bidirectional: "ar-SA" } : { value: "en-US" },
-          }),
-        ],
-      }),
+      chromeTable(total, rtl ? [pageCol, brandCol] : [brandCol, pageCol], "top", rule, rtl ? [pages, brand] : [brand, pages]),
     ],
   });
 }
@@ -160,16 +236,19 @@ type Bucket = { landscape: boolean; cover: boolean; children: Child[] };
 export async function buildReportDocx(report: PreparedReport): Promise<Uint8Array> {
   const rtlDoc = report.locale === "ar";
   const buckets: Bucket[] = [];
+  const mark = pngSize(report.wordmark);
+  const markW = (400 * 96) / 72;
+  const markH = markW * (mark.height / mark.width);
   const cover: Child[] = [
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 1200, after: 200 },
+      spacing: { before: 720, after: 200 },
       children: [
         new ImageRun({
           type: "png",
-          data: report.logo,
-          transformation: { width: 72, height: 72 },
-          altText: { title: "eit", description: "engineer it", name: "eit" },
+          data: report.wordmark,
+          transformation: { width: markW, height: markH },
+          altText: { title: "engineer it", description: "engineer it", name: "engineerit-wordmark" },
         }),
       ],
     }),
@@ -270,8 +349,8 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
           margin: { top: 900, bottom: 800, left: 720, right: 720, header: 400, footer: 400 },
         },
       },
-      headers: bucket.cover ? undefined : { default: makeHeader(report.title, rtlDoc) },
-      footers: { default: makeFooter(report) },
+      headers: bucket.cover ? undefined : { default: makeHeader(report.title, rtlDoc, report.logo, bucket.landscape) },
+      footers: { default: makeFooter(report, bucket.landscape) },
       children: bucket.children,
     })),
   });
