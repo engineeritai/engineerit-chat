@@ -1,4 +1,21 @@
-const GENERIC = new Set(["", "engineer it", "engineerit.ai", "engineerit-ai", "new chat", "محادثة جديدة", "engineering report", "تقرير هندسي"]);
+/** Neutral cover line. "engineer it" stays lowercase Latin in both languages. */
+export const REPORT_LABEL = {
+  en: "Report · Engineered with engineer it",
+  ar: "تقرير · بإعداد engineer it",
+} as const;
+
+const GENERIC = new Set([
+  "",
+  "engineer it",
+  "engineerit.ai",
+  "engineerit-ai",
+  "new chat",
+  "محادثة جديدة",
+  "engineering report",
+  "تقرير هندسي",
+  REPORT_LABEL.en.toLowerCase(),
+  REPORT_LABEL.ar.toLowerCase(),
+]);
 
 const TRAILING =
   /^(process|workflow|diagram|diagrams|overview|report|summary|guide|flowchart|flow|chart|map|procedure|description|simplified|شرح|عملية|مخطط|تقرير)$/i;
@@ -57,7 +74,7 @@ export function coverSubtitle(source: string | undefined, locale: "en" | "ar"): 
   const text = clean(source);
   const extra = text && !GENERIC.has(text.toLowerCase()) ? splitAside(text).extra : "";
   if (extra) return extra.slice(0, 160);
-  return locale === "ar" ? "تقرير هندسي" : "Engineering report";
+  return REPORT_LABEL[locale];
 }
 
 export function pickTopicSource(requested: string | undefined, prompt: string | undefined, heading: string | undefined): string {

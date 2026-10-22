@@ -2,13 +2,21 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import fontkit from "@pdf-lib/fontkit";
-import { visualTokens } from "./arabicShape";
+import { directionalRuns, visualTokens } from "./arabicShape";
 
 test("arabic title tokens stay logical and read from the right", () => {
   assert.deepEqual(visualTokens("تركيب مضخة التغذية"), ["التغذية", " ", "مضخة", " ", "تركيب"]);
   assert.deepEqual(visualTokens("40 بار"), ["بار", " ", "40"]);
   assert.deepEqual(visualTokens("لا 12"), ["12", " ", "لا"]);
   assert.deepEqual(visualTokens("Pump P-101"), ["Pump", " ", "P-101"]);
+  assert.deepEqual(visualTokens("تقرير · بإعداد engineer it"), ["engineer", " ", "it", " ", "بإعداد", " ", "·", " ", "تقرير"]);
+  assert.deepEqual(directionalRuns("تقرير · بإعداد engineer it"), [
+    { text: "تقرير · بإعداد ", rtl: true },
+    { text: "engineer it", rtl: false },
+  ]);
+  assert.deepEqual(directionalRuns("Report · Engineered with engineer it"), [
+    { text: "Report · Engineered with engineer it", rtl: false },
+  ]);
 });
 
 test("Noto Sans Arabic shapes the logical title with joining forms", () => {

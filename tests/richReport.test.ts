@@ -12,6 +12,7 @@ import { appendSources, sourcesFromResponse } from "../lib/citations";
 import { riyadhStamp } from "../lib/ksaTime";
 import { ganttAppendix, parseMessage } from "../lib/messageDocument";
 import { buildReportDocx } from "../lib/reportDocx";
+import { REPORT_LABEL } from "../lib/exportName";
 import { REPORT_FOOTER_LINE, prepareReport } from "../lib/reportModel";
 import { buildReportPdf } from "../lib/reportPdf";
 import { buildReportPptx } from "../lib/reportPptx";
@@ -183,6 +184,7 @@ test("exports build pdf, docx, pptx, and xlsx in english and arabic", async () =
     ["ar", sampleAr, "تركيب مضخة التغذية"],
   ] as const) {
     const report = await prepareReport({ title, markdown, locale, now });
+    assert.equal(report.subtitle, REPORT_LABEL[locale]);
     assert.ok(report.blocks.some((block) => block.type === "heading" && block.text.includes(locale === "ar" ? "ملحق" : "Schedule data")));
     const pdf = await buildReportPdf(report);
     const docx = await buildReportDocx(report);
@@ -199,9 +201,15 @@ test("exports build pdf, docx, pptx, and xlsx in english and arabic", async () =
     const xml = await word.file("word/document.xml")!.async("string");
     assert.match(xml, /w:tblHeader/);
     assert.match(xml, /Heading1|Title/);
+    assert.equal(xml.includes(locale === "ar" ? "تقرير · بإعداد" : REPORT_LABEL.en), true);
+    assert.equal(xml.includes("engineer it"), true);
+    assert.equal(xml.includes("Engineering report"), false);
+    assert.equal(xml.includes("تقرير هندسي"), false);
     const deck = await JSZip.loadAsync(pptx);
     const slides = Object.keys(deck.files).filter((name) => /ppt\/slides\/slide\d+\.xml/.test(name));
     assert.ok(slides.length >= 4);
+    const coverXml = await deck.file("ppt/slides/slide1.xml")!.async("string");
+    assert.equal(coverXml.includes(REPORT_LABEL[locale]), true);
     const sheet = await JSZip.loadAsync(xlsx);
     const workbook = await sheet.file("xl/workbook.xml")!.async("string");
     assert.match(workbook, /workbook/);
@@ -210,6 +218,30 @@ test("exports build pdf, docx, pptx, and xlsx in english and arabic", async () =
     await writeSamples(`${locale}.pptx`, pptx);
     await writeSamples(`${locale}.xlsx`, xlsx);
   }
+});
+
+test("the arabic cover subtitle keeps engineer it in latin order", async () => {
+  const report = await prepareReport({ title: "تركيب مضخة التغذية", markdown: sampleAr, locale: "ar", now });
+  assert.equal(report.subtitle, REPORT_LABEL.ar);
+  const pdfPath = path.join(tmpdir(), "engineerit-ar-subtitle.pdf");
+  await writeFile(pdfPath, await buildReportPdf(report));
+  const html = execFileSync("pdftotext", ["-bbox-layout", "-f", "1", "-l", "1", pdfPath, "-"], { encoding: "utf8" });
+  const words = [...html.matchAll(/<word xMin="([\d.]+)"[^>]*>([^<]*)<\/word>/g)].map((match) => ({
+    x: Number(match[1]),
+    text: match[2],
+  }));
+  const engineer = words.find((word) => word.text === "engineer");
+  const it = words.find((word) => word.text === "it");
+  const arabicReport = words.find((word) => word.text.includes("تقرير") || word.text.includes("ريرقت"));
+  assert.ok(engineer && it && arabicReport);
+  assert.ok(engineer.x < it.x);
+  assert.ok(it.x < arabicReport.x);
+  const en = await prepareReport({ title: "Feed pump installation", markdown: sampleEn, locale: "en", now });
+  const enPath = path.join(tmpdir(), "engineerit-en-subtitle.pdf");
+  await writeFile(enPath, await buildReportPdf(en));
+  const text = execFileSync("pdftotext", ["-layout", "-f", "1", "-l", "1", enPath, "-"], { encoding: "utf8" });
+  assert.match(text, /Report · Engineered with engineer it/);
+  assert.equal(text.includes("Engineering report"), false);
 });
 
 test("covers use the official wordmark and footers keep the eit line", async () => {

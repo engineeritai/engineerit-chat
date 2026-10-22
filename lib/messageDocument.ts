@@ -1,5 +1,5 @@
 import { claimsDiagram, requestedCharts, sanitizeFlowchart, stepsFromMarkdown, flowchartFromSteps } from "@/lib/diagramReply";
-import { coverSubtitle, pickTopicSource, shortTopic } from "@/lib/exportName";
+import { coverSubtitle, pickTopicSource, REPORT_LABEL, shortTopic } from "@/lib/exportName";
 import { riyadhIsoDate } from "@/lib/ksaTime";
 import { scurveFromTable } from "@/lib/scurveFromTable";
 import { inclusiveDays, parseChart, type ChartModel, type GanttModel } from "@/lib/scheduleModel";
@@ -303,7 +303,7 @@ export function ganttAppendix(blocks: Block[], locale: UiLocale): { headers: str
 export function exportMeta(markdown: string, requested: string | undefined, locale: UiLocale, prompt?: string) {
   const heading = markdown.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim();
   const source = pickTopicSource(requested, prompt, heading);
-  const fallback = locale === "ar" ? "تقرير هندسي" : "Engineering report";
+  const fallback = REPORT_LABEL[locale];
   return {
     source,
     title: shortTopic(source, fallback),

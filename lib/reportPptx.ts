@@ -1,3 +1,4 @@
+import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
@@ -120,16 +121,18 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
     align: "center",
     rtlMode: blockDir(report.title, report.locale) === "rtl",
   });
+  const subtitleRtl = directionalRuns(report.subtitle).some((run) => run.rtl);
   cover.addText(report.subtitle, {
     x: 1.2,
     y: 3.8,
     w: W - 2.4,
     h: 0.4,
-    fontFace: face, lang,
+    fontFace: subtitleRtl ? "Arial" : face,
+    lang: subtitleRtl ? "ar-SA" : "en-US",
     fontSize: 16,
     color: "64748B",
     align: "center",
-    rtlMode: rtl,
+    rtlMode: subtitleRtl,
   });
   cover.addShape(pptx.ShapeType.rect, {
     x: (W - 2.2) / 2,
