@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { riyadhIsoDate, riyadhStamp, type UiLocale } from "@/lib/ksaTime";
-import { coverSubtitle, pickTopicSource, shortTopic } from "@/lib/exportName";
+import { coverSubtitle, pickTopicSource, REPORT_LABEL, shortTopic } from "@/lib/exportName";
 import { appendixHeading, ganttAppendix, parseMessage, type Block } from "@/lib/messageDocument";
 import { pngSize, svgToPng } from "@/lib/rasterSvg";
 import { renderChartSvg } from "@/lib/scheduleSvg";
@@ -86,7 +86,7 @@ export async function prepareReport(input: ReportRequest): Promise<PreparedRepor
   const heading = input.markdown.match(/^#{1,6}\s+(.+)$/m)?.[1];
   const raw = pickTopicSource(input.title, input.prompt, heading);
   return {
-    title: shortTopic(raw, locale === "ar" ? "تقرير هندسي" : "Engineering report"),
+    title: shortTopic(raw, REPORT_LABEL[locale]),
     subtitle: (input.subtitle || coverSubtitle(raw, locale)).slice(0, 160),
     locale,
     stamp: riyadhStamp(now, locale),

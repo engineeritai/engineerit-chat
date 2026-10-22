@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { REPORT_LABEL } from "@/lib/exportName";
 import { shareDescription, buildShareHtml } from "@/lib/shareDocument";
 import { SITE_URL } from "@/lib/seo";
 
@@ -61,7 +62,7 @@ function asRecord(data: Partial<ShareRecord> & { created_at?: string } | null | 
   const locale = data.locale === "ar" ? "ar" : "en";
   return {
     id: data.id,
-    title: data.title || (locale === "ar" ? "تقرير هندسي" : "Engineering report"),
+    title: data.title || REPORT_LABEL[locale],
     markdown: data.markdown,
     locale,
     description: data.description || shareDescription(data.markdown),
@@ -208,7 +209,7 @@ export async function createShare(input: { title: string; markdown: string; loca
   const markdown = input.markdown.slice(0, 200_000);
   const record: ShareRecord = {
     id: crypto.randomBytes(9).toString("base64url"),
-    title: input.title.slice(0, 140) || (input.locale === "ar" ? "تقرير هندسي" : "Engineering report"),
+    title: input.title.slice(0, 140) || REPORT_LABEL[input.locale],
     markdown,
     locale: input.locale,
     description: shareDescription(markdown),

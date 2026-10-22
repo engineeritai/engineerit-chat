@@ -18,6 +18,7 @@ import {
   VerticalAlign,
   WidthType,
 } from "docx";
+import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
@@ -42,6 +43,17 @@ function textRun(value: string, opts: { bold?: boolean; size?: number; color?: s
     rightToLeft: opts.rtl,
     color: opts.color,
     language: opts.rtl ? { value: "ar-SA", bidirectional: "ar-SA" } : { value: "en-US" },
+  });
+}
+
+function subtitleParagraph(value: string) {
+  const runs = directionalRuns(plainInline(value));
+  const rtl = runs.some((run) => run.rtl);
+  return new Paragraph({
+    bidirectional: rtl,
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 80 },
+    children: runs.map((run) => textRun(run.text, { rtl: run.rtl, size: 22 })),
   });
 }
 
@@ -259,7 +271,7 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       spacing: { before: 400, after: 160 },
       children: [textRun(report.title, { bold: true, size: 56, rtl: blockDir(report.title, report.locale) === "rtl" })],
     }),
-    paragraph(report.subtitle, blockDir(report.subtitle, report.locale) === "rtl", AlignmentType.CENTER),
+    subtitleParagraph(report.subtitle),
     paragraph(report.stamp, rtlDoc, AlignmentType.CENTER),
   ];
   buckets.push({ landscape: false, cover: true, children: cover });

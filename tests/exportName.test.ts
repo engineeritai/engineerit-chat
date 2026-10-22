@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { contentDisposition, coverSubtitle, downloadName, shortTopic } from "../lib/exportName";
+import { contentDisposition, coverSubtitle, downloadName, REPORT_LABEL, shortTopic } from "../lib/exportName";
 import { asciiToMermaid, parseMessage, topicFrom } from "../lib/messageDocument";
 import { buildShareHtml } from "../lib/shareDocument";
 import { toWhatsApp } from "../lib/whatsappText";
@@ -47,6 +47,13 @@ test("short topic drops the subtitle and stays within a few words", () => {
   assert.equal(shortTopic("إنتاج اليوريا الفنية – سابك"), "إنتاج اليوريا الفنية");
   assert.equal(coverSubtitle("Technical Grade Urea Production – SABIC Process Workflow", "en"), "SABIC Process Workflow");
   assert.equal(coverSubtitle("Technical Grade Urea Production (SABIC)", "en"), "SABIC");
+  assert.equal(coverSubtitle("Feed pump installation", "en"), REPORT_LABEL.en);
+  assert.equal(coverSubtitle("", "ar"), REPORT_LABEL.ar);
+  assert.equal(coverSubtitle("Engineering report", "en"), REPORT_LABEL.en);
+  assert.equal(coverSubtitle("تقرير هندسي", "ar"), REPORT_LABEL.ar);
+  assert.equal(shortTopic("Engineering report", REPORT_LABEL.en), REPORT_LABEL.en);
+  assert.equal(REPORT_LABEL.en, "Report · Engineered with engineer it");
+  assert.equal(REPORT_LABEL.ar, "تقرير · بإعداد engineer it");
   const name = downloadName("Technical Grade Urea Production – SABIC Process Workflow", "pdf");
   assert.equal(name, "Technical Grade Urea Production.pdf");
   assert.equal(downloadName("Technical Grade Urea Production", "html"), "Technical Grade Urea Production.html");
