@@ -61,6 +61,10 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       title: "Feedback | engineerit.ai",
       description: "Send feedback or a complaint about engineerit.ai.",
     },
+    "/feedback/review": {
+      title: "Rate the platform | engineerit.ai",
+      description: "Rate engineerit.ai from 1 to 5 and send an optional note about what you like and what to improve.",
+    },
     "/subscription": {
       title: "Subscription | engineerit.ai",
       description: "Choose or upgrade your engineerit.ai plan.",
@@ -158,6 +162,10 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/feedback": {
       title: "الملاحظات | engineerit.ai",
       description: "أرسل ملاحظة أو شكوى عن engineerit.ai.",
+    },
+    "/feedback/review": {
+      title: "قيم المنصة | engineerit.ai",
+      description: "قيم engineerit.ai من 1 إلى 5، وأضف ملاحظة اختيارية عما يعجبك وما ينبغي تحسينه.",
     },
     "/subscription": {
       title: "الاشتراك | engineerit.ai",

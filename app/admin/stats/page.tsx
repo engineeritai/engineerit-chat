@@ -7,12 +7,20 @@ import { supabase } from "@/lib/supabaseClient";
 
 type PlanCount = { plan: string; count: number };
 
+type Suggestion = {
+  rating: number;
+  liked: string | null;
+  improve: string | null;
+  createdAt: string;
+};
+
 type Stats = {
   timezone: string;
   signups: { today: number; days7: number };
   chats: { today: number; days7: number };
   subscriptions: PlanCount[];
   payments7d: { count: number; amountSar: number; byPlan: PlanCount[] };
+  feedback: { count: number; averageRating: number | null; latest: Suggestion[] } | null;
 };
 
 function formatCount(value: number) {
@@ -79,6 +87,34 @@ export default function AdminStatsPage() {
                   <p style={{ margin: 0, fontSize: 14, color: "#5c6570" }}>No active billing subscriptions.</p>
                 ) : (
                   <PlanTable rows={stats.subscriptions} />
+                )}
+              </section>
+              <section className="card" style={{ marginBottom: 16 }}>
+                <h2 className="section-heading" style={{ marginTop: 0 }}>Platform feedback</h2>
+                {stats.feedback == null ? (
+                  <p style={{ margin: 0 }}>Feedback storage is not set up yet.</p>
+                ) : stats.feedback.count === 0 ? (
+                  <p style={{ margin: 0 }}>No platform feedback yet.</p>
+                ) : (
+                  <>
+                    <p style={{ margin: "0 0 8px" }}>
+                      {formatCount(stats.feedback.count)} responses. Average rating{" "}
+                      {stats.feedback.averageRating == null ? "—" : stats.feedback.averageRating.toFixed(1)} out of 5.
+                    </p>
+                    {stats.feedback.latest.length === 0 ? (
+                      <p style={{ margin: 0, fontSize: 14, color: "#5c6570" }}>No written suggestions yet.</p>
+                    ) : (
+                      <ul style={{ margin: 0, paddingLeft: 18 }}>
+                        {stats.feedback.latest.map((item) => (
+                          <li key={item.createdAt + item.rating + (item.liked || "") + (item.improve || "")} style={{ marginBottom: 8 }}>
+                            <div>Rating {item.rating}/5</div>
+                            {item.liked ? <div>Likes: {item.liked}</div> : null}
+                            {item.improve ? <div>Improve: {item.improve}</div> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
                 )}
               </section>
               <section className="card">
