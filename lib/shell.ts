@@ -428,6 +428,22 @@ export type ShellCopy = {
     askPlaceholder: string;
     send: string;
     close: string;
+    review: {
+      link: string;
+      title: string;
+      lead: string;
+      rating: string;
+      liked: string;
+      improve: string;
+      optional: string;
+      submit: string;
+      sending: string;
+      thanks: string;
+      error: string;
+      signIn: string;
+      signInLead: string;
+      unavailable: string;
+    };
   };
   legal: {
     termsTitle: string;
@@ -910,6 +926,22 @@ const en: ShellCopy = {
     askPlaceholder: "Ask the smart assistant…",
     send: "Send",
     close: "Close",
+    review: {
+      link: "Rate the platform",
+      title: "Your opinion of engineerit.ai",
+      lead: "Choose a rating from 1 to 5. The two questions are optional. This is saved on your signed-in account.",
+      rating: "How is the platform for you?",
+      liked: "What do you like?",
+      improve: "What should we improve or add?",
+      optional: "optional",
+      submit: "Send feedback",
+      sending: "Sending…",
+      thanks: "Thank you. Your feedback is saved.",
+      error: "Could not save your feedback. Try again.",
+      signIn: "Sign in",
+      signInLead: "Sign in to save your feedback on this account.",
+      unavailable: "Saving feedback is not available yet. You can write to support@engineerit.ai.",
+    },
   },
   legal: {
     termsTitle: "User policy and agreement",
@@ -1389,6 +1421,22 @@ const ar: ShellCopy = {
     askPlaceholder: "اسأل المساعد الذكي…",
     send: "إرسال",
     close: "إغلاق",
+    review: {
+      link: "قيم المنصة",
+      title: "رأيك في engineerit.ai",
+      lead: "اختر تقييما من 1 إلى 5. السؤالان اختياريان. يحفظ هذا على حسابك بعد الدخول.",
+      rating: "كيف تجد المنصة؟",
+      liked: "ما الذي يعجبك؟",
+      improve: "ما الذي ينبغي أن نحسنه أو نضيفه؟",
+      optional: "اختياري",
+      submit: "إرسال الملاحظة",
+      sending: "جاري الإرسال…",
+      thanks: "شكرا لك. حفظنا ملاحظتك.",
+      error: "تعذر حفظ الملاحظة. حاول مرة أخرى.",
+      signIn: "دخول",
+      signInLead: "ادخل لحفظ الملاحظة على حسابك.",
+      unavailable: "حفظ الملاحظات غير جاهز بعد. يمكنك الكتابة إلى support@engineerit.ai.",
+    },
   },
   legal: {
     termsTitle: "سياسة الاستخدام والاتفاق",

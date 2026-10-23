@@ -111,6 +111,9 @@ export default function FeedbackPage() {
             <h1 className="page-title">{s.feedback.title}</h1>
           </div>
           <p className="page-subtitle">{s.feedback.lead}</p>
+          <p className="page-subtitle">
+            <Link href="/feedback/review">{s.feedback.review.link}</Link>
+          </p>
 
           <form className="card" onSubmit={handleSubmit}>
             <div className="form-row">
