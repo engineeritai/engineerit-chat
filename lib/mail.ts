@@ -20,7 +20,16 @@ export type OutboundMail = {
   replyTo?: string;
   attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>;
   headers?: { get(name: string): string | null };
+  /** SMTP address. Defaults to the configured mailbox. */
+  fromAddress?: string;
+  extraHeaders?: Record<string, string>;
 };
+
+function fromHeader(message: OutboundMail, fallbackAddress: string) {
+  const address = message.fromAddress?.trim() || fallbackAddress;
+  const name = (message.fromName || "engineerit.ai").replace(/"/g, "");
+  return `"${name}" <${address}>`;
+}
 
 export async function deliverMail(message: OutboundMail) {
   const decision = mailDecision({
@@ -36,13 +45,15 @@ export async function deliverMail(message: OutboundMail) {
         secure: false,
       });
       await transport.sendMail({
-        from: `"${message.fromName || "engineerit.ai"}" <${process.env.MAIL_FROM || "noreply@engineerit.ai"}>`,
+        from: fromHeader(message, process.env.MAIL_FROM || "noreply@engineerit.ai"),
         to: message.to,
         bcc: message.bcc,
+        replyTo: message.replyTo,
         subject: message.subject,
         text: message.text,
         html: message.html,
         attachments: message.attachments,
+        headers: message.extraHeaders,
       });
       return { sent: true, sink: "mailpit" as const, reason: decision.reason };
     }
@@ -52,7 +63,7 @@ export async function deliverMail(message: OutboundMail) {
   const mailer = getMailer();
   if (!mailer) return { sent: false, sink: null, reason: "not-configured" };
   await mailer.transporter.sendMail({
-    from: `"${message.fromName || "engineerit.ai"}" <${mailer.from}>`,
+    from: fromHeader(message, mailer.from),
     to: message.to,
     ...(message.bcc ? { bcc: message.bcc } : {}),
     replyTo: message.replyTo,
@@ -60,6 +71,7 @@ export async function deliverMail(message: OutboundMail) {
     text: message.text,
     html: message.html,
     attachments: message.attachments,
+    headers: message.extraHeaders,
   });
   return { sent: true, sink: null, reason: "smtp" };
 }

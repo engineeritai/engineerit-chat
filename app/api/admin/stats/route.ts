@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminEmail } from "@/lib/admin";
 import { countByPlan, foldSignups, riyadhWindows, sumSar } from "@/lib/adminStats";
+import { feedbackTableMissing, summarizePlatformFeedback } from "@/lib/platformFeedback";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
 
 export const runtime = "nodejs";
@@ -69,6 +70,32 @@ async function paidInvoices(admin: ReturnType<typeof getSupabaseAdmin>, sinceIso
   throw new Error("Paid invoice list was truncated.");
 }
 
+async function platformFeedback(admin: ReturnType<typeof getSupabaseAdmin>) {
+  const ratings: number[] = [];
+  const latest: Array<{ rating: number | string | null; liked: string | null; improve: string | null; created_at: string }> = [];
+  try {
+  for (let from = 0; from < ROW_CAP; from += ROW_PAGE) {
+    const { data, error } = await admin
+      .from("platform_feedback")
+      .select("rating, liked, improve, created_at")
+      .order("created_at", { ascending: false })
+      .range(from, from + ROW_PAGE - 1);
+    if (error) {
+      if (feedbackTableMissing(error)) return null;
+      throw error;
+    }
+    const batch = data || [];
+    if (from === 0) latest.push(...batch);
+    for (const row of batch) ratings.push(Number(row.rating));
+    if (batch.length < ROW_PAGE) return summarizePlatformFeedback(ratings, latest);
+  }
+  throw new Error("Platform feedback list was truncated.");
+  } catch (err) {
+    if (feedbackTableMissing(err)) return null;
+    throw err;
+  }
+}
+
 export async function GET(req: Request) {
   const user = await getUserFromRequest(req);
   if (!user || !isAdminEmail(user.email)) {
@@ -85,6 +112,12 @@ export async function GET(req: Request) {
       activePlans(admin),
       paidInvoices(admin, weekStart.toISOString()),
     ]);
+    let feedback: Awaited<ReturnType<typeof platformFeedback>> = null;
+    try {
+      feedback = await platformFeedback(admin);
+    } catch (err) {
+      if (!feedbackTableMissing(err)) throw err;
+    }
     const signups = foldSignups(stamps, todayStart.getTime(), weekStart.getTime());
     return NextResponse.json({
       timezone: "Asia/Riyadh",
@@ -96,6 +129,7 @@ export async function GET(req: Request) {
         amountSar: sumSar(payments.map((row) => row.amount_sar)),
         byPlan: countByPlan(payments.map((row) => row.plan || "unknown")),
       },
+      feedback,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not load stats.";

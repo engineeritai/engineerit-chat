@@ -37,7 +37,9 @@ The first payment uses the Moyasar payment form with **Save card** after the cus
 | `MOYASAR_SECRET_KEY` | yes | `sk_test_…` or `sk_live_…`. Charges saved tokens and verifies payments. |
 | `NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY` | yes | `pk_test_…` or `pk_live_…`. Loads the card form. |
 | `MOYASAR_WEBHOOK_SECRET` | yes | Webhook HMAC secret, or the `secret_token` Moyasar posts. Missing secret rejects every webhook. |
-| `CRON_SECRET` | yes | Authorizes `/api/cron/renewals`. Missing secret rejects the job. |
+| `CRON_SECRET` | yes | Authorizes `/api/cron/renewals` and `/api/cron/lifecycle`. Also signs lifecycle unsubscribe links. Missing secret rejects the job. |
+| `LIFECYCLE_EMAILS` | no | Set to `on` to send lifecycle feedback. Any other value, including unset, sends nothing. |
+| `LIFECYCLE_EMAIL_BATCH` | no | Notes per daily lifecycle run. Default 40, maximum 200. |
 | `NEXT_PUBLIC_APP_URL` | yes | Public HTTPS origin, no trailing slash. Used for Moyasar return URLs, the renewal callback, and the update-card link in failure emails. |
 | `ZSMTP_HOST` | yes for email | SMTP host for receipts and billing notes |
 | `ZSMTP_PORT` | no | Default `465` |
@@ -59,7 +61,14 @@ Run once, in order. Each file is idempotent (`if not exists` / `add column if no
 3. `supabase/migrations/20261016160000_recurring_billing.sql` — `saved_cards`, `billing_subscriptions`, `renewal_attempts`, plus `payment_id` on checkout rows.
 4. `supabase/migrations/20261016180000_advisor_tiers_and_legacy_price.sql` — `consultant_legacy_price_until` and `advisor_trial_plan` on `profiles`, and a three-month grandfather backfill for current Consultant rows. Apply this before the new prices go live.
 5. `supabase/migrations/20261016210000_profile_subscription_fields.sql` — `locale` on checkout rows and billing subscriptions, so invoice emails and PDFs stay in the buyer’s language. Apply this before deploy.
-6. `supabase/migrations/20261023170000_promo_codes.sql` — promo codes, redemptions, and the weekly question. Apply this before creating codes. It grants the tables to `service_role` only and enables RLS with no client policies, so a signed-in user cannot read the code list or the question answers. Checkout, `/admin/codes`, and `/question` keep working if this file has not been applied yet: checkout charges the list price and hides the code field, and the other two pages show an empty state instead of an error.
+6. `supabase/migrations/20261023160000_lifecycle_feedback.sql` — platform feedback ratings, the lifecycle email queue, and opt-out. Apply this before setting `LIFECYCLE_EMAILS=on`.
+7. `supabase/migrations/20261023170000_promo_codes.sql` — promo codes, redemptions, and the weekly question. Apply this before creating codes. It grants the tables to `service_role` only and enables RLS with no client policies, so a signed-in user cannot read the code list or the question answers. Checkout, `/admin/codes`, and `/question` keep working if this file has not been applied yet: checkout charges the list price and hides the code field, and the other two pages show an empty state instead of an error.
+
+## Lifecycle feedback email
+
+Off until `LIFECYCLE_EMAILS=on`. Vercel Cron calls `GET /api/cron/lifecycle` daily at 04:30 UTC. The first email is due 21 days after sign-up, then every 30 days, for accounts that have not used the unsubscribe link. Each run sends at most `LIFECYCLE_EMAIL_BATCH` messages (default 40, maximum 200). Paid accounts get a feedback note. Free accounts also get an invitation to the Engineer plan at SAR 19/month.
+
+`?dry=1` with the cron secret lists how many notes are due and does not send. Leave the flag unset, or set it to anything other than `on`, to stop sending. Mail is From `support@engineerit.ai`, so the SMTP account must be allowed to send as that address. `enqueue_subscription_emails` stays service-role only and is not called from the browser.
 
 `saved_cards`, `billing_subscriptions`, and `renewal_attempts` have RLS enabled and no client policies. Only the service role reads or writes them. Card tokens are never returned to the browser.
 

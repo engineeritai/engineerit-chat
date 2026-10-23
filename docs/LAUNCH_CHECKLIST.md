@@ -47,7 +47,9 @@ Set these on the Vercel project (Production, and Preview if you test there). `NE
 | `MOYASAR_SECRET_KEY` | Moyasar dashboard → API keys → secret key for the same mode as tokenization |
 | `NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY` | Moyasar dashboard → API keys → publishable key |
 | `MOYASAR_WEBHOOK_SECRET` | The secret you set on the Moyasar webhook in section 2 |
-| `CRON_SECRET` | Generate a long random string. Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` to `GET /api/cron/renewals` |
+| `CRON_SECRET` | Generate a long random string. Vercel Cron sends `Authorization: Bearer <CRON_SECRET>` to `GET /api/cron/renewals` and `GET /api/cron/lifecycle` |
+| `LIFECYCLE_EMAILS` | Optional. Set to `on` only after `supabase/migrations/20261023160000_lifecycle_feedback.sql` is applied. Unset or any other value sends nothing. |
+| `LIFECYCLE_EMAIL_BATCH` | Optional. Notes per daily run. Default 40, maximum 200. |
 | `NEXT_PUBLIC_APP_URL` | The public HTTPS origin, no trailing slash, for example `https://engineerit.ai` |
 | `ZSMTP_HOST` | SMTP host from the mail provider |
 | `ZSMTP_PORT` | Optional. Defaults to `465` (implicit TLS). Set `587` only if the provider requires STARTTLS |
