@@ -19,7 +19,7 @@ import { assertIndividualPlanPrices } from "@/lib/pricingDisplay";
 export const SITE_URL = "https://engineerit.ai";
 export const SITE_NAME = "engineerit.ai";
 
-export const defaultTitle = "engineer it | AI Engineering Assistant";
+export const defaultTitle = "engineer it | Your AI Engineering Assistant";
 
 export const defaultDescription =
   "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Your subscription unlocks unlimited chats, engineering tools and AI Advisors.";

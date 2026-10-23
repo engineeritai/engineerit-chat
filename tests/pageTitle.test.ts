@@ -4,8 +4,8 @@ import test from "node:test";
 import { metaFor } from "../lib/pageMeta";
 import { defaultTitle, pageMetadata } from "../lib/seo";
 
-const EN_TITLE = "engineer it | AI Engineering Assistant";
-const AR_TITLE = "engineer it | مساعد هندسي بالذكاء الاصطناعي";
+const EN_TITLE = "engineer it | Your AI Engineering Assistant";
+const AR_TITLE = "engineer it | مساعدك الهندسي بالذكاء الاصطناعي";
 const EN_DESCRIPTION =
   "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Your subscription unlocks unlimited chats, engineering tools and AI Advisors.";
 const AR_DESCRIPTION =
