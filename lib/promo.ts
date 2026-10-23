@@ -17,6 +17,7 @@ export type PromoReason =
   | "not_lapsed"
   | "wrong_user"
   | "below_minimum"
+  | "student_unverified"
   | "closed"
   | "missing";
 
@@ -39,6 +40,7 @@ export type PromoCode = {
   singleUse: boolean;
   active: boolean;
   restrictedUserId: string | null;
+  requiresStudent: boolean;
 };
 
 export type PromoFacts = {
@@ -52,6 +54,7 @@ export type PromoFacts = {
   userUses: number;
   hasOpenSubscription: boolean;
   hasPaidBefore: boolean;
+  studentVerified?: boolean;
 };
 
 export type PromoQuote = {
@@ -151,6 +154,9 @@ export function evaluatePromo(code: PromoCode | null, facts: PromoFacts): PromoD
   if (code.audience === "domain" || code.domains.length > 0) {
     if (!emailMatchesDomain(facts.email, code.domains)) return { ok: false, reason: "wrong_domain" };
   }
+  if (code.requiresStudent && !facts.studentVerified) {
+    return { ok: false, reason: "student_unverified" };
+  }
   if (code.plans.length > 0 && !code.plans.includes(facts.planId)) {
     return { ok: false, reason: "wrong_plan" };
   }
@@ -185,11 +191,21 @@ export type RenewalPromoState = {
   discountType: PromoDiscountType | null;
   percentOff: number | null;
   amountOffSar: number | null;
+  requiresStudent?: boolean;
+  studentVerified?: boolean;
 };
 
 export function priceRenewalWithPromo(listSar: number, state: RenewalPromoState) {
   const listHalalas = Math.max(0, Math.round(Number(listSar) * 100));
   const remaining = Math.max(0, Math.floor(Number(state.cyclesRemaining) || 0));
+  if (state.requiresStudent && !state.studentVerified && remaining > 0 && state.discountType) {
+    return {
+      amountSar: halalasToSar(listHalalas),
+      amountHalalas: listHalalas,
+      cyclesRemainingAfter: remaining,
+      discounted: false,
+    };
+  }
   if (remaining <= 0 || !state.discountType) {
     return {
       amountSar: halalasToSar(listHalalas),
@@ -242,6 +258,7 @@ export type PromoDraft = {
   domains?: string[];
   singleUse?: boolean;
   restrictedUserId?: string | null;
+  requiresStudent?: boolean;
   note?: string;
 };
 
@@ -338,6 +355,7 @@ export function parsePromoDraft(draft: PromoDraft, now = new Date()): { ok: true
       single_use: Boolean(draft.singleUse) || audience === "batch",
       active: true,
       restricted_user_id: draft.restrictedUserId || null,
+      requires_student: Boolean(draft.requiresStudent),
       note: (draft.note || "").trim().slice(0, 280) || null,
     },
   };
@@ -362,9 +380,16 @@ export type PromoInsert = {
   single_use: boolean;
   active: boolean;
   restricted_user_id: string | null;
+  requires_student: boolean;
   note: string | null;
   batch_id?: string | null;
 };
+
+export function promoInsertPayload(row: PromoInsert) {
+  if (row.requires_student) return row;
+  const { requires_student: _requiresStudent, ...rest } = row;
+  return rest;
+}
 
 export function buildBatchCodes(args: { count: number; prefix: string; draft: PromoDraft; now?: Date }) {
   const count = Math.floor(args.count);
@@ -392,7 +417,14 @@ export function buildBatchCodes(args: { count: number; prefix: string; draft: Pr
       args.now
     );
     if (!parsed.ok) return parsed;
-    rows.push({ ...parsed.row, batch_id: batchId, single_use: true, max_uses: 1, audience: "batch" });
+    rows.push({
+      ...parsed.row,
+      batch_id: batchId,
+      single_use: true,
+      max_uses: 1,
+      audience: "batch",
+      requires_student: Boolean(args.draft.requiresStudent),
+    });
   }
   return { ok: true as const, batchId, rows };
 }
@@ -419,6 +451,7 @@ export function mapPromoRow(row: Record<string, unknown>): PromoCode {
     singleUse: Boolean(row.single_use),
     active: row.active !== false,
     restrictedUserId: row.restricted_user_id ? String(row.restricted_user_id) : null,
+    requiresStudent: Boolean(row.requires_student),
   };
 }
 

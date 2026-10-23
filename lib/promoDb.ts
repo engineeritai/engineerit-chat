@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BillingInterval } from "@/lib/plans";
 import { mapPromoRow } from "@/lib/promo";
-import { missingPromoSchema } from "@/lib/promoSchema";
+import { mentionsColumn, missingPromoSchema } from "@/lib/promoSchema";
 import type { CheckoutPricePatch, PromoCheckoutRow, PromoDb, ReserveInput } from "@/lib/promoCheckout";
 
 function intervalOf(value: string): BillingInterval {
@@ -127,27 +127,39 @@ export function promoDb(admin: SupabaseClient): PromoDb {
       return { ok: true };
     },
     async writeCheckout(id, patch: CheckoutPricePatch) {
+      const base = {
+        amount_sar: patch.amountSar,
+        amount_halalas: patch.amountHalalas,
+        promo_code_id: patch.promoCodeId,
+        promo_code: patch.promoCode,
+        list_amount_sar: patch.listAmountSar,
+        list_amount_halalas: patch.listAmountHalalas,
+        discount_sar: patch.discountSar,
+        discount_halalas: patch.discountHalalas,
+        promo_cycles: patch.promoCycles,
+        promo_discount_type: patch.promoDiscountType,
+        promo_percent_off: patch.promoPercentOff,
+        promo_amount_off_sar: patch.promoAmountOffSar,
+      };
+      const withFlag = { ...base, promo_requires_student: Boolean(patch.promoRequiresStudent) };
+      let result = await admin.from("moyasar_invoices").update(withFlag).eq("id", id).eq("status", "pending").select("id");
+      if (result.error && mentionsColumn(result.error, "promo_requires_student") && !patch.promoRequiresStudent) {
+        result = await admin.from("moyasar_invoices").update(base).eq("id", id).eq("status", "pending").select("id");
+      }
+      if (result.error) raise(result.error);
+      return Boolean(result.data && result.data.length > 0);
+    },
+    async studentVerifiedUntil(userId) {
       const { data, error } = await admin
-        .from("moyasar_invoices")
-        .update({
-          amount_sar: patch.amountSar,
-          amount_halalas: patch.amountHalalas,
-          promo_code_id: patch.promoCodeId,
-          promo_code: patch.promoCode,
-          list_amount_sar: patch.listAmountSar,
-          list_amount_halalas: patch.listAmountHalalas,
-          discount_sar: patch.discountSar,
-          discount_halalas: patch.discountHalalas,
-          promo_cycles: patch.promoCycles,
-          promo_discount_type: patch.promoDiscountType,
-          promo_percent_off: patch.promoPercentOff,
-          promo_amount_off_sar: patch.promoAmountOffSar,
-        })
-        .eq("id", id)
-        .eq("status", "pending")
-        .select("id");
-      if (error) raise(error);
-      return Boolean(data && data.length > 0);
+        .from("student_status")
+        .select("verified_until")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) {
+        if (missingPromoSchema(error)) return null;
+        raise(error);
+      }
+      return data?.verified_until ? String(data.verified_until) : null;
     },
   };
 }
@@ -168,6 +180,7 @@ export function promoPurchaseFields(row: {
   promo_discount_type?: string | null;
   promo_percent_off?: number | null;
   promo_amount_off_sar?: number | null;
+  promo_requires_student?: boolean | null;
 }) {
   if (!row.promo_code_id) return null;
   const cycles = Math.max(0, Math.floor(Number(row.promo_cycles) || 1) - 1);
@@ -179,5 +192,6 @@ export function promoPurchaseFields(row: {
     percentOff: row.promo_percent_off === null || row.promo_percent_off === undefined ? null : Number(row.promo_percent_off),
     amountOffSar:
       row.promo_amount_off_sar === null || row.promo_amount_off_sar === undefined ? null : Number(row.promo_amount_off_sar),
+    ...("promo_requires_student" in row ? { requiresStudent: Boolean(row.promo_requires_student) } : {}),
   };
 }

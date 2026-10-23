@@ -39,6 +39,34 @@ type RedemptionRow = {
 
 const PLANS = ["engineer", "professional", "consultant", "team", "enterprise"];
 
+type StudentDoc = {
+  id: string;
+  userId: string;
+  fileName: string;
+  url: string | null;
+  createdAt: string;
+};
+
+const STUDENT_PRESET = {
+  code: "STUDENT50",
+  label: "Student 50%",
+  discountType: "percent",
+  percentOff: "50",
+  amountOffSar: "",
+  freeMonths: "1",
+  plans: ["engineer"],
+  month: true,
+  year: false,
+  cycles: "12",
+  maxUses: "",
+  onePerUser: true,
+  audience: "any",
+  domains: "",
+  expiresAt: "",
+  note: "50% off Engineer monthly after student verification.",
+  requiresStudent: true,
+};
+
 async function authHeader() {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -66,6 +94,9 @@ export default function AdminCodesPage() {
   const [codes, setCodes] = useState<CodeRow[]>([]);
   const [redemptions, setRedemptions] = useState<RedemptionRow[]>([]);
   const [batchCodes, setBatchCodes] = useState<string[]>([]);
+  const [studentDocs, setStudentDocs] = useState<StudentDoc[]>([]);
+  const [studentUnavailable, setStudentUnavailable] = useState(false);
+  const [domain, setDomain] = useState("");
   const [form, setForm] = useState({
     code: "",
     label: "",
@@ -83,16 +114,13 @@ export default function AdminCodesPage() {
     domains: "",
     expiresAt: "",
     note: "",
+    requiresStudent: false,
   });
   const [batch, setBatch] = useState({
     count: "25",
     prefix: "STU",
-    discountType: "free_months",
-    freeMonths: "1",
-    percentOff: "10",
-    plans: ["engineer"],
-    domains: ".edu.sa",
-    cycles: "1",
+    percentOff: "50",
+    cycles: "12",
   });
   const [question, setQuestion] = useState({
     questionEn: "",
@@ -111,12 +139,21 @@ export default function AdminCodesPage() {
       setError("Sign in with an admin account.");
       return;
     }
-    const [codeRes, redemptionRes] = await Promise.all([
+    const [codeRes, redemptionRes, studentRes] = await Promise.all([
       fetch("/api/admin/codes", { headers }),
       fetch("/api/admin/codes/redemptions", { headers }),
+      fetch("/api/admin/students", { headers }),
     ]);
     const codeJson = await codeRes.json().catch(() => ({}));
     const redemptionJson = await redemptionRes.json().catch(() => ({}));
+    const studentJson = await studentRes.json().catch(() => ({}));
+    if (studentJson.unavailable) {
+      setStudentUnavailable(true);
+      setStudentDocs([]);
+    } else if (studentRes.ok) {
+      setStudentUnavailable(false);
+      setStudentDocs(studentJson.documents || []);
+    }
     if (codeJson.unavailable || redemptionJson.unavailable) {
       setPendingMigration(true);
       setError("");
@@ -138,15 +175,8 @@ export default function AdminCodesPage() {
     void load();
   }, []);
 
-  function togglePlan(plan: string, target: "form" | "batch") {
-    if (target === "form") {
-      setForm((current) => ({
-        ...current,
-        plans: current.plans.includes(plan) ? current.plans.filter((item) => item !== plan) : [...current.plans, plan],
-      }));
-      return;
-    }
-    setBatch((current) => ({
+  function togglePlan(plan: string) {
+    setForm((current) => ({
       ...current,
       plans: current.plans.includes(plan) ? current.plans.filter((item) => item !== plan) : [...current.plans, plan],
     }));
@@ -199,6 +229,7 @@ export default function AdminCodesPage() {
                       cycles: Number(form.cycles),
                       maxUses: form.maxUses === "" ? null : Number(form.maxUses),
                       onePerUser: form.onePerUser,
+                      requiresStudent: form.requiresStudent,
                       audience: form.audience,
                       domains: form.domains.split(",").map((item) => item.trim()).filter(Boolean),
                       expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
@@ -267,7 +298,7 @@ export default function AdminCodesPage() {
                 <legend>Plans (empty means every paid plan)</legend>
                 {PLANS.map((plan) => (
                   <label key={plan}>
-                    <input type="checkbox" checked={form.plans.includes(plan)} onChange={() => togglePlan(plan, "form")} /> {plan}
+                    <input type="checkbox" checked={form.plans.includes(plan)} onChange={() => togglePlan(plan)} /> {plan}
                   </label>
                 ))}
               </fieldset>
@@ -276,14 +307,26 @@ export default function AdminCodesPage() {
                 <label><input type="checkbox" checked={form.month} onChange={(event) => setForm({ ...form, month: event.target.checked })} /> Monthly</label>
                 <label><input type="checkbox" checked={form.year} onChange={(event) => setForm({ ...form, year: event.target.checked })} /> Yearly</label>
                 <label><input type="checkbox" checked={form.onePerUser} onChange={(event) => setForm({ ...form, onePerUser: event.target.checked })} /> One use per user</label>
+                <label><input type="checkbox" checked={form.requiresStudent} onChange={(event) => setForm({ ...form, requiresStudent: event.target.checked })} /> Verified student required</label>
               </fieldset>
-              <button className="btn" type="submit">Create code</button>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <button
+                  className="btn btn-quiet"
+                  type="button"
+                  onClick={() => setForm(STUDENT_PRESET)}
+                >
+                  Student
+                </button>
+                <button className="btn" type="submit">Create code</button>
+              </div>
             </form>
           </section>
 
           <section className="card" style={{ marginBottom: 16 }}>
             <h2 className="section-heading" style={{ marginTop: 0 }}>Student batch</h2>
-            <p>Single-use codes. Add domains such as .edu.sa when the gift should only work on those emails.</p>
+            <p>
+              Single-use codes for the Engineer plan, monthly, at 50% for 12 cycles. Each code works only after a verified university email or an approved student letter.
+            </p>
             <form
               className="promo-admin-form"
               onSubmit={(event) => {
@@ -297,15 +340,10 @@ export default function AdminCodesPage() {
                     body: JSON.stringify({
                       count: Number(batch.count),
                       prefix: batch.prefix,
-                      label: "Student gift",
-                      discountType: batch.discountType,
-                      freeMonths: Number(batch.freeMonths),
+                      label: "Student 50%",
                       percentOff: Number(batch.percentOff),
-                      plans: batch.plans,
-                      intervals: ["month"],
                       cycles: Number(batch.cycles),
-                      domains: batch.domains.split(",").map((item) => item.trim()).filter(Boolean),
-                      audience: batch.domains.trim() ? "domain" : "batch",
+                      requiresStudent: true,
                     }),
                   });
                   const json = await res.json().catch(() => ({}));
@@ -327,28 +365,8 @@ export default function AdminCodesPage() {
             >
               <label>Count <input value={batch.count} onChange={(event) => setBatch({ ...batch, count: event.target.value })} inputMode="numeric" /></label>
               <label>Prefix <input value={batch.prefix} onChange={(event) => setBatch({ ...batch, prefix: event.target.value })} /></label>
-              <label>
-                Discount
-                <select value={batch.discountType} onChange={(event) => setBatch({ ...batch, discountType: event.target.value })}>
-                  <option value="free_months">Free months</option>
-                  <option value="percent">Percent</option>
-                </select>
-              </label>
-              {batch.discountType === "free_months" ? (
-                <label>Free months <input value={batch.freeMonths} onChange={(event) => setBatch({ ...batch, freeMonths: event.target.value })} inputMode="numeric" /></label>
-              ) : (
-                <label>Percent <input value={batch.percentOff} onChange={(event) => setBatch({ ...batch, percentOff: event.target.value })} inputMode="numeric" /></label>
-              )}
-              <label>Cycles <input value={batch.cycles} onChange={(event) => setBatch({ ...batch, cycles: event.target.value })} inputMode="numeric" /></label>
-              <label>Domains <input value={batch.domains} onChange={(event) => setBatch({ ...batch, domains: event.target.value })} placeholder=".edu.sa" /></label>
-              <fieldset>
-                <legend>Plans</legend>
-                {PLANS.map((plan) => (
-                  <label key={plan}>
-                    <input type="checkbox" checked={batch.plans.includes(plan)} onChange={() => togglePlan(plan, "batch")} /> {plan}
-                  </label>
-                ))}
-              </fieldset>
+              <label>Percent <input value={batch.percentOff} onChange={(event) => setBatch({ ...batch, percentOff: event.target.value })} inputMode="numeric" /></label>
+              <label>Monthly cycles <input value={batch.cycles} onChange={(event) => setBatch({ ...batch, cycles: event.target.value })} inputMode="numeric" /></label>
               <button className="btn" type="submit">Generate batch</button>
             </form>
             {batchCodes.length > 0 ? (
@@ -416,6 +434,122 @@ export default function AdminCodesPage() {
                 </table>
               </div>
             ) : null}
+          </section>
+
+          <section className="card" style={{ marginBottom: 16 }}>
+            <h2 className="section-heading" style={{ marginTop: 0 }}>Student letters</h2>
+            <p>Approve a student or enrolment letter to grant 12 months of student status. A university email confirms itself with a code and does not appear here.</p>
+            {studentUnavailable ? (
+              <p>Student verification is not in this database yet. Apply supabase/migrations/20261023180000_student_verification.sql, then reload.</p>
+            ) : null}
+            {studentDocs.length === 0 && !studentUnavailable ? <p>No letters waiting.</p> : null}
+            {studentDocs.length > 0 ? (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr>
+                      {["Letter", "Account", "Submitted", ""].map((header) => (
+                        <th key={header} style={{ textAlign: "start", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {studentDocs.map((doc) => (
+                      <tr key={doc.id}>
+                        <td style={{ padding: "6px 8px" }}>
+                          {doc.url ? <a href={doc.url}>{doc.fileName}</a> : doc.fileName}
+                        </td>
+                        <td style={{ padding: "6px 8px" }}>{doc.userId}</td>
+                        <td style={{ padding: "6px 8px" }}>{new Date(doc.createdAt).toLocaleString()}</td>
+                        <td style={{ padding: "6px 8px" }}>
+                          <button
+                            type="button"
+                            className="btn"
+                            onClick={() => {
+                              void (async () => {
+                                const headers = await authHeader();
+                                if (!headers) return;
+                                const res = await fetch("/api/admin/students/review", {
+                                  method: "POST",
+                                  headers,
+                                  body: JSON.stringify({ id: doc.id, decision: "approve" }),
+                                });
+                                const json = await res.json().catch(() => ({}));
+                                if (!res.ok) {
+                                  setError(json.error || "Could not approve the letter.");
+                                  return;
+                                }
+                                setNotice("Student letter approved.");
+                                await load();
+                              })();
+                            }}
+                          >
+                            Approve
+                          </button>{" "}
+                          <button
+                            type="button"
+                            className="btn btn-quiet"
+                            onClick={() => {
+                              void (async () => {
+                                const headers = await authHeader();
+                                if (!headers) return;
+                                const res = await fetch("/api/admin/students/review", {
+                                  method: "POST",
+                                  headers,
+                                  body: JSON.stringify({ id: doc.id, decision: "reject" }),
+                                });
+                                const json = await res.json().catch(() => ({}));
+                                if (!res.ok) {
+                                  setError(json.error || "Could not reject the letter.");
+                                  return;
+                                }
+                                setNotice("Student letter rejected.");
+                                await load();
+                              })();
+                            }}
+                          >
+                            Reject
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+            <form
+              className="promo-admin-form"
+              style={{ marginTop: 12 }}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void (async () => {
+                  const headers = await authHeader();
+                  if (!headers) return;
+                  const res = await fetch("/api/admin/students", {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify({ domain }),
+                  });
+                  const json = await res.json().catch(() => ({}));
+                  if (json.unavailable) {
+                    setStudentUnavailable(true);
+                    return;
+                  }
+                  if (!res.ok) {
+                    setError(json.error || "Could not add the domain.");
+                    return;
+                  }
+                  setDomain("");
+                  setNotice("University domain added.");
+                })();
+              }}
+            >
+              <label>
+                Extra university domain
+                <input value={domain} onChange={(event) => setDomain(event.target.value)} placeholder="ksu.edu.sa" />
+              </label>
+              <button className="btn" type="submit">Add domain</button>
+            </form>
           </section>
 
           <section className="card" style={{ marginBottom: 16 }}>

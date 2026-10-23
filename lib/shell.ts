@@ -387,6 +387,10 @@ export type ShellCopy = {
     freeReady: string;
     freeRedeem: string;
     question: string;
+    studentOffer: string;
+    verifyStudent: string;
+    studentUnverified: string;
+    studentExpired: string;
   };
   billing: {
     title: string;
@@ -907,6 +911,10 @@ const en: ShellCopy = {
     freeReady: "This period is free. No payment is due now.",
     freeRedeem: "Activate free access",
     question: "Question of the week",
+    studentOffer: "Students: 50% off the Engineer plan with a verified university email or a student letter",
+    verifyStudent: "Verify student status",
+    studentUnverified: "Verify student status before this discount applies",
+    studentExpired: "Student status has expired. Renewal uses the list price until you verify again.",
   },
   billing: {
     title: "Billing",
@@ -1425,6 +1433,10 @@ const ar: ShellCopy = {
     freeReady: "هذه الفترة مجانية. لا يوجد مبلغ مستحق الآن.",
     freeRedeem: "تفعيل الوصول المجاني",
     question: "سؤال الأسبوع",
+    studentOffer: "للطلاب: خصم 50% على باقة المهندس مع بريد جامعي مؤكد أو خطاب طالب",
+    verifyStudent: "تأكيد صفة الطالب",
+    studentUnverified: "أكد صفة الطالب أولا لتطبيق هذا الخصم",
+    studentExpired: "انتهت صفة الطالب. التجديد بالسعر المعلن حتى تؤكدها من جديد.",
   },
   billing: {
     title: "الفوترة",

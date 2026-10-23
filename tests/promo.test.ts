@@ -44,6 +44,7 @@ function code(partial: Partial<PromoCode> & Pick<PromoCode, "discountType">): Pr
     singleUse: partial.singleUse ?? false,
     active: partial.active ?? true,
     restrictedUserId: partial.restrictedUserId ?? null,
+    requiresStudent: partial.requiresStudent ?? false,
   };
 }
 

@@ -1,7 +1,7 @@
 type SchemaError = { code?: string; message?: string } | string | null | undefined;
 
 const PROMO_NAMES =
-  /promo_|weekly_questions|question_entries|reserve_promo_use|list_amount_sar|list_amount_halalas|discount_halalas|discount_sar/;
+  /promo_|weekly_questions|question_entries|reserve_promo_use|list_amount_sar|list_amount_halalas|discount_halalas|discount_sar|requires_student|student_otp|student_documents|student_email_domains|student_status/;
 
 export function missingPromoSchema(error: SchemaError) {
   const message = typeof error === "string" ? error : error?.message || "";
@@ -31,4 +31,9 @@ export function promoRenewalUpdate(
     };
   }
   return { promo_cycles_remaining: cyclesRemainingAfter };
+}
+
+export function mentionsColumn(error: { message?: string } | string | null | undefined, column: string) {
+  const message = typeof error === "string" ? error : error?.message || "";
+  return message.toLowerCase().includes(column.toLowerCase());
 }

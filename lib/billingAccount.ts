@@ -25,6 +25,7 @@ export async function syncBillingSubscription(
       discountType: string | null;
       percentOff: number | null;
       amountOffSar: number | null;
+      requiresStudent?: boolean;
     } | null;
   }
 ) {
@@ -74,6 +75,9 @@ export async function syncBillingSubscription(
             promo_discount_type: args.promo.discountType,
             promo_percent_off: args.promo.percentOff,
             promo_amount_off_sar: args.promo.amountOffSar,
+            ...(args.promo.requiresStudent === undefined
+              ? {}
+              : { promo_requires_student: args.promo.requiresStudent }),
           }),
   };
 

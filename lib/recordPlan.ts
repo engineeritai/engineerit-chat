@@ -26,6 +26,7 @@ type RecordArgs = {
     discountType: string | null;
     percentOff: number | null;
     amountOffSar: number | null;
+    requiresStudent?: boolean;
   } | null;
 };
 

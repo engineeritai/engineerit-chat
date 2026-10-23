@@ -5,6 +5,7 @@ import {
   type PromoDecision,
   type PromoReason,
 } from "@/lib/promo";
+import { studentDiscountAllowed } from "@/lib/studentVerify";
 import type { BillingInterval } from "@/lib/plans";
 
 export type PromoCheckoutRow = {
@@ -32,6 +33,7 @@ export type CheckoutPricePatch = {
   promoDiscountType: string | null;
   promoPercentOff: number | null;
   promoAmountOffSar: number | null;
+  promoRequiresStudent?: boolean;
 };
 
 export type ReserveInput = {
@@ -50,6 +52,7 @@ export type PromoDb = {
   releaseCheckout(checkoutId: string): Promise<void>;
   reserve(input: ReserveInput): Promise<{ ok: true } | { ok: false; reason: "already_used" | "max_uses" }>;
   writeCheckout(id: string, patch: CheckoutPricePatch): Promise<boolean>;
+  studentVerifiedUntil?(userId: string): Promise<string | null>;
 };
 
 export type ApplyInput = {
@@ -114,6 +117,7 @@ function appliedPatch(code: PromoCode, quote: Extract<PromoDecision, { ok: true 
     promoDiscountType: code.discountType,
     promoPercentOff: code.percentOff,
     promoAmountOffSar: code.amountOffSar,
+    promoRequiresStudent: code.requiresStudent,
   };
 }
 
@@ -146,26 +150,29 @@ export async function applyPromo(db: PromoDb, input: ApplyInput): Promise<ApplyR
   }
 
   const code = await db.loadCode(normalized);
-  const [uses, userUses, hasOpenSubscription, hasPaidBefore] = code
+  const now = input.now || new Date();
+  const [uses, userUses, hasOpenSubscription, hasPaidBefore, verifiedUntil] = code
     ? await Promise.all([
         db.countUses(code.id, checkout.id),
         db.countUserUses(code.id, checkout.userId, checkout.id),
         db.hasOpenSubscription(checkout.userId),
         db.hasPaidBefore(checkout.userId),
+        code.requiresStudent && db.studentVerifiedUntil ? db.studentVerifiedUntil(checkout.userId) : Promise.resolve(null),
       ])
-    : [0, 0, false, false];
+    : [0, 0, false, false, null];
 
   const decision = evaluatePromo(code, {
-    now: input.now || new Date(),
+    now,
     userId: checkout.userId,
     email: checkout.email,
     planId: checkout.plan,
     interval: checkout.interval,
     listHalalas,
-    uses,
-    userUses,
-    hasOpenSubscription,
-    hasPaidBefore,
+    uses: Number(uses),
+    userUses: Number(userUses),
+    hasOpenSubscription: Boolean(hasOpenSubscription),
+    hasPaidBefore: Boolean(hasPaidBefore),
+    studentVerified: studentDiscountAllowed(typeof verifiedUntil === "string" ? verifiedUntil : null, now),
   });
   if (!decision.ok || !code) return decision.ok ? { ok: false, reason: "invalid" } : decision;
 

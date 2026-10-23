@@ -17,6 +17,7 @@ import { periodDays } from "@/lib/plans";
 import { useMessages } from "@/lib/useMessages";
 import { trackOnce } from "@/lib/attribution";
 import CheckoutCode, { type PromoQuote } from "../../components/CheckoutCode";
+import StudentVerify from "../../components/StudentVerify";
 
 type Checkout = {
   id: string;
@@ -254,6 +255,7 @@ export default function CheckoutPage() {
                       onPriced={onPriced}
                       onRedeemed={() => window.location.assign(paymentSuccessPath(checkout.id, payToken))}
                     />
+                    <StudentVerify preview={preview} />
                     <p className="checkout-vat-note">{s.checkout.vatNote}</p>
                   </section>
                   <p className="checkout-note">{s.checkout.walletReminder}</p>

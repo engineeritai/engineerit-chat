@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/promoAccess";
 import { missingPromoSchema } from "@/lib/promoSchema";
-import { parsePromoDraft } from "@/lib/promo";
+import { parsePromoDraft, promoInsertPayload } from "@/lib/promo";
 import { getSupabaseAdmin } from "@/lib/serverSupabase";
 import type { PromoAudience, PromoDiscountType } from "@/lib/promo";
 import type { BillingInterval } from "@/lib/plans";
@@ -48,11 +48,12 @@ export async function POST(req: NextRequest) {
     audience: (body.audience as PromoAudience) || "any",
     domains: Array.isArray(body.domains) ? body.domains.map(String) : [],
     singleUse: Boolean(body.singleUse),
+    requiresStudent: Boolean(body.requiresStudent),
     note: typeof body.note === "string" ? body.note : "",
   });
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
   const admin = getSupabaseAdmin();
-  const { data, error } = await admin.from("promo_codes").insert(parsed.row).select("id, code").single();
+  const { data, error } = await admin.from("promo_codes").insert(promoInsertPayload(parsed.row)).select("id, code").single();
   if (error) {
     if (missingPromoSchema(error)) return NextResponse.json({ unavailable: true });
     return NextResponse.json({ error: error.message }, { status: 500 });

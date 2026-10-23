@@ -42,6 +42,7 @@ function reasonText(reason: string, copy: ShellCopy["checkout"]) {
   if (reason === "already_used") return copy.codeUsed;
   if (reason === "max_uses") return copy.codeLimit;
   if (reason === "below_minimum") return copy.codeTooSmall;
+  if (reason === "student_unverified") return copy.studentUnverified;
   return copy.codeInvalid;
 }
 

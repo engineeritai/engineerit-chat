@@ -13,7 +13,7 @@ import {
 import { recordPlanPurchase } from "@/lib/recordPlan";
 import { sendReceipt } from "@/lib/receipt";
 import { markPromoPaid, promoPurchaseFields } from "@/lib/promoDb";
-import { missingPromoSchema } from "@/lib/promoSchema";
+import { mentionsColumn, missingPromoSchema } from "@/lib/promoSchema";
 
 export type CheckoutRow = {
   id: string;
@@ -41,6 +41,7 @@ export type CheckoutRow = {
   promo_discount_type?: string | null;
   promo_percent_off?: number | null;
   promo_amount_off_sar?: number | null;
+  promo_requires_student?: boolean | null;
 };
 
 function addDays(from: Date, days: number) {
@@ -239,18 +240,19 @@ const CHECKOUT_COLUMNS =
   "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale";
 const CHECKOUT_PROMO_COLUMNS =
   ", promo_code_id, promo_code, promo_cycles, promo_discount_type, promo_percent_off, promo_amount_off_sar";
+const CHECKOUT_STUDENT_COLUMN = ", promo_requires_student";
 
 async function loadCheckout(admin: SupabaseClient, column: "id" | "invoice_id", value: string) {
-  const withPromo = await admin
-    .from("moyasar_invoices")
-    .select(CHECKOUT_COLUMNS + CHECKOUT_PROMO_COLUMNS)
-    .eq(column, value)
-    .maybeSingle();
-  if (!withPromo.error) return (withPromo.data as CheckoutRow | null) ?? null;
-  if (!missingPromoSchema(withPromo.error)) throw new Error(withPromo.error.message);
-  const plain = await admin.from("moyasar_invoices").select(CHECKOUT_COLUMNS).eq(column, value).maybeSingle();
-  if (plain.error) throw new Error(plain.error.message);
-  return (plain.data as CheckoutRow | null) ?? null;
+  const query = (columns: string) => admin.from("moyasar_invoices").select(columns).eq(column, value).maybeSingle();
+  let result = await query(CHECKOUT_COLUMNS + CHECKOUT_PROMO_COLUMNS + CHECKOUT_STUDENT_COLUMN);
+  if (result.error && mentionsColumn(result.error, "promo_requires_student")) {
+    result = await query(CHECKOUT_COLUMNS + CHECKOUT_PROMO_COLUMNS);
+  }
+  if (result.error && missingPromoSchema(result.error)) {
+    result = await query(CHECKOUT_COLUMNS);
+  }
+  if (result.error) throw new Error(result.error.message);
+  return (result.data as CheckoutRow | null) ?? null;
 }
 
 export async function loadCheckoutByInvoice(admin: SupabaseClient, invoiceId: string) {

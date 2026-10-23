@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabaseClient";
 import Link from "next/link";
 import { localizedPlan, planById, formatMoney } from "@/lib/labels";
 import ChangePasswordCard from "@/app/components/ChangePasswordCard";
+import StudentVerify from "@/app/components/StudentVerify";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
 import { PLANS, PLAN_THEME, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
@@ -1042,6 +1043,8 @@ export default function ProfilePage() {
               </ul>
             </div>
           )}
+
+          {tab === "overview" && <StudentVerify framed />}
 
           {tab === "overview" && <ChangePasswordCard />}
 
