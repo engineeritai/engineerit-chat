@@ -64,7 +64,7 @@ const SUBSCRIPTION_COLUMNS =
 const SUBSCRIPTION_PROMO_COLUMNS =
   ", promo_cycles_remaining, promo_code_id, promo_code, promo_discount_type, promo_percent_off, promo_amount_off_sar";
 
-async function loadDueSubscriptions(admin: SupabaseClient, now: Date) {
+async function loadDueSubscriptions(admin: SupabaseClient, now: Date): Promise<OpenSubscription[]> {
   const query = (columns: string) =>
     admin
       .from("billing_subscriptions")
@@ -73,11 +73,11 @@ async function loadDueSubscriptions(admin: SupabaseClient, now: Date) {
       .lte("current_period_end", now.toISOString())
       .limit(100);
   const withPromo = await query(SUBSCRIPTION_COLUMNS + SUBSCRIPTION_PROMO_COLUMNS);
-  if (!withPromo.error) return withPromo.data;
+  if (!withPromo.error) return (withPromo.data || []) as unknown as OpenSubscription[];
   if (!missingPromoSchema(withPromo.error)) throw new Error(withPromo.error.message);
   const plain = await query(SUBSCRIPTION_COLUMNS);
   if (plain.error) throw new Error(plain.error.message);
-  return plain.data;
+  return (plain.data || []) as unknown as OpenSubscription[];
 }
 
 export type RenewalRunResult = {
@@ -97,8 +97,7 @@ export async function runDueRenewals(
   const data = await loadDueSubscriptions(admin, now);
 
   const results: RenewalRunResult[] = [];
-  for (const row of data || []) {
-    const sub = row as OpenSubscription;
+  for (const sub of data) {
     const decision = decideRenewal({
       now,
       subscriptionId: sub.id,

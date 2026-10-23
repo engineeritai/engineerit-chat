@@ -415,7 +415,7 @@ export default function AdminCodesPage() {
                   </tbody>
                 </table>
               </div>
-            )}
+            ) : null}
           </section>
 
           <section className="card" style={{ marginBottom: 16 }}>
@@ -500,7 +500,7 @@ export default function AdminCodesPage() {
                   </tbody>
                 </table>
               </div>
-            )}
+            ) : null}
           </section>
         </div>
       </div>
