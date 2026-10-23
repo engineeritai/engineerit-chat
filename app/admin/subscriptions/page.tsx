@@ -93,6 +93,9 @@ export default function AdminSubscriptionsPage() {
         <div className="page-wrap">
           <h1 className="page-title">Billing monitor</h1>
           <p className="page-subtitle">
+            <a href="/admin/promos">Promo codes</a>
+          </p>
+          <p className="page-subtitle">
             Read-only view of subscriptions, renewal attempts, and teams. Customers buy, renew,
             cancel, and change seats themselves through Moyasar.
           </p>

@@ -23,6 +23,7 @@ import {
   type SelfServePlanId,
 } from "@/lib/plans";
 import { planById } from "@/lib/labels";
+import { cycleCharge, halalasToSar, termsFromSnapshot } from "@/lib/promoCodes";
 import { sendReceipt } from "@/lib/receipt";
 
 export type OpenSubscription = {
@@ -42,6 +43,12 @@ export type OpenSubscription = {
   credit_halalas: number;
   failure_count: number;
   locale?: string | null;
+  promo_code_id?: string | null;
+  promo_code?: string | null;
+  discount_kind?: string | null;
+  discount_percent?: number | null;
+  discount_amount_off_sar?: number | null;
+  discount_cycles_remaining?: number | null;
 };
 
 type ChargeResult = {
@@ -68,7 +75,7 @@ export async function runDueRenewals(
   const { data, error } = await admin
     .from("billing_subscriptions")
     .select(
-      "id, user_id, customer_email, plan, billing_interval, extra_seats, seat_limit, amount_halalas, status, current_period_end, cancel_at_period_end, saved_card_id, team_id, credit_halalas, failure_count, locale"
+      "id, user_id, customer_email, plan, billing_interval, extra_seats, seat_limit, amount_halalas, status, current_period_end, cancel_at_period_end, saved_card_id, team_id, credit_halalas, failure_count, locale, promo_code_id, promo_code, discount_kind, discount_percent, discount_amount_off_sar, discount_cycles_remaining"
     )
     .in("status", ["active", "past_due"])
     .lte("current_period_end", now.toISOString())
@@ -124,8 +131,20 @@ export async function applyRenewalDecision(
   const quote = await quoteRenewal(admin, sub, now);
   const priced = renewalChargeHalalas(quote.amountHalalas, sub.credit_halalas);
   if (priced.chargeHalalas === 0) {
-    await extendSubscription(admin, sub, now, priced.creditRemaining);
-    return "extended_with_credit";
+    await extendSubscription(admin, sub, now, priced.creditRemaining, quote);
+    if (quote.discounted) {
+      await recordRenewalInvoice(admin, sub, {
+        amountSar: 0,
+        amountHalalas: 0,
+        listAmountSar: halalasToSar(quote.listAmountHalalas),
+        discountSar: halalasToSar(quote.discountHalalas),
+        periodEnd: nextPeriodEnd(now, new Date(sub.current_period_end), sub.billing_interval).toISOString(),
+        paymentId: null,
+        locale: sub.locale === "ar" ? "ar" : "en",
+        now,
+      });
+    }
+    return quote.discounted ? "extended_free" : "extended_with_credit";
   }
 
   const charge = await chargeSavedCard(admin, sub, {
@@ -139,7 +158,7 @@ export async function applyRenewalDecision(
   if (charge.pending) return "pending";
 
   if (charge.paid) {
-    await extendSubscription(admin, sub, now, priced.creditRemaining);
+    await extendSubscription(admin, sub, now, priced.creditRemaining, quote);
     if (sub.customer_email) {
       const periodEnd = nextPeriodEnd(now, new Date(sub.current_period_end), sub.billing_interval);
       const amountSar = priced.chargeHalalas / 100;
@@ -147,6 +166,8 @@ export async function applyRenewalDecision(
       await recordRenewalInvoice(admin, sub, {
         amountSar,
         amountHalalas: priced.chargeHalalas,
+        listAmountSar: quote.discounted ? halalasToSar(quote.listAmountHalalas) : null,
+        discountSar: quote.discounted ? halalasToSar(quote.discountHalalas) : null,
         periodEnd: periodEnd.toISOString(),
         paymentId: charge.paymentId || null,
         locale,
@@ -358,16 +379,28 @@ async function quoteRenewal(admin: SupabaseClient, sub: OpenSubscription, now: D
       .maybeSingle();
     consultantLegacy = consultantLegacyActive(data?.consultant_legacy_price_until, now);
   }
-  return quoteSelfServe(sub.plan, sub.billing_interval, sub.extra_seats, { consultantLegacy });
+  const list = quoteSelfServe(sub.plan, sub.billing_interval, sub.extra_seats, { consultantLegacy });
+  const cycle = cycleCharge(list.amountHalalas, Number(sub.discount_cycles_remaining || 0), termsFromSnapshot(sub));
+  return {
+    ...list,
+    amountSar: halalasToSar(cycle.chargeHalalas),
+    amountHalalas: cycle.chargeHalalas,
+    listAmountHalalas: list.amountHalalas,
+    discountHalalas: cycle.discountHalalas,
+    upcomingHalalas: cycle.upcomingHalalas,
+    cyclesRemainingAfter: cycle.cyclesRemainingAfter,
+    discounted: cycle.discounted,
+  };
 }
 
 async function extendSubscription(
   admin: SupabaseClient,
   sub: OpenSubscription,
   now: Date,
-  creditRemaining: number
+  creditRemaining: number,
+  priced?: Awaited<ReturnType<typeof quoteRenewal>>
 ) {
-  const quote = await quoteRenewal(admin, sub, now);
+  const quote = priced || (await quoteRenewal(admin, sub, now));
   const periodEnd = nextPeriodEnd(now, new Date(sub.current_period_end), sub.billing_interval);
   const nowIso = now.toISOString();
   const endIso = periodEnd.toISOString();
@@ -378,8 +411,9 @@ async function extendSubscription(
       failure_count: 0,
       next_retry_at: null,
       credit_halalas: creditRemaining,
-      amount_sar: quote.amountSar,
-      amount_halalas: quote.amountHalalas,
+      amount_sar: halalasToSar(quote.upcomingHalalas),
+      amount_halalas: quote.upcomingHalalas,
+      discount_cycles_remaining: quote.cyclesRemainingAfter,
       current_period_start: nowIso,
       current_period_end: endIso,
       updated_at: nowIso,
@@ -449,6 +483,8 @@ async function recordRenewalInvoice(
   args: {
     amountSar: number;
     amountHalalas: number;
+    listAmountSar?: number | null;
+    discountSar?: number | null;
     periodEnd: string;
     paymentId: string | null;
     locale: "ar" | "en";
@@ -477,6 +513,15 @@ async function recordRenewalInvoice(
     extra_seats: sub.extra_seats,
     customer_email: sub.customer_email,
     user_id: sub.user_id,
+    list_amount_sar: args.listAmountSar ?? null,
+    discount_sar: args.discountSar ?? null,
+    discount_halalas: args.discountSar === null || args.discountSar === undefined ? null : Math.round(args.discountSar * 100),
+    promo_code_id: args.discountSar ? sub.promo_code_id || null : null,
+    promo_code: args.discountSar ? sub.promo_code || null : null,
+    promo_cycles: args.discountSar ? Number(sub.discount_cycles_remaining || 0) : null,
+    discount_kind: args.discountSar ? sub.discount_kind || null : null,
+    discount_percent: args.discountSar ? sub.discount_percent ?? null : null,
+    discount_amount_off_sar: args.discountSar ? sub.discount_amount_off_sar ?? null : null,
     status: "paid",
     paid_at: nowIso,
     activated_at: nowIso,

@@ -22,6 +22,9 @@ export type ReceiptInput = {
   paymentMethod?: string | null;
   paymentId?: string | null;
   issuedAt?: string | null;
+  promoCode?: string | null;
+  listAmountSar?: number | null;
+  discountSar?: number | null;
 };
 
 const PLAN_LABELS_AR: Record<PlanId, string> = {
@@ -56,6 +59,9 @@ export function buildReceipt(
     paymentMethod: input.paymentMethod,
     paymentId: input.paymentId,
     issuedAt: input.issuedAt,
+    promoCode: input.promoCode,
+    listAmountSar: input.listAmountSar,
+    discountSar: input.discountSar,
     vatNumber: options?.vatNumber ?? process.env.VAT_NUMBER,
     zatcaFlag: options?.zatcaFlag ?? process.env.ZATCA_INVOICES_ENABLED,
   });

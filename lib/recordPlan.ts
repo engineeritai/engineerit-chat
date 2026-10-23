@@ -19,6 +19,16 @@ type RecordArgs = {
   cancelAtPeriodEnd?: boolean;
   locale?: string | null;
   skipRecent?: boolean;
+  billingAmountSar?: number;
+  billingAmountHalalas?: number;
+  promo?: {
+    promoCodeId: string | null;
+    promoCode: string | null;
+    kind: string | null;
+    percentOff: number | null;
+    amountOffSar: number | null;
+    cyclesRemaining: number;
+  } | null;
 };
 
 function addDays(from: Date, days: number) {
@@ -99,6 +109,9 @@ export async function recordPlanPurchase(admin: SupabaseClient, args: RecordArgs
         teamId: healedTeam,
         cancelAtPeriodEnd: args.cancelAtPeriodEnd,
         locale: args.locale,
+        billingAmountSar: args.billingAmountSar,
+        billingAmountHalalas: args.billingAmountHalalas,
+        promo: args.promo,
       });
       return { ok: true as const, idempotent: true, endDate: healedEnd };
     }
@@ -173,6 +186,9 @@ export async function recordPlanPurchase(admin: SupabaseClient, args: RecordArgs
     teamId,
     cancelAtPeriodEnd: args.cancelAtPeriodEnd,
     locale: args.locale,
+    billingAmountSar: args.billingAmountSar,
+    billingAmountHalalas: args.billingAmountHalalas,
+    promo: args.promo,
   });
 
   return { ok: true as const, idempotent: false, endDate: endIso, amountSar, seatLimit };

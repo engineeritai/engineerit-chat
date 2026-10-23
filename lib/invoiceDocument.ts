@@ -57,6 +57,7 @@ const METHOD_EN: Record<string, string> = {
   samsungpay: "Samsung Pay",
   stcpay: "STC Pay",
   token: "Saved card",
+  promo: "Gift code",
 };
 
 const METHOD_AR: Record<string, string> = {
@@ -65,6 +66,7 @@ const METHOD_AR: Record<string, string> = {
   samsungpay: "Samsung Pay",
   stcpay: "STC Pay",
   token: "بطاقة محفوظة",
+  promo: "رمز هدية",
 };
 
 export function paymentMethodLabel(type: string | null | undefined, locale: InvoiceLocale) {
@@ -96,6 +98,9 @@ export type InvoiceDraft = {
   issuedAt?: string | null;
   vatNumber?: string;
   zatcaFlag?: string;
+  promoCode?: string | null;
+  listAmountSar?: number | null;
+  discountSar?: number | null;
 };
 
 export function buildInvoiceDocument(input: InvoiceDraft): InvoiceDocument {
@@ -120,6 +125,16 @@ export function buildInvoiceDocument(input: InvoiceDraft): InvoiceDocument {
   const end = formatWhen(input.periodEnd);
   if (start) rows.push({ label: ar ? "بداية الفترة" : "Period start", value: start });
   if (end) rows.push({ label: ar ? "نهاية الفترة" : "Period end", value: end });
+  if (input.promoCode) {
+    if (input.listAmountSar !== null && input.listAmountSar !== undefined) {
+      const list = ar ? formatArabicAmount(input.listAmountSar) : formatSar(input.listAmountSar);
+      rows.push({ label: ar ? "السعر الأصلي" : "List price", value: list });
+    }
+    if (input.discountSar !== null && input.discountSar !== undefined) {
+      const discount = ar ? formatArabicAmount(input.discountSar) : formatSar(input.discountSar);
+      rows.push({ label: ar ? "الخصم" : "Discount", value: `${input.promoCode} · ${discount}` });
+    }
+  }
   if (method) rows.push({ label: ar ? "طريقة الدفع" : "Payment method", value: method });
   if (input.paymentId) rows.push({ label: ar ? "رقم عملية ميسر" : "Moyasar payment ID", value: input.paymentId });
 

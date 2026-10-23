@@ -11,6 +11,8 @@ import {
 } from "@/lib/plans";
 import { signCheckoutHandoff, verifyCheckoutHandoff } from "@/lib/checkoutHandoff";
 import { moyasarKeysError, readMoyasarKeys, readSamsungPayServiceId } from "@/lib/moyasarEnv";
+import { cycleCharge, halalasToSar, termsFromSnapshot } from "@/lib/promoCodes";
+import { quoteFromInvoice } from "@/lib/promoStore";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
 
 export const runtime = "nodejs";
@@ -39,7 +41,9 @@ export async function GET(req: NextRequest) {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
     .from("moyasar_invoices")
-    .select("id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, user_id, status")
+    .select(
+      "id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, user_id, status, purpose, list_amount_sar, list_amount_halalas, discount_sar, discount_halalas, promo_code, promo_cycles"
+    )
     .eq("id", id)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -64,11 +68,11 @@ export async function GET(req: NextRequest) {
       id: data.id,
       plan: data.plan,
       billing_interval: data.billing_interval,
-      amount_sar: data.amount_sar,
-      amount_halalas: data.amount_halalas,
+      ...quoteFromInvoice(data),
       seat_limit: data.seat_limit,
       extra_seats: data.extra_seats,
       status: data.status,
+      purpose: data.purpose,
     },
     publishableKey: keys.publishable,
     callbackUrl: callback.toString(),
@@ -108,7 +112,9 @@ export async function POST(req: NextRequest) {
     if (renewNow) {
       const { data: sub, error: subErr } = await admin
         .from("billing_subscriptions")
-        .select("plan, billing_interval, extra_seats, status")
+        .select(
+          "plan, billing_interval, extra_seats, status, discount_cycles_remaining, discount_kind, discount_percent, discount_amount_off_sar, promo_code_id, promo_code"
+        )
         .eq("user_id", user.id)
         .in("status", ["active", "past_due"])
         .maybeSingle();
@@ -126,7 +132,17 @@ export async function POST(req: NextRequest) {
           .maybeSingle();
         consultantLegacy = consultantLegacyActive(profile?.consultant_legacy_price_until);
       }
-      const quote = quoteSelfServe(sub.plan, interval, normalizeExtraSeats(sub.extra_seats), { consultantLegacy });
+      const listQuote = quoteSelfServe(sub.plan, interval, normalizeExtraSeats(sub.extra_seats), { consultantLegacy });
+      const cycle = cycleCharge(
+        listQuote.amountHalalas,
+        Number(sub.discount_cycles_remaining || 0),
+        termsFromSnapshot(sub)
+      );
+      const quote = {
+        ...listQuote,
+        amountSar: halalasToSar(cycle.chargeHalalas),
+        amountHalalas: cycle.chargeHalalas,
+      };
       const checkoutId = crypto.randomUUID();
       const baseUrl = getAppBaseUrl(req);
       const pageUrl = `${baseUrl}/checkout/${checkoutId}`;
@@ -137,6 +153,16 @@ export async function POST(req: NextRequest) {
         billing_interval: quote.interval,
         amount_sar: quote.amountSar,
         amount_halalas: quote.amountHalalas,
+        list_amount_sar: listQuote.amountSar,
+        list_amount_halalas: listQuote.amountHalalas,
+        discount_sar: halalasToSar(cycle.discountHalalas),
+        discount_halalas: cycle.discountHalalas,
+        promo_code_id: cycle.discounted ? sub.promo_code_id || null : null,
+        promo_code: cycle.discounted ? sub.promo_code || null : null,
+        promo_cycles: cycle.discounted ? Number(sub.discount_cycles_remaining || 0) : null,
+        discount_kind: cycle.discounted ? sub.discount_kind || null : null,
+        discount_percent: cycle.discounted ? sub.discount_percent ?? null : null,
+        discount_amount_off_sar: cycle.discounted ? sub.discount_amount_off_sar ?? null : null,
         currency: "SAR",
         seat_limit: quote.seatLimit,
         extra_seats: quote.extraSeats,
@@ -188,6 +214,10 @@ export async function POST(req: NextRequest) {
       billing_interval: quote.interval,
       amount_sar: quote.amountSar,
       amount_halalas: quote.amountHalalas,
+      list_amount_sar: quote.amountSar,
+      list_amount_halalas: quote.amountHalalas,
+      discount_sar: 0,
+      discount_halalas: 0,
       currency: "SAR",
       seat_limit: quote.seatLimit,
       extra_seats: quote.extraSeats,

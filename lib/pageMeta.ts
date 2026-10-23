@@ -9,6 +9,11 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       description:
         "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Your subscription unlocks unlimited chats, engineering tools and AI Advisors.",
     },
+    "/question": {
+      title: "Question of the week | engineerit.ai",
+      description:
+        "Answer the engineerit.ai question of the week. A correct answer, or taking part when the week allows, can earn a limited 10% discount code.",
+    },
     "/faq": {
       title: "Questions | engineerit.ai",
       description:
@@ -107,6 +112,11 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       title: "engineerit.ai | مساعد هندسي بالذكاء الاصطناعي لمكاتب الخليج",
       description:
         "engineerit.ai يهندس أي فكرة أو موضوع بمنهج منظم. أرفق ملفاتك، واختر أداة، واحصل على إجابات منظمة. اشتراكك يفتح المحادثات غير المحدودة والأدوات الهندسية ومستشاري الذكاء الاصطناعي.",
+    },
+    "/question": {
+      title: "سؤال الأسبوع | engineerit.ai",
+      description:
+        "أجب عن سؤال الأسبوع في engineerit.ai. الإجابة الصحيحة، أو المشاركة عندما يسمح الأسبوع، تمنحك رمز خصم محدود.",
     },
     "/faq": {
       title: "الأسئلة الشائعة | engineerit.ai",

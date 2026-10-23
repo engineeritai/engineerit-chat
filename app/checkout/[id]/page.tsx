@@ -16,6 +16,7 @@ import { addDays, formatBillingDate } from "@/lib/billingCycle";
 import { periodDays } from "@/lib/plans";
 import { useMessages } from "@/lib/useMessages";
 import { trackOnce } from "@/lib/attribution";
+import PromoCodeBox, { type PromoQuoteState } from "../../components/PromoCodeBox";
 
 type Checkout = {
   id: string;
@@ -25,6 +26,13 @@ type Checkout = {
   amount_halalas: number;
   seat_limit: number | null;
   status?: string;
+  list_amount_sar?: number | null;
+  list_amount_halalas?: number | null;
+  discount_sar?: number | null;
+  discount_halalas?: number | null;
+  promo_code?: string | null;
+  promo_cycles?: number | null;
+  purpose?: string | null;
 };
 
 const NETWORKS = ["mada", "Visa", "Mastercard", "Amex", "UnionPay"];
@@ -32,7 +40,7 @@ const NOTICE_KEY = "engineerit_checkout_notice";
 
 export default function CheckoutPage() {
   const params = useParams<{ id: string }>();
-  const { locale, shell: s } = useMessages();
+  const { locale, dir, shell: s } = useMessages();
   const [sidebar, setSidebar] = useState(false);
   const [consent, setConsent] = useState(saveCardStartsChecked);
   const [saveRejected, setSaveRejected] = useState(false);
@@ -221,6 +229,24 @@ export default function CheckoutPage() {
                         </dd>
                       </div>
                     </dl>
+                    <PromoCodeBox
+                      checkoutId={checkout.id}
+                      preview={preview}
+                      locale={locale}
+                      dir={dir}
+                      payToken={payToken}
+                      listSar={Number(checkout.list_amount_sar ?? checkout.amount_sar)}
+                      discountSar={Number(checkout.discount_sar || 0)}
+                      payableSar={Number(checkout.amount_sar)}
+                      payableHalalas={Number(checkout.amount_halalas)}
+                      code={checkout.promo_code || ""}
+                      cycles={Number(checkout.promo_cycles || 0)}
+                      locked={checkout.purpose === "renew_now" && Boolean(checkout.promo_code)}
+                      onPriced={(next: PromoQuoteState) => {
+                        setCheckout((current) => (current ? { ...current, ...next } : current));
+                        setAttempt((n) => n + 1);
+                      }}
+                    />
                     <p className="checkout-vat-note">{s.checkout.vatNote}</p>
                   </section>
                   <p className="checkout-note">{s.checkout.walletReminder}</p>
@@ -263,7 +289,7 @@ export default function CheckoutPage() {
                       <a href="mailto:support@engineerit.ai">support@engineerit.ai</a>
                     </li>
                   </ul>
-                  {preview ? (
+                  {Number(checkout.amount_halalas) === 0 && checkout.promo_code ? null : preview ? (
                     <div className="checkout-preview" data-testid="checkout-preview">
                       <p>{s.checkout.summary}</p>
                     </div>

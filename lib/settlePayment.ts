@@ -12,6 +12,8 @@ import {
 } from "@/lib/moyasar";
 import { recordPlanPurchase } from "@/lib/recordPlan";
 import { sendReceipt } from "@/lib/receipt";
+import { canActivateFree } from "@/lib/promoCodes";
+import { billingPromoFromInvoice } from "@/lib/promoStore";
 
 export type CheckoutRow = {
   id: string;
@@ -33,6 +35,16 @@ export type CheckoutRow = {
   payment_id?: string | null;
   purpose?: string | null;
   locale?: string | null;
+  list_amount_sar?: number | null;
+  list_amount_halalas?: number | null;
+  discount_sar?: number | null;
+  discount_halalas?: number | null;
+  promo_code_id?: string | null;
+  promo_code?: string | null;
+  promo_cycles?: number | null;
+  discount_kind?: string | null;
+  discount_percent?: number | null;
+  discount_amount_off_sar?: number | null;
 };
 
 function addDays(from: Date, days: number) {
@@ -49,7 +61,21 @@ export async function settleCheckout(
   if (!assessment.ok) {
     return { ok: false as const, reason: assessment.reason };
   }
+  return completeSettlement(admin, row, payment);
+}
 
+export async function settleFreeCheckout(admin: SupabaseClient, row: CheckoutRow) {
+  if (!canActivateFree(Number(row.amount_halalas), row.promo_code_id)) {
+    return { ok: false as const, reason: "not_free" as const };
+  }
+  return completeSettlement(admin, row, null);
+}
+
+async function completeSettlement(
+  admin: SupabaseClient,
+  row: CheckoutRow,
+  payment?: RemotePayment | null
+) {
   const interval: BillingInterval = row.billing_interval === "year" ? "year" : "month";
   let periodEnd = row.period_end;
 
@@ -68,6 +94,10 @@ export async function settleCheckout(
       try {
         periodEnd = await activateCheckout(admin, row, interval);
         await admin.from("moyasar_invoices").update({ period_end: periodEnd }).eq("id", row.id);
+        if (row.promo_code_id) {
+          const { error: redeemErr } = await admin.rpc("redeem_promo_invoice", { p_invoice_id: row.id });
+          if (redeemErr) throw new Error(redeemErr.message);
+        }
         if (payment && row.user_id) {
           const { data: billing } = await admin
             .from("billing_subscriptions")
@@ -132,9 +162,12 @@ export async function settleCheckout(
           invoiceNumber: row.invoice_id || row.id,
           customerName: row.company,
           customerEmail: row.customer_email,
-          paymentMethod: payment?.source?.type || null,
+          paymentMethod: payment?.source?.type || (Number(row.amount_halalas) === 0 ? "promo" : null),
           paymentId: payment?.id || row.payment_id || null,
           issuedAt: new Date().toISOString(),
+          promoCode: row.promo_code || null,
+          listAmountSar: row.list_amount_sar === null || row.list_amount_sar === undefined ? null : Number(row.list_amount_sar),
+          discountSar: row.discount_sar === null || row.discount_sar === undefined ? null : Number(row.discount_sar),
         });
         if (!sent) {
           await admin
@@ -160,7 +193,7 @@ async function activateCheckout(
   const now = new Date();
   let periodEnd = addDays(now, periodDays(interval));
   let periodStart = now.toISOString();
-  let cancelAtPeriodEnd = false;
+  let cancelAtPeriodEnd = Number(row.amount_halalas) === 0 && row.purpose !== "renew_now";
   if (row.purpose === "renew_now" && row.user_id) {
     const { data: billing } = await admin
       .from("billing_subscriptions")
@@ -188,6 +221,7 @@ async function activateCheckout(
   }
 
   if (row.user_id) {
+    const priced = billingPromoFromInvoice(row);
     const result = await recordPlanPurchase(admin, {
       userId: row.user_id,
       email,
@@ -203,6 +237,9 @@ async function activateCheckout(
       skipRecent: row.purpose === "renew_now",
       company: row.company,
       source: "moyasar",
+      billingAmountSar: priced.billingAmountSar,
+      billingAmountHalalas: priced.billingAmountHalalas,
+      promo: priced.promo,
     });
     return result.endDate;
   }
@@ -229,7 +266,7 @@ export async function loadCheckoutByInvoice(admin: SupabaseClient, invoiceId: st
   const { data, error } = await admin
     .from("moyasar_invoices")
     .select(
-      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale"
+      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale, list_amount_sar, list_amount_halalas, discount_sar, discount_halalas, promo_code_id, promo_code, promo_cycles, discount_kind, discount_percent, discount_amount_off_sar"
     )
     .eq("invoice_id", invoiceId)
     .maybeSingle();
@@ -241,7 +278,7 @@ export async function loadCheckoutById(admin: SupabaseClient, id: string) {
   const { data, error } = await admin
     .from("moyasar_invoices")
     .select(
-      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale"
+      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale, list_amount_sar, list_amount_halalas, discount_sar, discount_halalas, promo_code_id, promo_code, promo_cycles, discount_kind, discount_percent, discount_amount_off_sar"
     )
     .eq("id", id)
     .maybeSingle();
