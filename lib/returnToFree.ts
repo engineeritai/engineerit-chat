@@ -149,7 +149,7 @@ function personalEnded(
   if (billing.status === "expired" || billing.status === "canceled") {
     return { ended: true, reason: "closed", notice: stillPaid || recent };
   }
-  const graceEnd = addDays(end, GRACE_DAYS).getTime();
+  const graceEnd = addDays(new Date(endMs), GRACE_DAYS).getTime();
   if (now.getTime() >= graceEnd || Number(billing.failure_count || 0) >= 3) {
     return { ended: true, reason: "grace_elapsed", notice: stillPaid || recent };
   }
