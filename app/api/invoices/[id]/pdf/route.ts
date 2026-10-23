@@ -24,7 +24,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   const { data, error } = await admin
     .from("moyasar_invoices")
     .select(
-      "id, invoice_id, payment_id, user_id, plan, billing_interval, amount_sar, seat_limit, paid_at, period_end, status, customer_email, company"
+      "id, invoice_id, payment_id, user_id, plan, billing_interval, amount_sar, seat_limit, paid_at, period_end, status, customer_email, company, promo_code, list_amount_sar, discount_sar"
     )
     .eq("id", id)
     .maybeSingle();
@@ -70,6 +70,9 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
     paymentMethod,
     paymentId,
     issuedAt: data.paid_at,
+    promoCode: data.promo_code || null,
+    listAmountSar: data.list_amount_sar === null || data.list_amount_sar === undefined ? null : Number(data.list_amount_sar),
+    discountSar: data.discount_sar === null || data.discount_sar === undefined ? null : Number(data.discount_sar),
   });
   const pdf = await renderInvoicePdf(document);
   const filename = locale === "ar" ? "engineerit-invoice-ar.pdf" : "engineerit-invoice.pdf";

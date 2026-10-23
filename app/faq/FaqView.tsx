@@ -2,6 +2,7 @@
 
 import { useLocale } from "@/app/components/LocaleProvider";
 import { getMarketingContent } from "@/lib/marketing";
+import { promoCopy } from "@/lib/promoCopy";
 
 export default function FaqView() {
   const { locale } = useLocale();
@@ -19,6 +20,9 @@ export default function FaqView() {
           </details>
         ))}
       </div>
+      <p className="mkt-intro">
+        <a href="/question">{promoCopy[locale].question.title}</a>
+      </p>
     </section>
   );
 }
