@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx --test tests/billing.test.ts tests/homeRedirect.test.ts tests/adminStats.test.ts tests/richReport.test.ts tests/exportName.test.ts tests/pwa.test.ts tests/password.test.ts tests/invoiceTable.test.ts tests/operationsCardCopy.test.ts tests/scurveFallback.test.ts tests/messageTime.test.ts tests/diagramReply.test.ts tests/touchAudit.test.ts tests/mailGuard.test.ts tests/lifecycleMail.test.ts lib/chatExport.test.ts lib/arabicShape.test.ts lib/arabicVisual.test.ts lib/shareStore.test.ts",
+    "test": "tsx --test tests/billing.test.ts tests/homeRedirect.test.ts tests/adminStats.test.ts tests/richReport.test.ts tests/exportName.test.ts tests/pwa.test.ts tests/password.test.ts tests/invoiceTable.test.ts tests/operationsCardCopy.test.ts tests/scurveFallback.test.ts tests/messageTime.test.ts tests/diagramReply.test.ts tests/touchAudit.test.ts tests/mailGuard.test.ts tests/lifecycleMail.test.ts tests/paymentJourney.test.ts tests/signupFlow.test.ts tests/returnToFree.test.ts lib/chatExport.test.ts lib/arabicShape.test.ts lib/arabicVisual.test.ts lib/shareStore.test.ts",
     "test:smoke": "playwright test",
     "test:visual": "playwright test -c playwright.visual.config.ts",
     "test:sidebar": "playwright test -c playwright.sidebar.config.ts tests/e2e/sidebar-nav.spec.ts"

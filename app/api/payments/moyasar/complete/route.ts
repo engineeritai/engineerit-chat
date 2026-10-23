@@ -19,10 +19,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Checkout not found." }, { status: 404 });
     }
 
-    if (paymentId) {
-      await admin.from("moyasar_invoices").update({ payment_id: paymentId }).eq("id", row.id);
-    }
-    const result = await confirmCheckout(admin, { ...row, payment_id: paymentId || row.payment_id }, paymentId || row.payment_id);
+    const result = await confirmCheckout(
+      admin,
+      { ...row, payment_id: paymentId || row.payment_id },
+      paymentId || row.payment_id
+    );
     if (!result.ok) {
       return NextResponse.json(
         { error: "Moyasar has not confirmed this payment yet.", reason: result.reason },

@@ -8,6 +8,7 @@ import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { LocaleProvider } from "@/app/components/LocaleProvider";
 import Attribution from "@/app/components/Attribution";
+import SignupConfirmForward from "@/app/components/SignupConfirmForward";
 import KeyboardInset from "@/app/components/KeyboardInset";
 import ToastHost from "@/app/components/ToastHost";
 import TouchGuard from "@/app/components/TouchGuard";
@@ -127,6 +128,7 @@ export default async function RootLayout({
         <ToastHost />
         <TouchGuard />
         <PwaRegister />
+        <SignupConfirmForward />
         <Attribution />
         <Analytics />
       </body>

@@ -65,23 +65,33 @@ export async function syncBillingSubscription(
   return data.id as string;
 }
 
+/** Token, brand, and last four only. The PAN and CVC are never fields on this row. */
+export function savedCardRecord(
+  userId: string,
+  payment: RemotePayment,
+  nowIso = new Date().toISOString()
+) {
+  const token = payment.source?.token;
+  if (!token || !token.startsWith("token_")) return null;
+  return {
+    user_id: userId,
+    moyasar_token: token,
+    brand: payment.source?.company || null,
+    last_four: lastFour(payment.source?.number),
+    holder_name: payment.source?.name || null,
+    status: payment.status === "paid" ? "active" : "initiated",
+    consent_at: nowIso,
+    updated_at: nowIso,
+  };
+}
+
 export async function saveCardFromPayment(
   admin: SupabaseClient,
   args: { userId: string; payment: RemotePayment; billingSubscriptionId?: string | null }
 ) {
-  const token = args.payment.source?.token;
-  if (!token || !token.startsWith("token_")) return null;
   const nowIso = new Date().toISOString();
-  const row = {
-    user_id: args.userId,
-    moyasar_token: token,
-    brand: args.payment.source?.company || null,
-    last_four: lastFour(args.payment.source?.number),
-    holder_name: args.payment.source?.name || null,
-    status: args.payment.status === "paid" ? "active" : "initiated",
-    consent_at: nowIso,
-    updated_at: nowIso,
-  };
+  const row = savedCardRecord(args.userId, args.payment, nowIso);
+  if (!row) return null;
 
   const { data, error } = await admin
     .from("saved_cards")

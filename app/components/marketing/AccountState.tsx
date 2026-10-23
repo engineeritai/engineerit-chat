@@ -115,7 +115,7 @@ export function AccountState({ children }: { children: ReactNode }) {
         if (profile.avatar_url) avatar = profile.avatar_url;
       }
 
-      const plan = await resolveEffectivePlan(supabase, user.id);
+      let plan = await resolveEffectivePlan(supabase, user.id);
       let start: string | null = null;
       let end: string | null = null;
       const { data: sessionData } = await supabase.auth.getSession();
@@ -125,6 +125,7 @@ export function AccountState({ children }: { children: ReactNode }) {
           headers: { Authorization: `Bearer ${token}` },
         }).catch(() => null);
         const billingJson = billingRes ? await billingRes.json().catch(() => ({})) : {};
+        if (billingRes?.ok && isPlanId(billingJson.plan)) plan = billingJson.plan;
         const sub = billingJson?.subscription;
         if (billingRes?.ok && sub) {
           start = typeof sub.current_period_start === "string" ? sub.current_period_start : null;

@@ -20,6 +20,7 @@ import {
   type AdvisorId,
 } from "@/lib/advisors";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
+import type { PlanId } from "@/lib/plans";
 import { advisorsAreLive, advisorsNowLive } from "@/lib/advisorLaunch";
 import { getAccessToken } from "@/lib/accessToken";
 import { getPlaybook, groupedPlaybooks, playbooksFor, playbookTemplate } from "@/lib/playbooks";
@@ -102,6 +103,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
   const [openShareFor, setOpenShareFor] = useState<string | null>(null);
   const [showGate, setShowGate] = useState(false);
   const [gateNotice, setGateNotice] = useState<string | null>(null);
+  const [gatePlan, setGatePlan] = useState<PlanId | null>(null);
   const [activePlaybook, setActivePlaybook] = useState(playbooks[0]?.id ?? "");
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
 
@@ -110,7 +112,8 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
   const selected = getPlaybook(advisor.id, activePlaybook) ?? playbooks[0];
   const template = selected ? playbookTemplate(selected, locale) : "";
 
-  function openGate(notice?: string) {
+  function openGate(notice?: string, plan?: PlanId) {
+    setGatePlan(plan || null);
     setGateNotice(notice || m.advisors.includedOn[advisorId]);
     setShowGate(true);
   }
@@ -123,7 +126,8 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     const max = isGuest ? 1 : tier === "assistant" ? 3 : Number.POSITIVE_INFINITY;
     if (Number.isFinite(max) && cur >= max) {
       openGate(
-        isGuest ? s.chat.dailyGuest : s.chat.dailyPaid
+        isGuest ? s.chat.dailyGuest : `${s.chat.dailyPaid} ${s.chat.upgradeBody}`,
+        isGuest ? undefined : "engineer"
       );
       return { ok: false as const, key, cur };
     }
@@ -800,7 +804,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         isGuest={isGuest}
         m={m}
         notice={gateNotice}
-        planId={unlockPlanForAdvisor(advisorId)}
+        planId={gatePlan || unlockPlanForAdvisor(advisorId)}
         onClose={() => setShowGate(false)}
       />
     </div>

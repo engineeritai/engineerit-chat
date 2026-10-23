@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { returnUserToAssistant } from "@/lib/returnToFree";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   normalizeSubscriptionTier,
@@ -28,6 +29,10 @@ export function historyCode(status: number, code: string) {
 }
 
 export async function loadHistoryAccount(userId: string): Promise<HistoryAccount> {
+  await returnUserToAssistant(supabaseAdmin, userId).catch((err) => {
+    console.error("return to assistant", err);
+  });
+
   const teamIds = new Set<string>();
   let rawTier = "assistant";
 
