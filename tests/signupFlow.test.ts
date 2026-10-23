@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { afterEach, describe, it } from "node:test";
+import { authCallbackKind, shouldForwardSignupConfirm } from "../lib/authCallback";
 import { handleAuthEmail } from "../lib/authEmail";
 import { resetAuthRateLimits } from "../lib/authRateLimit";
 import { newProfileRow } from "../lib/ensureProfile";
+import { RESET_REDIRECT } from "../lib/password";
 import { parsePendingCheckout, pendingFromMetadata } from "../lib/pendingCheckout";
 import {
   classifySignupError,
-  confirmRedirectUrl,
   isDuplicateSignup,
   registrationMessage,
-  resetRedirectUrl,
   signInProblem,
   validateRegistration,
 } from "../lib/registerAccount";
@@ -77,25 +77,28 @@ describe("duplicate email and confirmation links", () => {
     assert.doesNotMatch(registrationMessage("ar", "duplicate"), /Sign in/);
   });
 
-  it("sends confirmation to /auth/confirmed and reset to /reset-password on the public site", () => {
-    assert.equal(confirmRedirectUrl({}), "https://engineerit.ai/auth/confirmed");
-    assert.equal(resetRedirectUrl({}), "https://engineerit.ai/reset-password");
-    assert.equal(
-      confirmRedirectUrl({ NEXT_PUBLIC_APP_URL: "https://engineerit.ai" }),
-      "https://engineerit.ai/auth/confirmed"
-    );
-    assert.equal(
-      confirmRedirectUrl({ NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000" }),
-      "http://127.0.0.1:3000/auth/confirmed"
-    );
-    assert.equal(
-      resetRedirectUrl({ NEXT_PUBLIC_APP_URL: "http://localhost:3000" }),
-      "http://localhost:3000/reset-password"
-    );
+  it("uses the confirmation and reset redirects already on main", () => {
+    assert.equal(RESET_REDIRECT, "https://engineerit.ai/reset-password");
     const auth = readFileSync("lib/authEmail.ts", "utf8");
-    assert.match(auth, /emailRedirectTo: confirmRedirectUrl\(\)/);
-    assert.match(auth, /redirectTo: resetRedirectUrl\(\)/);
-    assert.doesNotMatch(auth, /redirectTo:\s*["']https:\/\/example/);
+    const main = readFileSync("lib/password.ts", "utf8");
+    assert.match(main, /RESET_REDIRECT = "https:\/\/engineerit\.ai\/reset-password"/);
+    assert.match(auth, /RESET_REDIRECT/);
+    assert.doesNotMatch(auth, /emailRedirectTo/);
+    assert.doesNotMatch(auth, /auth\/confirmed/);
+    assert.equal(authCallbackKind("", "#access_token=a&refresh_token=b&type=signup"), "signup");
+    assert.equal(authCallbackKind("?type=recovery", ""), "recovery");
+    assert.equal(authCallbackKind("?code=abc", ""), "none");
+    assert.equal(shouldForwardSignupConfirm("/", "?code=abc", ""), true);
+    assert.equal(shouldForwardSignupConfirm("/reset-password", "?code=abc", ""), false);
+    assert.equal(shouldForwardSignupConfirm("/reset-password", "", "#type=signup"), true);
+    assert.equal(shouldForwardSignupConfirm("/reset-password", "?type=recovery", ""), false);
+    assert.equal(shouldForwardSignupConfirm("/auth/confirmed", "#type=signup", ""), false);
+    const forward = readFileSync("app/components/SignupConfirmForward.tsx", "utf8");
+    assert.match(forward, /\/auth\/confirmed/);
+    assert.match(forward, /\/api\/profile\/ensure/);
+    const reset = readFileSync("app/reset-password/page.tsx", "utf8");
+    assert.match(reset, /authCallbackKind/);
+    assert.match(reset, /=== "signup"/);
   });
 
   it("keeps the chosen plan on the account and gives register a sign-in path", () => {
@@ -136,7 +139,11 @@ describe("profile row on first login", () => {
     assert.match(sql, /profiles_update_own/);
     assert.match(sql, /handle_new_user/);
     assert.match(sql, /on conflict \(id\) do nothing/);
+    assert.match(sql, /NOT REQUIRED/);
     assert.match(sql, /status in \('pending', 'paid', 'cancelled'\)/);
+    const ensure = readFileSync("app/api/profile/ensure/route.ts", "utf8");
+    assert.match(ensure, /newProfileRow/);
+    assert.doesNotMatch(ensure, /handle_new_user/);
     const profile = readFileSync("app/profile/page.tsx", "utf8");
     const upsert = profile.slice(profile.indexOf(".upsert("), profile.indexOf("onConflict"));
     assert.doesNotMatch(upsert, /subscription_tier/);
@@ -191,8 +198,8 @@ describe("confirmation and reset email", () => {
     process.env.NODE_ENV = "production";
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://auth.example.test";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
-    delete process.env.NEXT_PUBLIC_APP_URL;
-    delete process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NEXT_PUBLIC_APP_URL = "http://127.0.0.1:3000";
+    process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
     delete process.env.TURNSTILE_SECRET_KEY;
 
     const calls: { url: string; body: Record<string, unknown> | null }[] = [];
@@ -233,7 +240,8 @@ describe("confirmation and reset email", () => {
 
     const signupCall = calls.find((call) => call.url.includes("/signup"));
     const resetCall = calls.find((call) => call.url.includes("/recover"));
-    assert.equal(new URL(signupCall?.url || "https://invalid").searchParams.get("redirect_to"), "https://engineerit.ai/auth/confirmed");
+    assert.equal(new URL(signupCall?.url || "https://invalid").searchParams.get("redirect_to"), null);
+    assert.equal(JSON.stringify(signupCall?.body || {}).includes("auth/confirmed"), false);
     assert.equal(new URL(resetCall?.url || "https://invalid").searchParams.get("redirect_to"), "https://engineerit.ai/reset-password");
     const pending = (signupCall?.body?.data as { pending_checkout?: { planId?: string } } | undefined)?.pending_checkout;
     assert.equal(pending?.planId, "engineer");

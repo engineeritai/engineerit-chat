@@ -73,16 +73,3 @@ export function registrationMessage(locale: Locale, code: RegistrationCode) {
   return messages[code];
 }
 
-export function confirmRedirectUrl(env: Record<string, string | undefined> = process.env) {
-  return authRedirectUrl("/auth/confirmed", env);
-}
-
-export function resetRedirectUrl(env: Record<string, string | undefined> = process.env) {
-  return authRedirectUrl("/reset-password", env);
-}
-
-function authRedirectUrl(path: "/auth/confirmed" | "/reset-password", env: Record<string, string | undefined>) {
-  const app = (env.NEXT_PUBLIC_APP_URL || env.NEXT_PUBLIC_SITE_URL || "").trim().replace(/\/$/, "");
-  if (/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(app)) return `${app}${path}`;
-  return `https://engineerit.ai${path}`;
-}

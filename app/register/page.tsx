@@ -82,9 +82,7 @@ export default function RegisterPage() {
 
       trackProduct("register_completed");
 
-      // ✅ IMPORTANT:
-      // We DO NOT insert into profiles here anymore.
-      // Profiles row is created by DB trigger (handle_new_user) to avoid RLS/session issues.
+      // The profile row is created on the first signed-in request by POST /api/profile/ensure.
 
       setFullName("");
       setEmail("");

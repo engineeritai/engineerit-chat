@@ -162,7 +162,6 @@ export async function returnUserToAssistant(
   now = new Date()
 ): Promise<AccessDecision> {
   const profile = await admin.from("profiles").select("subscription_tier").eq("id", userId).maybeSingle();
-  const stored = profile.error ? "assistant" : String(profile.data?.subscription_tier || "assistant");
 
   const billingResult = await admin
     .from("billing_subscriptions")
@@ -208,6 +207,9 @@ export async function returnUserToAssistant(
     teams = (teamRows.data || []) as TeamAccessRow[];
   }
 
+  const stored = profile.error
+    ? String(billing?.plan || "assistant")
+    : String(profile.data?.subscription_tier || "assistant");
   const decision = decideReturnToAssistant({ now, storedTier: stored, billing, teams });
   if (!decision.write) return decision;
 
@@ -257,15 +259,21 @@ export async function returnUserToAssistant(
   return decision;
 }
 
-/** Rewrite this user's chat expiry to the free Assistant window. Idempotent. */
+/** Rewrite this user's chat expiry to the free Assistant window. Idempotent. A missing column is ignored. */
 export async function applyAssistantRetention(admin: SupabaseClient, userId: string) {
-  const listed = await admin.from("conversations").select("id, created_at").eq("user_id", userId).limit(200);
-  const rows = (listed.data || []) as { id?: string; created_at?: string }[];
-  for (const row of rows) {
-    if (!row.id || !row.created_at) continue;
-    const expiresAt = expiresAtFromCreated(row.created_at, "assistant");
-    if (!expiresAt) continue;
-    await admin.from("conversations").update({ expires_at: expiresAt }).eq("id", row.id).eq("user_id", userId);
+  try {
+    const listed = await admin.from("conversations").select("id, created_at").eq("user_id", userId).limit(200);
+    if (listed.error) return;
+    const rows = (listed.data || []) as { id?: string; created_at?: string }[];
+    for (const row of rows) {
+      if (!row.id || !row.created_at) continue;
+      const expiresAt = expiresAtFromCreated(row.created_at, "assistant");
+      if (!expiresAt) continue;
+      const updated = await admin.from("conversations").update({ expires_at: expiresAt }).eq("id", row.id).eq("user_id", userId);
+      if (updated.error) return;
+    }
+  } catch {
+    return;
   }
 }
 

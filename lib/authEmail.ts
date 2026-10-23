@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { checkAuthRate, consumeAuthDaily } from "@/lib/authRateLimit";
 import { isProductionMailRuntime, mailDecision } from "@/lib/mailPolicy";
-import { classifySignupError, confirmRedirectUrl, isDuplicateSignup, resetRedirectUrl } from "@/lib/registerAccount";
+import { RESET_REDIRECT } from "@/lib/password";
+import { classifySignupError, isDuplicateSignup } from "@/lib/registerAccount";
 import { isSelfServePlan, normalizeExtraSeats, parseInterval } from "@/lib/plans";
 import { getSupabaseAdmin } from "@/lib/serverSupabase";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -41,14 +42,14 @@ export async function createAuthLinkWithoutEmail(args: {
         ? await admin.auth.admin.generateLink({
             type: "recovery",
             email: args.email,
-            options: { redirectTo: resetRedirectUrl(env) },
+            options: { redirectTo: RESET_REDIRECT },
           })
         : await admin.auth.admin.generateLink({
             type: "signup",
             email: args.email,
             password: args.password || "sink-only-not-sent",
             options: {
-              redirectTo: confirmRedirectUrl(env),
+              redirectTo: RESET_REDIRECT,
               data: args.fullName ? { full_name: args.fullName } : undefined,
             },
           });
@@ -125,7 +126,6 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
       email,
       password,
       options: {
-        emailRedirectTo: confirmRedirectUrl(),
         captchaToken,
         data: {
           ...(fullName ? { full_name: fullName } : {}),
@@ -146,12 +146,12 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
     const { error } = await client.auth.resend({
       type: "signup",
       email,
-      options: { captchaToken, emailRedirectTo: confirmRedirectUrl() },
+      options: { captchaToken },
     });
     if (error) return Response.json({ error: error.message }, { status: 400 });
     return Response.json({ ok: true, sent: true });
   }
-  const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: resetRedirectUrl(), captchaToken });
+  const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: RESET_REDIRECT, captchaToken });
   if (error) {
     const later = /rate|too many|over_email_send_rate/i.test(error.message);
     if (later) return Response.json({ error: "Please wait a moment and try again." }, { status: 429 });

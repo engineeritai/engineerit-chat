@@ -9,6 +9,17 @@ import { confirmCheckout, type CheckoutRow } from "@/lib/settlePayment";
 /** Pending checkouts older than this are cancelled only after Moyasar is asked. */
 export const STALE_PENDING_MS = 3 * 24 * 60 * 60 * 1000;
 
+/** null until a write shows whether production allows status cancelled. */
+let cancelledWritable: boolean | null = null;
+
+export function resetCancelledStatusSupport() {
+  cancelledWritable = null;
+}
+
+export function cancelledStatusRejected(message: string) {
+  return /check constraint|status_check|violates check|invalid input value for enum/i.test(message);
+}
+
 export type PaymentLookup = "unavailable" | "paid" | "open" | "unpaid";
 
 export function staleCheckoutAction(ageMs: number, lookup: PaymentLookup): "keep" | "settle" | "cancel" {
@@ -115,12 +126,17 @@ export async function expireStaleCheckouts(admin: SupabaseClient, now = new Date
       continue;
     }
     if (action === "cancel") {
+      if (cancelledWritable === false) {
+        results.push({ id: row.id, action: "keep" });
+        continue;
+      }
       const { error: cancelError } = await admin
         .from("moyasar_invoices")
         .update({ status: "cancelled" })
         .eq("id", row.id)
         .eq("status", "pending")
         .is("activated_at", null);
+      if (cancelError && cancelledStatusRejected(cancelError.message || "")) cancelledWritable = false;
       results.push({ id: row.id, action: cancelError ? "keep" : "cancel" });
       continue;
     }

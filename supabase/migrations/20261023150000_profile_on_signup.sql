@@ -1,4 +1,7 @@
--- Profile row for every new account, and owner-only access for the signed-in user.
+-- NOT REQUIRED for the running app. Do not apply this week.
+-- Profile rows are created by POST /api/profile/ensure with the service role.
+-- Until this file is applied, moyasar_invoices.status stays pending or paid.
+-- The stale-checkout job leaves a row pending when 'cancelled' is rejected.
 -- Safe to run more than once. Does not replace an existing on_auth_user_created trigger.
 
 create table if not exists public.profiles (

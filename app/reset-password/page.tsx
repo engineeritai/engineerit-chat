@@ -7,6 +7,7 @@ import MarketingShell from "@/app/components/marketing/MarketingShell";
 import PasswordField from "@/app/components/PasswordField";
 import { changePassword } from "@/lib/authEmailClient";
 import { supabase } from "@/lib/supabaseClient";
+import { authCallbackKind } from "@/lib/authCallback";
 import { passwordProblem, passwordStrength } from "@/lib/password";
 import { useMessages } from "@/lib/useMessages";
 import type { EmailOtpType } from "@supabase/supabase-js";
@@ -35,6 +36,8 @@ export default function ResetPasswordPage() {
     strength === "short" ? s.password.strengthShort : strength === "strong" ? s.password.strengthStrong : strength === "ok" ? s.password.strengthOk : "";
 
   useEffect(() => {
+    if (authCallbackKind(window.location.search, window.location.hash) === "signup") return;
+
     let cancel = false;
     const { data: auth } = supabase.auth.onAuthStateChange((event) => {
       if (cancel) return;

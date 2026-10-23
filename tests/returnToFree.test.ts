@@ -197,6 +197,41 @@ describe("return to the free Assistant plan", () => {
     assert.equal(state.conversations[0].expires_at, addDays(now, 20).toISOString());
   });
 
+  it("still returns to Assistant when the profile read or the expiry column fails", async () => {
+    const userId = "user-1";
+    const state: Record<string, Record<string, unknown>[]> = {
+      profiles: [{ id: userId, subscription_tier: "engineer" }],
+      billing_subscriptions: [
+        {
+          id: "bill-1",
+          user_id: userId,
+          plan: "engineer",
+          billing_interval: "month",
+          status: "expired",
+          current_period_end: addDays(now, -2).toISOString(),
+          cancel_at_period_end: false,
+          failure_count: 0,
+        },
+      ],
+      subscriptions: [],
+      team_members: [],
+      teams: [],
+      conversations: [{ id: "chat-1", user_id: userId, created_at: addDays(now, -10).toISOString() }],
+    };
+    const decision = await returnUserToAssistant(
+      memoryAdmin(state, {
+        profileError: "could not read profiles",
+        conversationError: "column expires_at of relation conversations does not exist",
+      }) as never,
+      userId,
+      now
+    );
+    assert.equal(decision.plan, "assistant");
+    assert.equal(decision.ended, true);
+    assert.equal(state.profiles[0].subscription_tier, "assistant");
+    assert.equal(state.conversations[0].expires_at, undefined);
+  });
+
   it("shows an English and Arabic renew notice and enforces the plan on the server", () => {
     assert.match(shellCopy.en.billing.endedBody, /free Assistant plan/);
     assert.match(shellCopy.en.billing.endedBody, /chat history/);
@@ -217,7 +252,10 @@ describe("return to the free Assistant plan", () => {
   });
 });
 
-function memoryAdmin(state: Record<string, Record<string, unknown>[]>) {
+function memoryAdmin(
+  state: Record<string, Record<string, unknown>[]>,
+  options?: { profileError?: string; conversationError?: string }
+) {
   return {
     from(table: string) {
       const filters: { op: "eq" | "in"; column: string; value: unknown }[] = [];
@@ -231,8 +269,14 @@ function memoryAdmin(state: Record<string, Record<string, unknown>[]>) {
           })
         );
         if (payload) {
+          if (table === "conversations" && options?.conversationError) {
+            return { data: null, error: { message: options.conversationError } };
+          }
           for (const row of matched) Object.assign(row, payload);
           return { data: matched, error: null };
+        }
+        if (table === "profiles" && options?.profileError) {
+          return { data: single ? null : [], error: { message: options.profileError } };
         }
         return { data: single ? matched[0] || null : matched, error: null };
       };

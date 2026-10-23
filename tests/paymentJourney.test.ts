@@ -7,7 +7,14 @@ import { assessTokenCharge, createMoyasarTokenPayment, MoyasarRequestError } fro
 import { isMoyasarSaveNotice, replaceMoyasarSaveNotice } from "../lib/moyasarNotice";
 import { PLAN_AMOUNTS_SAR } from "../lib/plans";
 import { settleCheckout, type CheckoutRow } from "../lib/settlePayment";
-import { classifyCheckoutPayments, expireStaleCheckouts, STALE_PENDING_MS, staleCheckoutAction } from "../lib/staleCheckouts";
+import {
+  cancelledStatusRejected,
+  classifyCheckoutPayments,
+  expireStaleCheckouts,
+  resetCancelledStatusSupport,
+  STALE_PENDING_MS,
+  staleCheckoutAction,
+} from "../lib/staleCheckouts";
 import { shellCopy } from "../lib/shell";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -26,7 +33,7 @@ function matches(row: Row, filters: Filter[]) {
   });
 }
 
-function fakeAdmin() {
+function fakeAdmin(options?: { rejectCancelled?: boolean }) {
   const tables: Record<string, Row[]> = {
     moyasar_invoices: [],
     subscriptions: [],
@@ -105,6 +112,13 @@ function fakeAdmin() {
       if (!table) return { data: null, error: { message: `missing table ${this.table}` } };
       if (this.op === "select") return { data: this.rows(), error: null };
       if (this.op === "update") {
+        const payload = this.payload as Row;
+        if (options?.rejectCancelled && payload?.status === "cancelled") {
+          return {
+            data: null,
+            error: { message: 'new row for relation "moyasar_invoices" violates check constraint "moyasar_invoices_status_check"' },
+          };
+        }
         const hit = this.rows();
         for (const row of hit) Object.assign(row, this.payload);
         return { data: this.selected ? hit : null, error: null };
@@ -303,6 +317,7 @@ describe("stale pending checkouts", () => {
   });
 
   it("cancels an unpaid checkout only after Moyasar lists no paid payment", async () => {
+    resetCancelledStatusSupport();
     const { client, tables } = fakeAdmin();
     const row = checkout();
     tables.moyasar_invoices.push({ ...row, created_at: new Date(Date.now() - STALE_PENDING_MS - 1000).toISOString() });
@@ -328,6 +343,27 @@ describe("stale pending checkouts", () => {
     const results = await expireStaleCheckouts(client, new Date());
     assert.equal(results[0]?.action, "keep");
     assert.equal(tables.moyasar_invoices[0]?.status, "pending");
+  });
+
+  it("leaves the checkout pending when the database still only allows pending or paid", async () => {
+    resetCancelledStatusSupport();
+    assert.equal(
+      cancelledStatusRejected('new row violates check constraint "moyasar_invoices_status_check"'),
+      true
+    );
+    const { client, tables } = fakeAdmin({ rejectCancelled: true });
+    const row = checkout();
+    tables.moyasar_invoices.push({ ...row, created_at: new Date(Date.now() - STALE_PENDING_MS - 1000).toISOString() });
+    process.env.MOYASAR_SECRET_KEY = "sk_test_example";
+    global.fetch = (async () =>
+      new Response(JSON.stringify({ payments: [] }), { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch;
+    const results = await expireStaleCheckouts(client, new Date());
+    assert.equal(results[0]?.action, "keep");
+    assert.equal(tables.moyasar_invoices[0]?.status, "pending");
+    const again = await expireStaleCheckouts(client, new Date());
+    assert.equal(again[0]?.action, "keep");
+    assert.equal(tables.moyasar_invoices[0]?.status, "pending");
+    resetCancelledStatusSupport();
   });
 });
 
