@@ -9,15 +9,23 @@ export type RemoteInvoice = {
   metadata?: Record<string, string>;
 };
 
+export function currencyIsSar(currency: string | null | undefined) {
+  return (currency || "").trim().toUpperCase() === "SAR";
+}
+
+/** A plan turns on only for a paid SAR payment of the stored amount. */
 export function assessPaidInvoice(
   storedHalalas: number,
-  remote: { status?: string | null; amount?: number | null }
+  remote: { status?: string | null; amount?: number | null; currency?: string | null }
 ) {
   if (remote.status !== "paid") {
     return { ok: false as const, reason: "not_paid" as const };
   }
   if (remote.amount !== storedHalalas) {
     return { ok: false as const, reason: "amount_mismatch" as const };
+  }
+  if (!currencyIsSar(remote.currency)) {
+    return { ok: false as const, reason: "currency_mismatch" as const };
   }
   return { ok: true as const };
 }
@@ -152,7 +160,9 @@ export function lastFour(masked: string | null | undefined) {
 export function extractPaymentId(body: unknown): string | null {
   if (!body || typeof body !== "object") return null;
   const record = body as {
+    id?: unknown;
     type?: unknown;
+    source?: unknown;
     data?: { id?: unknown; invoice_id?: unknown };
   };
   if (
@@ -164,7 +174,19 @@ export function extractPaymentId(body: unknown): string | null {
   ) {
     return record.data.id;
   }
+  // Dashboard webhooks sometimes post the payment resource itself. Its id is not an invoice id.
+  if (typeof record.id === "string" && record.source && typeof record.source === "object") {
+    return record.id;
+  }
   return null;
+}
+
+/** Checkout id wins over a payment id that also looks like an invoice id. */
+export function webhookCheckoutLookup(body: unknown) {
+  const checkoutId = extractCheckoutId(body);
+  const paymentId = extractPaymentId(body);
+  const invoiceId = paymentId ? null : extractInvoiceId(body);
+  return { checkoutId, invoiceId, paymentId };
 }
 
 export async function fetchMoyasarPayment(secretKey: string, paymentId: string) {
@@ -219,6 +241,22 @@ export async function createMoyasarTokenPayment(
     throw new Error(payment?.message || payment?.source?.message || "Moyasar could not charge the saved card.");
   }
   return payment;
+}
+
+/** Payments created by our form carry metadata.checkout_id. */
+export async function findMoyasarPaymentsForCheckout(secretKey: string, checkoutId: string) {
+  const url = `https://api.moyasar.com/v1/payments?metadata[checkout_id]=${encodeURIComponent(checkoutId)}`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: authHeader(secretKey),
+      Accept: "application/json",
+    },
+  });
+  const body = (await response.json().catch(() => null)) as { payments?: RemotePayment[] } | null;
+  if (!response.ok || !body) {
+    throw new Error("Could not list Moyasar payments for this checkout.");
+  }
+  return Array.isArray(body.payments) ? body.payments : [];
 }
 
 export async function fetchMoyasarInvoice(secretKey: string, invoiceId: string) {

@@ -5,8 +5,10 @@ import { saveCardFromPayment } from "@/lib/billingAccount";
 import { shouldStorePaymentToken } from "@/lib/moyasarEnv";
 import {
   assessPaidInvoice,
+  currencyIsSar,
   fetchMoyasarInvoice,
   fetchMoyasarPayment,
+  findMoyasarPaymentsForCheckout,
   type RemoteInvoice,
   type RemotePayment,
 } from "@/lib/moyasar";
@@ -249,6 +251,62 @@ export async function loadCheckoutById(admin: SupabaseClient, id: string) {
   return (data as CheckoutRow | null) ?? null;
 }
 
+export function paymentBelongsToCheckout(
+  payment: RemotePayment,
+  row: Pick<CheckoutRow, "id" | "amount_halalas">
+) {
+  return (
+    payment.metadata?.checkout_id === row.id &&
+    payment.amount === Number(row.amount_halalas) &&
+    currencyIsSar(payment.currency)
+  );
+}
+
+async function rememberPaymentId(admin: SupabaseClient, row: CheckoutRow, paymentId: string, force = false) {
+  if (!paymentId || row.payment_id === paymentId) return;
+  if (row.payment_id && !force) return;
+  const { error } = await admin.from("moyasar_invoices").update({ payment_id: paymentId }).eq("id", row.id);
+  if (error) throw new Error(error.message);
+  row.payment_id = paymentId;
+}
+
+async function applyVerifiedPayment(admin: SupabaseClient, row: CheckoutRow, payment: RemotePayment) {
+  if (payment.metadata?.checkout_id !== row.id) {
+    return { ok: false as const, reason: "checkout_mismatch" as const };
+  }
+  if (payment.amount !== Number(row.amount_halalas)) {
+    return { ok: false as const, reason: "amount_mismatch" as const };
+  }
+  if (!currencyIsSar(payment.currency)) {
+    return { ok: false as const, reason: "currency_mismatch" as const };
+  }
+  if (payment.id && (!row.payment_id || payment.status === "paid")) {
+    await rememberPaymentId(admin, row, payment.id, payment.status === "paid");
+  }
+  if (payment.status !== "paid") {
+    return { ok: false as const, reason: "not_paid" as const };
+  }
+  return settleCheckout(
+    admin,
+    row,
+    { id: payment.id, status: payment.status, amount: payment.amount, currency: payment.currency },
+    payment
+  );
+}
+
+async function settlePaidSibling(admin: SupabaseClient, row: CheckoutRow, secret: string, skipId?: string) {
+  const listed = await findMoyasarPaymentsForCheckout(secret, row.id);
+  const paid = listed.find(
+    (payment) => payment.status === "paid" && payment.id !== skipId && paymentBelongsToCheckout(payment, row)
+  );
+  if (!paid) return null;
+  return applyVerifiedPayment(admin, row, paid);
+}
+
+/**
+ * Verify a Moyasar payment by id with the secret key, then activate once.
+ * A closed tab still settles when the webhook or a later lookup finds the paid payment.
+ */
 export async function confirmCheckout(
   admin: SupabaseClient,
   row: CheckoutRow,
@@ -256,25 +314,23 @@ export async function confirmCheckout(
 ) {
   const secret = process.env.MOYASAR_SECRET_KEY;
   if (!secret) throw new Error("MOYASAR_SECRET_KEY is not set in environment.");
-  const id = paymentId || row.payment_id;
+  const explicit = (paymentId || "").trim();
+  const id = explicit || row.payment_id || "";
   if (id) {
     const payment = await fetchMoyasarPayment(secret, id);
-    if (payment.metadata?.checkout_id && payment.metadata.checkout_id !== row.id) {
-      return { ok: false as const, reason: "checkout_mismatch" as const };
-    }
-    if (payment.metadata?.checkout_id !== row.id) {
-      return { ok: false as const, reason: "checkout_mismatch" as const };
-    }
-    return settleCheckout(
-      admin,
-      row,
-      { id: payment.id, status: payment.status, amount: payment.amount, currency: payment.currency },
-      payment
-    );
+    const applied = await applyVerifiedPayment(admin, row, payment);
+    if (applied.ok) return applied;
+    const sibling = await settlePaidSibling(admin, row, secret, payment.id);
+    if (sibling) return sibling;
+    return applied;
   }
-  if (!row.invoice_id) throw new Error("This checkout has no Moyasar payment yet.");
-  const remote = await fetchMoyasarInvoice(secret, row.invoice_id);
-  return settleCheckout(admin, row, remote);
+  const sibling = await settlePaidSibling(admin, row, secret);
+  if (sibling) return sibling;
+  if (row.invoice_id) {
+    const remote = await fetchMoyasarInvoice(secret, row.invoice_id);
+    return settleCheckout(admin, row, remote);
+  }
+  return { ok: false as const, reason: "not_paid" as const };
 }
 
 export async function confirmStoredInvoice(admin: SupabaseClient, row: CheckoutRow) {

@@ -330,6 +330,10 @@ body {
   max-width: 560px;
 }
 
+.checkout-main {
+  min-width: 0;
+}
+
 .checkout-summary {
   border: 1px solid #e5e7eb;
   border-radius: 16px;
@@ -376,10 +380,10 @@ body {
 
 .checkout-vat-note {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 13px;
+  line-height: 1.45;
   font-weight: 400;
-  color: #9ca3af;
+  color: #4b5563;
 }
 
 .checkout-networks {
@@ -548,9 +552,12 @@ body {
   padding: 8px;
 }
 
-.mysr-form {
+.mysr-form,
+.mysr-form .mysr-form-moyasarFormWrapper,
+.mysr-form form {
   width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
 }
 
 .pay-success {
@@ -1624,6 +1631,62 @@ body {
   background: #111827;
   color: #fff;
   border-color: #111827;
+}
+
+.gate-offer {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.gate-offer-name {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.gate-offer-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.gate-offer .gate-text {
+  margin: 0;
+}
+
+.gate-offer .gate-btn {
+  width: 100%;
+  min-height: 44px;
+}
+
+@media (max-width: 420px) {
+  .checkout-summary div,
+  .pay-success-card dl div {
+    align-items: flex-start;
+  }
+
+  .checkout-summary dd,
+  .checkout-help,
+  .checkout-vat-note,
+  .checkout-trust,
+  .checkout-note {
+    overflow-wrap: anywhere;
+  }
+
+  .gate-actions {
+    flex-direction: column;
+  }
+
+  .gate-btn {
+    width: 100%;
+    min-height: 44px;
+  }
 }
 /* ============================
    FINAL FIX – HEADER & SIDEBAR FREEZE

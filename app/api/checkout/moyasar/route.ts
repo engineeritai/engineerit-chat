@@ -10,6 +10,7 @@ import {
   type SelfServePlanId,
 } from "@/lib/plans";
 import { signCheckoutHandoff, verifyCheckoutHandoff } from "@/lib/checkoutHandoff";
+import { receiptVatMode } from "@/lib/billingCycle";
 import { moyasarKeysError, readMoyasarKeys, readSamsungPayServiceId } from "@/lib/moyasarEnv";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
 
@@ -76,6 +77,7 @@ export async function GET(req: NextRequest) {
     samsungPayServiceId: readSamsungPayServiceId(),
     phonePayUrl: phonePay ? phonePay.toString() : "",
     phonePayExpiresAt: signed?.expiresAt || "",
+    vatIncluded: receiptVatMode(process.env.VAT_NUMBER, process.env.ZATCA_INVOICES_ENABLED).kind === "vat",
   });
 }
 

@@ -272,7 +272,7 @@ async function chargeSavedCard(
       return finishAttempt(
         admin,
         attempt.id,
-        chargeOutcome(existingPayment.status, existingPayment.amount, args.amountHalalas),
+        chargeOutcome(existingPayment.status, existingPayment.amount, existingPayment.currency, args.amountHalalas),
         existingPayment.id || attempt.moyasar_payment_id,
         existingPayment.source?.message || existingPayment.message || null
       );
@@ -304,7 +304,7 @@ async function chargeSavedCard(
     return finishAttempt(
       admin,
       attempt.id,
-      chargeOutcome(payment.status, payment.amount, args.amountHalalas),
+      chargeOutcome(payment.status, payment.amount, payment.currency, args.amountHalalas),
       payment.id || null,
       payment.source?.message || payment.message || null
     );
@@ -314,13 +314,16 @@ async function chargeSavedCard(
   }
 }
 
-function chargeOutcome(
+/** A paid charge in the wrong amount or currency is held, not applied and not charged again. */
+export function chargeOutcome(
   status: string | undefined,
   amount: number | undefined,
+  currency: string | undefined,
   expected: number
 ): "paid" | "pending" | "failed" {
-  if (status === "paid" && amount === expected) return "paid";
-  if (status === "initiated" || status === "authorized") return "pending";
+  const sar = (currency || "").trim().toUpperCase() === "SAR";
+  if (status === "paid" && amount === expected && sar) return "paid";
+  if (status === "paid" || status === "initiated" || status === "authorized") return "pending";
   return "failed";
 }
 

@@ -6,9 +6,14 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json().catch(() => null)) as { checkoutId?: string; paymentId?: string } | null;
+    const body = (await req.json().catch(() => null)) as {
+      checkoutId?: string;
+      paymentId?: string;
+      stage?: string;
+    } | null;
     const checkoutId = (body?.checkoutId || "").trim();
     const paymentId = (body?.paymentId || "").trim();
+    const created = body?.stage === "created";
     if (!/^[0-9a-f-]{36}$/i.test(checkoutId)) {
       return NextResponse.json({ error: "Missing checkout." }, { status: 400 });
     }
@@ -19,11 +24,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Checkout not found." }, { status: 404 });
     }
 
-    if (paymentId) {
-      await admin.from("moyasar_invoices").update({ payment_id: paymentId }).eq("id", row.id);
-    }
-    const result = await confirmCheckout(admin, { ...row, payment_id: paymentId || row.payment_id }, paymentId || row.payment_id);
+    const result = await confirmCheckout(admin, row, paymentId || row.payment_id);
     if (!result.ok) {
+      if (created && result.reason === "not_paid") {
+        return NextResponse.json({ ok: true, pending: true });
+      }
       return NextResponse.json(
         { error: "Moyasar has not confirmed this payment yet.", reason: result.reason },
         { status: 409 }

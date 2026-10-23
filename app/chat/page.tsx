@@ -33,7 +33,11 @@ import Sidebar from "../components/Sidebar";
 import { DISCIPLINES } from "@/lib/disciplines";
 import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
-import { disciplineLabel, toolLabel } from "@/lib/labels";
+import { disciplineLabel, planById, toolLabel } from "@/lib/labels";
+import { PLAN_AMOUNTS_SAR } from "@/lib/plans";
+import { freeLimitUpgradeMessage } from "@/lib/upgradePrompt";
+import BuyPlanButton from "../components/BuyPlanButton";
+import { SarText } from "../components/RiyalAmount";
 import { postDocument, postImage, readApiError } from "@/lib/postAttachment";
 import { MAX_UPLOAD_BYTES, UploadError, fileTooLargeMessage } from "@/lib/uploadLimits";
 import { canShareChatWithTeam } from "@/lib/historyRetention";
@@ -413,6 +417,14 @@ export default function Page() {
   const messages: Message[] = fixture ?? thread?.messages ?? [];
 
   useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    if (new URLSearchParams(window.location.search).get("upgrade") !== "1") return;
+    setGateMode("upgrade");
+    setLimitNotice(freeLimitUpgradeMessage(locale));
+    setShowGate(true);
+  }, [locale]);
+
+  useEffect(() => {
     const kind = new URLSearchParams(window.location.search).get("fixture");
     const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "actions-en", "actions-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar"]);
     if (!kind || !kinds.has(kind)) return;
@@ -697,10 +709,7 @@ export default function Page() {
 
     const max = isGuest ? 1 : planId === "assistant" ? 3 : Number.POSITIVE_INFINITY;
     if (Number.isFinite(max) && cur >= max) {
-      const msg =
-        isGuest
-          ? s.chat.dailyGuest
-          : s.chat.dailyPaid;
+      const msg = isGuest ? s.chat.dailyGuest : freeLimitUpgradeMessage(locale);
       if (isGuest) openRegisterGate(msg);
       else if (planId === "assistant") openUpgradeGate(msg);
       return { ok: false as const, key, cur };
@@ -797,12 +806,11 @@ export default function Page() {
 
         if (res.status === 429) {
           const data = await res.json().catch(() => null);
-          const msg =
-            data?.error || (isGuest ? s.chat.dailyGuest : s.chat.dailyPaid);
+          const msg = isGuest ? data?.error || s.chat.dailyGuest : freeLimitUpgradeMessage(locale);
           if (isGuest) openRegisterGate(msg);
           else if (planId === "assistant") openUpgradeGate(msg);
 
-          await pushAssistant(isGuest ? s.chat.dailyGuestReply : s.chat.dailyPaidReply);
+          await pushAssistant(isGuest ? s.chat.dailyGuestReply : freeLimitUpgradeMessage(locale));
           return;
         }
 
@@ -1577,11 +1585,22 @@ export default function Page() {
                 </div>
               ) : (
                 <div className="gate-body">
-                  <div className="gate-text">{s.chat.upgradeBody}</div>
+                  <div className="gate-offer">
+                    <div className="gate-offer-name">{planById(locale, "engineer").name}</div>
+                    <div className="gate-offer-price">
+                      <SarText>{String(PLAN_AMOUNTS_SAR.engineer.month)}</SarText>
+                      <span>{s.chat.perMonth}</span>
+                    </div>
+                    <p className="gate-text">{s.chat.upgradeBody}</p>
+                    <BuyPlanButton
+                      planId="engineer"
+                      interval="month"
+                      className="gate-btn gate-btn-primary"
+                      verb="upgrade"
+                      label={s.chat.upgradeOffer}
+                    />
+                  </div>
                   <div className="gate-actions">
-                    <a className="gate-btn gate-btn-primary" href="/pricing">
-                      {s.chat.upgrade}
-                    </a>
                     <button
                       className="gate-btn"
                       type="button"

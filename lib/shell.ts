@@ -104,6 +104,7 @@ export type ShellCopy = {
     upgradeTitle: string;
     registerBody: string;
     upgradeBody: string;
+    upgradeOffer: string;
     close: string;
     upgrade: string;
     copy: string;
@@ -210,6 +211,7 @@ export type ShellCopy = {
     passwordMin: string;
     createdConfirm: string;
     createdRedirect: string;
+    haveAccount: string;
     upgradeAnytime: string;
     policyName: string;
   };
@@ -360,10 +362,15 @@ export type ShellCopy = {
     phonePayInvalid: string;
     retry: string;
     paymentFailed: string;
+    paymentCancelled: string;
+    paymentMismatch: string;
     copyLink: string;
     copied: string;
     networks: string;
     vatNote: string;
+    vatExempt: string;
+    vatIncluded: string;
+    cancelHow: string;
   };
   billing: {
     title: string;
@@ -567,9 +574,10 @@ const en: ShellCopy = {
     documentFailed:
       "Document processing failed. Please try again, or convert the file to PDF or text and upload it again.",
     registerTitle: "Register or log in",
-    upgradeTitle: "Upgrade required",
+    upgradeTitle: "Continue on Engineer",
     registerBody: "Please register or log in to continue.",
-    upgradeBody: "Upgrade to continue without limits.",
+    upgradeBody: "No daily reply cap, plus Word, Excel, and PowerPoint file analysis.",
+    upgradeOffer: "Subscribe",
     close: "Close",
     upgrade: "Upgrade",
     copy: "Copy",
@@ -655,7 +663,7 @@ const en: ShellCopy = {
     createOne: "Create an account",
     unable: "Unable to sign in. Please try again.",
     genericError: "Something went wrong. Please try again.",
-    loggedIn: "Logged in. Redirecting to your profile...",
+    loggedIn: "Logged in. Redirecting...",
     registerTitle: "Register on engineerit.ai",
     registerLeadBefore:
       "Create your account and start with the free Assistant Engineer plan, then subscribe to one of the paid plans for unlimited chats and chat export, according to each plan's features (",
@@ -674,7 +682,7 @@ const en: ShellCopy = {
     creating: "Creating account...",
     create: "Create account",
     emailConfirmTitle: "Email confirmation required",
-    emailConfirmHint: "After confirmation, come back and sign in from the top bar.",
+    emailConfirmHint: "Confirm the email, then sign in on this page. The plan you chose stays selected and opens in checkout.",
     afterRegister:
       "After registration, your account starts on the free Assistant Engineer plan. Engineer, Professional Engineer, Consultant Engineer, Team, and Enterprise are bought through Moyasar, monthly or annual. Annual billing saves you 2 months free. Each payment covers the period you choose.",
     viewPlans: "View plans and subscribe",
@@ -686,8 +694,9 @@ const en: ShellCopy = {
     passwordMismatch: "Password and confirmation password do not match.",
     passwordMin: "Password must be at least 8 characters.",
     createdConfirm:
-      "Account created. We sent a confirmation email. Check your inbox and junk folder, confirm the address, then sign in from the top bar.",
-    createdRedirect: "Account created. Redirecting to your profile...",
+      "Account created. We sent a confirmation email. Check your inbox and junk folder, confirm the address, then sign in on this page.",
+    createdRedirect: "Account created. Redirecting...",
+    haveAccount: "Already have an account?",
     upgradeAnytime: "You can change your plan at any time from your profile or the pricing page.",
     policyName: "User policy and agreement",
   },
@@ -820,9 +829,9 @@ const en: ShellCopy = {
     savedCard: "We'll renew with this card. You can cancel anytime from your profile.",
     consent: "Save this card for automatic renewal",
     optional: "Optional",
-    renewManually: "You can renew manually anytime from your profile.",
+    renewManually: "This payment does not renew automatically. It covers one period, and you can subscribe again from Pricing.",
     securePay: "Secure payment by Moyasar",
-    cancelAnytime: "Cancel anytime",
+    cancelAnytime: "Cancel auto-renew in Billing before the renewal date",
     cardNotStored: "Your card details are never stored on our servers",
     openFailed: "Could not open checkout.",
     missingKey: "The card form is not configured yet.",
@@ -840,11 +849,16 @@ const en: ShellCopy = {
     phonePayExpired: "This phone link has expired. Open checkout on your computer and scan a new code.",
     phonePayInvalid: "This phone link is not valid. Open checkout on your computer and scan a new code.",
     retry: "Try again",
-    paymentFailed: "The payment did not go through. Check the details and try again.",
+    paymentFailed: "The payment did not go through. No plan was turned on. Check the details and try again.",
+    paymentCancelled: "The payment was cancelled. No plan was turned on. You can try again.",
+    paymentMismatch: "We could not match this payment's amount or currency. No plan was turned on. Email support@engineerit.ai before trying again.",
     copyLink: "Copy phone link",
     copied: "Link copied",
     networks: "Cards",
-    vatNote: "VAT as applicable",
+    vatNote: "The price shown is the total due today. VAT is not added.",
+    vatExempt: "The price shown is the total due today. VAT is not added.",
+    vatIncluded: "This price includes 15% VAT.",
+    cancelHow: "Cancel in Billing before this date and the saved card is not charged again. Access stays on until then.",
   },
   billing: {
     title: "Billing",
@@ -1049,9 +1063,10 @@ const ar: ShellCopy = {
     imageFailed: "تعذر تحليل الصورة. حاول مرة أخرى أو استخدم صورة أصغر.",
     documentFailed: "تعذرت معالجة المستند. حاول مرة أخرى، أو احفظه كملف بي دي إف أو نص ثم أعد رفعه.",
     registerTitle: "التسجيل أو الدخول",
-    upgradeTitle: "الترقية مطلوبة",
+    upgradeTitle: "تابع على باقة المهندس",
     registerBody: "سجل أو ادخل للمتابعة.",
-    upgradeBody: "ارفع باقتك للمتابعة دون حدود.",
+    upgradeBody: "بلا حد يومي للردود، مع تحليل ملفات وورد وإكسل وباوربوينت.",
+    upgradeOffer: "اشترك الآن",
     close: "إغلاق",
     upgrade: "ترقية",
     copy: "نسخ",
@@ -1137,7 +1152,7 @@ const ar: ShellCopy = {
     createOne: "أنشئ حسابا",
     unable: "تعذر الدخول. حاول مرة أخرى.",
     genericError: "حدث خطأ. حاول مرة أخرى.",
-    loggedIn: "تم الدخول. جاري التحويل إلى ملفك...",
+    loggedIn: "تم الدخول. جاري التحويل...",
     registerTitle: "التسجيل في engineerit.ai",
     registerLeadBefore:
       "أنشئ حسابك، وابدأ بباقة المهندس المساعد المجانية، ثم اشترك في إحدى الباقات المدفوعة لتحصل على محادثات لا محدودة وتصدير للمحادثات حسب مزايا الباقات المتوفرة (",
@@ -1155,7 +1170,7 @@ const ar: ShellCopy = {
     creating: "جاري إنشاء الحساب...",
     create: "إنشاء الحساب",
     emailConfirmTitle: "يلزم تأكيد البريد",
-    emailConfirmHint: "بعد التأكيد، عد وسجل الدخول من الشريط العلوي.",
+    emailConfirmHint: "أكد البريد، ثم ادخل من هذه الصفحة. تبقى الباقة التي اخترتها وتفتح في صفحة الدفع.",
     afterRegister:
       "بعد التسجيل تبدأ على باقة المهندس المساعد المجانية. تشترى باقات المهندس والمهندس المحترف والمهندس الاستشاري والفريق والمؤسسات عبر Moyasar، شهريا أو سنويا. الاشتراك السنوي يوفر شهرين مجانا. كل دفعة تغطي المدة التي تختارها.",
     viewPlans: "عرض الباقات والاشتراك",
@@ -1167,8 +1182,9 @@ const ar: ShellCopy = {
     passwordMismatch: "كلمة المرور وتأكيدها غير متطابقين.",
     passwordMin: "كلمة المرور يجب أن تكون 8 أحرف على الأقل.",
     createdConfirm:
-      "تم إنشاء الحساب. أرسلنا رسالة تأكيد. راجع الوارد والبريد غير الهام، ثم أكد العنوان وادخل من الشريط العلوي.",
-    createdRedirect: "تم إنشاء الحساب. جاري التحويل إلى ملفك...",
+      "تم إنشاء الحساب. أرسلنا رسالة تأكيد. راجع الوارد والبريد غير الهام، ثم أكد العنوان وادخل من هذه الصفحة.",
+    createdRedirect: "تم إنشاء الحساب. جاري التحويل...",
+    haveAccount: "لديك حساب؟",
     upgradeAnytime: "يمكنك تغيير الباقة في أي وقت من ملفك أو صفحة الأسعار.",
     policyName: "سياسة الاستخدام والاتفاق",
   },
@@ -1300,9 +1316,9 @@ const ar: ShellCopy = {
     savedCard: "سنجدد بهذه البطاقة. يمكنك الإلغاء في أي وقت من ملفك.",
     consent: "احفظ هذه البطاقة للتجديد التلقائي",
     optional: "اختياري",
-    renewManually: "يمكنك التجديد يدويا في أي وقت من ملفك الشخصي.",
+    renewManually: "لا يتجدد هذا الدفع تلقائيا. يغطي فترة واحدة، ويمكنك الاشتراك مرة أخرى من صفحة الأسعار.",
     securePay: "دفع آمن عبر ميسر",
-    cancelAnytime: "إلغاء في أي وقت",
+    cancelAnytime: "ألغِ التجديد التلقائي من الفوترة قبل تاريخ التجديد",
     cardNotStored: "لا نحتفظ ببيانات بطاقتك على خوادمنا",
     openFailed: "تعذر فتح صفحة الدفع.",
     missingKey: "نموذج البطاقة غير معد بعد.",
@@ -1319,11 +1335,16 @@ const ar: ShellCopy = {
     phonePayExpired: "انتهت صلاحية رابط الجوال. افتح الدفع على الكمبيوتر لمسح رمز جديد.",
     phonePayInvalid: "رابط الجوال غير صالح. افتح الدفع على الكمبيوتر وامسح رمزا جديدا.",
     retry: "حاول مرة أخرى",
-    paymentFailed: "لم يتم الدفع. راجع البيانات وحاول مرة أخرى.",
+    paymentFailed: "لم يتم الدفع. لم تُفعّل أي باقة. راجع البيانات وحاول مرة أخرى.",
+    paymentCancelled: "أُلغي الدفع. لم تُفعّل أي باقة. يمكنك المحاولة مرة أخرى.",
+    paymentMismatch: "تعذر مطابقة مبلغ الدفع أو عملته. لم تُفعّل الباقة. راسل support@engineerit.ai قبل المحاولة مرة أخرى.",
     copyLink: "نسخ رابط الجوال",
     copied: "تم نسخ الرابط",
     networks: "البطاقات",
-    vatNote: "ضريبة القيمة المضافة حسب الأنظمة",
+    vatNote: "السعر المعروض هو المبلغ المستحق اليوم. لا تُضاف ضريبة القيمة المضافة.",
+    vatExempt: "السعر المعروض هو المبلغ المستحق اليوم. لا تُضاف ضريبة القيمة المضافة.",
+    vatIncluded: "هذا السعر يشمل ضريبة القيمة المضافة 15٪.",
+    cancelHow: "ألغِ من صفحة الفوترة قبل هذا التاريخ ولن تُخصم البطاقة المحفوظة مرة أخرى. يبقى الوصول حتى نهاية الفترة.",
   },
   billing: {
     title: "الفوترة",

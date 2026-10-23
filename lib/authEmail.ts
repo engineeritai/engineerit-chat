@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { checkAuthRate, consumeAuthDaily } from "@/lib/authRateLimit";
 import { isProductionMailRuntime, mailDecision } from "@/lib/mailPolicy";
+import { isSelfServePlan } from "@/lib/plans";
 import { RESET_REDIRECT } from "@/lib/password";
 import { getSupabaseAdmin } from "@/lib/serverSupabase";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -16,6 +17,22 @@ export function clientIp(req: Request): string {
 export function authEmailMode(args: { email: string; testHeader?: string | null; env?: NodeJS.ProcessEnv }) {
   const decision = mailDecision({ to: args.email, testHeader: args.testHeader, env: args.env });
   return decision.deliver === "smtp" ? "send" : "sink";
+}
+
+function signupMetadata(
+  fullName: string | undefined,
+  pending?: { pendingPlan?: string; pendingInterval?: string; pendingSeats?: number } | null
+) {
+  const data: Record<string, string | number> = {};
+  const name = (fullName || "").trim();
+  if (name) data.full_name = name;
+  if (pending && isSelfServePlan(pending.pendingPlan)) {
+    data.pending_plan = pending.pendingPlan;
+    data.pending_interval = pending.pendingInterval === "year" ? "year" : "month";
+    const seats = Number(pending.pendingSeats);
+    data.pending_seats = Number.isFinite(seats) ? Math.max(0, Math.floor(seats)) : 0;
+  }
+  return data;
 }
 
 function placeholderSupabase(env: NodeJS.ProcessEnv) {
@@ -48,7 +65,7 @@ export async function createAuthLinkWithoutEmail(args: {
             password: args.password || "sink-only-not-sent",
             options: {
               redirectTo: RESET_REDIRECT,
-              data: args.fullName ? { full_name: args.fullName } : undefined,
+              data: signupMetadata(args.fullName, undefined),
             },
           });
     const { data, error } = generated;
@@ -65,6 +82,9 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
     password?: string;
     fullName?: string;
     captchaToken?: string;
+    pendingPlan?: string;
+    pendingInterval?: string;
+    pendingSeats?: number;
   } | null;
   const email = (body?.email || "").trim().toLowerCase();
   const password = body?.password || "";
@@ -121,7 +141,10 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
     const { data, error } = await client.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName }, captchaToken },
+      options: {
+        data: signupMetadata(fullName, body),
+        captchaToken,
+      },
     });
     if (error) return Response.json({ error: error.message }, { status: 400 });
     return Response.json({ ok: true, sent: true, needsConfirmation: !data.session, user: data.user });

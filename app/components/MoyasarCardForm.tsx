@@ -8,6 +8,7 @@ import {
   SAMSUNG_PAY_SDK_URL,
   checkoutPaymentMethods,
   isSaveCardRejection,
+  moyasarFormTranslations,
   moyasarSaveOptions,
 } from "@/lib/moyasarEnv";
 
@@ -84,7 +85,22 @@ export default function MoyasarCardForm({
         methods,
         metadata,
         language: locale,
+        translations: moyasarFormTranslations(),
         fixed_width: false,
+        on_completed: async (payment: { id?: string }) => {
+          const paymentId = payment?.id || "";
+          const checkoutId = metadata.checkout_id || "";
+          if (!paymentId || !checkoutId) return;
+          try {
+            await fetch("/api/payments/moyasar/complete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ checkoutId, paymentId, stage: "created" }),
+            });
+          } catch {
+            /* The return page and the webhook can still verify this payment id. */
+          }
+        },
         ...moyasarSaveOptions({
           saveCard,
           wallets,
@@ -106,7 +122,7 @@ export default function MoyasarCardForm({
     }
     const noticeTimer = window.setTimeout(() => {
       const notice = document.querySelector(".mysr-form-configNotice")?.textContent?.trim();
-      if (notice) onFailed.current?.(notice);
+      if (notice && !/card data will be saved|بيانات بطاقت/i.test(notice)) onFailed.current?.(notice);
     }, 0);
     return () => window.clearTimeout(noticeTimer);
   }, [

@@ -3,7 +3,15 @@ import { supabase } from "@/lib/supabaseClient";
 
 export async function requestAuthEmail(
   action: "signup" | "reset" | "resend",
-  body: { email: string; password?: string; fullName?: string; captchaToken?: string }
+  body: {
+    email: string;
+    password?: string;
+    fullName?: string;
+    captchaToken?: string;
+    pendingPlan?: string;
+    pendingInterval?: string;
+    pendingSeats?: number;
+  }
 ) {
   const path = action === "reset" ? "recover" : action;
   const response = await fetch(`/api/auth/${path}`, {

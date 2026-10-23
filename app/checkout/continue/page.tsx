@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { readPendingCheckout, startMoyasarCheckout } from "@/lib/checkoutClient";
+import { startMoyasarCheckout } from "@/lib/checkoutClient";
+import { pendingFromMetadata, pendingFromSearch, readPendingCheckout, savePendingCheckout } from "@/lib/pendingCheckout";
+import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
 
 export default function CheckoutContinuePage() {
@@ -9,16 +11,24 @@ export default function CheckoutContinuePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const pending = readPendingCheckout();
-    if (!pending) {
-      window.location.replace("/pricing");
-      return;
-    }
     let cancelled = false;
-    void startMoyasarCheckout(pending).then((result) => {
+    void (async () => {
+      const params = new URLSearchParams(window.location.search);
+      let pending = pendingFromSearch(params) || readPendingCheckout();
+      if (!pending) {
+        const { data } = await supabase.auth.getUser();
+        pending = pendingFromMetadata(data.user?.user_metadata);
+      }
+      if (cancelled) return;
+      if (!pending) {
+        window.location.replace("/pricing");
+        return;
+      }
+      savePendingCheckout(pending);
+      const result = await startMoyasarCheckout(pending);
       if (cancelled || result.ok || result.needsAuth) return;
       setError(result.error);
-    });
+    })();
     return () => {
       cancelled = true;
     };
