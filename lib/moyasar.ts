@@ -11,7 +11,7 @@ export type RemoteInvoice = {
 
 export function assessPaidInvoice(
   storedHalalas: number,
-  remote: { status?: string | null; amount?: number | null }
+  remote: { status?: string | null; amount?: number | null; currency?: string | null }
 ) {
   if (remote.status !== "paid") {
     return { ok: false as const, reason: "not_paid" as const };
@@ -19,7 +19,32 @@ export function assessPaidInvoice(
   if (remote.amount !== storedHalalas) {
     return { ok: false as const, reason: "amount_mismatch" as const };
   }
+  if ((remote.currency || "").toUpperCase() !== "SAR") {
+    return { ok: false as const, reason: "currency_mismatch" as const };
+  }
   return { ok: true as const };
+}
+
+/** Saved-card charges. A paid result must match the halalas and SAR, or the plan stays unchanged. */
+export function assessTokenCharge(
+  expectedHalalas: number,
+  remote: { status?: string | null; amount?: number | null; currency?: string | null }
+): "paid" | "pending" | "failed" {
+  const status = (remote.status || "").toLowerCase();
+  if (status === "initiated" || status === "authorized") return "pending";
+  if (status === "paid" && remote.amount === expectedHalalas && (remote.currency || "").toUpperCase() === "SAR") {
+    return "paid";
+  }
+  return "failed";
+}
+
+export class MoyasarRequestError extends Error {
+  readonly kind: "decline" | "transport";
+  constructor(message: string, kind: "decline" | "transport") {
+    super(message);
+    this.name = "MoyasarRequestError";
+    this.kind = kind;
+  }
 }
 
 export function verifyMoyasarSignature(
@@ -196,29 +221,66 @@ export async function createMoyasarTokenPayment(
     idempotencyKey: string;
   }
 ) {
-  const response = await fetch("https://api.moyasar.com/v1/payments", {
-    method: "POST",
-    headers: {
-      Authorization: authHeader(secretKey),
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "Idempotency-Key": payload.idempotencyKey,
-    },
-    body: JSON.stringify({
-      amount: payload.amount,
-      currency: payload.currency,
-      description: payload.description,
-      callback_url: payload.callback_url,
-      metadata: payload.metadata,
-      source: { type: "token", token: payload.token },
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch("https://api.moyasar.com/v1/payments", {
+      method: "POST",
+      headers: {
+        Authorization: authHeader(secretKey),
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "Idempotency-Key": payload.idempotencyKey,
+      },
+      body: JSON.stringify({
+        amount: payload.amount,
+        currency: payload.currency,
+        description: payload.description,
+        callback_url: payload.callback_url,
+        metadata: payload.metadata,
+        source: { type: "token", token: payload.token },
+      }),
+    });
+  } catch (err) {
+    throw new MoyasarRequestError(
+      err instanceof Error ? err.message : "Moyasar could not be reached.",
+      "transport"
+    );
+  }
 
   const payment = (await response.json().catch(() => null)) as RemotePayment | null;
   if (!response.ok || !payment) {
-    throw new Error(payment?.message || payment?.source?.message || "Moyasar could not charge the saved card.");
+    const kind = response.status >= 500 || response.status === 429 || response.status === 408 ? "transport" : "decline";
+    throw new MoyasarRequestError(
+      payment?.message || payment?.source?.message || "Moyasar could not charge the saved card.",
+      kind
+    );
   }
   return payment;
+}
+
+export async function listMoyasarPaymentsByCheckout(secretKey: string, checkoutId: string) {
+  const url = new URL("https://api.moyasar.com/v1/payments");
+  url.searchParams.set("metadata[checkout_id]", checkoutId);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        Authorization: authHeader(secretKey),
+        Accept: "application/json",
+      },
+    });
+  } catch (err) {
+    throw new MoyasarRequestError(
+      err instanceof Error ? err.message : "Moyasar could not be reached.",
+      "transport"
+    );
+  }
+  const body = (await response.json().catch(() => null)) as { payments?: RemotePayment[] } | RemotePayment[] | null;
+  if (!response.ok || !body) {
+    throw new MoyasarRequestError("Could not list Moyasar payments.", response.status >= 500 ? "transport" : "decline");
+  }
+  const payments = Array.isArray(body) ? body : body.payments;
+  return Array.isArray(payments) ? payments : [];
 }
 
 export async function fetchMoyasarInvoice(secretKey: string, invoiceId: string) {

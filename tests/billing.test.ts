@@ -249,9 +249,12 @@ describe("team access", () => {
 
 describe("Moyasar confirmation and receipts", () => {
   it("accepts a paid invoice only when the amount matches", () => {
-    assert.deepEqual(assessPaidInvoice(34900, { status: "paid", amount: 34900 }), { ok: true });
-    assert.equal(assessPaidInvoice(34900, { status: "initiated", amount: 34900 }).ok, false);
-    assert.equal(assessPaidInvoice(34900, { status: "paid", amount: 100 }).reason, "amount_mismatch");
+    assert.deepEqual(assessPaidInvoice(34900, { status: "paid", amount: 34900, currency: "SAR" }), { ok: true });
+    assert.equal(assessPaidInvoice(34900, { status: "initiated", amount: 34900, currency: "SAR" }).ok, false);
+    assert.equal(assessPaidInvoice(34900, { status: "paid", amount: 100, currency: "SAR" }).reason, "amount_mismatch");
+    assert.equal(assessPaidInvoice(34900, { status: "paid", amount: 34900, currency: "USD" }).reason, "currency_mismatch");
+    assert.equal(assessPaidInvoice(34900, { status: "paid", amount: 34900 }).reason, "currency_mismatch");
+    assert.equal(assessPaidInvoice(34900, { status: "failed", amount: 34900, currency: "SAR" }).reason, "not_paid");
   });
 
   it("reads the invoice id from an invoice callback and from a payment webhook", () => {

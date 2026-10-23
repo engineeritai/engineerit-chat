@@ -66,7 +66,12 @@ export async function settleCheckout(
     const nowIso = new Date().toISOString();
     const { data: claimed, error: claimErr } = await admin
       .from("moyasar_invoices")
-      .update({ status: "paid", paid_at: nowIso, activated_at: nowIso })
+      .update({
+        status: "paid",
+        paid_at: nowIso,
+        activated_at: nowIso,
+        ...(payment?.id ? { payment_id: payment.id } : {}),
+      })
       .eq("id", row.id)
       .is("activated_at", null)
       .select("id");
@@ -76,7 +81,13 @@ export async function settleCheckout(
     if (claimed && claimed.length > 0) {
       try {
         periodEnd = await activateCheckout(admin, row, interval);
-        await admin.from("moyasar_invoices").update({ period_end: periodEnd }).eq("id", row.id);
+        await admin
+          .from("moyasar_invoices")
+          .update({
+            period_end: periodEnd,
+            ...(payment?.id ? { payment_id: payment.id } : {}),
+          })
+          .eq("id", row.id);
         if (payment && row.user_id) {
           const { data: billing } = await admin
             .from("billing_subscriptions")

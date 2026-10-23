@@ -708,6 +708,57 @@ body {
   max-width: 100%;
 }
 
+.mysr-form .mysr-form-warn-icon-art {
+  display: none;
+}
+
+a.auth-follow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 8px;
+  text-decoration: none;
+}
+
+[dir="rtl"] .register-form,
+[dir="rtl"] .checkout-layout,
+[dir="rtl"] .gate-modal,
+[dir="rtl"] .checkout-help,
+[dir="rtl"] .checkout-vat-note,
+[dir="rtl"] .checkbox-label {
+  text-align: start;
+}
+
+@media (max-width: 420px) {
+  .page-wrap {
+    overflow-x: hidden;
+  }
+
+  .register-form .btn,
+  .auth-follow,
+  .checkout-error .btn,
+  .gate-actions .gate-btn,
+  .pay-success-actions .btn {
+    width: 100%;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gate-actions {
+    flex-direction: column;
+  }
+
+  .checkout-summary dd,
+  .checkout-help,
+  .checkout-vat-note,
+  .checkbox-label {
+    overflow-wrap: anywhere;
+  }
+}
+
 .pay-success {
   max-width: 560px;
 }

@@ -12,7 +12,12 @@ import {
 } from "@/lib/billingCycle";
 import { downgradeNotice, expireNotice, pastDueNotice } from "@/lib/billingNotices";
 import { appBaseUrl, deliverMail, escapeHtml } from "@/lib/mail";
-import { createMoyasarTokenPayment, fetchMoyasarPayment } from "@/lib/moyasar";
+import {
+  assessTokenCharge,
+  createMoyasarTokenPayment,
+  fetchMoyasarPayment,
+  MoyasarRequestError,
+} from "@/lib/moyasar";
 import {
   PLAN_LABELS,
   consultantLegacyActive,
@@ -26,6 +31,7 @@ import { priceRenewalWithPromo, type PromoDiscountType } from "@/lib/promo";
 import { mentionsColumn, missingPromoSchema, promoRenewalUpdate } from "@/lib/promoSchema";
 import { studentDiscountAllowed } from "@/lib/studentVerify";
 import { planById } from "@/lib/labels";
+import { applyAssistantRetention } from "@/lib/returnToFree";
 import { sendReceipt } from "@/lib/receipt";
 
 export type OpenSubscription = {
@@ -295,13 +301,13 @@ async function chargeSavedCard(
   if (attempt.moyasar_payment_id) {
     try {
       const existingPayment = await fetchMoyasarPayment(secret, attempt.moyasar_payment_id);
-      return finishAttempt(
-        admin,
-        attempt.id,
-        chargeOutcome(existingPayment.status, existingPayment.amount, args.amountHalalas),
-        existingPayment.id || attempt.moyasar_payment_id,
-        existingPayment.source?.message || existingPayment.message || null
-      );
+    return finishAttempt(
+      admin,
+      attempt.id,
+      assessTokenCharge(args.amountHalalas, existingPayment),
+      existingPayment.id || attempt.moyasar_payment_id,
+      existingPayment.source?.message || existingPayment.message || null
+    );
     } catch {
       return {
         paid: false,
@@ -330,24 +336,21 @@ async function chargeSavedCard(
     return finishAttempt(
       admin,
       attempt.id,
-      chargeOutcome(payment.status, payment.amount, args.amountHalalas),
+      assessTokenCharge(args.amountHalalas, payment),
       payment.id || null,
       payment.source?.message || payment.message || null
     );
   } catch (err) {
+    if (err instanceof MoyasarRequestError && err.kind === "transport") {
+      return {
+        paid: false,
+        pending: true,
+        error: "The saved-card charge could not be confirmed. It will be checked again.",
+      };
+    }
     const message = err instanceof Error ? err.message : "Charge failed.";
     return finishAttempt(admin, attempt.id, "failed", null, message);
   }
-}
-
-function chargeOutcome(
-  status: string | undefined,
-  amount: number | undefined,
-  expected: number
-): "paid" | "pending" | "failed" {
-  if (status === "paid" && amount === expected) return "paid";
-  if (status === "initiated" || status === "authorized") return "pending";
-  return "failed";
 }
 
 async function finishAttempt(
@@ -477,6 +480,7 @@ async function endAccess(admin: SupabaseClient, sub: OpenSubscription, status: "
   if (sub.team_id) {
     await admin.from("teams").update({ status: "lapsed", updated_at: nowIso }).eq("id", sub.team_id);
   }
+  await applyAssistantRetention(admin, sub.user_id);
 }
 
 export async function chargeSeatChange(

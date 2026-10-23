@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { readPendingCheckout, startMoyasarCheckout } from "@/lib/checkoutClient";
+import { readAnyPendingCheckout, startMoyasarCheckout } from "@/lib/checkoutClient";
 import { useMessages } from "@/lib/useMessages";
 
 export default function CheckoutContinuePage() {
@@ -9,14 +9,16 @@ export default function CheckoutContinuePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const pending = readPendingCheckout();
-    if (!pending) {
-      window.location.replace("/pricing");
-      return;
-    }
     let cancelled = false;
-    void startMoyasarCheckout(pending).then((result) => {
-      if (cancelled || result.ok || result.needsAuth) return;
+    void readAnyPendingCheckout().then((pending) => {
+      if (cancelled) return;
+      if (!pending) {
+        window.location.replace("/pricing");
+        return;
+      }
+      return startMoyasarCheckout(pending);
+    }).then((result) => {
+      if (cancelled || !result || result.ok || result.needsAuth) return;
       setError(result.error);
     });
     return () => {

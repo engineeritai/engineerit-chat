@@ -287,8 +287,8 @@ describe("checkout promo application", () => {
       });
       assert.equal(calls[0]?.amount, 1710);
       assert.equal(payment.amount, 1710);
-      assert.equal(assessPaidInvoice(1710, { status: "paid", amount: 1900 }).ok, false);
-      assert.equal(assessPaidInvoice(1710, { status: "paid", amount: 1710 }).ok, true);
+      assert.equal(assessPaidInvoice(1710, { status: "paid", amount: 1900, currency: "SAR" }).ok, false);
+      assert.equal(assessPaidInvoice(1710, { status: "paid", amount: 1710, currency: "SAR" }).ok, true);
     } finally {
       globalThis.fetch = original;
     }

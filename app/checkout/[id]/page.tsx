@@ -257,6 +257,7 @@ export default function CheckoutPage() {
                     />
                     <StudentVerify preview={preview} />
                     <p className="checkout-vat-note">{s.checkout.vatNote}</p>
+                    <p className="checkout-help">{s.checkout.cancelHow}</p>
                   </section>
                   <p className="checkout-note">{s.checkout.walletReminder}</p>
                   <ul className="checkout-networks" aria-label={s.checkout.networks}>
@@ -281,7 +282,7 @@ export default function CheckoutPage() {
                     {saveRejected
                       ? s.checkout.saveRejected
                       : consent
-                        ? `${s.billing.renewsOn} ${renewsOn}`
+                        ? `${s.checkout.saveNotice} ${s.billing.renewsOn} ${renewsOn}.`
                         : s.checkout.renewManually}
                   </p>
                   <ul className="checkout-trust">
@@ -318,8 +319,9 @@ export default function CheckoutPage() {
                       orderNumber={checkout.id}
                       attempt={attempt}
                       failureFallback={s.checkout.paymentFailed}
+                      saveNotice={s.checkout.saveNotice}
                       onSaveCardRejected={() => setSaveRejected(true)}
-                      onPaymentError={(message) => setPaymentError(message || s.checkout.paymentFailed)}
+                      onPaymentError={() => setPaymentError(s.checkout.paymentFailed)}
                     />
                   ) : (
                     <p>{s.checkout.missingKey}</p>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { returnUserToAssistant } from "@/lib/returnToFree";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
 
 export const runtime = "nodejs";
@@ -7,6 +8,12 @@ export async function GET(req: Request) {
   const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   const admin = getSupabaseAdmin();
+  let access: Awaited<ReturnType<typeof returnUserToAssistant>> | null = null;
+  try {
+    access = await returnUserToAssistant(admin, user.id);
+  } catch (err) {
+    console.error("return to assistant", err);
+  }
   const { data: sub, error } = await admin
     .from("billing_subscriptions")
     .select(
@@ -28,8 +35,17 @@ export async function GET(req: Request) {
       .maybeSingle();
     const updated = ended?.updated_at ? new Date(ended.updated_at).getTime() : 0;
     const recent = updated > 0 && Date.now() - updated < 30 * 24 * 60 * 60 * 1000;
-    const notice = ended && ended.failure_count >= 3 && recent ? "downgraded" : null;
-    return NextResponse.json({ subscription: null, card: null, notice });
+    const cardFailure = Boolean(ended && ended.failure_count >= 3 && recent);
+    const plan = access?.plan || "assistant";
+    const notice = plan === "assistant" && (access?.notice || cardFailure) ? "ended" : null;
+    return NextResponse.json({
+      subscription: null,
+      card: null,
+      plan,
+      notice,
+      previousPlan: access?.previousPlan || "engineer",
+      previousInterval: access?.previousInterval || "month",
+    });
   }
 
   let card: { brand: string | null; last_four: string | null; status: string } | null = null;
@@ -41,5 +57,12 @@ export async function GET(req: Request) {
       .maybeSingle();
     card = data;
   }
-  return NextResponse.json({ subscription: sub, card });
+  return NextResponse.json({
+    subscription: sub,
+    card,
+    plan: access?.plan || sub.plan,
+    notice: null,
+    previousPlan: access?.previousPlan || sub.plan,
+    previousInterval: access?.previousInterval || sub.billing_interval || "month",
+  });
 }

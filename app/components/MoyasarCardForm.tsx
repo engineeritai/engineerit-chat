@@ -10,6 +10,7 @@ import {
   isSaveCardRejection,
   moyasarSaveOptions,
 } from "@/lib/moyasarEnv";
+import { isMoyasarSaveNotice } from "@/lib/moyasarNotice";
 
 type Props = {
   amountHalalas: number;
@@ -24,6 +25,7 @@ type Props = {
   orderNumber?: string;
   attempt?: number;
   failureFallback?: string;
+  saveNotice?: string;
   onSaveCardRejected?: () => void;
   onPaymentError?: (message: string) => void;
 };
@@ -51,6 +53,7 @@ export default function MoyasarCardForm({
   orderNumber = "",
   attempt = 0,
   failureFallback = "",
+  saveNotice = "",
   onSaveCardRejected,
   onPaymentError,
 }: Props) {
@@ -104,11 +107,31 @@ export default function MoyasarCardForm({
     } catch (error) {
       onFailed.current?.(errorText(error) || failureFallback);
     }
+    const rewriteNotice = () => {
+      if (!saveNotice) return;
+      const root = document.querySelector(".mysr-form");
+      if (!root) return;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode();
+      while (node) {
+        const current = node.textContent || "";
+        if (isMoyasarSaveNotice(current)) node.textContent = saveNotice;
+        node = walker.nextNode();
+      }
+    };
+    rewriteNotice();
+    const observer = new MutationObserver(rewriteNotice);
+    const form = document.querySelector(".mysr-form");
+    if (form) observer.observe(form, { childList: true, subtree: true, characterData: true });
     const noticeTimer = window.setTimeout(() => {
+      rewriteNotice();
       const notice = document.querySelector(".mysr-form-configNotice")?.textContent?.trim();
-      if (notice) onFailed.current?.(notice);
+      if (notice && !isMoyasarSaveNotice(notice)) onFailed.current?.(notice);
     }, 0);
-    return () => window.clearTimeout(noticeTimer);
+    return () => {
+      window.clearTimeout(noticeTimer);
+      observer.disconnect();
+    };
   }, [
     ready,
     amountHalalas,
@@ -123,6 +146,7 @@ export default function MoyasarCardForm({
     orderNumber,
     attempt,
     failureFallback,
+    saveNotice,
   ]);
 
   return (

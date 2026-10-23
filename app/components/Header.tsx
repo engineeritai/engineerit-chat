@@ -12,6 +12,7 @@ import { useMessages } from "@/lib/useMessages";
 import { supabase } from "@/lib/supabaseClient";
 import { HEADER_PLAN_ABBREV, PLAN_COLORS, type PlanId } from "@/lib/plans";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
+import { signInProblem } from "@/lib/registerAccount";
 
 type HeaderProps = {
   onToggleSidebar: () => void;
@@ -186,7 +187,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
       });
 
       if (error) {
-        setLoginError(error.message);
+        setLoginError(signInProblem(locale, error.message));
         setLoginLoading(false);
         return;
       }
@@ -212,6 +213,10 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         null;
 
       if (data.session?.access_token) {
+        await fetch("/api/profile/ensure", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        }).catch(() => null);
         await fetch("/api/team/claim", {
           method: "POST",
           headers: { Authorization: `Bearer ${data.session.access_token}` },
@@ -457,11 +462,37 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
                       <div
                         style={{
                           fontSize: 12,
-                          color: "#b91c1c",
+                          color: loginError === s.auth.resendSent ? "#15803d" : "#b91c1c",
                           marginBottom: 4,
                         }}
+                        role="alert"
                       >
-                        {loginError}
+                        <p style={{ margin: "0 0 8px" }}>{loginError}</p>
+                        {loginError === s.auth.emailNotConfirmed ? (
+                          <>
+                            <TurnstileField onToken={setCaptchaToken} />
+                            <button
+                              type="button"
+                              className="btn auth-follow"
+                              disabled={loginLoading}
+                              onClick={() => {
+                                setLoginLoading(true);
+                                void requestAuthEmail("resend", {
+                                  email: loginEmail,
+                                  captchaToken,
+                                }).then(({ status, data }) => {
+                                  if (status === 429) setLoginError(s.password.tryLater);
+                                  else if (!data.ok && status >= 400) {
+                                    setLoginError(data.code === "captcha" ? s.auth.captchaRequired : s.auth.genericError);
+                                  } else setLoginError(s.auth.resendSent);
+                                }).catch(() => setLoginError(s.auth.genericError))
+                                  .finally(() => setLoginLoading(false));
+                              }}
+                            >
+                              {s.auth.resendConfirm}
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                     )}
 

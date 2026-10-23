@@ -10,7 +10,8 @@ import ChangePasswordCard from "@/app/components/ChangePasswordCard";
 import StudentVerify from "@/app/components/StudentVerify";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
-import { PLANS, PLAN_THEME, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
+import BuyPlanButton from "@/app/components/BuyPlanButton";
+import { PLANS, PLAN_THEME, consultantLegacyActive, isPlanId, isSelfServePlan, type BillingInterval, type PlanId } from "@/lib/plans";
 import { displayFeatures, formatSar, formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
 import { FeatureLine, SarText } from "@/app/components/RiyalAmount";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
@@ -196,6 +197,8 @@ export default function ProfilePage() {
   const [subHistory, setSubHistory] = useState<SubscriptionRow[]>([]);
   const [billing, setBilling] = useState<BillingView | null>(null);
   const [billingNotice, setBillingNotice] = useState<string | null>(null);
+  const [renewPlan, setRenewPlan] = useState<PlanId>("engineer");
+  const [renewInterval, setRenewInterval] = useState<BillingInterval>("month");
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [busyAction, setBusyAction] = useState("");
   const [chatCount, setChatCount] = useState<number | null>(null);
@@ -255,6 +258,15 @@ export default function ProfilePage() {
           }
         }
 
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (accessToken) {
+          await fetch("/api/profile/ensure", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }).catch(() => undefined);
+        }
+
         // 2) Load profile data
         let initialFullName =
           (user.user_metadata?.full_name as string | undefined) ??
@@ -308,7 +320,8 @@ export default function ProfilePage() {
 
         if (subscriptionTierOverride) subscriptionTier = subscriptionTierOverride;
 
-        // Ensure row exists (no registration_code here)
+        // Create the row when it is missing. Do not write subscription_tier here:
+        // a failed read must not turn a paid plan back into Assistant.
         const { error: upsertError } = await supabase
           .from("profiles")
           .upsert(
@@ -316,7 +329,6 @@ export default function ProfilePage() {
               id: user.id,
               full_name: initialFullName,
               avatar_url: avatarUrl,
-              subscription_tier: subscriptionTier,
             },
             { onConflict: "id" }
           );
@@ -379,29 +391,34 @@ export default function ProfilePage() {
           console.warn("SUBSCRIPTIONS HISTORY WARN:", e);
         }
 
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        if (token) {
+        if (accessToken) {
           const billingRes = await fetch("/api/billing", {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${accessToken}` },
           });
           const billingJson = await billingRes.json().catch(() => ({}));
-          if (billingRes.ok && billingJson.subscription && isPlanId(billingJson.subscription.plan)) {
+          if (isPlanId(billingJson.previousPlan)) setRenewPlan(billingJson.previousPlan);
+          if (billingJson.previousInterval === "year" || billingJson.previousInterval === "month") {
+            setRenewInterval(billingJson.previousInterval);
+          }
+          if (billingJson.plan === "assistant") setEffectivePlan("assistant");
+          if (billingRes.ok && billingJson.subscription && isPlanId(billingJson.subscription.plan) && billingJson.plan !== "assistant") {
             setBilling(billingJson.subscription as BillingView);
             setBillingNotice(null);
           } else {
             setBilling(null);
-            setBillingNotice(billingRes.ok && billingJson.notice === "downgraded" ? "downgraded" : null);
+            setBillingNotice(
+              billingRes.ok && billingJson.notice === "ended" && billingJson.plan === "assistant" ? "ended" : null
+            );
           }
           const invoiceRes = await fetch("/api/invoices", {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${accessToken}` },
           });
           const invoiceJson = await invoiceRes.json().catch(() => ({}));
           if (invoiceRes.ok && Array.isArray(invoiceJson.invoices)) {
             setInvoices(invoiceJson.invoices as InvoiceRow[]);
           }
           const libraryRes = await fetch("/api/profile/library", {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${accessToken}` },
           });
           const library = await libraryRes.json().catch(() => ({}));
           if (libraryRes.ok) {
@@ -852,9 +869,19 @@ export default function ProfilePage() {
                 {s.profile.teamLapsed}
               </p>
             ) : shown.planId === "assistant" ? (
-              <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
-                {billingNotice === "downgraded" ? s.billing.downgraded : s.profile.freeBody}
-              </p>
+              <div style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
+                <p style={{ margin: "0 0 10px" }}>
+                  {billingNotice === "ended" ? s.billing.endedBody : s.profile.freeBody}
+                </p>
+                {billingNotice === "ended" && isSelfServePlan(renewPlan) ? (
+                  <BuyPlanButton
+                    planId={renewPlan}
+                    interval={renewInterval}
+                    label={s.billing.endedRenew}
+                    className="btn auth-follow"
+                  />
+                ) : null}
+              </div>
             ) : billing ? (
               <div style={{ fontSize: 14, color: "#374151", marginBottom: 10, lineHeight: 1.7 }}>
                 <div>
