@@ -59,15 +59,17 @@ Run once, in order. Each file is idempotent (`if not exists` / `add column if no
 3. `supabase/migrations/20261016160000_recurring_billing.sql` — `saved_cards`, `billing_subscriptions`, `renewal_attempts`, plus `payment_id` on checkout rows.
 4. `supabase/migrations/20261016180000_advisor_tiers_and_legacy_price.sql` — `consultant_legacy_price_until` and `advisor_trial_plan` on `profiles`, and a three-month grandfather backfill for current Consultant rows. Apply this before the new prices go live.
 5. `supabase/migrations/20261016210000_profile_subscription_fields.sql` — `locale` on checkout rows and billing subscriptions, so invoice emails and PDFs stay in the buyer’s language. Apply this before deploy.
+6. `supabase/migrations/20261023120000_cancel_stale_invoices.sql` — allows `cancelled` on `moyasar_invoices` and indexes pending rows. No new table. Apply before the renewal cron starts cancelling unpaid checkouts older than 3 days.
 
 `saved_cards`, `billing_subscriptions`, and `renewal_attempts` have RLS enabled and no client policies. Only the service role reads or writes them. Card tokens are never returned to the browser.
 
 ## How renewal works
 
-- Attempts run on day 0, 1, 3, and 7 after `current_period_end`.
-- Success extends the period (30 or 365 days), resets the failure count, and emails a receipt.
-- A failed charge emails the customer with a link to `/account/billing`. Access stays on through the day-7 retry. Team access is held by extending the team period to the end of that grace window.
-- After the day-7 attempt fails, the account moves to Assistant Engineer and a team is marked lapsed.
+- Attempts run on day 0, 1, and 3 after `current_period_end`. There is no day-7 retry.
+- Success extends the period (30 or 365 days), resets the failure count, and emails a receipt. A paid charge in the wrong amount or currency is held and is not applied and not charged again.
+- A failed charge emails the customer with a link to `/account/billing`. Access stays on through the day-3 retry. Team access is held by extending the team period to the end of that 3-day grace window.
+- After the day-3 attempt fails, the account moves to Assistant Engineer and a team is marked lapsed.
+- The same cron cancels pending checkouts older than 3 days only after Moyasar is asked. A matching paid payment is settled instead. If Moyasar cannot be reached, the row stays pending.
 - Cancel in the billing page sets `cancel_at_period_end`. The cron expires the plan at period end and does not charge. Resume is available before that date.
 - Seat increases charge a prorated amount on the saved card (minimum SAR 1). Seat decreases store credit against the next renewal. There is no cash refund.
 - Each charge uses a stable idempotency key (`renewal:<id>:<period end>:<attempt>` or `seats:<id>:<period end>:<from>-><to>`) both in `renewal_attempts` and as Moyasar’s `Idempotency-Key`.
@@ -75,7 +77,7 @@ Run once, in order. Each file is idempotent (`if not exists` / `add column if no
 
 ## Card update
 
-`/account/billing/card` runs a SAR 1 verification payment with Save card, with the signed-in user id in metadata. The saved token replaces the previous card only when that payment is paid, the amount is 100 halalas, and the metadata matches the session.
+`/account/billing/card` runs a SAR 1 verification payment with Save card, with the signed-in user id in metadata. The saved token replaces the previous card only when that payment is paid, the amount is 100 halalas, the currency is SAR, and the metadata matches the session.
 
 ## Moyasar test card
 

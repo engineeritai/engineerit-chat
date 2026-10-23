@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
-import {
-  extractCheckoutId,
-  extractInvoiceId,
-  extractPaymentId,
-  verifyMoyasarSecretToken,
-  verifyMoyasarSignature,
-} from "@/lib/moyasar";
+import { verifyMoyasarSecretToken, verifyMoyasarSignature, webhookCheckoutLookup } from "@/lib/moyasar";
 import { getSupabaseAdmin } from "@/lib/serverSupabase";
-import { confirmStoredInvoice, loadCheckoutById, loadCheckoutByInvoice } from "@/lib/settlePayment";
+import { confirmCheckout, loadCheckoutById, loadCheckoutByInvoice } from "@/lib/settlePayment";
 
 export const runtime = "nodejs";
 
@@ -38,20 +32,15 @@ export async function POST(req: Request) {
 
   try {
     const admin = getSupabaseAdmin();
-    const invoiceId = extractInvoiceId(body);
-    const checkoutId = extractCheckoutId(body);
-    const paymentId = extractPaymentId(body);
-    const row = invoiceId
-      ? await loadCheckoutByInvoice(admin, invoiceId)
-      : checkoutId
-        ? await loadCheckoutById(admin, checkoutId)
-        : null;
+    const target = webhookCheckoutLookup(body);
+    let row = target.checkoutId ? await loadCheckoutById(admin, target.checkoutId) : null;
+    if (!row && target.invoiceId) row = await loadCheckoutByInvoice(admin, target.invoiceId);
 
     if (!row) {
       return NextResponse.json({ ok: true, ignored: true });
     }
 
-    const result = await confirmStoredInvoice(admin, paymentId ? { ...row, payment_id: row.payment_id || paymentId } : row);
+    const result = await confirmCheckout(admin, row, target.paymentId || row.payment_id);
     if (!result.ok) {
       return NextResponse.json({ ok: true, pending: true, reason: result.reason });
     }

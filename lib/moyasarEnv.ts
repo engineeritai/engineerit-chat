@@ -71,6 +71,21 @@ export function shouldStorePaymentToken(
   return typeof source?.token === "string" && source.token.startsWith("token_");
 }
 
+/**
+ * Moyasar's built-in English notice is "You card data will be saved upon submit."
+ * Custom translations override that string. The Arabic notice drops the stray leading period.
+ */
+export function moyasarFormTranslations() {
+  return {
+    en: {
+      "form.save_card_notice": "Your card data will be saved upon submit.",
+    },
+    ar: {
+      "form.save_card_notice": "سيتم حفظ بيانات بطاقتك عند إتمام العملية.",
+    },
+  };
+}
+
 /** Form blocks passed to Moyasar.init. save_card is set on card, Apple Pay, and Samsung Pay together. */
 export function moyasarSaveOptions(input: {
   saveCard: boolean;

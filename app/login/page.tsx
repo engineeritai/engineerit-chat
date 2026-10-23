@@ -6,6 +6,8 @@ import MarketingShell from "../components/marketing/MarketingShell";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
+import { pendingCheckoutPath, readPendingCheckout } from "@/lib/pendingCheckout";
+import { destinationAfterAuth } from "@/lib/postAuth";
 import { safeNextPath } from "@/lib/safeNext";
 
 export default function LoginPage() {
@@ -21,7 +23,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     const next = new URLSearchParams(window.location.search).get("next");
-    if (next) setRegisterHref(`/register?next=${encodeURIComponent(next)}`);
+    const pending = readPendingCheckout();
+    const path = safeNextPath(next, pending ? pendingCheckoutPath(pending) : "");
+    if (path) setRegisterHref(`/register?next=${encodeURIComponent(path)}`);
   }, []);
 
   const handleSubmit = async (e: any) => {
@@ -53,14 +57,7 @@ export default function LoginPage() {
         typeof window !== "undefined"
           ? new URLSearchParams(window.location.search).get("next")
           : null;
-      let stored: string | null = null;
-      try {
-        stored = window.localStorage.getItem("engineerit_post_auth_next");
-        window.localStorage.removeItem("engineerit_post_auth_next");
-      } catch {
-        /* ignore */
-      }
-      const nextPath = safeNextPath(fromQuery || stored, "/profile");
+      const nextPath = destinationAfterAuth(fromQuery, data.session.user.user_metadata);
       setTimeout(() => {
         router.push(nextPath);
       }, 1000);

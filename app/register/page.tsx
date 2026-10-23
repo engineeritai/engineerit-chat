@@ -1,12 +1,14 @@
 // app/register/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MarketingShell from "../components/marketing/MarketingShell";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TurnstileField from "@/app/components/TurnstileField";
 import { requestAuthEmail } from "@/lib/authEmailClient";
+import { pendingCheckoutPath, POST_AUTH_NEXT_KEY, readPendingCheckout } from "@/lib/pendingCheckout";
+import { destinationAfterAuth } from "@/lib/postAuth";
 import { safeNextPath } from "@/lib/safeNext";
 import { trackProduct } from "@/lib/attribution";
 import { useMessages } from "@/lib/useMessages";
@@ -25,8 +27,23 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [signInHref, setSignInHref] = useState("/login");
 
   const router = useRouter();
+
+  useEffect(() => {
+    const next = new URLSearchParams(window.location.search).get("next");
+    const pending = readPendingCheckout();
+    const path = safeNextPath(next, pending ? pendingCheckoutPath(pending) : "/profile");
+    if (path !== "/profile") {
+      try {
+        window.localStorage.setItem(POST_AUTH_NEXT_KEY, path);
+      } catch {
+        /* ignore */
+      }
+    }
+    setSignInHref(`/login?next=${encodeURIComponent(path)}`);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,11 +74,19 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      const pending = readPendingCheckout();
       const { status, data } = await requestAuthEmail("signup", {
         email: e1,
         password,
         fullName,
         captchaToken,
+        ...(pending
+          ? {
+              pendingPlan: pending.planId,
+              pendingInterval: pending.interval,
+              pendingSeats: pending.extraSeats,
+            }
+          : {}),
       });
 
       if (!data.ok || status >= 400) {
@@ -81,18 +106,15 @@ export default function RegisterPage() {
       setPassword("");
       setConfirmPassword("");
 
-      const nextPath = safeNextPath(
-        typeof window !== "undefined"
-          ? new URLSearchParams(window.location.search).get("next")
-          : null,
-        "/profile"
-      );
+      const requested =
+        typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null;
 
-      // If email confirmation is ON -> session is null
+      // If email confirmation is ON -> session is null. Keep the chosen plan for the new tab.
       if (data.needsConfirmation !== false) {
+        const nextPath = safeNextPath(requested, pending ? pendingCheckoutPath(pending) : "/profile");
         try {
           if (nextPath !== "/profile") {
-            window.localStorage.setItem("engineerit_post_auth_next", nextPath);
+            window.localStorage.setItem(POST_AUTH_NEXT_KEY, nextPath);
           }
         } catch {
           /* ignore */
@@ -101,7 +123,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // If confirmation is OFF -> user is logged in
+      // If confirmation is OFF -> user is logged in and goes straight to that checkout.
+      const nextPath = destinationAfterAuth(requested, null);
       setSuccessMessage(s.auth.createdRedirect);
       setTimeout(() => router.push(nextPath), 900);
     } catch (err) {
@@ -289,6 +312,13 @@ export default function RegisterPage() {
               >
                 {loading ? s.auth.creating : s.auth.create}
               </button>
+
+              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#4b5563" }}>
+                {s.auth.haveAccount}{" "}
+                <Link href={signInHref} className="link">
+                  {s.auth.signIn}
+                </Link>
+              </p>
             </form>
           </div>
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { checkoutFailureKind } from "@/lib/checkoutFailure";
 import { useMessages } from "@/lib/useMessages";
 
 function ReturnInner() {
@@ -20,8 +21,13 @@ function ReturnInner() {
     const paymentId = params.get("id") || "";
     const pay = params.get("pay") || "";
     const status = (params.get("status") || "").toLowerCase();
-    const backToCheckout = () => {
-      const notice = params.get("message") || s.checkout.paymentFailed;
+    const backToCheckout = (kind: "cancelled" | "failed" | "mismatch" = "failed") => {
+      const notice =
+        kind === "cancelled"
+          ? s.checkout.paymentCancelled
+          : kind === "mismatch"
+            ? s.checkout.paymentMismatch
+            : s.checkout.paymentFailed;
       try {
         sessionStorage.setItem("engineerit_checkout_notice", notice.slice(0, 300));
       } catch {
@@ -36,7 +42,7 @@ function ReturnInner() {
       return;
     }
     if (status && status !== "paid") {
-      backToCheckout();
+      backToCheckout(checkoutFailureKind(status));
       return;
     }
     let cancelled = false;
@@ -48,7 +54,8 @@ function ReturnInner() {
       });
       if (cancelled) return;
       if (!res.ok) {
-        backToCheckout();
+        const json = (await res.json().catch(() => ({}))) as { reason?: string };
+        backToCheckout(checkoutFailureKind(status, json.reason));
         return;
       }
       setMessage(s.profile.paymentConfirmedGo);
@@ -59,7 +66,7 @@ function ReturnInner() {
     return () => {
       cancelled = true;
     };
-  }, [params, router, s.checkout.paymentFailed, s.profile.paymentConfirmedGo]);
+  }, [params, router, s.checkout.paymentCancelled, s.checkout.paymentFailed, s.checkout.paymentMismatch, s.profile.paymentConfirmedGo]);
 
   return <p>{message}</p>;
 }

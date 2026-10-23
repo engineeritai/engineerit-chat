@@ -1,40 +1,18 @@
 "use client";
 
 import { supabase } from "@/lib/supabaseClient";
-import { isSelfServePlan, type BillingInterval, type SelfServePlanId } from "@/lib/plans";
+import {
+  clearPendingCheckout,
+  pendingCheckoutPath,
+  POST_AUTH_NEXT_KEY,
+  readPendingCheckout,
+  savePendingCheckout,
+  type PendingCheckout,
+} from "@/lib/pendingCheckout";
 
-const PENDING_KEY = "engineerit_pending_checkout";
 export const CHECKOUT_CONTINUE_PATH = "/checkout/continue";
-
-export type PendingCheckout = {
-  planId: SelfServePlanId;
-  interval: BillingInterval;
-  extraSeats: number;
-};
-
-export function savePendingCheckout(pending: PendingCheckout) {
-  try {
-    window.sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
-  } catch {
-    /* ignore */
-  }
-}
-
-export function readPendingCheckout(): PendingCheckout | null {
-  try {
-    const raw = window.sessionStorage.getItem(PENDING_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as PendingCheckout;
-    if (!isSelfServePlan(parsed?.planId)) return null;
-    return {
-      planId: parsed.planId,
-      interval: parsed.interval === "year" ? "year" : "month",
-      extraSeats: Number.isFinite(parsed.extraSeats) ? parsed.extraSeats : 0,
-    };
-  } catch {
-    return null;
-  }
-}
+export type { PendingCheckout };
+export { clearPendingCheckout, readPendingCheckout, savePendingCheckout };
 
 function readLocale() {
   try {
@@ -46,25 +24,19 @@ function readLocale() {
   return "en";
 }
 
-export function clearPendingCheckout() {
+function rememberCheckoutReturn(pending: PendingCheckout) {
+  const next = pendingCheckoutPath(pending);
   try {
-    window.sessionStorage.removeItem(PENDING_KEY);
+    window.localStorage.setItem(POST_AUTH_NEXT_KEY, next);
   } catch {
     /* ignore */
   }
+  return next;
 }
 
-function rememberCheckoutReturn() {
-  try {
-    window.localStorage.setItem("engineerit_post_auth_next", CHECKOUT_CONTINUE_PATH);
-  } catch {
-    /* ignore */
-  }
-}
-
-function sendToLogin() {
-  rememberCheckoutReturn();
-  window.location.assign(`/login?next=${encodeURIComponent(CHECKOUT_CONTINUE_PATH)}`);
+function sendToLogin(pending: PendingCheckout) {
+  const next = rememberCheckoutReturn(pending);
+  window.location.assign(`/login?next=${encodeURIComponent(next)}`);
 }
 
 /**
@@ -82,14 +54,14 @@ export async function startMoyasarCheckout(
   savePendingCheckout(pending);
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) {
-    sendToLogin();
+    sendToLogin(pending);
     return { ok: false, needsAuth: true };
   }
 
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) {
-    sendToLogin();
+    sendToLogin(pending);
     return { ok: false, needsAuth: true };
   }
 
@@ -109,7 +81,7 @@ export async function startMoyasarCheckout(
   });
   const json = await res.json().catch(() => ({ error: "Could not start payment." }));
   if (res.status === 401) {
-    sendToLogin();
+    sendToLogin(pending);
     return { ok: false, needsAuth: true };
   }
   if (!res.ok || !json.url) {
@@ -120,6 +92,9 @@ export async function startMoyasarCheckout(
     };
   }
   clearPendingCheckout();
+  void supabase.auth.updateUser({
+    data: { pending_plan: "", pending_interval: "", pending_seats: "" },
+  });
   window.location.assign(json.url as string);
   return { ok: true };
 }

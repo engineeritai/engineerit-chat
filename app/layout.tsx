@@ -12,6 +12,7 @@ import KeyboardInset from "@/app/components/KeyboardInset";
 import ToastHost from "@/app/components/ToastHost";
 import TouchGuard from "@/app/components/TouchGuard";
 import PwaRegister from "@/app/components/PwaRegister";
+import ResumeCheckout from "@/app/components/ResumeCheckout";
 import HubSpot from "@/app/components/HubSpot";
 import { metaFor } from "@/lib/pageMeta";
 import { requestLocale } from "@/lib/requestLocale";
@@ -121,7 +122,10 @@ export default async function RootLayout({
       </head>
 
       <body className={`${inter.variable} ${plexArabic.variable}`}>
-        <LocaleProvider initialLocale={locale}>{children}</LocaleProvider>
+        <LocaleProvider initialLocale={locale}>
+          <ResumeCheckout />
+          {children}
+        </LocaleProvider>
         {isTest ? null : <HubSpot />}
         <KeyboardInset />
         <ToastHost />

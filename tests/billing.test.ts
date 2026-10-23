@@ -63,6 +63,7 @@ import {
   extractInvoiceId,
   verifyMoyasarSecretToken,
   verifyMoyasarSignature,
+  webhookCheckoutLookup,
 } from "../lib/moyasar";
 import { chosenLanguage } from "../lib/replyLanguage";
 import { PDFDocument } from "pdf-lib";
@@ -248,10 +249,14 @@ describe("team access", () => {
 });
 
 describe("Moyasar confirmation and receipts", () => {
-  it("accepts a paid invoice only when the amount matches", () => {
-    assert.deepEqual(assessPaidInvoice(34900, { status: "paid", amount: 34900 }), { ok: true });
-    assert.equal(assessPaidInvoice(34900, { status: "initiated", amount: 34900 }).ok, false);
-    assert.equal(assessPaidInvoice(34900, { status: "paid", amount: 100 }).reason, "amount_mismatch");
+  it("accepts a paid invoice only when the amount and SAR currency match", () => {
+    assert.deepEqual(assessPaidInvoice(34900, { status: "paid", amount: 34900, currency: "SAR" }), { ok: true });
+    assert.deepEqual(assessPaidInvoice(34900, { status: "paid", amount: 34900, currency: "sar" }), { ok: true });
+    assert.equal(assessPaidInvoice(34900, { status: "initiated", amount: 34900, currency: "SAR" }).ok, false);
+    assert.equal(assessPaidInvoice(34900, { status: "failed", amount: 34900, currency: "SAR" }).reason, "not_paid");
+    assert.equal(assessPaidInvoice(34900, { status: "paid", amount: 100, currency: "SAR" }).reason, "amount_mismatch");
+    assert.equal(assessPaidInvoice(34900, { status: "paid", amount: 34900, currency: "USD" }).reason, "currency_mismatch");
+    assert.equal(assessPaidInvoice(34900, { status: "paid", amount: 34900 }).reason, "currency_mismatch");
   });
 
   it("reads the invoice id from an invoice callback and from a payment webhook", () => {
@@ -261,6 +266,33 @@ describe("Moyasar confirmation and receipts", () => {
       "inv_9"
     );
     assert.equal(extractInvoiceId({ type: "payment_paid", data: { id: "pay_1" } }), null);
+  });
+
+  it("looks up a bare payment webhook by checkout id, not by the payment id", () => {
+    const checkoutId = "11111111-1111-4111-8111-111111111111";
+    assert.deepEqual(
+      webhookCheckoutLookup({
+        id: "pay_1",
+        status: "paid",
+        amount: 1900,
+        currency: "SAR",
+        source: { type: "creditcard" },
+        metadata: { checkout_id: checkoutId },
+      }),
+      { checkoutId, invoiceId: null, paymentId: "pay_1" }
+    );
+    assert.deepEqual(
+      webhookCheckoutLookup({
+        type: "payment_paid",
+        data: { id: "pay_2", metadata: { checkout_id: checkoutId } },
+      }),
+      { checkoutId, invoiceId: null, paymentId: "pay_2" }
+    );
+    assert.deepEqual(webhookCheckoutLookup({ id: "inv_1", status: "paid", amount: 100 }), {
+      checkoutId: null,
+      invoiceId: "inv_1",
+      paymentId: null,
+    });
   });
 
   it("checks the webhook signature and secret token", () => {

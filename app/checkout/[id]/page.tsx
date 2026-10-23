@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { type PlanId } from "@/lib/plans";
 import { formatMoney, planById } from "@/lib/labels";
 import { SarText } from "@/app/components/RiyalAmount";
+import { checkoutFailureKind } from "@/lib/checkoutFailure";
 import { paymentSuccessPath } from "@/lib/checkoutReturn";
 import { phonePayStartsOpen, saveCardStartsChecked } from "@/lib/moyasarEnv";
 import { addDays, formatBillingDate } from "@/lib/billingCycle";
@@ -50,6 +51,7 @@ export default function CheckoutPage() {
   const [payToken, setPayToken] = useState("");
   const [copied, setCopied] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [vatIncluded, setVatIncluded] = useState(false);
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
@@ -116,6 +118,7 @@ export default function CheckoutPage() {
       setCallbackUrl(json.callbackUrl || "");
       setSamsungPayServiceId(json.samsungPayServiceId || "");
       setPhonePayUrl(json.phonePayUrl || "");
+      setVatIncluded(json.vatIncluded === true);
     })();
     return () => {
       cancelled = true;
@@ -167,7 +170,7 @@ export default function CheckoutPage() {
   const banner = paymentError || error;
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" dir={locale === "ar" ? "rtl" : "ltr"}>
       <NavSidebar isMobileOpen={sidebar} onCloseMobile={() => setSidebar(false)} />
       <div className="main">
         <Header onToggleSidebar={() => setSidebar((v) => !v)} />
@@ -220,8 +223,12 @@ export default function CheckoutPage() {
                           <SarText>{amount}</SarText>
                         </dd>
                       </div>
+                      <div>
+                        <dt>{consent && !saveRejected ? s.billing.renewsOn : s.billing.endsOn}</dt>
+                        <dd>{renewsOn}</dd>
+                      </div>
                     </dl>
-                    <p className="checkout-vat-note">{s.checkout.vatNote}</p>
+                    <p className="checkout-vat-note">{vatIncluded ? s.checkout.vatIncluded : s.checkout.vatExempt}</p>
                   </section>
                   <p className="checkout-note">{s.checkout.walletReminder}</p>
                   <ul className="checkout-networks" aria-label={s.checkout.networks}>
@@ -246,7 +253,7 @@ export default function CheckoutPage() {
                     {saveRejected
                       ? s.checkout.saveRejected
                       : consent
-                        ? `${s.billing.renewsOn} ${renewsOn}`
+                        ? `${s.billing.renewsOn} ${renewsOn}. ${s.checkout.cancelHow}`
                         : s.checkout.renewManually}
                   </p>
                   <ul className="checkout-trust">
@@ -282,7 +289,16 @@ export default function CheckoutPage() {
                       attempt={attempt}
                       failureFallback={s.checkout.paymentFailed}
                       onSaveCardRejected={() => setSaveRejected(true)}
-                      onPaymentError={(message) => setPaymentError(message || s.checkout.paymentFailed)}
+                      onPaymentError={(message) => {
+                        const kind = checkoutFailureKind(message);
+                        setPaymentError(
+                          kind === "cancelled"
+                            ? s.checkout.paymentCancelled
+                            : kind === "mismatch"
+                              ? s.checkout.paymentMismatch
+                              : s.checkout.paymentFailed
+                        );
+                      }}
                     />
                   ) : (
                     <p>{s.checkout.missingKey}</p>

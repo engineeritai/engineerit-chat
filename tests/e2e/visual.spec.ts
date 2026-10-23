@@ -147,6 +147,29 @@ test("home, pricing, advisors, and checkout", async ({ page }) => {
       await expect(page).toHaveScreenshot(`${lang}-${route.name}`);
     }
   }
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  for (const lang of ["en", "ar"] as const) {
+    await page.goto(`/checkout/preview?fixture=preview&lang=${lang}`, { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => document.documentElement.dataset.hydrated === "1");
+    await expect(page.locator(".app-shell")).toHaveAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+    await expect(page.locator(".checkout-consent input")).toBeChecked();
+    const copy = await page.locator(".checkout-main").innerText();
+    if (lang === "en") {
+      expect(copy).toContain("The price shown is the total due today. VAT is not added.");
+      expect(copy).toContain("Renews automatically on");
+      expect(copy).toContain("Cancel in Billing before this date");
+    } else {
+      expect(copy).toContain("لا تُضاف ضريبة القيمة المضافة");
+      expect(copy).toContain("يتجدد تلقائيا في");
+      expect(copy).toContain("ألغِ من صفحة الفوترة");
+    }
+    const box = await page.evaluate(() => ({
+      client: document.documentElement.clientWidth,
+      scroll: document.documentElement.scrollWidth,
+    }));
+    expect(box.scroll).toBeLessThanOrEqual(box.client + 2);
+  }
 });
 
 async function assertViewerFit(page: Page) {

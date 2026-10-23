@@ -12,6 +12,7 @@ import { useMessages } from "@/lib/useMessages";
 import { supabase } from "@/lib/supabaseClient";
 import { HEADER_PLAN_ABBREV, PLAN_COLORS, type PlanId } from "@/lib/plans";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
+import { destinationAfterAuth } from "@/lib/postAuth";
 
 type HeaderProps = {
   onToggleSidebar: () => void;
@@ -241,16 +242,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
       setLoginPassword("");
       setForgotMsg(null);
 
-      let nextPath = "/profile";
-      try {
-        const stored = window.localStorage.getItem("engineerit_post_auth_next");
-        if (stored) {
-          window.localStorage.removeItem("engineerit_post_auth_next");
-          nextPath = stored.startsWith("/") && !stored.startsWith("//") ? stored : "/profile";
-        }
-      } catch {
-        /* ignore */
-      }
+      const nextPath = destinationAfterAuth(null, data.user.user_metadata);
       router.push(nextPath);
     } catch (err) {
       console.error(err);
