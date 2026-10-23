@@ -75,19 +75,28 @@ export default function QuestionView() {
 
   useEffect(() => {
     setPageUrl(window.location.href);
-    void supabase.auth.getSession().then(({ data }) => setSignedIn(Boolean(data.session)));
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => setSignedIn(Boolean(data.session)))
+      .catch(() => setSignedIn(false));
     let cancelled = false;
     void (async () => {
-      const res = await fetch("/api/question");
-      const json = await res.json().catch(() => ({}));
-      if (cancelled) return;
-      if (!res.ok) {
+      try {
+        const res = await fetch("/api/question");
+        const json = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(copy.loadFailed);
+          setReady(true);
+          return;
+        }
+        setQuestion(json.question || null);
+        setReady(true);
+      } catch {
+        if (cancelled) return;
         setError(copy.loadFailed);
         setReady(true);
-        return;
       }
-      setQuestion(json.question || null);
-      setReady(true);
     })();
     return () => {
       cancelled = true;
