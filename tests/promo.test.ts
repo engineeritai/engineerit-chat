@@ -20,6 +20,7 @@ import {
   type WeeklyQuestionRow,
 } from "../lib/promo";
 import { applyPromo, type PromoCheckoutRow, type PromoDb } from "../lib/promoCheckout";
+import { missingPromoSchema, promoRenewalUpdate } from "../lib/promoSchema";
 
 const NOW = new Date("2026-10-23T12:00:00.000Z");
 
@@ -399,7 +400,7 @@ describe("question of the week and owner tools", () => {
   });
 
   test("locks codes and answers behind service-role grants and RLS", () => {
-    const sql = readFileSync("supabase/migrations/20261023160000_promo_codes.sql", "utf8");
+    const sql = readFileSync("supabase/migrations/20261023170000_promo_codes.sql", "utf8");
     for (const table of ["promo_codes", "promo_redemptions", "weekly_questions", "question_entries"]) {
       assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`));
       assert.match(sql, new RegExp(`revoke all on table public\\.${table} from authenticated`));
@@ -410,9 +411,48 @@ describe("question of the week and owner tools", () => {
     assert.match(sql, /grant execute on function public\.reserve_promo_use/);
     const renewal = readFileSync("lib/renewals.ts", "utf8");
     assert.match(renewal, /priceRenewalWithPromo/);
+    assert.match(renewal, /missingPromoSchema/);
+    assert.match(renewal, /promoRenewalUpdate/);
+    assert.match(readFileSync("lib/settlePayment.ts", "utf8"), /missingPromoSchema/);
+    assert.match(readFileSync("lib/settlePayment.ts", "utf8"), /"promo_code_id" in row/);
+    assert.match(readFileSync("app/api/question/route.ts", "utf8"), /missingPromoSchema/);
+    assert.match(readFileSync("app/api/checkout/promo/route.ts", "utf8"), /unavailable/);
+    assert.match(readFileSync("app/api/admin/codes/route.ts", "utf8"), /unavailable/);
     const checkout = readFileSync("app/checkout/[id]/page.tsx", "utf8");
     assert.match(checkout, /CheckoutCode/);
     assert.match(readFileSync("lib/shell.ts", "utf8"), /Have a code\?/);
     assert.match(readFileSync("lib/shell.ts", "utf8"), /عندك رمز؟/);
+  });
+
+  test("skips promo writes when the migration is not applied", () => {
+    assert.equal(
+      missingPromoSchema({
+        code: "PGRST205",
+        message: "Could not find the table 'public.promo_codes' in the schema cache",
+      }),
+      true
+    );
+    assert.equal(
+      missingPromoSchema({
+        code: "42703",
+        message: 'column "list_amount_halalas" of relation "moyasar_invoices" does not exist',
+      }),
+      true
+    );
+    assert.equal(
+      missingPromoSchema("Could not find the 'promo_code_id' column of 'moyasar_invoices' in the schema cache"),
+      true
+    );
+    assert.equal(missingPromoSchema("relation \"public.weekly_questions\" does not exist"), true);
+    assert.equal(missingPromoSchema({ code: "23505", message: "duplicate key value violates unique constraint" }), false);
+    assert.equal(missingPromoSchema("permission denied for table profiles"), false);
+    assert.deepEqual(promoRenewalUpdate({}, 0), {});
+    assert.deepEqual(promoRenewalUpdate({ promo_cycles_remaining: 0, promo_discount_type: null }, 0), {});
+    assert.deepEqual(promoRenewalUpdate({ promo_cycles_remaining: 2, promo_discount_type: "percent" }, 1), {
+      promo_cycles_remaining: 1,
+    });
+    const cleared = promoRenewalUpdate({ promo_cycles_remaining: 1, promo_discount_type: "percent" }, 0);
+    assert.equal(cleared.promo_cycles_remaining, 0);
+    assert.equal(cleared.promo_code_id, null);
   });
 });

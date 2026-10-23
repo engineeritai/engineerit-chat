@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BillingInterval } from "@/lib/plans";
 import { mapPromoRow } from "@/lib/promo";
+import { missingPromoSchema } from "@/lib/promoSchema";
 import type { CheckoutPricePatch, PromoCheckoutRow, PromoDb, ReserveInput } from "@/lib/promoCheckout";
 
 function intervalOf(value: string): BillingInterval {
@@ -10,6 +11,12 @@ function intervalOf(value: string): BillingInterval {
 function num(value: unknown) {
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function raise(error: { code?: string; message?: string }): never {
+  const err = new Error(error.message || "Database error") as Error & { code?: string };
+  err.code = error.code;
+  throw err;
 }
 
 export function promoDb(admin: SupabaseClient): PromoDb {
@@ -22,7 +29,7 @@ export function promoDb(admin: SupabaseClient): PromoDb {
         )
         .eq("id", id)
         .maybeSingle();
-      if (error) throw new Error(error.message);
+      if (error) raise(error);
       if (!data?.user_id) return null;
       const row: PromoCheckoutRow = {
         id: data.id,
@@ -39,7 +46,7 @@ export function promoDb(admin: SupabaseClient): PromoDb {
     },
     async loadCode(normalized) {
       const { data, error } = await admin.from("promo_codes").select("*").eq("code", normalized).maybeSingle();
-      if (error) throw new Error(error.message);
+      if (error) raise(error);
       if (!data) return null;
       return mapPromoRow(data as Record<string, unknown>);
     },
@@ -50,7 +57,7 @@ export function promoDb(admin: SupabaseClient): PromoDb {
         .eq("code_id", codeId)
         .in("status", ["reserved", "paid"])
         .neq("checkout_id", exceptCheckoutId);
-      if (error) throw new Error(error.message);
+      if (error) raise(error);
       return count || 0;
     },
     async countUserUses(codeId, userId, exceptCheckoutId) {
@@ -61,7 +68,7 @@ export function promoDb(admin: SupabaseClient): PromoDb {
         .eq("user_id", userId)
         .in("status", ["reserved", "paid"])
         .neq("checkout_id", exceptCheckoutId);
-      if (error) throw new Error(error.message);
+      if (error) raise(error);
       return count || 0;
     },
     async hasOpenSubscription(userId) {
@@ -71,7 +78,7 @@ export function promoDb(admin: SupabaseClient): PromoDb {
         .eq("user_id", userId)
         .in("status", ["active", "past_due"])
         .limit(1);
-      if (error) throw new Error(error.message);
+      if (error) raise(error);
       return Boolean(data && data.length > 0);
     },
     async hasPaidBefore(userId) {
@@ -84,8 +91,8 @@ export function promoDb(admin: SupabaseClient): PromoDb {
           .in("status", ["canceled", "expired", "active", "past_due"])
           .limit(1),
       ]);
-      if (invoices.error) throw new Error(invoices.error.message);
-      if (subs.error) throw new Error(subs.error.message);
+      if (invoices.error) raise(invoices.error);
+      if (subs.error) raise(subs.error);
       return Boolean((invoices.data && invoices.data.length > 0) || (subs.data && subs.data.length > 0));
     },
     async releaseCheckout(checkoutId) {
@@ -94,7 +101,7 @@ export function promoDb(admin: SupabaseClient): PromoDb {
         .update({ status: "released" })
         .eq("checkout_id", checkoutId)
         .eq("status", "reserved");
-      if (error) throw new Error(error.message);
+      if (error) raise(error);
     },
     async reserve(input: ReserveInput) {
       const { error } = await admin.rpc("reserve_promo_use", {
@@ -115,7 +122,7 @@ export function promoDb(admin: SupabaseClient): PromoDb {
         const message = error.message || "";
         if (message.includes("already_used")) return { ok: false, reason: "already_used" };
         if (message.includes("max_uses")) return { ok: false, reason: "max_uses" };
-        throw new Error(message);
+        raise(error);
       }
       return { ok: true };
     },
@@ -139,7 +146,7 @@ export function promoDb(admin: SupabaseClient): PromoDb {
         .eq("id", id)
         .eq("status", "pending")
         .select("id");
-      if (error) throw new Error(error.message);
+      if (error) raise(error);
       return Boolean(data && data.length > 0);
     },
   };
@@ -151,7 +158,7 @@ export async function markPromoPaid(admin: SupabaseClient, checkoutId: string) {
     .update({ status: "paid" })
     .eq("checkout_id", checkoutId)
     .eq("status", "reserved");
-  if (error) console.error("promo redemption", error.message);
+  if (error && !missingPromoSchema(error)) console.error("promo redemption", error.message);
 }
 
 export function promoPurchaseFields(row: {

@@ -23,6 +23,7 @@ import {
   type SelfServePlanId,
 } from "@/lib/plans";
 import { priceRenewalWithPromo, type PromoDiscountType } from "@/lib/promo";
+import { missingPromoSchema, promoRenewalUpdate } from "@/lib/promoSchema";
 import { planById } from "@/lib/labels";
 import { sendReceipt } from "@/lib/receipt";
 
@@ -58,6 +59,27 @@ type ChargeResult = {
   error?: string;
 };
 
+const SUBSCRIPTION_COLUMNS =
+  "id, user_id, customer_email, plan, billing_interval, extra_seats, seat_limit, amount_halalas, status, current_period_end, cancel_at_period_end, saved_card_id, team_id, credit_halalas, failure_count, locale";
+const SUBSCRIPTION_PROMO_COLUMNS =
+  ", promo_cycles_remaining, promo_code_id, promo_code, promo_discount_type, promo_percent_off, promo_amount_off_sar";
+
+async function loadDueSubscriptions(admin: SupabaseClient, now: Date) {
+  const query = (columns: string) =>
+    admin
+      .from("billing_subscriptions")
+      .select(columns)
+      .in("status", ["active", "past_due"])
+      .lte("current_period_end", now.toISOString())
+      .limit(100);
+  const withPromo = await query(SUBSCRIPTION_COLUMNS + SUBSCRIPTION_PROMO_COLUMNS);
+  if (!withPromo.error) return withPromo.data;
+  if (!missingPromoSchema(withPromo.error)) throw new Error(withPromo.error.message);
+  const plain = await query(SUBSCRIPTION_COLUMNS);
+  if (plain.error) throw new Error(plain.error.message);
+  return plain.data;
+}
+
 export type RenewalRunResult = {
   id: string;
   action: string;
@@ -72,16 +94,7 @@ export async function runDueRenewals(
   now = new Date(),
   options?: { dryRun?: boolean }
 ) {
-  const { data, error } = await admin
-    .from("billing_subscriptions")
-    .select(
-      "id, user_id, customer_email, plan, billing_interval, extra_seats, seat_limit, amount_halalas, status, current_period_end, cancel_at_period_end, saved_card_id, team_id, credit_halalas, failure_count, locale, promo_cycles_remaining, promo_code_id, promo_code, promo_discount_type, promo_percent_off, promo_amount_off_sar"
-    )
-    .in("status", ["active", "past_due"])
-    .lte("current_period_end", now.toISOString())
-    .limit(100);
-
-  if (error) throw new Error(error.message);
+  const data = await loadDueSubscriptions(admin, now);
 
   const results: RenewalRunResult[] = [];
   for (const row of data || []) {
@@ -406,16 +419,7 @@ async function extendSubscription(
       credit_halalas: creditRemaining,
       amount_sar: quote.amountSar,
       amount_halalas: quote.amountHalalas,
-      promo_cycles_remaining: quote.promoCyclesRemaining,
-      ...(quote.promoCyclesRemaining === 0
-        ? {
-            promo_discount_type: null,
-            promo_percent_off: null,
-            promo_amount_off_sar: null,
-            promo_code_id: null,
-            promo_code: null,
-          }
-        : {}),
+      ...promoRenewalUpdate(sub, quote.promoCyclesRemaining),
       current_period_start: nowIso,
       current_period_end: endIso,
       updated_at: nowIso,

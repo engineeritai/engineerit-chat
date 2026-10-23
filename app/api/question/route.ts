@@ -7,6 +7,7 @@ import {
   type WeeklyQuestionRow,
 } from "@/lib/promo";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
+import { missingPromoSchema } from "@/lib/promoSchema";
 
 export const runtime = "nodejs";
 
@@ -42,7 +43,10 @@ async function currentQuestion(now = new Date()) {
     .order("published_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (missingPromoSchema(error)) return null;
+    throw new Error(error.message);
+  }
   if (!data) return null;
   const row = asQuestion(data as Record<string, unknown>);
   if (!publicWeeklyQuestion(row, now)) return null;
@@ -54,6 +58,9 @@ export async function GET() {
     const row = await currentQuestion();
     return NextResponse.json({ question: row ? publicWeeklyQuestion(row) : null });
   } catch (err) {
+    if (missingPromoSchema(err instanceof Error ? err : String(err))) {
+      return NextResponse.json({ question: null });
+    }
     const message = err instanceof Error ? err.message : "Could not load the question.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -76,7 +83,10 @@ export async function POST(req: NextRequest) {
       )
       .eq("id", questionId)
       .maybeSingle();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      if (missingPromoSchema(error)) return NextResponse.json({ ok: false, reason: "unavailable" });
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     if (!data) return NextResponse.json({ error: "Question not found." }, { status: 404 });
     const row = asQuestion(data as Record<string, unknown>);
     if (!publicWeeklyQuestion(row)) return NextResponse.json({ error: "Question not found." }, { status: 404 });
@@ -87,7 +97,10 @@ export async function POST(req: NextRequest) {
       .eq("question_id", row.id)
       .eq("user_id", user.id)
       .maybeSingle();
-    if (existingErr) return NextResponse.json({ error: existingErr.message }, { status: 500 });
+    if (existingErr) {
+      if (missingPromoSchema(existingErr)) return NextResponse.json({ ok: false, reason: "unavailable" });
+      return NextResponse.json({ error: existingErr.message }, { status: 500 });
+    }
 
     let prior: { rewarded: boolean; correct: boolean; code: string | null; expiresAt: string | null } | null = null;
     if (existing) {
@@ -128,6 +141,9 @@ export async function POST(req: NextRequest) {
         correct: false,
         rewarded: false,
       });
+      if (insertErr && missingPromoSchema(insertErr)) {
+        return NextResponse.json({ ok: false, reason: "unavailable" });
+      }
       if (insertErr && !insertErr.message.toLowerCase().includes("duplicate")) {
         return NextResponse.json({ error: insertErr.message }, { status: 500 });
       }
@@ -141,6 +157,7 @@ export async function POST(req: NextRequest) {
       questionId: row.id,
     });
     const { data: created, error: codeErr } = await admin.from("promo_codes").insert(reward).select("id, code, expires_at").single();
+    if (codeErr && missingPromoSchema(codeErr)) return NextResponse.json({ ok: false, reason: "unavailable" });
     if (codeErr || !created) return NextResponse.json({ error: codeErr?.message || "Could not create the code." }, { status: 500 });
     const { error: entryErr } = await admin.from("question_entries").insert({
       question_id: row.id,
@@ -150,6 +167,7 @@ export async function POST(req: NextRequest) {
       rewarded: true,
       code_id: created.id,
     });
+    if (entryErr && missingPromoSchema(entryErr)) return NextResponse.json({ ok: false, reason: "unavailable" });
     if (entryErr) return NextResponse.json({ error: entryErr.message }, { status: 500 });
     return NextResponse.json({
       ok: true,
@@ -160,6 +178,9 @@ export async function POST(req: NextRequest) {
       percent: row.reward_percent,
     });
   } catch (err) {
+    if (missingPromoSchema(err instanceof Error ? err : String(err))) {
+      return NextResponse.json({ ok: false, reason: "unavailable" });
+    }
     const message = err instanceof Error ? err.message : "Could not save the answer.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

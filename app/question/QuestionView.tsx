@@ -122,6 +122,11 @@ export default function QuestionView() {
         body: JSON.stringify({ questionId: question.id, choiceIndex: choice }),
       });
       const json = await res.json().catch(() => ({}));
+      if (json.reason === "unavailable" || json.unavailable) {
+        setQuestion(null);
+        setResult(null);
+        return;
+      }
       if (!res.ok) {
         setError(json.error || copy.loadFailed);
         return;

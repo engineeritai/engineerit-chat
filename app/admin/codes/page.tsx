@@ -62,6 +62,7 @@ export default function AdminCodesPage() {
   const [sidebar, setSidebar] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [pendingMigration, setPendingMigration] = useState(false);
   const [codes, setCodes] = useState<CodeRow[]>([]);
   const [redemptions, setRedemptions] = useState<RedemptionRow[]>([]);
   const [batchCodes, setBatchCodes] = useState<string[]>([]);
@@ -116,6 +117,14 @@ export default function AdminCodesPage() {
     ]);
     const codeJson = await codeRes.json().catch(() => ({}));
     const redemptionJson = await redemptionRes.json().catch(() => ({}));
+    if (codeJson.unavailable || redemptionJson.unavailable) {
+      setPendingMigration(true);
+      setError("");
+      setCodes([]);
+      setRedemptions([]);
+      return;
+    }
+    setPendingMigration(false);
     if (!codeRes.ok) {
       setError(codeJson.error || "Could not load codes.");
       return;
@@ -156,6 +165,12 @@ export default function AdminCodesPage() {
             {" · "}
             <Link href="/question">Question of the week</Link>
           </p>
+          {pendingMigration ? (
+            <p>
+              Promo tables are not in this database yet. Apply supabase/migrations/20261023170000_promo_codes.sql, then reload.
+              Checkout still works without codes.
+            </p>
+          ) : null}
           {error ? <p style={{ color: "#b91c1c" }}>{error}</p> : null}
           {notice ? <p style={{ color: "#047857" }}>{notice}</p> : null}
 
@@ -191,6 +206,11 @@ export default function AdminCodesPage() {
                     }),
                   });
                   const json = await res.json().catch(() => ({}));
+                  if (json.unavailable) {
+                    setPendingMigration(true);
+                    setError("");
+                    return;
+                  }
                   if (!res.ok) {
                     setError(json.error || "Could not create the code.");
                     return;
@@ -289,6 +309,11 @@ export default function AdminCodesPage() {
                     }),
                   });
                   const json = await res.json().catch(() => ({}));
+                  if (json.unavailable) {
+                    setPendingMigration(true);
+                    setError("");
+                    return;
+                  }
                   if (!res.ok) {
                     setError(json.error || "Could not generate the batch.");
                     return;
@@ -333,7 +358,8 @@ export default function AdminCodesPage() {
 
           <section className="card" style={{ marginBottom: 16 }}>
             <h2 className="section-heading" style={{ marginTop: 0 }}>Codes</h2>
-            {codes.length === 0 ? <p>No codes yet.</p> : (
+            {codes.length === 0 && !pendingMigration ? <p>No codes yet.</p> : null}
+            {codes.length > 0 ? (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
@@ -366,8 +392,13 @@ export default function AdminCodesPage() {
                                     headers,
                                     body: JSON.stringify({ id: row.id }),
                                   });
+                                  const json = await res.json().catch(() => ({}));
+                                  if (json.unavailable) {
+                                    setPendingMigration(true);
+                                    setError("");
+                                    return;
+                                  }
                                   if (!res.ok) {
-                                    const json = await res.json().catch(() => ({}));
                                     setError(json.error || "Could not disable the code.");
                                     return;
                                   }
@@ -411,6 +442,11 @@ export default function AdminCodesPage() {
                     }),
                   });
                   const json = await res.json().catch(() => ({}));
+                  if (json.unavailable) {
+                    setPendingMigration(true);
+                    setError("");
+                    return;
+                  }
                   if (!res.ok) {
                     setError(json.error || "Could not publish the question.");
                     return;
@@ -437,7 +473,8 @@ export default function AdminCodesPage() {
 
           <section className="card">
             <h2 className="section-heading" style={{ marginTop: 0 }}>Redemptions</h2>
-            {redemptions.length === 0 ? <p>No redemptions yet.</p> : (
+            {redemptions.length === 0 && !pendingMigration ? <p>No redemptions yet.</p> : null}
+            {redemptions.length > 0 ? (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>

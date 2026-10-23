@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { applyPromo } from "@/lib/promoCheckout";
 import { promoDb } from "@/lib/promoDb";
 import { checkoutActor } from "@/lib/promoAccess";
+import { missingPromoSchema } from "@/lib/promoSchema";
 
 export const runtime = "nodejs";
 
@@ -35,6 +36,22 @@ function publicQuote(row: {
   };
 }
 
+function unavailableQuote() {
+  return {
+    applied: false,
+    unavailable: true,
+    code: null,
+    listSar: 0,
+    discountSar: 0,
+    chargedSar: 0,
+    chargedHalalas: 0,
+    listHalalas: 0,
+    discountHalalas: 0,
+    cycles: 0,
+    free: false,
+  };
+}
+
 export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id") || "";
   if (!ID.test(id)) return NextResponse.json({ error: "Missing checkout." }, { status: 400 });
@@ -48,7 +65,10 @@ export async function GET(req: NextRequest) {
       )
       .eq("id", id)
       .maybeSingle();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      if (missingPromoSchema(error)) return NextResponse.json(unavailableQuote());
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     if (!data) return NextResponse.json({ error: "Checkout not found." }, { status: 404 });
     return NextResponse.json(publicQuote(data));
   } catch (err) {
@@ -78,6 +98,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json(result);
   } catch (err) {
+    if (missingPromoSchema(err instanceof Error ? err : String(err))) return NextResponse.json(unavailableQuote());
     const message = err instanceof Error ? err.message : "Could not apply the code.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

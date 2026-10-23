@@ -52,6 +52,7 @@ export default function CheckoutCode({ checkoutId, payToken, preview, copy, onPr
   const [message, setMessage] = useState("");
   const [tone, setTone] = useState<"ok" | "bad" | "">("");
   const [quote, setQuote] = useState<PromoQuote | null>(null);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     if (preview) return;
@@ -62,7 +63,12 @@ export default function CheckoutCode({ checkoutId, payToken, preview, copy, onPr
       if (payToken) qs.set("pay", payToken);
       const res = await fetch(`/api/checkout/promo?${qs}`, { headers });
       const json = await res.json().catch(() => null);
-      if (cancelled || !res.ok || !json) return;
+      if (cancelled || !json) return;
+      if (json.unavailable) {
+        setHidden(true);
+        return;
+      }
+      if (!res.ok) return;
       setQuote(json);
       onPriced(json);
       if (json.applied) {
@@ -89,6 +95,10 @@ export default function CheckoutCode({ checkoutId, payToken, preview, copy, onPr
         body: JSON.stringify({ id: checkoutId, code: nextCode, pay: payToken }),
       });
       const json = await res.json().catch(() => ({}));
+      if (json.unavailable) {
+        setHidden(true);
+        return;
+      }
       if (!res.ok || json.ok === false) {
         setTone("bad");
         setMessage(reasonText(String(json.reason || ""), copy));
@@ -115,6 +125,10 @@ export default function CheckoutCode({ checkoutId, payToken, preview, copy, onPr
         body: JSON.stringify({ id: checkoutId, pay: payToken }),
       });
       const json = await res.json().catch(() => ({}));
+      if (json.unavailable) {
+        setHidden(true);
+        return;
+      }
       if (!res.ok || json.ok === false) {
         setTone("bad");
         setMessage(copy.codeInvalid);
@@ -125,6 +139,8 @@ export default function CheckoutCode({ checkoutId, payToken, preview, copy, onPr
       setBusy(false);
     }
   }
+
+  if (hidden) return null;
 
   const renewal =
     quote?.applied && quote.cycles > 1

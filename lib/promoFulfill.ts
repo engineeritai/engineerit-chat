@@ -56,7 +56,7 @@ export async function fulfillFreeCheckout(admin: SupabaseClient, row: CheckoutRo
       periodEnd,
       locale: row.locale === "ar" ? "ar" : "en",
       source: "moyasar",
-      promo: promoPurchaseFields(row),
+      promo: "promo_code_id" in row ? promoPurchaseFields(row) : undefined,
     });
     await admin.from("moyasar_invoices").update({ period_end: periodEnd }).eq("id", row.id);
     await markPromoPaid(admin, row.id);

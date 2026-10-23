@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkoutActor } from "@/lib/promoAccess";
 import { fulfillFreeCheckout } from "@/lib/promoFulfill";
 import { loadCheckoutById } from "@/lib/settlePayment";
+import { missingPromoSchema } from "@/lib/promoSchema";
 
 export const runtime = "nodejs";
 
@@ -23,6 +24,9 @@ export async function POST(req: NextRequest) {
     if (!result.ok) return NextResponse.json({ ok: false, reason: result.reason }, { status: 400 });
     return NextResponse.json({ ok: true, periodEnd: result.periodEnd });
   } catch (err) {
+    if (missingPromoSchema(err instanceof Error ? err : String(err))) {
+      return NextResponse.json({ ok: false, reason: "unavailable" });
+    }
     const message = err instanceof Error ? err.message : "Could not activate this plan.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

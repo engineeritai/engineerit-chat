@@ -59,7 +59,7 @@ Run once, in order. Each file is idempotent (`if not exists` / `add column if no
 3. `supabase/migrations/20261016160000_recurring_billing.sql` — `saved_cards`, `billing_subscriptions`, `renewal_attempts`, plus `payment_id` on checkout rows.
 4. `supabase/migrations/20261016180000_advisor_tiers_and_legacy_price.sql` — `consultant_legacy_price_until` and `advisor_trial_plan` on `profiles`, and a three-month grandfather backfill for current Consultant rows. Apply this before the new prices go live.
 5. `supabase/migrations/20261016210000_profile_subscription_fields.sql` — `locale` on checkout rows and billing subscriptions, so invoice emails and PDFs stay in the buyer’s language. Apply this before deploy.
-6. `supabase/migrations/20261023160000_promo_codes.sql` — promo codes, redemptions, and the weekly question. Apply this before creating codes. It grants the tables to `service_role` only and enables RLS with no client policies, so a signed-in user cannot read the code list or the question answers.
+6. `supabase/migrations/20261023170000_promo_codes.sql` — promo codes, redemptions, and the weekly question. Apply this before creating codes. It grants the tables to `service_role` only and enables RLS with no client policies, so a signed-in user cannot read the code list or the question answers. Checkout, `/admin/codes`, and `/question` keep working if this file has not been applied yet: checkout charges the list price and hides the code field, and the other two pages show an empty state instead of an error.
 
 `saved_cards`, `billing_subscriptions`, and `renewal_attempts` have RLS enabled and no client policies. Only the service role reads or writes them. Card tokens are never returned to the browser.
 

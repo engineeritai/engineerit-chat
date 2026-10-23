@@ -13,6 +13,7 @@ import {
 import { recordPlanPurchase } from "@/lib/recordPlan";
 import { sendReceipt } from "@/lib/receipt";
 import { markPromoPaid, promoPurchaseFields } from "@/lib/promoDb";
+import { missingPromoSchema } from "@/lib/promoSchema";
 
 export type CheckoutRow = {
   id: string;
@@ -211,7 +212,7 @@ async function activateCheckout(
       skipRecent: row.purpose === "renew_now",
       company: row.company,
       source: "moyasar",
-      promo: promoPurchaseFields(row),
+      promo: "promo_code_id" in row ? promoPurchaseFields(row) : undefined,
     });
     return result.endDate;
   }
@@ -234,28 +235,30 @@ async function activateCheckout(
   return periodEnd;
 }
 
-export async function loadCheckoutByInvoice(admin: SupabaseClient, invoiceId: string) {
-  const { data, error } = await admin
+const CHECKOUT_COLUMNS =
+  "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale";
+const CHECKOUT_PROMO_COLUMNS =
+  ", promo_code_id, promo_code, promo_cycles, promo_discount_type, promo_percent_off, promo_amount_off_sar";
+
+async function loadCheckout(admin: SupabaseClient, column: "id" | "invoice_id", value: string) {
+  const withPromo = await admin
     .from("moyasar_invoices")
-    .select(
-      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale, promo_code_id, promo_code, promo_cycles, promo_discount_type, promo_percent_off, promo_amount_off_sar"
-    )
-    .eq("invoice_id", invoiceId)
+    .select(CHECKOUT_COLUMNS + CHECKOUT_PROMO_COLUMNS)
+    .eq(column, value)
     .maybeSingle();
-  if (error) throw new Error(error.message);
-  return (data as CheckoutRow | null) ?? null;
+  if (!withPromo.error) return (withPromo.data as CheckoutRow | null) ?? null;
+  if (!missingPromoSchema(withPromo.error)) throw new Error(withPromo.error.message);
+  const plain = await admin.from("moyasar_invoices").select(CHECKOUT_COLUMNS).eq(column, value).maybeSingle();
+  if (plain.error) throw new Error(plain.error.message);
+  return (plain.data as CheckoutRow | null) ?? null;
+}
+
+export async function loadCheckoutByInvoice(admin: SupabaseClient, invoiceId: string) {
+  return loadCheckout(admin, "invoice_id", invoiceId);
 }
 
 export async function loadCheckoutById(admin: SupabaseClient, id: string) {
-  const { data, error } = await admin
-    .from("moyasar_invoices")
-    .select(
-      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale, promo_code_id, promo_code, promo_cycles, promo_discount_type, promo_percent_off, promo_amount_off_sar"
-    )
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return (data as CheckoutRow | null) ?? null;
+  return loadCheckout(admin, "id", id);
 }
 
 export async function confirmCheckout(

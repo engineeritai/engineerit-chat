@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/promoAccess";
+import { missingPromoSchema } from "@/lib/promoSchema";
 import { getSupabaseAdmin } from "@/lib/serverSupabase";
 
 export const runtime = "nodejs";
@@ -20,7 +21,10 @@ export async function GET(req: NextRequest) {
     )
     .order("created_at", { ascending: false })
     .limit(20);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (missingPromoSchema(error)) return NextResponse.json({ unavailable: true, questions: [] });
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json({ questions: data || [] });
 }
 
@@ -68,6 +72,9 @@ export async function POST(req: NextRequest) {
     })
     .select("id")
     .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (missingPromoSchema(error)) return NextResponse.json({ unavailable: true });
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json({ id: data.id });
 }
