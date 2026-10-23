@@ -5,7 +5,7 @@ export type PageMeta = { title: string; description: string };
 const META: Record<Locale, Record<string, PageMeta>> = {
   en: {
     "/": {
-      title: "engineer it | AI Engineering Assistant",
+      title: "engineer it | Your AI Engineering Assistant",
       description:
         "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Your subscription unlocks unlimited chats, engineering tools and AI Advisors.",
     },
@@ -108,7 +108,7 @@ const META: Record<Locale, Record<string, PageMeta>> = {
   },
   ar: {
     "/": {
-      title: "engineer it | مساعد هندسي بالذكاء الاصطناعي",
+      title: "engineer it | مساعدك الهندسي بالذكاء الاصطناعي",
       description:
         "engineerit.ai يهندس أي فكرة أو موضوع بمنهج منظم. أرفق ملفاتك، واختر أداة، واحصل على إجابات منظمة. اشتراكك يفتح المحادثات غير المحدودة والأدوات الهندسية ومستشاري الذكاء الاصطناعي.",
     },
