@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Header from "../../components/Header";
 import NavSidebar from "../../components/NavSidebar";
@@ -16,6 +16,8 @@ import { addDays, formatBillingDate } from "@/lib/billingCycle";
 import { periodDays } from "@/lib/plans";
 import { useMessages } from "@/lib/useMessages";
 import { trackOnce } from "@/lib/attribution";
+import CheckoutCode, { type PromoQuote } from "../../components/CheckoutCode";
+import StudentVerify from "../../components/StudentVerify";
 
 type Checkout = {
   id: string;
@@ -50,6 +52,7 @@ export default function CheckoutPage() {
   const [payToken, setPayToken] = useState("");
   const [copied, setCopied] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [promo, setPromo] = useState<PromoQuote | null>(null);
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
@@ -156,6 +159,13 @@ export default function CheckoutPage() {
     [checkout?.id, checkout?.plan]
   );
 
+  const onPriced = useCallback((next: PromoQuote) => {
+    setPromo(next.applied ? next : null);
+    setCheckout((current) => {
+      if (!current || Number(current.amount_halalas) === next.chargedHalalas) return current;
+      return { ...current, amount_sar: next.chargedSar, amount_halalas: next.chargedHalalas };
+    });
+  }, []);
   const label = checkout ? planById(locale, checkout.plan).name : "";
   const amount = checkout ? formatMoney(Number(checkout.amount_sar), locale) : "";
   const cycle = checkout?.billing_interval === "year" ? s.profile.annual : s.profile.monthly;
@@ -214,13 +224,38 @@ export default function CheckoutPage() {
                           <dd>{checkout.seat_limit}</dd>
                         </div>
                       ) : null}
+                      {promo ? (
+                        <>
+                          <div>
+                            <dt>{s.checkout.originalPrice}</dt>
+                            <dd>
+                              <SarText>{formatMoney(promo.listSar, locale)}</SarText>
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>{s.checkout.discount}</dt>
+                            <dd>
+                              <SarText>{formatMoney(promo.discountSar, locale)}</SarText>
+                            </dd>
+                          </div>
+                        </>
+                      ) : null}
                       <div>
-                        <dt>{s.profile.amount}</dt>
+                        <dt>{promo ? s.checkout.totalDue : s.profile.amount}</dt>
                         <dd className="checkout-amount">
                           <SarText>{amount}</SarText>
                         </dd>
                       </div>
                     </dl>
+                    <CheckoutCode
+                      checkoutId={checkout.id}
+                      payToken={payToken}
+                      preview={preview}
+                      copy={s.checkout}
+                      onPriced={onPriced}
+                      onRedeemed={() => window.location.assign(paymentSuccessPath(checkout.id, payToken))}
+                    />
+                    <StudentVerify preview={preview} />
                     <p className="checkout-vat-note">{s.checkout.vatNote}</p>
                     <p className="checkout-help">{s.checkout.cancelHow}</p>
                   </section>
@@ -264,7 +299,9 @@ export default function CheckoutPage() {
                       <a href="mailto:support@engineerit.ai">support@engineerit.ai</a>
                     </li>
                   </ul>
-                  {preview ? (
+                  {promo?.free ? (
+                    <p className="checkout-note">{s.checkout.freeReady}</p>
+                  ) : preview ? (
                     <div className="checkout-preview" data-testid="checkout-preview">
                       <p>{s.checkout.summary}</p>
                     </div>

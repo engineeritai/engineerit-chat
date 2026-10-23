@@ -15,6 +15,7 @@ export const en: MarketingContent = {
     advisors: "AI Advisors",
     pricing: "Pricing",
     faq: "Questions",
+    question: "Question of the week",
     login: "Login",
     openChat: "Start chatting",
     startChat: "Start chatting",

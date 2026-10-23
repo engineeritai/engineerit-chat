@@ -22,6 +22,7 @@ export type MarketingContent = {
     advisors: string;
     pricing: string;
     faq: string;
+    question: string;
     login: string;
     openChat: string;
     startChat: string;

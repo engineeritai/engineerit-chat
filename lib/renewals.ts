@@ -27,6 +27,9 @@ import {
   type PlanId,
   type SelfServePlanId,
 } from "@/lib/plans";
+import { priceRenewalWithPromo, type PromoDiscountType } from "@/lib/promo";
+import { mentionsColumn, missingPromoSchema, promoRenewalUpdate } from "@/lib/promoSchema";
+import { studentDiscountAllowed } from "@/lib/studentVerify";
 import { planById } from "@/lib/labels";
 import { applyAssistantRetention } from "@/lib/returnToFree";
 import { sendReceipt } from "@/lib/receipt";
@@ -48,6 +51,13 @@ export type OpenSubscription = {
   credit_halalas: number;
   failure_count: number;
   locale?: string | null;
+  promo_cycles_remaining?: number | null;
+  promo_code_id?: string | null;
+  promo_code?: string | null;
+  promo_discount_type?: string | null;
+  promo_percent_off?: number | null;
+  promo_amount_off_sar?: number | null;
+  promo_requires_student?: boolean | null;
 };
 
 type ChargeResult = {
@@ -56,6 +66,31 @@ type ChargeResult = {
   paymentId?: string | null;
   error?: string;
 };
+
+const SUBSCRIPTION_COLUMNS =
+  "id, user_id, customer_email, plan, billing_interval, extra_seats, seat_limit, amount_halalas, status, current_period_end, cancel_at_period_end, saved_card_id, team_id, credit_halalas, failure_count, locale";
+const SUBSCRIPTION_PROMO_COLUMNS =
+  ", promo_cycles_remaining, promo_code_id, promo_code, promo_discount_type, promo_percent_off, promo_amount_off_sar";
+const SUBSCRIPTION_STUDENT_COLUMN = ", promo_requires_student";
+
+async function loadDueSubscriptions(admin: SupabaseClient, now: Date): Promise<OpenSubscription[]> {
+  const query = (columns: string) =>
+    admin
+      .from("billing_subscriptions")
+      .select(columns)
+      .in("status", ["active", "past_due"])
+      .lte("current_period_end", now.toISOString())
+      .limit(100);
+  let result = await query(SUBSCRIPTION_COLUMNS + SUBSCRIPTION_PROMO_COLUMNS + SUBSCRIPTION_STUDENT_COLUMN);
+  if (result.error && mentionsColumn(result.error, "promo_requires_student")) {
+    result = await query(SUBSCRIPTION_COLUMNS + SUBSCRIPTION_PROMO_COLUMNS);
+  }
+  if (result.error && missingPromoSchema(result.error)) {
+    result = await query(SUBSCRIPTION_COLUMNS);
+  }
+  if (result.error) throw new Error(result.error.message);
+  return (result.data || []) as unknown as OpenSubscription[];
+}
 
 export type RenewalRunResult = {
   id: string;
@@ -71,20 +106,10 @@ export async function runDueRenewals(
   now = new Date(),
   options?: { dryRun?: boolean }
 ) {
-  const { data, error } = await admin
-    .from("billing_subscriptions")
-    .select(
-      "id, user_id, customer_email, plan, billing_interval, extra_seats, seat_limit, amount_halalas, status, current_period_end, cancel_at_period_end, saved_card_id, team_id, credit_halalas, failure_count, locale"
-    )
-    .in("status", ["active", "past_due"])
-    .lte("current_period_end", now.toISOString())
-    .limit(100);
-
-  if (error) throw new Error(error.message);
+  const data = await loadDueSubscriptions(admin, now);
 
   const results: RenewalRunResult[] = [];
-  for (const row of data || []) {
-    const sub = row as OpenSubscription;
+  for (const sub of data) {
     const decision = decideRenewal({
       now,
       subscriptionId: sub.id,
@@ -157,6 +182,7 @@ export async function applyRenewalDecision(
         paymentId: charge.paymentId || null,
         locale,
         now,
+        discounted: quote.promoDiscounted,
       });
       try {
         await sendReceipt(sub.customer_email, {
@@ -361,7 +387,28 @@ async function quoteRenewal(admin: SupabaseClient, sub: OpenSubscription, now: D
       .maybeSingle();
     consultantLegacy = consultantLegacyActive(data?.consultant_legacy_price_until, now);
   }
-  return quoteSelfServe(sub.plan, sub.billing_interval, sub.extra_seats, { consultantLegacy });
+  const list = quoteSelfServe(sub.plan, sub.billing_interval, sub.extra_seats, { consultantLegacy });
+  const discountType = sub.promo_discount_type;
+  const studentVerified = sub.promo_requires_student ? await readStudentVerified(admin, sub.user_id, now) : false;
+  const promo = priceRenewalWithPromo(list.amountSar, {
+    cyclesRemaining: Number(sub.promo_cycles_remaining) || 0,
+    discountType:
+      discountType === "percent" || discountType === "fixed" || discountType === "free_months"
+        ? (discountType as PromoDiscountType)
+        : null,
+    percentOff: sub.promo_percent_off === null || sub.promo_percent_off === undefined ? null : Number(sub.promo_percent_off),
+    amountOffSar:
+      sub.promo_amount_off_sar === null || sub.promo_amount_off_sar === undefined ? null : Number(sub.promo_amount_off_sar),
+    requiresStudent: Boolean(sub.promo_requires_student),
+    studentVerified,
+  });
+  return {
+    ...list,
+    amountSar: promo.amountSar,
+    amountHalalas: promo.amountHalalas,
+    promoCyclesRemaining: promo.cyclesRemainingAfter,
+    promoDiscounted: promo.discounted,
+  };
 }
 
 async function extendSubscription(
@@ -383,6 +430,7 @@ async function extendSubscription(
       credit_halalas: creditRemaining,
       amount_sar: quote.amountSar,
       amount_halalas: quote.amountHalalas,
+      ...promoRenewalUpdate(sub, quote.promoCyclesRemaining),
       current_period_start: nowIso,
       current_period_end: endIso,
       updated_at: nowIso,
@@ -457,6 +505,7 @@ async function recordRenewalInvoice(
     paymentId: string | null;
     locale: "ar" | "en";
     now: Date;
+    discounted?: boolean;
   }
 ) {
   if (args.paymentId) {
@@ -487,8 +536,27 @@ async function recordRenewalInvoice(
     period_end: args.periodEnd,
     purpose: "renewal",
     locale: args.locale,
+    ...(args.discounted
+      ? {
+          promo_code_id: sub.promo_code_id || null,
+          promo_code: sub.promo_code || null,
+          promo_discount_type: sub.promo_discount_type || null,
+          promo_percent_off: sub.promo_percent_off ?? null,
+          promo_amount_off_sar: sub.promo_amount_off_sar ?? null,
+          promo_cycles: sub.promo_cycles_remaining ?? null,
+        }
+      : {}),
   });
   if (error) console.error("renewal invoice insert", error);
+}
+
+async function readStudentVerified(admin: SupabaseClient, userId: string, now: Date) {
+  const { data, error } = await admin.from("student_status").select("verified_until").eq("user_id", userId).maybeSingle();
+  if (error) {
+    if (missingPromoSchema(error)) return false;
+    throw new Error(error.message);
+  }
+  return studentDiscountAllowed(data?.verified_until ? String(data.verified_until) : null, now);
 }
 
 function noticeLocale(sub: OpenSubscription): "en" | "ar" {

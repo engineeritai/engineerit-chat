@@ -12,6 +12,8 @@ import {
 } from "@/lib/moyasar";
 import { recordPlanPurchase } from "@/lib/recordPlan";
 import { sendReceipt } from "@/lib/receipt";
+import { markPromoPaid, promoPurchaseFields } from "@/lib/promoDb";
+import { mentionsColumn, missingPromoSchema } from "@/lib/promoSchema";
 
 export type CheckoutRow = {
   id: string;
@@ -33,6 +35,13 @@ export type CheckoutRow = {
   payment_id?: string | null;
   purpose?: string | null;
   locale?: string | null;
+  promo_code_id?: string | null;
+  promo_code?: string | null;
+  promo_cycles?: number | null;
+  promo_discount_type?: string | null;
+  promo_percent_off?: number | null;
+  promo_amount_off_sar?: number | null;
+  promo_requires_student?: boolean | null;
 };
 
 function addDays(from: Date, days: number) {
@@ -105,6 +114,7 @@ export async function settleCheckout(
             .eq("user_id", row.user_id)
             .in("status", ["active", "past_due"]);
         }
+        await markPromoPaid(admin, row.id);
         if (row.lead_id) {
           const { error: leadErr } = await admin
             .from("enterprise_leads")
@@ -214,6 +224,7 @@ async function activateCheckout(
       skipRecent: row.purpose === "renew_now",
       company: row.company,
       source: "moyasar",
+      promo: "promo_code_id" in row ? promoPurchaseFields(row) : undefined,
     });
     return result.endDate;
   }
@@ -236,28 +247,31 @@ async function activateCheckout(
   return periodEnd;
 }
 
+const CHECKOUT_COLUMNS =
+  "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale";
+const CHECKOUT_PROMO_COLUMNS =
+  ", promo_code_id, promo_code, promo_cycles, promo_discount_type, promo_percent_off, promo_amount_off_sar";
+const CHECKOUT_STUDENT_COLUMN = ", promo_requires_student";
+
+async function loadCheckout(admin: SupabaseClient, column: "id" | "invoice_id", value: string) {
+  const query = (columns: string) => admin.from("moyasar_invoices").select(columns).eq(column, value).maybeSingle();
+  let result = await query(CHECKOUT_COLUMNS + CHECKOUT_PROMO_COLUMNS + CHECKOUT_STUDENT_COLUMN);
+  if (result.error && mentionsColumn(result.error, "promo_requires_student")) {
+    result = await query(CHECKOUT_COLUMNS + CHECKOUT_PROMO_COLUMNS);
+  }
+  if (result.error && missingPromoSchema(result.error)) {
+    result = await query(CHECKOUT_COLUMNS);
+  }
+  if (result.error) throw new Error(result.error.message);
+  return (result.data as CheckoutRow | null) ?? null;
+}
+
 export async function loadCheckoutByInvoice(admin: SupabaseClient, invoiceId: string) {
-  const { data, error } = await admin
-    .from("moyasar_invoices")
-    .select(
-      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale"
-    )
-    .eq("invoice_id", invoiceId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return (data as CheckoutRow | null) ?? null;
+  return loadCheckout(admin, "invoice_id", invoiceId);
 }
 
 export async function loadCheckoutById(admin: SupabaseClient, id: string) {
-  const { data, error } = await admin
-    .from("moyasar_invoices")
-    .select(
-      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale"
-    )
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return (data as CheckoutRow | null) ?? null;
+  return loadCheckout(admin, "id", id);
 }
 
 export async function confirmCheckout(

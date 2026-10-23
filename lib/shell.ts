@@ -16,6 +16,7 @@ export type ShellCopy = {
     team: string;
     advisors: string;
     faq: string;
+    question: string;
   };
   footer: {
     blurb: string;
@@ -374,6 +375,32 @@ export type ShellCopy = {
     copied: string;
     networks: string;
     vatNote: string;
+    haveCode: string;
+    codePlaceholder: string;
+    applyCode: string;
+    removeCode: string;
+    codeApplied: string;
+    codeInvalid: string;
+    codeExpired: string;
+    codeNotYet: string;
+    codeWrongPlan: string;
+    codeWrongAccount: string;
+    codeUsed: string;
+    codeLimit: string;
+    codeTooSmall: string;
+    codeChecking: string;
+    originalPrice: string;
+    discount: string;
+    totalDue: string;
+    afterDiscountList: string;
+    afterDiscountCycles: string;
+    freeReady: string;
+    freeRedeem: string;
+    question: string;
+    studentOffer: string;
+    verifyStudent: string;
+    studentUnverified: string;
+    studentExpired: string;
     saveNotice: string;
     cancelHow: string;
   };
@@ -506,6 +533,7 @@ const en: ShellCopy = {
     team: "Team",
     advisors: "AI Advisors",
     faq: "Questions",
+    question: "Question of the week",
   },
   footer: {
     blurb: "AI engineering assistant",
@@ -887,6 +915,32 @@ const en: ShellCopy = {
     copied: "Link copied",
     networks: "Cards",
     vatNote: "Total due today is the amount above, in SAR. VAT is shown on the receipt only when a VAT number is on file.",
+    haveCode: "Have a code?",
+    codePlaceholder: "Gift or promo code",
+    applyCode: "Apply",
+    removeCode: "Remove",
+    codeApplied: "Code applied",
+    codeInvalid: "This code is not valid",
+    codeExpired: "This code has expired",
+    codeNotYet: "This code is not active yet",
+    codeWrongPlan: "This code does not apply to this plan",
+    codeWrongAccount: "This code is not available for this account",
+    codeUsed: "This code has already been used",
+    codeLimit: "This code has reached its limit",
+    codeTooSmall: "This code cannot be applied to this amount",
+    codeChecking: "Checking code",
+    originalPrice: "Original price",
+    discount: "Discount",
+    totalDue: "Total",
+    afterDiscountList: "After this discount, renewal returns to the list price.",
+    afterDiscountCycles: "This price covers this payment and {count} more. After that, renewal returns to the list price.",
+    freeReady: "This period is free. No payment is due now.",
+    freeRedeem: "Activate free access",
+    question: "Question of the week",
+    studentOffer: "Students: 50% off the Engineer plan with a verified university email or a student letter",
+    verifyStudent: "Verify student status",
+    studentUnverified: "Verify student status before this discount applies",
+    studentExpired: "Student status has expired. Renewal uses the list price until you verify again.",
     saveNotice: "Your card is saved securely by Moyasar for automatic renewal.",
     cancelHow: "Cancel anytime from Billing before the renewal date. Access stays on until that date.",
   },
@@ -1022,6 +1076,7 @@ const ar: ShellCopy = {
     team: "الفريق",
     advisors: "مستشارو الذكاء الاصطناعي",
     faq: "الأسئلة الشائعة",
+    question: "سؤال الأسبوع",
   },
   footer: {
     blurb: "مساعد هندسي بالذكاء الاصطناعي",
@@ -1398,6 +1453,32 @@ const ar: ShellCopy = {
     copied: "تم نسخ الرابط",
     networks: "البطاقات",
     vatNote: "المستحق اليوم هو المبلغ أعلاه بالريال. تظهر ضريبة القيمة المضافة في الإيصال فقط عند وجود رقم ضريبي.",
+    haveCode: "عندك رمز؟",
+    codePlaceholder: "رمز هدية أو خصم",
+    applyCode: "تطبيق",
+    removeCode: "إزالة",
+    codeApplied: "تم تطبيق الرمز",
+    codeInvalid: "هذا الرمز غير صالح",
+    codeExpired: "انتهت صلاحية هذا الرمز",
+    codeNotYet: "هذا الرمز غير مفعل بعد",
+    codeWrongPlan: "هذا الرمز لا ينطبق على هذه الباقة",
+    codeWrongAccount: "هذا الرمز غير متاح لهذا الحساب",
+    codeUsed: "سبق استخدام هذا الرمز",
+    codeLimit: "بلغ هذا الرمز حد الاستخدام",
+    codeTooSmall: "لا يمكن تطبيق هذا الرمز على هذا المبلغ",
+    codeChecking: "جار التحقق من الرمز",
+    originalPrice: "السعر الأصلي",
+    discount: "الخصم",
+    totalDue: "المجموع",
+    afterDiscountList: "بعد هذا الخصم يعود التجديد إلى السعر المعلن.",
+    afterDiscountCycles: "يشمل هذا السعر هذه الدفعة و{count} بعدها. ثم يعود التجديد إلى السعر المعلن.",
+    freeReady: "هذه الفترة مجانية. لا يوجد مبلغ مستحق الآن.",
+    freeRedeem: "تفعيل الوصول المجاني",
+    question: "سؤال الأسبوع",
+    studentOffer: "للطلاب: خصم 50% على باقة المهندس مع بريد جامعي مؤكد أو خطاب طالب",
+    verifyStudent: "تأكيد صفة الطالب",
+    studentUnverified: "أكد صفة الطالب أولا لتطبيق هذا الخصم",
+    studentExpired: "انتهت صفة الطالب. التجديد بالسعر المعلن حتى تؤكدها من جديد.",
     saveNotice: "يحفظ ميسر بطاقتك بشكل آمن للتجديد التلقائي.",
     cancelHow: "يمكنك الإلغاء من الفوترة قبل تاريخ التجديد. يستمر الوصول حتى ذلك التاريخ.",
   },
