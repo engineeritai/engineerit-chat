@@ -47,7 +47,7 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(SITE_URL),
     title: {
       default: meta.title,
-      template: "%s | engineerit.ai",
+      template: "%s | engineer it",
     },
     description: meta.description,
     applicationName: "engineer it",
