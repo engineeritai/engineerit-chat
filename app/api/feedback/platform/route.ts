@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { parsePlatformFeedback } from "@/lib/platformFeedback";
+import { feedbackTableMissing, parsePlatformFeedback } from "@/lib/platformFeedback";
 import { getUserFromRequest } from "@/lib/serverSupabase";
 
 export const runtime = "nodejs";
@@ -29,6 +29,9 @@ export async function POST(req: Request) {
     improve: parsed.improve,
   });
   if (error) {
+    if (feedbackTableMissing(error)) {
+      return NextResponse.json({ ok: false, error: "unavailable" }, { status: 409 });
+    }
     console.error("platform feedback", error.message);
     return NextResponse.json({ error: "save" }, { status: 500 });
   }

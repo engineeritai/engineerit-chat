@@ -54,12 +54,47 @@ export function summarizePlatformFeedback(
   return { count: valid.length, averageRating, latest };
 }
 
-export function feedbackTableMissing(error: { code?: string; message?: string } | null | undefined) {
-  if (!error) return false;
-  const message = error.message || "";
-  return (
-    error.code === "42P01" ||
-    error.code === "PGRST205" ||
-    (/platform_feedback/i.test(message) && /does not exist|schema cache/i.test(message))
-  );
+/** True when platform_feedback is absent because the lifecycle migration has not been applied. */
+export function feedbackTableMissing(error: unknown) {
+  if (!error || (typeof error !== "object" && typeof error !== "string")) return false;
+  const record = typeof error === "object" ? (error as { code?: string; message?: string; details?: string; hint?: string }) : {};
+  const text = [
+    record.code,
+    record.message,
+    record.details,
+    record.hint,
+    error instanceof Error ? error.message : "",
+    typeof error === "string" ? error : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  if (record.code === "42P01" || record.code === "PGRST205") return true;
+  return /platform_feedback/i.test(text) && /does not exist|schema cache|could not find the table/i.test(text);
+}
+
+export function presentFeedback(value: unknown):
+  | { ready: false }
+  | { ready: true; count: number; averageRating: number | null; latest: FeedbackSuggestion[] } {
+  if (value == null || typeof value !== "object") return { ready: false };
+  const record = value as { count?: unknown; averageRating?: unknown; latest?: unknown };
+  const count = typeof record.count === "number" ? record.count : Number(record.count);
+  if (!Number.isFinite(count) || count < 0) return { ready: false };
+  const averageRating =
+    typeof record.averageRating === "number" && Number.isFinite(record.averageRating) ? record.averageRating : null;
+  const latest = Array.isArray(record.latest)
+    ? record.latest.flatMap((item) => {
+        if (!item || typeof item !== "object") return [];
+        const row = item as { rating?: unknown; liked?: unknown; improve?: unknown; createdAt?: unknown };
+        const rating = typeof row.rating === "number" ? row.rating : Number(row.rating);
+        return [
+          {
+            rating: Number.isFinite(rating) ? rating : 0,
+            liked: cleanFeedbackText(row.liked),
+            improve: cleanFeedbackText(row.improve),
+            createdAt: typeof row.createdAt === "string" ? row.createdAt : "",
+          },
+        ];
+      })
+    : [];
+  return { ready: true, count, averageRating, latest };
 }

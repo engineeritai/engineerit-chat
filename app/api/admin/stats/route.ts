@@ -73,6 +73,7 @@ async function paidInvoices(admin: ReturnType<typeof getSupabaseAdmin>, sinceIso
 async function platformFeedback(admin: ReturnType<typeof getSupabaseAdmin>) {
   const ratings: number[] = [];
   const latest: Array<{ rating: number | string | null; liked: string | null; improve: string | null; created_at: string }> = [];
+  try {
   for (let from = 0; from < ROW_CAP; from += ROW_PAGE) {
     const { data, error } = await admin
       .from("platform_feedback")
@@ -81,7 +82,7 @@ async function platformFeedback(admin: ReturnType<typeof getSupabaseAdmin>) {
       .range(from, from + ROW_PAGE - 1);
     if (error) {
       if (feedbackTableMissing(error)) return null;
-      throw new Error(error.message);
+      throw error;
     }
     const batch = data || [];
     if (from === 0) latest.push(...batch);
@@ -89,6 +90,10 @@ async function platformFeedback(admin: ReturnType<typeof getSupabaseAdmin>) {
     if (batch.length < ROW_PAGE) return summarizePlatformFeedback(ratings, latest);
   }
   throw new Error("Platform feedback list was truncated.");
+  } catch (err) {
+    if (feedbackTableMissing(err)) return null;
+    throw err;
+  }
 }
 
 export async function GET(req: Request) {
@@ -100,14 +105,19 @@ export async function GET(req: Request) {
   try {
     const admin = getSupabaseAdmin();
     const { todayStart, weekStart } = riyadhWindows(new Date());
-    const [stamps, chatsToday, chats7, plans, payments, feedback] = await Promise.all([
+    const [stamps, chatsToday, chats7, plans, payments] = await Promise.all([
       signupStamps(admin),
       countRows(admin, "conversations", todayStart.toISOString()),
       countRows(admin, "conversations", weekStart.toISOString()),
       activePlans(admin),
       paidInvoices(admin, weekStart.toISOString()),
-      platformFeedback(admin),
     ]);
+    let feedback: Awaited<ReturnType<typeof platformFeedback>> = null;
+    try {
+      feedback = await platformFeedback(admin);
+    } catch (err) {
+      if (!feedbackTableMissing(err)) throw err;
+    }
     const signups = foldSignups(stamps, todayStart.getTime(), weekStart.getTime());
     return NextResponse.json({
       timezone: "Asia/Riyadh",

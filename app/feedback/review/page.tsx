@@ -12,7 +12,7 @@ export default function FeedbackReviewPage() {
   const [rating, setRating] = useState<number | null>(null);
   const [liked, setLiked] = useState("");
   const [improve, setImprove] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "done" | "error" | "auth">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "done" | "error" | "auth" | "unavailable">("idle");
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -40,11 +40,19 @@ export default function FeedbackReviewPage() {
           improve,
         }),
       });
-      if (res.status === 401) {
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (res.status === 401 || json.error === "auth") {
         setStatus("auth");
         return;
       }
-      if (!res.ok) throw new Error("save");
+      if (json.error === "unavailable") {
+        setStatus("unavailable");
+        return;
+      }
+      if (!res.ok) {
+        setStatus("error");
+        return;
+      }
       setStatus("done");
       setLiked("");
       setImprove("");
@@ -127,6 +135,9 @@ export default function FeedbackReviewPage() {
           ) : null}
           {status === "error" ? (
             <p style={{ fontSize: 13, color: "#b91c1c", marginTop: 8 }}>{copy.error}</p>
+          ) : null}
+          {status === "unavailable" ? (
+            <p style={{ fontSize: 13, marginTop: 8 }}>{copy.unavailable}</p>
           ) : null}
           {status === "auth" ? (
             <p style={{ fontSize: 13, marginTop: 8 }}>

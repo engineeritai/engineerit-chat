@@ -442,6 +442,7 @@ export type ShellCopy = {
       error: string;
       signIn: string;
       signInLead: string;
+      unavailable: string;
     };
   };
   legal: {
@@ -939,6 +940,7 @@ const en: ShellCopy = {
       error: "Could not save your feedback. Try again.",
       signIn: "Sign in",
       signInLead: "Sign in to save your feedback on this account.",
+      unavailable: "Saving feedback is not available yet. You can write to support@engineerit.ai.",
     },
   },
   legal: {
@@ -1433,6 +1435,7 @@ const ar: ShellCopy = {
       error: "تعذر حفظ الملاحظة. حاول مرة أخرى.",
       signIn: "دخول",
       signInLead: "ادخل لحفظ الملاحظة على حسابك.",
+      unavailable: "حفظ الملاحظات غير جاهز بعد. يمكنك الكتابة إلى support@engineerit.ai.",
     },
   },
   legal: {

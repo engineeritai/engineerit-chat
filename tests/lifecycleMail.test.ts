@@ -28,7 +28,7 @@ import {
   type LifecycleCandidate,
 } from "../lib/lifecycleMail";
 import { memoryLifecycleMailer, runLifecycleEmails } from "../lib/lifecycleRun";
-import { parsePlatformFeedback, summarizePlatformFeedback } from "../lib/platformFeedback";
+import { feedbackTableMissing, parsePlatformFeedback, presentFeedback, summarizePlatformFeedback } from "../lib/platformFeedback";
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = new Date("2026-10-23T04:30:00.000Z");
@@ -366,6 +366,42 @@ describe("platform feedback", () => {
     assert.equal(parsed.ok && parsed.liked?.length, 2000);
   });
 
+  it("treats a missing feedback table as unset, and still renders a real summary", () => {
+    assert.equal(
+      feedbackTableMissing({
+        code: "PGRST205",
+        message: "Could not find the table 'public.platform_feedback' in the schema cache",
+      }),
+      true
+    );
+    assert.equal(
+      feedbackTableMissing({ code: "42P01", message: 'relation "public.platform_feedback" does not exist' }),
+      true
+    );
+    assert.equal(
+      feedbackTableMissing(new Error("Could not find the table 'public.platform_feedback' in the schema cache")),
+      true
+    );
+    assert.equal(feedbackTableMissing({ code: "42501", message: "permission denied for table profiles" }), false);
+    assert.deepEqual(presentFeedback(null), { ready: false });
+    assert.deepEqual(presentFeedback({ count: 0, averageRating: null }), {
+      ready: true,
+      count: 0,
+      averageRating: null,
+      latest: [],
+    });
+    const shown = presentFeedback({
+      count: 2,
+      averageRating: 4,
+      latest: [{ rating: 5, liked: "chat", improve: null, createdAt: "2026-10-02T00:00:00.000Z" }],
+    });
+    assert.equal(shown.ready, true);
+    if (shown.ready) {
+      assert.equal(shown.count, 2);
+      assert.equal(shown.latest[0].liked, "chat");
+    }
+  });
+
   it("summarizes count, average, and the latest written notes", () => {
     const summary = summarizePlatformFeedback(
       [5, 3, 4],
@@ -414,7 +450,11 @@ describe("lifecycle switches and grants", () => {
 
     const route = fs.readFileSync("app/api/feedback/platform/route.ts", "utf8");
     assert.match(route, /platform_feedback/);
+    assert.match(route, /status: 409/);
+    assert.match(route, /unavailable/);
     assert.equal(/getSupabaseAdmin|SERVICE_ROLE|supabaseAdmin/.test(route), false);
+    const stats = fs.readFileSync("app/api/admin/stats/route.ts", "utf8");
+    assert.match(stats, /feedbackTableMissing/);
 
     const cron = fs.readFileSync("app/api/cron/lifecycle/route.ts", "utf8");
     assert.match(cron, /getSupabaseAdmin/);

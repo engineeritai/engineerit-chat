@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Header from "../../components/Header";
 import NavSidebar from "../../components/NavSidebar";
+import { presentFeedback } from "@/lib/platformFeedback";
 import { supabase } from "@/lib/supabaseClient";
 
 type PlanCount = { plan: string; count: number };
@@ -91,31 +92,7 @@ export default function AdminStatsPage() {
               </section>
               <section className="card" style={{ marginBottom: 16 }}>
                 <h2 className="section-heading" style={{ marginTop: 0 }}>Platform feedback</h2>
-                {stats.feedback == null ? (
-                  <p style={{ margin: 0 }}>Feedback storage is not set up yet.</p>
-                ) : stats.feedback.count === 0 ? (
-                  <p style={{ margin: 0 }}>No platform feedback yet.</p>
-                ) : (
-                  <>
-                    <p style={{ margin: "0 0 8px" }}>
-                      {formatCount(stats.feedback.count)} responses. Average rating{" "}
-                      {stats.feedback.averageRating == null ? "—" : stats.feedback.averageRating.toFixed(1)} out of 5.
-                    </p>
-                    {stats.feedback.latest.length === 0 ? (
-                      <p style={{ margin: 0, fontSize: 14, color: "#5c6570" }}>No written suggestions yet.</p>
-                    ) : (
-                      <ul style={{ margin: 0, paddingLeft: 18 }}>
-                        {stats.feedback.latest.map((item) => (
-                          <li key={item.createdAt + item.rating + (item.liked || "") + (item.improve || "")} style={{ marginBottom: 8 }}>
-                            <div>Rating {item.rating}/5</div>
-                            {item.liked ? <div>Likes: {item.liked}</div> : null}
-                            {item.improve ? <div>Improve: {item.improve}</div> : null}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </>
-                )}
+                <FeedbackSummary value={stats.feedback} />
               </section>
               <section className="card">
                 <h2 className="section-heading" style={{ marginTop: 0 }}>Payments, last 7 days</h2>
@@ -129,6 +106,37 @@ export default function AdminStatsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function FeedbackSummary({ value }: { value: unknown }) {
+  const feedback = presentFeedback(value);
+  if (!feedback.ready) {
+    return <p style={{ margin: 0 }}>Feedback storage is not set up yet.</p>;
+  }
+  if (feedback.count === 0) {
+    return <p style={{ margin: 0 }}>No platform feedback yet.</p>;
+  }
+  return (
+    <>
+      <p style={{ margin: "0 0 8px" }}>
+        {formatCount(feedback.count)} responses. Average rating{" "}
+        {feedback.averageRating == null ? "—" : feedback.averageRating.toFixed(1)} out of 5.
+      </p>
+      {feedback.latest.length === 0 ? (
+        <p style={{ margin: 0, fontSize: 14, color: "#5c6570" }}>No written suggestions yet.</p>
+      ) : (
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          {feedback.latest.map((item, index) => (
+            <li key={`${item.createdAt}-${index}`} style={{ marginBottom: 8 }}>
+              <div>Rating {item.rating}/5</div>
+              {item.liked ? <div>Likes: {item.liked}</div> : null}
+              {item.improve ? <div>Improve: {item.improve}</div> : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 }
 
