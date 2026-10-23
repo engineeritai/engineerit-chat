@@ -59,6 +59,7 @@ Run once, in order. Each file is idempotent (`if not exists` / `add column if no
 3. `supabase/migrations/20261016160000_recurring_billing.sql` — `saved_cards`, `billing_subscriptions`, `renewal_attempts`, plus `payment_id` on checkout rows.
 4. `supabase/migrations/20261016180000_advisor_tiers_and_legacy_price.sql` — `consultant_legacy_price_until` and `advisor_trial_plan` on `profiles`, and a three-month grandfather backfill for current Consultant rows. Apply this before the new prices go live.
 5. `supabase/migrations/20261016210000_profile_subscription_fields.sql` — `locale` on checkout rows and billing subscriptions, so invoice emails and PDFs stay in the buyer’s language. Apply this before deploy.
+6. `supabase/migrations/20261023160000_promo_codes.sql` — promo codes, redemptions, and the weekly question. Apply this before creating codes. It grants the tables to `service_role` only and enables RLS with no client policies, so a signed-in user cannot read the code list or the question answers.
 
 `saved_cards`, `billing_subscriptions`, and `renewal_attempts` have RLS enabled and no client policies. Only the service role reads or writes them. Card tokens are never returned to the browser.
 
@@ -81,6 +82,20 @@ Run once, in order. Each file is idempotent (`if not exists` / `add column if no
 
 In test mode: `4201320111111010`, any future expiry, any CVV. Tokenization must be enabled or Moyasar will not return a token.
 
+## Promo codes
+
+List prices do not change. A code discounts the amount stored on the checkout, and Moyasar is charged that discounted amount. The code is saved on the invoice. After the discounted cycles end, renewal uses the list price again. A free checkout (100% off or free months, charged SAR 0) skips Moyasar and activates the period directly.
+
+`/admin/codes` is limited to `ADMIN_EMAILS`. From there the owner can:
+
+1. Create one code (percent, fixed SAR, or free months; plans; cycles; dates; max uses; one use per user; audience).
+2. Generate a student batch of single-use codes, optionally limited to email domains such as `.edu.sa`.
+3. Create a win-back code with audience “Lapsed subscribers”. It applies only when the account has paid before and has no active or past-due subscription.
+4. Publish the question of the week (English and Arabic, choices, correct index, reward percent, and whether taking part is enough). The public page is `/question`.
+5. Disable a code and read redemptions.
+
+A question reward is a single-use code restricted to that user. Share buttons on `/question` share the page, not the code.
+
 ## Admin
 
-`/admin/subscriptions` lists subscriptions, charge attempts, and teams for `ADMIN_EMAILS`. It does not activate plans or create invoices.
+`/admin/subscriptions` lists subscriptions, charge attempts, and teams for `ADMIN_EMAILS`. It does not activate plans or create invoices. `/admin/codes` creates promo codes.

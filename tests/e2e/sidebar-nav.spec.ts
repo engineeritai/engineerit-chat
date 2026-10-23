@@ -8,6 +8,7 @@ const homeLinks = [
   "/tools",
   "/pricing",
   "/faq",
+  "/question",
   "/profile",
   "/feedback",
   "/legal/terms",

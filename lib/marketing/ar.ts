@@ -15,6 +15,7 @@ export const ar: MarketingContent = {
     advisors: "مستشارو الذكاء الاصطناعي",
     pricing: "الأسعار",
     faq: "الأسئلة الشائعة",
+    question: "سؤال الأسبوع",
     login: "دخول",
     openChat: "ابدأ المحادثة",
     startChat: "ابدأ المحادثة",

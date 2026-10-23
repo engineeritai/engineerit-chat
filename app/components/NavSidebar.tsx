@@ -27,6 +27,7 @@ export default function NavSidebar({ isMobileOpen, onCloseMobile }: Props) {
             <SidebarLink href="/advisors" label={s.nav.advisors} currentPath={pathname} />
             <SidebarLink href="/pricing" label={s.nav.pricing} currentPath={pathname} />
             <SidebarLink href="/faq" label={s.nav.faq} currentPath={pathname} />
+            <SidebarLink href="/question" label={s.nav.question} currentPath={pathname} />
             <SidebarLink href="/register" label={s.nav.register} currentPath={pathname} />
             <SidebarLink href="/account/team" label={s.nav.team} currentPath={pathname} />
             <SidebarLink href="/profile" label={s.nav.profile} currentPath={pathname} />

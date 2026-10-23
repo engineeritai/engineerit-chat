@@ -12,6 +12,7 @@ import {
 } from "@/lib/moyasar";
 import { recordPlanPurchase } from "@/lib/recordPlan";
 import { sendReceipt } from "@/lib/receipt";
+import { markPromoPaid, promoPurchaseFields } from "@/lib/promoDb";
 
 export type CheckoutRow = {
   id: string;
@@ -33,6 +34,12 @@ export type CheckoutRow = {
   payment_id?: string | null;
   purpose?: string | null;
   locale?: string | null;
+  promo_code_id?: string | null;
+  promo_code?: string | null;
+  promo_cycles?: number | null;
+  promo_discount_type?: string | null;
+  promo_percent_off?: number | null;
+  promo_amount_off_sar?: number | null;
 };
 
 function addDays(from: Date, days: number) {
@@ -94,6 +101,7 @@ export async function settleCheckout(
             .eq("user_id", row.user_id)
             .in("status", ["active", "past_due"]);
         }
+        await markPromoPaid(admin, row.id);
         if (row.lead_id) {
           const { error: leadErr } = await admin
             .from("enterprise_leads")
@@ -203,6 +211,7 @@ async function activateCheckout(
       skipRecent: row.purpose === "renew_now",
       company: row.company,
       source: "moyasar",
+      promo: promoPurchaseFields(row),
     });
     return result.endDate;
   }
@@ -229,7 +238,7 @@ export async function loadCheckoutByInvoice(admin: SupabaseClient, invoiceId: st
   const { data, error } = await admin
     .from("moyasar_invoices")
     .select(
-      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale"
+      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale, promo_code_id, promo_code, promo_cycles, promo_discount_type, promo_percent_off, promo_amount_off_sar"
     )
     .eq("invoice_id", invoiceId)
     .maybeSingle();
@@ -241,7 +250,7 @@ export async function loadCheckoutById(admin: SupabaseClient, id: string) {
   const { data, error } = await admin
     .from("moyasar_invoices")
     .select(
-      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale"
+      "id, invoice_id, payment_id, plan, billing_interval, amount_sar, amount_halalas, seat_limit, extra_seats, customer_email, user_id, lead_id, company, status, activated_at, receipt_sent_at, period_end, purpose, locale, promo_code_id, promo_code, promo_cycles, promo_discount_type, promo_percent_off, promo_amount_off_sar"
     )
     .eq("id", id)
     .maybeSingle();

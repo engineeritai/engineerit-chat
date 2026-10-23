@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Header from "../../components/Header";
 import NavSidebar from "../../components/NavSidebar";
 import { supabase } from "@/lib/supabaseClient";
@@ -94,7 +95,8 @@ export default function AdminSubscriptionsPage() {
           <h1 className="page-title">Billing monitor</h1>
           <p className="page-subtitle">
             Read-only view of subscriptions, renewal attempts, and teams. Customers buy, renew,
-            cancel, and change seats themselves through Moyasar.
+            cancel, and change seats themselves through Moyasar.{" "}
+            <Link href="/admin/codes">Promo codes</Link>
           </p>
           {error && <p style={{ color: "#b91c1c", fontSize: 14 }}>{error}</p>}
 

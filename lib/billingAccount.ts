@@ -18,6 +18,14 @@ export async function syncBillingSubscription(
     teamId?: string | null;
     cancelAtPeriodEnd?: boolean;
     locale?: string | null;
+    promo?: {
+      codeId: string | null;
+      code: string | null;
+      cyclesRemaining: number;
+      discountType: string | null;
+      percentOff: number | null;
+      amountOffSar: number | null;
+    } | null;
   }
 ) {
   const nowIso = new Date().toISOString();
@@ -48,6 +56,25 @@ export async function syncBillingSubscription(
     next_retry_at: null,
     updated_at: nowIso,
     ...(args.locale === "ar" || args.locale === "en" ? { locale: args.locale } : {}),
+    ...(args.promo === undefined
+      ? {}
+      : args.promo === null
+        ? {
+            promo_code_id: null,
+            promo_code: null,
+            promo_cycles_remaining: 0,
+            promo_discount_type: null,
+            promo_percent_off: null,
+            promo_amount_off_sar: null,
+          }
+        : {
+            promo_code_id: args.promo.codeId,
+            promo_code: args.promo.code,
+            promo_cycles_remaining: Math.max(0, Math.floor(args.promo.cyclesRemaining) || 0),
+            promo_discount_type: args.promo.discountType,
+            promo_percent_off: args.promo.percentOff,
+            promo_amount_off_sar: args.promo.amountOffSar,
+          }),
   };
 
   if (existing?.id) {

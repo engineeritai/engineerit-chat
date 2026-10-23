@@ -22,6 +22,7 @@ import {
   type PlanId,
   type SelfServePlanId,
 } from "@/lib/plans";
+import { priceRenewalWithPromo, type PromoDiscountType } from "@/lib/promo";
 import { planById } from "@/lib/labels";
 import { sendReceipt } from "@/lib/receipt";
 
@@ -42,6 +43,12 @@ export type OpenSubscription = {
   credit_halalas: number;
   failure_count: number;
   locale?: string | null;
+  promo_cycles_remaining?: number | null;
+  promo_code_id?: string | null;
+  promo_code?: string | null;
+  promo_discount_type?: string | null;
+  promo_percent_off?: number | null;
+  promo_amount_off_sar?: number | null;
 };
 
 type ChargeResult = {
@@ -68,7 +75,7 @@ export async function runDueRenewals(
   const { data, error } = await admin
     .from("billing_subscriptions")
     .select(
-      "id, user_id, customer_email, plan, billing_interval, extra_seats, seat_limit, amount_halalas, status, current_period_end, cancel_at_period_end, saved_card_id, team_id, credit_halalas, failure_count, locale"
+      "id, user_id, customer_email, plan, billing_interval, extra_seats, seat_limit, amount_halalas, status, current_period_end, cancel_at_period_end, saved_card_id, team_id, credit_halalas, failure_count, locale, promo_cycles_remaining, promo_code_id, promo_code, promo_discount_type, promo_percent_off, promo_amount_off_sar"
     )
     .in("status", ["active", "past_due"])
     .lte("current_period_end", now.toISOString())
@@ -151,6 +158,7 @@ export async function applyRenewalDecision(
         paymentId: charge.paymentId || null,
         locale,
         now,
+        discounted: (Number(sub.promo_cycles_remaining) || 0) > 0,
       });
       try {
         await sendReceipt(sub.customer_email, {
@@ -358,7 +366,25 @@ async function quoteRenewal(admin: SupabaseClient, sub: OpenSubscription, now: D
       .maybeSingle();
     consultantLegacy = consultantLegacyActive(data?.consultant_legacy_price_until, now);
   }
-  return quoteSelfServe(sub.plan, sub.billing_interval, sub.extra_seats, { consultantLegacy });
+  const list = quoteSelfServe(sub.plan, sub.billing_interval, sub.extra_seats, { consultantLegacy });
+  const discountType = sub.promo_discount_type;
+  const promo = priceRenewalWithPromo(list.amountSar, {
+    cyclesRemaining: Number(sub.promo_cycles_remaining) || 0,
+    discountType:
+      discountType === "percent" || discountType === "fixed" || discountType === "free_months"
+        ? (discountType as PromoDiscountType)
+        : null,
+    percentOff: sub.promo_percent_off === null || sub.promo_percent_off === undefined ? null : Number(sub.promo_percent_off),
+    amountOffSar:
+      sub.promo_amount_off_sar === null || sub.promo_amount_off_sar === undefined ? null : Number(sub.promo_amount_off_sar),
+  });
+  return {
+    ...list,
+    amountSar: promo.amountSar,
+    amountHalalas: promo.amountHalalas,
+    promoCyclesRemaining: promo.cyclesRemainingAfter,
+    promoDiscounted: promo.discounted,
+  };
 }
 
 async function extendSubscription(
@@ -380,6 +406,16 @@ async function extendSubscription(
       credit_halalas: creditRemaining,
       amount_sar: quote.amountSar,
       amount_halalas: quote.amountHalalas,
+      promo_cycles_remaining: quote.promoCyclesRemaining,
+      ...(quote.promoCyclesRemaining === 0
+        ? {
+            promo_discount_type: null,
+            promo_percent_off: null,
+            promo_amount_off_sar: null,
+            promo_code_id: null,
+            promo_code: null,
+          }
+        : {}),
       current_period_start: nowIso,
       current_period_end: endIso,
       updated_at: nowIso,
@@ -453,6 +489,7 @@ async function recordRenewalInvoice(
     paymentId: string | null;
     locale: "ar" | "en";
     now: Date;
+    discounted?: boolean;
   }
 ) {
   if (args.paymentId) {
@@ -483,6 +520,16 @@ async function recordRenewalInvoice(
     period_end: args.periodEnd,
     purpose: "renewal",
     locale: args.locale,
+    ...(args.discounted
+      ? {
+          promo_code_id: sub.promo_code_id || null,
+          promo_code: sub.promo_code || null,
+          promo_discount_type: sub.promo_discount_type || null,
+          promo_percent_off: sub.promo_percent_off ?? null,
+          promo_amount_off_sar: sub.promo_amount_off_sar ?? null,
+          promo_cycles: sub.promo_cycles_remaining ?? null,
+        }
+      : {}),
   });
   if (error) console.error("renewal invoice insert", error);
 }

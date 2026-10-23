@@ -14,6 +14,11 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       description:
         "Answers for engineering consultancies: trying the chat, standards, Moyasar billing, language, and company verification.",
     },
+    "/question": {
+      title: "Question of the week | engineerit.ai",
+      description:
+        "Answer the engineering question of the week. A correct answer, or taking part when that round allows it, earns a limited-time discount code.",
+    },
     "/how-it-works": {
       title: "How it works | engineerit.ai",
       description:
@@ -112,6 +117,11 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       title: "الأسئلة الشائعة | engineerit.ai",
       description:
         "إجابات للمكاتب الهندسية: تجربة المحادثة، والمعايير، وفوترة Moyasar، واللغة، وتوثيق الشركة.",
+    },
+    "/question": {
+      title: "سؤال الأسبوع | engineerit.ai",
+      description:
+        "أجب عن سؤال الأسبوع الهندسي. الإجابة الصحيحة، أو المشاركة عندما يسمح الدور بذلك، تمنحك رمزا بخصم لمدة محدودة.",
     },
     "/how-it-works": {
       title: "كيف يعمل | engineerit.ai",
