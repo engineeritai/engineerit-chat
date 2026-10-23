@@ -21,7 +21,7 @@ function ReturnInner() {
     const pay = params.get("pay") || "";
     const status = (params.get("status") || "").toLowerCase();
     const backToCheckout = () => {
-      const notice = params.get("message") || s.checkout.paymentFailed;
+      const notice = s.checkout.paymentFailed;
       try {
         sessionStorage.setItem("engineerit_checkout_notice", notice.slice(0, 300));
       } catch {

@@ -128,6 +128,53 @@ test("gantt dark mode on a phone", async ({ page }, info) => {
   expect(pageBox.scroll).toBeLessThanOrEqual(pageBox.client + 2);
 });
 
+test("register and checkout fit a 375px phone in English and Arabic", async ({ page }, info) => {
+  test.skip(info.project.name !== "phone-390", "375px is checked once");
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 375, height: 812 });
+  const routes = [
+    { path: "/register?lang=en", dir: "ltr", text: "Create your account" },
+    { path: "/register?lang=ar", dir: "rtl", text: "إنشاء الحساب" },
+    { path: "/forgot-password?lang=en", dir: "ltr", text: "Send reset link" },
+    { path: "/forgot-password?lang=ar", dir: "rtl", text: "إرسال رابط الاستعادة" },
+    { path: "/checkout/preview?fixture=preview&lang=en", dir: "ltr", text: "saved securely by Moyasar" },
+    { path: "/checkout/preview?fixture=preview&lang=ar", dir: "rtl", text: "ميسر" },
+  ];
+  for (const route of routes) {
+    await page.goto(route.path, { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => document.documentElement.dataset.hydrated === "1");
+    await expect(page.locator("body")).toContainText(route.text);
+    const fit = await page.evaluate(() => {
+      const root = document.documentElement;
+      const controls = [...document.querySelectorAll("button.btn, a.auth-follow, a.btn, .checkout-consent input")].map((node) => {
+        const box = node.getBoundingClientRect();
+        return {
+          width: box.width,
+          right: box.right,
+          left: box.left,
+          height: box.height,
+          text: (node.textContent || "").trim(),
+          check: node instanceof HTMLInputElement && node.type === "checkbox",
+        };
+      });
+      return {
+        client: root.clientWidth,
+        scroll: root.scrollWidth,
+        dir: root.dir,
+        controls,
+      };
+    });
+    expect(fit.dir).toBe(route.dir);
+    expect(fit.scroll).toBeLessThanOrEqual(fit.client + 2);
+    expect(fit.controls.length).toBeGreaterThan(0);
+    for (const control of fit.controls) {
+      expect(control.left).toBeGreaterThanOrEqual(-1);
+      expect(control.right).toBeLessThanOrEqual(fit.client + 1);
+      if (!control.check) expect(control.width).toBeGreaterThanOrEqual(44);
+    }
+  }
+});
+
 test("home, pricing, advisors, and checkout", async ({ page }) => {
   test.setTimeout(180_000);
   const pages = [

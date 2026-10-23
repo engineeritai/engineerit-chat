@@ -3,7 +3,13 @@ import { supabase } from "@/lib/supabaseClient";
 
 export async function requestAuthEmail(
   action: "signup" | "reset" | "resend",
-  body: { email: string; password?: string; fullName?: string; captchaToken?: string }
+  body: {
+    email: string;
+    password?: string;
+    fullName?: string;
+    captchaToken?: string;
+    pending?: { planId: string; interval: string; extraSeats: number };
+  }
 ) {
   const path = action === "reset" ? "recover" : action;
   const response = await fetch(`/api/auth/${path}`, {
@@ -16,6 +22,7 @@ export async function requestAuthEmail(
     sent?: boolean;
     error?: string;
     needsConfirmation?: boolean;
+    code?: string;
   };
   return { status: response.status, data };
 }

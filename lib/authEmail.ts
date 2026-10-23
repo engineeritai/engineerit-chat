@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { checkAuthRate, consumeAuthDaily } from "@/lib/authRateLimit";
 import { isProductionMailRuntime, mailDecision } from "@/lib/mailPolicy";
-import { RESET_REDIRECT } from "@/lib/password";
+import { classifySignupError, confirmRedirectUrl, isDuplicateSignup, resetRedirectUrl } from "@/lib/registerAccount";
+import { isSelfServePlan, normalizeExtraSeats, parseInterval } from "@/lib/plans";
 import { getSupabaseAdmin } from "@/lib/serverSupabase";
 import { verifyTurnstile } from "@/lib/turnstile";
 
@@ -40,14 +41,14 @@ export async function createAuthLinkWithoutEmail(args: {
         ? await admin.auth.admin.generateLink({
             type: "recovery",
             email: args.email,
-            options: { redirectTo: RESET_REDIRECT },
+            options: { redirectTo: resetRedirectUrl(env) },
           })
         : await admin.auth.admin.generateLink({
             type: "signup",
             email: args.email,
             password: args.password || "sink-only-not-sent",
             options: {
-              redirectTo: RESET_REDIRECT,
+              redirectTo: confirmRedirectUrl(env),
               data: args.fullName ? { full_name: args.fullName } : undefined,
             },
           });
@@ -65,21 +66,22 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
     password?: string;
     fullName?: string;
     captchaToken?: string;
+    pending?: { planId?: string; interval?: string; extraSeats?: number } | null;
   } | null;
   const email = (body?.email || "").trim().toLowerCase();
   const password = body?.password || "";
   const fullName = (body?.fullName || "").trim();
   if (!email.includes("@")) {
-    return Response.json({ error: "Enter a valid email address." }, { status: 400 });
+    return Response.json({ ok: false, code: "email_invalid" }, { status: 400 });
   }
   if (action === "signup" && password.length < 8) {
-    return Response.json({ error: "Password must be at least 8 characters." }, { status: 400 });
+    return Response.json({ ok: false, code: "password_short" }, { status: 400 });
   }
 
   const ip = clientIp(req);
   const captcha = await verifyTurnstile(body?.captchaToken || "", ip);
   if (!captcha.ok) {
-    return Response.json({ error: "Complete the captcha and try again." }, { status: 400 });
+    return Response.json({ ok: false, code: "captcha" }, { status: 400 });
   }
 
   const limited = checkAuthRate({ email, ip });
@@ -118,24 +120,51 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
   const client = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
   const captchaToken = body?.captchaToken || undefined;
   if (action === "signup") {
+    const pending = signupPending(body?.pending);
     const { data, error } = await client.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName }, captchaToken },
+      options: {
+        emailRedirectTo: confirmRedirectUrl(),
+        captchaToken,
+        data: {
+          ...(fullName ? { full_name: fullName } : {}),
+          ...(pending ? { pending_checkout: pending } : {}),
+        },
+      },
     });
-    if (error) return Response.json({ error: error.message }, { status: 400 });
-    return Response.json({ ok: true, sent: true, needsConfirmation: !data.session, user: data.user });
+    if (error) {
+      const code = classifySignupError(error.message);
+      return Response.json({ ok: false, code }, { status: code === "duplicate" ? 409 : 400 });
+    }
+    if (isDuplicateSignup(data.user)) {
+      return Response.json({ ok: false, code: "duplicate" }, { status: 409 });
+    }
+    return Response.json({ ok: true, sent: true, needsConfirmation: !data.session });
   }
   if (action === "resend") {
-    const { error } = await client.auth.resend({ type: "signup", email, options: { captchaToken } });
+    const { error } = await client.auth.resend({
+      type: "signup",
+      email,
+      options: { captchaToken, emailRedirectTo: confirmRedirectUrl() },
+    });
     if (error) return Response.json({ error: error.message }, { status: 400 });
     return Response.json({ ok: true, sent: true });
   }
-  const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: RESET_REDIRECT, captchaToken });
+  const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo: resetRedirectUrl(), captchaToken });
   if (error) {
     const later = /rate|too many|over_email_send_rate/i.test(error.message);
     if (later) return Response.json({ error: "Please wait a moment and try again." }, { status: 429 });
     console.error("password reset", error.message);
   }
   return Response.json({ ok: true, sent: true });
+}
+
+function signupPending(raw: { planId?: string; interval?: string; extraSeats?: number } | null | undefined) {
+  if (!raw || !isSelfServePlan(raw.planId)) return null;
+  return {
+    planId: raw.planId,
+    interval: parseInterval(raw.interval),
+    extraSeats: normalizeExtraSeats(raw.extraSeats),
+  };
 }

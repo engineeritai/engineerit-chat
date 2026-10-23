@@ -1,39 +1,60 @@
 "use client";
 
 import { supabase } from "@/lib/supabaseClient";
-import { isSelfServePlan, type BillingInterval, type SelfServePlanId } from "@/lib/plans";
+import {
+  parsePendingCheckout,
+  pendingFromMetadata,
+  type PendingCheckout,
+} from "@/lib/pendingCheckout";
 
 const PENDING_KEY = "engineerit_pending_checkout";
 export const CHECKOUT_CONTINUE_PATH = "/checkout/continue";
 
-export type PendingCheckout = {
-  planId: SelfServePlanId;
-  interval: BillingInterval;
-  extraSeats: number;
-};
+export { parsePendingCheckout, pendingFromMetadata };
+export type { PendingCheckout };
+
+function writePending(storage: Storage, pending: PendingCheckout) {
+  storage.setItem(PENDING_KEY, JSON.stringify(pending));
+}
 
 export function savePendingCheckout(pending: PendingCheckout) {
+  const value = parsePendingCheckout(pending);
+  if (!value) return;
   try {
-    window.sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+    writePending(window.sessionStorage, value);
+  } catch {
+    /* ignore */
+  }
+  try {
+    writePending(window.localStorage, value);
   } catch {
     /* ignore */
   }
 }
 
 export function readPendingCheckout(): PendingCheckout | null {
+  const stores: Storage[] = [];
   try {
-    const raw = window.sessionStorage.getItem(PENDING_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as PendingCheckout;
-    if (!isSelfServePlan(parsed?.planId)) return null;
-    return {
-      planId: parsed.planId,
-      interval: parsed.interval === "year" ? "year" : "month",
-      extraSeats: Number.isFinite(parsed.extraSeats) ? parsed.extraSeats : 0,
-    };
+    stores.push(window.sessionStorage);
   } catch {
-    return null;
+    /* ignore */
   }
+  try {
+    stores.push(window.localStorage);
+  } catch {
+    /* ignore */
+  }
+  for (const storage of stores) {
+    try {
+      const raw = storage.getItem(PENDING_KEY);
+      if (!raw) continue;
+      const parsed = parsePendingCheckout(JSON.parse(raw));
+      if (parsed) return parsed;
+    } catch {
+      /* try the other store */
+    }
+  }
+  return null;
 }
 
 function readLocale() {
@@ -52,6 +73,21 @@ export function clearPendingCheckout() {
   } catch {
     /* ignore */
   }
+  try {
+    window.localStorage.removeItem(PENDING_KEY);
+  } catch {
+    /* ignore */
+  }
+  void supabase.auth.updateUser({ data: { pending_checkout: null } }).catch(() => undefined);
+}
+
+export async function readAnyPendingCheckout(): Promise<PendingCheckout | null> {
+  const stored = readPendingCheckout();
+  if (stored) return stored;
+  const { data } = await supabase.auth.getUser();
+  const pending = pendingFromMetadata(data.user?.user_metadata?.pending_checkout);
+  if (pending) savePendingCheckout(pending);
+  return pending;
 }
 
 function rememberCheckoutReturn() {

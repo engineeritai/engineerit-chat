@@ -45,6 +45,7 @@ import { trackProduct } from "@/lib/attribution";
 import { featureTier, HEADER_PLAN_ABBREV, PLAN_THEME, type PlanId, type SelfServePlanId } from "@/lib/plans";
 import { hasToolAccess, toolRequiredPlan } from "@/lib/toolAccess";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
+import BuyPlanButton from "../components/BuyPlanButton";
 
 type Attachment = {
   id: string;
@@ -1579,9 +1580,12 @@ export default function Page() {
                 <div className="gate-body">
                   <div className="gate-text">{s.chat.upgradeBody}</div>
                   <div className="gate-actions">
-                    <a className="gate-btn gate-btn-primary" href="/pricing">
-                      {s.chat.upgrade}
-                    </a>
+                    <BuyPlanButton
+                      planId="engineer"
+                      interval="month"
+                      verb="upgrade"
+                      className="gate-btn gate-btn-primary"
+                    />
                     <button
                       className="gate-btn"
                       type="button"

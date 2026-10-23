@@ -254,6 +254,15 @@ export default function ProfilePage() {
           }
         }
 
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (accessToken) {
+          await fetch("/api/profile/ensure", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }).catch(() => undefined);
+        }
+
         // 2) Load profile data
         let initialFullName =
           (user.user_metadata?.full_name as string | undefined) ??
@@ -307,7 +316,8 @@ export default function ProfilePage() {
 
         if (subscriptionTierOverride) subscriptionTier = subscriptionTierOverride;
 
-        // Ensure row exists (no registration_code here)
+        // Create the row when it is missing. Do not write subscription_tier here:
+        // a failed read must not turn a paid plan back into Assistant.
         const { error: upsertError } = await supabase
           .from("profiles")
           .upsert(
@@ -315,7 +325,6 @@ export default function ProfilePage() {
               id: user.id,
               full_name: initialFullName,
               avatar_url: avatarUrl,
-              subscription_tier: subscriptionTier,
             },
             { onConflict: "id" }
           );
@@ -378,11 +387,9 @@ export default function ProfilePage() {
           console.warn("SUBSCRIPTIONS HISTORY WARN:", e);
         }
 
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        if (token) {
+        if (accessToken) {
           const billingRes = await fetch("/api/billing", {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${accessToken}` },
           });
           const billingJson = await billingRes.json().catch(() => ({}));
           if (billingRes.ok && billingJson.subscription && isPlanId(billingJson.subscription.plan)) {
@@ -393,14 +400,14 @@ export default function ProfilePage() {
             setBillingNotice(billingRes.ok && billingJson.notice === "downgraded" ? "downgraded" : null);
           }
           const invoiceRes = await fetch("/api/invoices", {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${accessToken}` },
           });
           const invoiceJson = await invoiceRes.json().catch(() => ({}));
           if (invoiceRes.ok && Array.isArray(invoiceJson.invoices)) {
             setInvoices(invoiceJson.invoices as InvoiceRow[]);
           }
           const libraryRes = await fetch("/api/profile/library", {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${accessToken}` },
           });
           const library = await libraryRes.json().catch(() => ({}));
           if (libraryRes.ok) {

@@ -143,10 +143,10 @@ export async function POST(req: NextRequest) {
           locale === "ar"
             ? limit.plan === "guest"
               ? "بلغت الحد اليومي (رد واحد في اليوم). سجل أو ادخل."
-              : "بلغت الحد اليومي لباقة المساعد (3 ردود في اليوم). يرجى الترقية."
+              : "بلغت الحد اليومي لباقة المساعد (3 ردود). باقة المهندس 19 ريال شهريا بلا حد يومي، مع تحليل ملفات وورد وإكسل وباوربوينت."
             : limit.plan === "guest"
               ? "Daily limit reached (1 reply/day). Please register or log in."
-              : "Daily limit reached for the Assistant plan (3 replies/day). Please upgrade.",
+              : "Daily limit reached on the free Assistant plan (3 replies). Engineer is SAR 19 a month, with no daily cap and Word, Excel, and PowerPoint analysis.",
         plan: limit.plan,
       },
       { status: 429 }

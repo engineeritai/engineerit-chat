@@ -3,18 +3,24 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import MarketingShell from "../components/marketing/MarketingShell";
+import TurnstileField from "@/app/components/TurnstileField";
 import Link from "next/link";
+import { requestAuthEmail } from "@/lib/authEmailClient";
 import { supabase } from "@/lib/supabaseClient";
 import { useMessages } from "@/lib/useMessages";
+import { signInProblem } from "@/lib/registerAccount";
 import { safeNextPath } from "@/lib/safeNext";
 
 export default function LoginPage() {
-  const { shell: s } = useMessages();
+  const { shell: s, locale } = useMessages();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [resendNote, setResendNote] = useState("");
+  const [resending, setResending] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
   const [registerHref, setRegisterHref] = useState("/register");
 
   const router = useRouter();
@@ -23,6 +29,30 @@ export default function LoginPage() {
     const next = new URLSearchParams(window.location.search).get("next");
     if (next) setRegisterHref(`/register?next=${encodeURIComponent(next)}`);
   }, []);
+
+  const resendConfirmation = async () => {
+    setResendNote("");
+    setResending(true);
+    try {
+      const { status, data } = await requestAuthEmail("resend", {
+        email: email.trim(),
+        captchaToken,
+      });
+      if (status === 429) {
+        setErrorMessage(s.password.tryLater);
+        return;
+      }
+      if (!data.ok && status >= 400) {
+        setErrorMessage(data.code === "captcha" ? s.auth.captchaRequired : s.auth.genericError);
+        return;
+      }
+      setResendNote(s.auth.resendSent);
+    } catch {
+      setErrorMessage(s.auth.genericError);
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
@@ -37,7 +67,7 @@ export default function LoginPage() {
       });
 
       if (error) {
-        setErrorMessage(error.message);
+        setErrorMessage(signInProblem(locale, error.message));
         setLoading(false);
         return;
       }
@@ -47,6 +77,11 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
+
+      await fetch("/api/profile/ensure", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+      }).catch(() => undefined);
 
       setSuccessMessage(s.auth.loggedIn);
       const fromQuery =
@@ -122,8 +157,23 @@ export default function LoginPage() {
                   fontSize: 13,
                   color: "#b91c1c",
                 }}
+                role="alert"
               >
-                {errorMessage}
+                <p style={{ margin: "0 0 8px" }}>{errorMessage}</p>
+                {errorMessage === s.auth.emailNotConfirmed ? (
+                  <>
+                    <TurnstileField onToken={setCaptchaToken} />
+                    <button
+                      type="button"
+                      className="btn auth-follow"
+                      disabled={resending}
+                      onClick={() => void resendConfirmation()}
+                    >
+                      {resending ? s.auth.creating : s.auth.resendConfirm}
+                    </button>
+                    {resendNote ? <p style={{ margin: "8px 0 0", color: "#15803d" }}>{resendNote}</p> : null}
+                  </>
+                ) : null}
               </div>
             )}
 

@@ -1,12 +1,14 @@
 // app/register/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MarketingShell from "../components/marketing/MarketingShell";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TurnstileField from "@/app/components/TurnstileField";
 import { requestAuthEmail } from "@/lib/authEmailClient";
+import { CHECKOUT_CONTINUE_PATH, readPendingCheckout } from "@/lib/checkoutClient";
+import { registrationMessage, validateRegistration, type RegistrationCode } from "@/lib/registerAccount";
 import { safeNextPath } from "@/lib/safeNext";
 import { trackProduct } from "@/lib/attribution";
 import { useMessages } from "@/lib/useMessages";
@@ -25,8 +27,20 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [pendingPlan, setPendingPlan] = useState(false);
+  const [loginHref, setLoginHref] = useState("/login");
 
   const router = useRouter();
+
+  useEffect(() => {
+    const pending = readPendingCheckout();
+    const next = safeNextPath(
+      new URLSearchParams(window.location.search).get("next"),
+      pending ? CHECKOUT_CONTINUE_PATH : "/profile"
+    );
+    setPendingPlan(Boolean(pending) || next === CHECKOUT_CONTINUE_PATH);
+    setLoginHref(`/login?next=${encodeURIComponent(next)}`);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,36 +50,33 @@ export default function RegisterPage() {
     // ✅ Validate BEFORE sending email / creating account
     const e1 = email.trim().toLowerCase();
     const e2 = confirmEmail.trim().toLowerCase();
-
-    if (!e1 || !e2) {
-      setErrorMessage(s.auth.emailRequired);
-      return;
-    }
-    if (e1 !== e2) {
-      setErrorMessage(s.auth.emailMismatch);
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMessage(s.auth.passwordMismatch);
-      return;
-    }
-    if (password.length < 8) {
-      setErrorMessage(s.auth.passwordMin);
+    const validation = validateRegistration({
+      email: e1,
+      confirmEmail: e2,
+      password,
+      confirmPassword,
+      accepted,
+    });
+    if (!validation.ok) {
+      setErrorMessage(registrationMessage(locale, validation.code));
       return;
     }
 
     setLoading(true);
 
     try {
+      const pending = readPendingCheckout();
       const { status, data } = await requestAuthEmail("signup", {
         email: e1,
         password,
         fullName,
         captchaToken,
+        ...(pending ? { pending } : {}),
       });
 
       if (!data.ok || status >= 400) {
-        setErrorMessage(status === 429 ? s.password.tryLater : data.error || s.auth.genericError);
+        const code = (data.code || (status === 429 ? "later" : "generic")) as RegistrationCode;
+        setErrorMessage(registrationMessage(locale, code));
         return;
       }
 
@@ -127,6 +138,7 @@ export default function RegisterPage() {
             </h2>
 
             <form
+              className="register-form"
               onSubmit={handleSubmit}
               style={{
                 display: "flex",
@@ -224,14 +236,11 @@ export default function RegisterPage() {
               </div>
 
               {errorMessage && (
-                <div
-                  style={{
-                    marginBottom: 6,
-                    fontSize: 13,
-                    color: "#b91c1c",
-                  }}
-                >
-                  {errorMessage}
+                <div className="form-note is-bad" role="alert">
+                  <p style={{ margin: "0 0 8px" }}>{errorMessage}</p>
+                  <Link href={loginHref} className="link">
+                    {s.auth.signIn}
+                  </Link>
                 </div>
               )}
 
@@ -277,6 +286,9 @@ export default function RegisterPage() {
                     <div style={{ fontSize: 12, color: "#7C2D12" }}>
                       {s.auth.emailConfirmHint}
                     </div>
+                    <Link href={loginHref} className="btn auth-follow">
+                      {pendingPlan ? s.auth.continueSignIn : s.auth.signIn}
+                    </Link>
                   </div>
                 </div>
               )}
@@ -304,10 +316,10 @@ export default function RegisterPage() {
             }}
           >
             <p style={{ fontSize: 14, color: "#374151", margin: 0 }}>
-              {s.auth.afterRegister}
+              {pendingPlan ? s.auth.planWaiting : s.auth.afterRegister}
             </p>
-            <Link href="/pricing" className="btn" style={{ alignSelf: "flex-start", marginTop: 4 }}>
-              {s.auth.viewPlans}
+            <Link href={pendingPlan ? loginHref : "/pricing"} className="btn auth-follow" style={{ alignSelf: "flex-start", marginTop: 4 }}>
+              {pendingPlan ? s.auth.continueSignIn : s.auth.viewPlans}
             </Link>
             <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>{s.auth.upgradeAnytime}</p>
           </div>
