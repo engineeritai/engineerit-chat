@@ -28,6 +28,7 @@ import {
   type SelfServePlanId,
 } from "@/lib/plans";
 import { planById } from "@/lib/labels";
+import { applyAssistantRetention } from "@/lib/returnToFree";
 import { sendReceipt } from "@/lib/receipt";
 
 export type OpenSubscription = {
@@ -431,6 +432,7 @@ async function endAccess(admin: SupabaseClient, sub: OpenSubscription, status: "
   if (sub.team_id) {
     await admin.from("teams").update({ status: "lapsed", updated_at: nowIso }).eq("id", sub.team_id);
   }
+  await applyAssistantRetention(admin, sub.user_id);
 }
 
 export async function chargeSeatChange(

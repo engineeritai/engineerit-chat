@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { resolveAdvisorAccessPlan, type AdvisorPlanId } from "@/lib/advisors";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
+import { isPlanId } from "@/lib/plans";
 import { supabase } from "@/lib/supabaseClient";
 
 export type SubscriptionTierState = {
@@ -45,7 +46,16 @@ export function useSubscriptionTier(): SubscriptionTierState {
 
         const raw = !error ? (profile?.subscription_tier as string | undefined) : undefined;
         const trialPlan = !error ? (profile?.advisor_trial_plan as string | undefined) : undefined;
-        const effective = await resolveEffectivePlan(supabase, user.id).catch(() => "assistant" as const);
+        let effective = await resolveEffectivePlan(supabase, user.id).catch(() => "assistant" as const);
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token || "";
+        if (token) {
+          const billingRes = await fetch("/api/billing", {
+            headers: { Authorization: `Bearer ${token}` },
+          }).catch(() => null);
+          const billingJson = billingRes ? await billingRes.json().catch(() => ({})) : {};
+          if (billingRes?.ok && isPlanId(billingJson.plan)) effective = billingJson.plan;
+        }
         if (!cancelled) {
           setState({
             ready: true,

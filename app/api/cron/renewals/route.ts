@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runDueRenewals } from "@/lib/renewals";
+import { returnExpiredPlans } from "@/lib/returnToFree";
 import { expireStaleCheckouts } from "@/lib/staleCheckouts";
 import { getSupabaseAdmin } from "@/lib/serverSupabase";
 
@@ -22,6 +23,14 @@ export async function GET(req: Request) {
     const dryRun = new URL(req.url).searchParams.get("dry") === "1";
     const now = new Date();
     const results = await runDueRenewals(admin, now, { dryRun });
+    let returned: { id: string; plan: string }[] = [];
+    if (!dryRun) {
+      try {
+        returned = await returnExpiredPlans(admin, now);
+      } catch (err) {
+        console.error("return to assistant", err);
+      }
+    }
     let stale: { id: string; action: string }[] = [];
     let staleError = "";
     if (!dryRun) {
@@ -37,6 +46,7 @@ export async function GET(req: Request) {
       dryRun,
       processed: results.length,
       results,
+      returned,
       stale,
       ...(staleError ? { staleError } : {}),
     });

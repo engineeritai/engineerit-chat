@@ -9,7 +9,8 @@ import { localizedPlan, planById, formatMoney } from "@/lib/labels";
 import ChangePasswordCard from "@/app/components/ChangePasswordCard";
 import { useMessages } from "@/lib/useMessages";
 import type { Locale } from "@/lib/i18n";
-import { PLANS, PLAN_THEME, consultantLegacyActive, isPlanId, isSelfServePlan, type PlanId } from "@/lib/plans";
+import BuyPlanButton from "@/app/components/BuyPlanButton";
+import { PLANS, PLAN_THEME, consultantLegacyActive, isPlanId, isSelfServePlan, type BillingInterval, type PlanId } from "@/lib/plans";
 import { displayFeatures, formatSar, formatUsdApprox, planPriceLabel } from "@/lib/pricingDisplay";
 import { FeatureLine, SarText } from "@/app/components/RiyalAmount";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
@@ -195,6 +196,8 @@ export default function ProfilePage() {
   const [subHistory, setSubHistory] = useState<SubscriptionRow[]>([]);
   const [billing, setBilling] = useState<BillingView | null>(null);
   const [billingNotice, setBillingNotice] = useState<string | null>(null);
+  const [renewPlan, setRenewPlan] = useState<PlanId>("engineer");
+  const [renewInterval, setRenewInterval] = useState<BillingInterval>("month");
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [busyAction, setBusyAction] = useState("");
   const [chatCount, setChatCount] = useState<number | null>(null);
@@ -392,12 +395,19 @@ export default function ProfilePage() {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
           const billingJson = await billingRes.json().catch(() => ({}));
-          if (billingRes.ok && billingJson.subscription && isPlanId(billingJson.subscription.plan)) {
+          if (isPlanId(billingJson.previousPlan)) setRenewPlan(billingJson.previousPlan);
+          if (billingJson.previousInterval === "year" || billingJson.previousInterval === "month") {
+            setRenewInterval(billingJson.previousInterval);
+          }
+          if (billingJson.plan === "assistant") setEffectivePlan("assistant");
+          if (billingRes.ok && billingJson.subscription && isPlanId(billingJson.subscription.plan) && billingJson.plan !== "assistant") {
             setBilling(billingJson.subscription as BillingView);
             setBillingNotice(null);
           } else {
             setBilling(null);
-            setBillingNotice(billingRes.ok && billingJson.notice === "downgraded" ? "downgraded" : null);
+            setBillingNotice(
+              billingRes.ok && billingJson.notice === "ended" && billingJson.plan === "assistant" ? "ended" : null
+            );
           }
           const invoiceRes = await fetch("/api/invoices", {
             headers: { Authorization: `Bearer ${accessToken}` },
@@ -858,9 +868,19 @@ export default function ProfilePage() {
                 {s.profile.teamLapsed}
               </p>
             ) : shown.planId === "assistant" ? (
-              <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
-                {billingNotice === "downgraded" ? s.billing.downgraded : s.profile.freeBody}
-              </p>
+              <div style={{ fontSize: 14, color: "#4b5563", marginBottom: 10 }}>
+                <p style={{ margin: "0 0 10px" }}>
+                  {billingNotice === "ended" ? s.billing.endedBody : s.profile.freeBody}
+                </p>
+                {billingNotice === "ended" && isSelfServePlan(renewPlan) ? (
+                  <BuyPlanButton
+                    planId={renewPlan}
+                    interval={renewInterval}
+                    label={s.billing.endedRenew}
+                    className="btn auth-follow"
+                  />
+                ) : null}
+              </div>
             ) : billing ? (
               <div style={{ fontSize: 14, color: "#374151", marginBottom: 10, lineHeight: 1.7 }}>
                 <div>

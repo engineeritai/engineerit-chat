@@ -42,7 +42,7 @@ import type { HistoryCode } from "@/lib/chatHistoryClient";
 import { ENGINEER_TOOLS, type EngineerToolId } from "@/lib/engineerTools";
 import { ADVISOR_IDS, hasAdvisorAccess, unlockPlanForAdvisor, type AdvisorId } from "@/lib/advisors";
 import { trackProduct } from "@/lib/attribution";
-import { featureTier, HEADER_PLAN_ABBREV, PLAN_THEME, type PlanId, type SelfServePlanId } from "@/lib/plans";
+import { featureTier, HEADER_PLAN_ABBREV, isPlanId, PLAN_THEME, type PlanId, type SelfServePlanId } from "@/lib/plans";
 import { hasToolAccess, toolRequiredPlan } from "@/lib/toolAccess";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
 import BuyPlanButton from "../components/BuyPlanButton";
@@ -271,6 +271,9 @@ export default function Page() {
 
   const [planReady, setPlanReady] = useState(false);
   const [planId, setPlanId] = useState<PlanId>("assistant");
+  const [endedPlan, setEndedPlan] = useState(false);
+  const [renewPlan, setRenewPlan] = useState<PlanId>("engineer");
+  const [renewInterval, setRenewInterval] = useState<"month" | "year">("month");
   const [advisorPlan, setAdvisorPlan] = useState("guest");
   const { locale, shell: s, m } = useMessages();
   const timeZone = useMessageTimeZone();
@@ -347,7 +350,25 @@ export default function Page() {
 
         setIsGuest(false);
         setUserId(user.id);
-        const effective = await resolveEffectivePlan(supabase, user.id);
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token || "";
+        let effective = await resolveEffectivePlan(supabase, user.id);
+        if (token) {
+          const billingRes = await fetch("/api/billing", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const billingJson = await billingRes.json().catch(() => ({}));
+          if (billingRes.ok && isPlanId(billingJson.plan)) effective = billingJson.plan;
+          if (billingRes.ok && billingJson.notice === "ended" && billingJson.plan === "assistant") {
+            setEndedPlan(true);
+            if (isPlanId(billingJson.previousPlan) && billingJson.previousPlan !== "assistant") {
+              setRenewPlan(billingJson.previousPlan);
+            }
+            if (billingJson.previousInterval === "year") setRenewInterval("year");
+          } else {
+            setEndedPlan(false);
+          }
+        }
         setPlanId(effective);
         setAdvisorPlan(effective);
       } catch (err) {
@@ -783,9 +804,14 @@ export default function Page() {
           content: userText,
         });
 
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token || "";
         const res = await fetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             discipline: disciplineLabel(locale, discipline),
             locale,
@@ -912,6 +938,17 @@ export default function Page() {
       />
 
       <div className={"main" + (messages.length === 0 ? " is-start" : "")}>
+          {endedPlan && (
+            <div className="history-banner" role="status">
+              <p style={{ margin: "0 0 8px" }}>{s.billing.endedBody}</p>
+              <BuyPlanButton
+                planId={renewPlan}
+                interval={renewInterval}
+                label={s.billing.endedRenew}
+                className="btn auth-follow"
+              />
+            </div>
+          )}
           {history.notice && (
             <p className="history-banner">
               {history.notice === "failed"

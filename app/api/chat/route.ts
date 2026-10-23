@@ -3,6 +3,8 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { gateAdvisor } from "@/lib/advisorGate";
+import { returnUserToAssistant } from "@/lib/returnToFree";
+import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
 import { assistantRules } from "@/lib/assistantRules";
 import {
   diagramRetryNeeded,
@@ -125,6 +127,18 @@ export async function POST(req: NextRequest) {
   };
 
   const locale = uiLocale(rawLocale);
+  const authed = await getUserFromRequest(req).catch(() => null);
+  const subjectId = authed?.id || (userId && userId !== "guest" ? userId : null);
+  let enforcedPlan = subjectId ? "assistant" : "guest";
+  if (subjectId) {
+    try {
+      const access = await returnUserToAssistant(getSupabaseAdmin(), subjectId);
+      enforcedPlan = access.plan;
+    } catch (err) {
+      console.error("plan access", err);
+      enforcedPlan = planId && planId !== "guest" ? "assistant" : "guest";
+    }
+  }
   const advisorGate = await gateAdvisor({ request: req, advisorId, locale, playbookId });
   if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
 
@@ -133,7 +147,7 @@ export async function POST(req: NextRequest) {
   const limit = await enforceDailyLimit({
     ip,
     userId: userId ?? null,
-    planId: planId || (userId ? "assistant" : "guest"),
+    planId: enforcedPlan,
   });
 
   if (!limit.ok) {

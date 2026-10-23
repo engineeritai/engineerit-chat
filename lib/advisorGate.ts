@@ -9,6 +9,7 @@ import {
   type AdvisorPlanId,
 } from "@/lib/advisors";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
+import { returnUserToAssistant } from "@/lib/returnToFree";
 import { advisorsAreLive } from "@/lib/advisorLaunch";
 import { isLocale, translate, type Locale } from "@/lib/i18n";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -126,6 +127,10 @@ async function resolveAdvisorPlan(request: Request): Promise<{
   try {
     const { data, error } = await supabaseAdmin.auth.getUser(token);
     if (error || !data.user) return { planId: "guest", isGuest: true };
+
+    await returnUserToAssistant(supabaseAdmin, data.user.id).catch((err) => {
+      console.error("return to assistant", err);
+    });
 
     const selected = await supabaseAdmin
       .from("profiles")

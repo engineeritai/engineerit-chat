@@ -403,6 +403,8 @@ export type ShellCopy = {
     cardSaveFailed: string;
     cardUnavailable: string;
     downgraded: string;
+    endedBody: string;
+    endedRenew: string;
   };
   subscription: {
     title: string;
@@ -915,6 +917,9 @@ const en: ShellCopy = {
     cardUnavailable: "Saving the card is unavailable until Moyasar tokenization is enabled.",
     downgraded:
       "We could not renew the saved card on the renewal date or on the retries 1 and 3 days later. This account is on the free Assistant Engineer plan.",
+    endedBody:
+      "Your paid plan has ended, so this account is on the free Assistant plan. Daily reply limits apply, and chat history is kept for the free plan.",
+    endedRenew: "Renew",
   },
   subscription: {
     title: "Plans and subscription",
@@ -1423,6 +1428,9 @@ const ar: ShellCopy = {
     cardUnavailable: "حفظ البطاقة غير متاح حتى يتاح حفظ البطاقات في ميسر.",
     downgraded:
       "تعذر تجديد البطاقة المحفوظة في يوم التجديد وبعد يوم و3 أيام. هذا الحساب على باقة المهندس المساعد المجانية.",
+    endedBody:
+      "انتهت الباقة المدفوعة، والحساب الآن على باقة المساعد المجانية. تطبق حدود الردود اليومية، ويحفظ سجل المحادثات حسب الباقة المجانية.",
+    endedRenew: "جدد",
   },
   subscription: {
     title: "الباقات والاشتراك",
