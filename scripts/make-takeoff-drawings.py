@@ -332,8 +332,85 @@ def draw_a101():
     return {k: round(v, 3) if isinstance(v, float) else v for k, v in q.items()}
 
 
+def draw_s201():
+    """Imperial foundation plan.
+
+    The schedule states the same measurable facts as the Clinton County
+    maintenance-building hand measure: 120 ft x 40 ft out-to-out, an 8 in
+    concrete wall, a 6 in slab inside the walls, and a CF24 footing with
+    three continuous #5 bars and no laps. This sheet is original. It is not
+    a copy of that drawing.
+    """
+    fig, ax = plt.subplots(figsize=(16.5, 11.7))
+    ax.set_aspect("equal")
+    ax.axis("off")
+    ax.add_patch(Rectangle((0, 0), 12.0, 4.0, fill=False, lw=2.0))
+    ax.add_patch(Rectangle((0.15, 0.15), 11.7, 3.7, fill=False, lw=1.0))
+    ax.text(6.0, 2.0, "SLAB ON GRADE\ninside the 8 in walls\nCF24 at the perimeter", ha="center", va="center", fontsize=12)
+    dim_h(ax, 0, 12, -0.7, "120 ft 0 in out-to-out")
+    dim_v(ax, 0, 4, 12.6, "40 ft 0 in")
+    notes = (
+        "SAMPLE DRAWING S-201\n"
+        "FOUNDATION PLAN\n"
+        "\n"
+        "CONTINUOUS FOOTING SCHEDULE (4000 PSI)\n"
+        "CF24 2 ft 0 in wide x 1 ft 0 in thick centreline 317 ft 4 in closed (1 no.) LONG (3) #5\n"
+        "\n"
+        "WALL FW1 concrete 8 in thk, height 5 ft 8 in, centreline 129 ft 10 in (1 no.)\n"
+        "WALL FW1 concrete 8 in thk, height 4 ft 4 in, centreline 187 ft 6 in (1 no.)\n"
+        "\n"
+        "6 in THK CONCRETE SLAB-ON-GRADE inside 118 ft 8 in x 38 ft 8 in (4000 PSI)\n"
+        "REINFORCE SLAB WITH 6x6 W2.1xW2.1 WWF CTRD IN THE SLAB\n"
+        "\n"
+        "NOTES\n"
+        "1. All dimensions in feet and inches.\n"
+        "2. No laps or hooks. No wastage is shown on this drawing.\n"
+        "3. Steel unit mass: #5 = 1.043 lb/ft.\n"
+        "4. Out-to-out building 120 ft 0 in x 40 ft 0 in with 8 in walls.\n"
+        "5. The slab is the inside area and is on grade. No soffit formwork.\n"
+        "6. Wall heights run from the top of the footing up to the top of the wall.\n"
+        "\n"
+        "Synthetic test drawing, not a real project."
+    )
+    ax.text(
+        -0.2,
+        6.6,
+        notes,
+        va="top",
+        fontsize=11,
+        family="DejaVu Sans",
+        bbox=dict(boxstyle="square", fc="white", ec="black", pad=0.45),
+    )
+    ax.set_xlim(-0.8, 16.5)
+    ax.set_ylim(-1.6, 11.2)
+    save(fig, "S201")
+
+    def mm(ft, inches=0):
+        return (ft * 12 + inches) * 25.4
+
+    slab = mm(118, 8) * mm(38, 8) * mm(0, 6) / 1e9
+    footing = mm(317, 4) * mm(2, 0) * mm(1, 0) / 1e9
+    wall = mm(129, 10) * mm(0, 8) * mm(5, 8) / 1e9 + mm(187, 6) * mm(0, 8) * mm(4, 4) / 1e9
+    kg_per_m = 1.043 * 0.45359237 / 0.3048
+    rebar = 3 * (mm(317, 4) / 1000) * kg_per_m
+    area = mm(118, 8) * mm(38, 8) / 1e6
+
+    def r3(value):
+        return round(value + 1e-12, 3)
+
+    return {
+        "slab_on_grade_m3": r3(slab),
+        "slab_wwf_m2": r3(area),
+        "strip_concrete_m3": r3(footing),
+        "wall_concrete_m3": r3(wall),
+        "longitudinal_#5_kg": r3(rebar),
+        "total_concrete_4000PSI_m3": r3(r3(slab) + r3(footing) + r3(wall)),
+        "total_rebar_kg": r3(rebar),
+    }
+
+
 def main():
-    truth = {"S101": draw_s101(), "S102": draw_s102(), "A101": draw_a101()}
+    truth = {"S101": draw_s101(), "S102": draw_s102(), "A101": draw_a101(), "S201": draw_s201()}
     path = OUT / "truth.json"
     path.write_text(json.dumps(truth, indent=2) + "\n")
     print(json.dumps(truth, indent=2))

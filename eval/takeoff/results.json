@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-26T11:31:50.805Z",
+  "generatedAt": "2026-10-26T13:13:35.670Z",
   "report": [
     {
       "file": "S101.pdf",
@@ -375,6 +375,96 @@
           "code": "skirting_m",
           "expected": 17.1,
           "actual": 17.1,
+          "errorPct": 0
+        }
+      ]
+    },
+    {
+      "file": "S201.pdf",
+      "source": "pdf-text",
+      "runs": 3,
+      "maxErrorPct": 0,
+      "stable": true,
+      "rows": [
+        {
+          "code": "slab_on_grade_m3",
+          "expected": 64.965,
+          "actual": 64.965,
+          "errorPct": 0
+        },
+        {
+          "code": "strip_concrete_m3",
+          "expected": 17.972,
+          "actual": 17.972,
+          "errorPct": 0
+        },
+        {
+          "code": "wall_concrete_m3",
+          "expected": 29.227,
+          "actual": 29.227,
+          "errorPct": 0
+        },
+        {
+          "code": "longitudinal_#5_kg",
+          "expected": 450.388,
+          "actual": 450.388,
+          "errorPct": 0
+        },
+        {
+          "code": "total_concrete_4000PSI_m3",
+          "expected": 112.164,
+          "actual": 112.164,
+          "errorPct": 0
+        },
+        {
+          "code": "total_rebar_kg",
+          "expected": 450.388,
+          "actual": 450.388,
+          "errorPct": 0
+        }
+      ]
+    },
+    {
+      "file": "S201.png",
+      "source": "ocr",
+      "runs": 3,
+      "maxErrorPct": 0,
+      "stable": true,
+      "rows": [
+        {
+          "code": "slab_on_grade_m3",
+          "expected": 64.965,
+          "actual": 64.965,
+          "errorPct": 0
+        },
+        {
+          "code": "strip_concrete_m3",
+          "expected": 17.972,
+          "actual": 17.972,
+          "errorPct": 0
+        },
+        {
+          "code": "wall_concrete_m3",
+          "expected": 29.227,
+          "actual": 29.227,
+          "errorPct": 0
+        },
+        {
+          "code": "longitudinal_#5_kg",
+          "expected": 450.388,
+          "actual": 450.388,
+          "errorPct": 0
+        },
+        {
+          "code": "total_concrete_4000PSI_m3",
+          "expected": 112.164,
+          "actual": 112.164,
+          "errorPct": 0
+        },
+        {
+          "code": "total_rebar_kg",
+          "expected": 450.388,
+          "actual": 450.388,
           "errorPct": 0
         }
       ]

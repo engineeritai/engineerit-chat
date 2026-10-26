@@ -38,6 +38,14 @@ const MAIN: Record<string, string[]> = {
     "total_rebar_kg",
   ],
   A101: ["wall_net_m2", "blockwork_m3", "plaster_m2", "floor_tiles_m2", "screed_m3", "skirting_m"],
+  S201: [
+    "slab_on_grade_m3",
+    "strip_concrete_m3",
+    "wall_concrete_m3",
+    "longitudinal_#5_kg",
+    "total_concrete_4000PSI_m3",
+    "total_rebar_kg",
+  ],
 };
 
 const RUNS = 3;
@@ -60,7 +68,7 @@ async function measure(filename: string) {
   return { result, qty };
 }
 
-for (const drawing of ["S101", "S102", "A101"] as const) {
+for (const drawing of ["S101", "S102", "A101", "S201"] as const) {
   for (const ext of ["pdf", "png"] as const) {
     test(`${drawing} ${ext} stays within 5% over ${RUNS} runs`, async () => {
       const filename = `${drawing}.${ext}`;
@@ -92,7 +100,7 @@ test("the original S-101 PDF from the trial matches the hand quantities", async 
 });
 
 test("PDF.js reads the drawing text layer on Node 20 without poppler", async () => {
-  for (const drawing of ["S101", "S102", "A101"] as const) {
+  for (const drawing of ["S101", "S102", "A101", "S201"] as const) {
     const text = await extractPdfText(readFileSync(`eval/takeoff/drawings/${drawing}.pdf`), "unpdf");
     const parsed = parseDrawingText(text);
     assert.equal(parsed.confidence, "high", `${drawing} confidence`);

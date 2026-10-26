@@ -40,6 +40,14 @@ const MAIN: Record<string, string[]> = {
     "total_rebar_kg",
   ],
   A101: ["wall_net_m2", "blockwork_m3", "plaster_m2", "floor_tiles_m2", "screed_m3", "skirting_m"],
+  S201: [
+    "slab_on_grade_m3",
+    "strip_concrete_m3",
+    "wall_concrete_m3",
+    "longitudinal_#5_kg",
+    "total_concrete_4000PSI_m3",
+    "total_rebar_kg",
+  ],
 };
 
 /** Quantity column from the 26 Oct 2026 live run, before this change. */
@@ -98,7 +106,7 @@ async function main() {
     complete = loaded.completeTakeoffExtraction;
   }
 
-  const drawings = ["S101", "S102", "A101"];
+  const drawings = ["S101", "S102", "A101", "S201"];
   const files = [
     ...drawings.flatMap((id) => [`${id}.pdf`, `${id}.png`]),
     "S101-source.pdf",
@@ -131,7 +139,7 @@ async function main() {
 
   let failed = false;
   for (const file of files) {
-    const id = file.startsWith("S101") ? "S101" : file.startsWith("S102") ? "S102" : "A101";
+    const id = file.startsWith("S101") ? "S101" : file.replace(/\.(pdf|png)$/i, "");
     const measures = [];
     for (let i = 0; i < runs; i++) {
       const result = await prepareTakeoff({
