@@ -608,11 +608,18 @@ export default function Page() {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
+  async function attachmentHeaders(): Promise<HeadersInit | undefined> {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token || "";
+    return token ? { Authorization: `Bearer ${token}` } : undefined;
+  }
+
   async function analyzeImage(question: string, imageFile: File): Promise<string> {
     const res = await postImage({
       file: imageFile,
       question: question || s.chat.analyzeImage,
       locale,
+      headers: await attachmentHeaders(),
       advisorId: activeAdvisor || undefined,
     });
     if (!res.ok) {
@@ -632,6 +639,7 @@ export default function Page() {
       file: docFile,
       question: question || s.chat.analyzeDocument,
       locale,
+      headers: await attachmentHeaders(),
       advisorId: activeAdvisor || undefined,
     });
     if (!res.ok) {

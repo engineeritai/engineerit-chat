@@ -1,0 +1,43 @@
+{
+  "S101": {
+    "slab_concrete_m3": 9.6,
+    "slab_soffit_formwork_m2": 48.0,
+    "slab_edge_formwork_m2": 5.6,
+    "column_concrete_m3": 2.88,
+    "column_formwork_m2": 28.8,
+    "footing_concrete_m3": 12.288,
+    "footing_side_formwork_m2": 24.96,
+    "blinding_m3": 1.376,
+    "excavation_m3": 60.016,
+    "slab_T12_m": 639.3,
+    "slab_T12_kg": 567.698,
+    "footing_T16_m": 209.0,
+    "footing_T16_kg": 329.802,
+    "total_concrete_C30_m3": 24.768,
+    "total_rebar_kg": 897.5
+  },
+  "S102": {
+    "strip_concrete_m3": 8.64,
+    "strip_side_formwork_m2": 28.8,
+    "blinding_m3": 1.44,
+    "excavation_m3": 47.52,
+    "longitudinal_T12_m": 108.0,
+    "longitudinal_T12_kg": 95.904,
+    "transverse_T10_m": 90.0,
+    "transverse_T10_kg": 55.53,
+    "total_concrete_C25_m3": 8.64,
+    "total_rebar_kg": 151.434,
+    "transverse_bar_count": 180,
+    "transverse_bar_length_m": 0.5
+  },
+  "A101": {
+    "wall_gross_m2": 56.4,
+    "openings_m2": 3.33,
+    "wall_net_m2": 53.07,
+    "blockwork_m3": 10.614,
+    "plaster_m2": 106.14,
+    "floor_tiles_m2": 20.0,
+    "screed_m3": 1.0,
+    "skirting_m": 17.1
+  }
+}

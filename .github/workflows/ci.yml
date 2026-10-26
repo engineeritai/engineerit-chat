@@ -30,7 +30,7 @@ jobs:
       - name: Install poppler-utils
         run: |
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y poppler-utils python3-pil
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y poppler-utils python3-pil tesseract-ocr
           sudo mkdir -p /opt/cursor/artifacts
           sudo chmod 777 /opt/cursor/artifacts
 

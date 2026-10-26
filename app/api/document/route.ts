@@ -5,6 +5,7 @@ import OpenAI from "openai";
 import { toFile } from "openai/uploads";
 import JSZip from "jszip";
 import { gateAdvisor } from "@/lib/advisorGate";
+import { assertFileAnalysisAccess } from "@/lib/fileAnalysisAccess";
 import { extractXlsxText } from "@/lib/xlsxText";
 import {
   IncomingFileError,
@@ -15,8 +16,12 @@ import {
 import { MAX_UPLOAD_BYTES, fileTooLargeMessage, messageLocale } from "@/lib/uploadLimits";
 import { freshnessRules } from "@/lib/assistantRules";
 import { replyLanguage, replyLanguageRule, type UiLocale } from "@/lib/replyLanguage";
+import { isTakeoffRequest } from "@/lib/takeoff/detect";
+import { completeTakeoffExtraction } from "@/lib/takeoff/openaiExtract";
+import { prepareTakeoff } from "@/lib/takeoff/pipeline";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -192,6 +197,18 @@ async function summarizeBuffer(
   locale: UiLocale
 ): Promise<string> {
   const lowerName = filename.toLowerCase();
+  if (
+    isTakeoffRequest(question) &&
+    (lowerName.endsWith(".pdf") || /\.(png|jpe?g|webp|gif|tiff?|bmp)$/.test(lowerName))
+  ) {
+    const result = await prepareTakeoff({
+      filename,
+      buffer,
+      locale: replyLanguage(locale, question),
+      complete: completeTakeoffExtraction,
+    });
+    return result.reply;
+  }
   let reply: string;
 
     // ─────────────────────────────────────
@@ -318,6 +335,11 @@ async function handleStoredDocument(req: NextRequest) {
     await removeIncomingFile(storagePath);
     return opened.response;
   }
+  const access = await assertFileAnalysisAccess(req, locale);
+  if (!access.ok) {
+    await removeIncomingFile(storagePath);
+    return access.response;
+  }
 
   let buffer: Buffer;
   try {
@@ -355,6 +377,8 @@ async function handleFormDocument(req: NextRequest) {
 
   const opened = await openAdvisor(req, advisorField, localeField, playbookField);
   if ("response" in opened) return opened.response;
+  const access = await assertFileAnalysisAccess(req, locale);
+  if (!access.ok) return access.response;
 
   if (!file) {
     return NextResponse.json(
