@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { bindVerticalPass } from "@/app/components/verticalPass";
 import { copyTable } from "@/app/components/copyRich";
+import { exportDeniedError, exportRequestHeaders, isExportLimitError } from "@/lib/exportClient";
 import { downloadName, shortTopic } from "@/lib/exportName";
 import { riyadhStamp } from "@/lib/ksaTime";
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
@@ -63,7 +64,7 @@ export default function ChatTable({
   async function exportExcel() {
     const res = await fetch("/api/export/xlsx", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await exportRequestHeaders(locale),
       body: JSON.stringify({
         title: headers[0] || "Table",
         locale,
@@ -72,7 +73,7 @@ export default function ChatTable({
         stamp: riyadhStamp(new Date(), locale),
       }),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw await exportDeniedError(res, locale === "ar" ? "تعذر تصدير الجدول" : "Couldn't export the table");
     const blob = await res.blob();
     await deliverBlob(blob, downloadName(shortTopic(fileBase || headers[0], locale === "ar" ? "جدول" : "Table"), "xlsx"));
   }
@@ -88,6 +89,10 @@ export default function ChatTable({
           className="msg-action-btn"
           onClick={() =>
             void exportExcel().catch((error) => {
+              if (isExportLimitError(error)) {
+                showToast(error.message, "err");
+                return;
+              }
               if (saveWasToasted(error)) return;
               showToast(locale === "ar" ? "تعذر تصدير الجدول" : "Couldn't export the table", "err");
             })

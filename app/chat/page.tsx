@@ -14,6 +14,7 @@ import { publishAndShare, publishShare, shareToWhatsApp } from "@/lib/chatAction
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
 import { showToast } from "@/lib/toast";
 import { toWhatsApp } from "@/lib/whatsappText";
+import { exportDeniedError, exportRequestHeaders, isExportLimitError } from "@/lib/exportClient";
 import { downloadName } from "@/lib/exportName";
 import { exportMeta } from "@/lib/messageDocument";
 import { buildShareHtml } from "@/lib/shareDocument";
@@ -168,7 +169,7 @@ function printHtml(aiText: string, title = "Report", locale: "en" | "ar" = "en")
 async function exportPdf(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
   const res = await fetch("/api/export/pdf", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await exportRequestHeaders(extra?.locale),
     body: JSON.stringify({
       title: extra?.title || "engineerit.ai",
       subtitle: extra?.subtitle,
@@ -179,7 +180,7 @@ async function exportPdf(aiText: string, extra?: { title?: string; subtitle?: st
     }),
   });
 
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw await exportDeniedError(res, "PDF export failed.");
   const blob = await res.blob();
   await deliverBlob(blob, downloadName(extra?.title || "Report", "pdf"));
 }
@@ -188,10 +189,10 @@ async function exportPdf(aiText: string, extra?: { title?: string; subtitle?: st
 async function exportWordDocx(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
   const res = await fetch("/api/export/docx", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await exportRequestHeaders(extra?.locale),
     body: JSON.stringify({ text: aiText, title: extra?.title, subtitle: extra?.subtitle, locale: extra?.locale, diagrams: extra?.diagrams }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw await exportDeniedError(res, "Word export failed.");
   const blob = await res.blob();
   await deliverBlob(blob, downloadName(extra?.title || "Report", "docx"));
 }
@@ -199,10 +200,10 @@ async function exportWordDocx(aiText: string, extra?: { title?: string; subtitle
 async function exportPptx(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
   const res = await fetch("/api/export/pptx", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await exportRequestHeaders(extra?.locale),
     body: JSON.stringify({ text: aiText, title: extra?.title, subtitle: extra?.subtitle, locale: extra?.locale, diagrams: extra?.diagrams }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw await exportDeniedError(res, "PowerPoint export failed.");
   const blob = await res.blob();
   await deliverBlob(blob, downloadName(extra?.title || "Report", "pptx"));
 }
@@ -242,6 +243,7 @@ function historyNoticeText(
     historyActionFailed: string;
     exportChatFailed: string;
     exportChatLocked: string;
+    exportChatLimit: string;
     shareTeamFailed: string;
     shareTeamNeedsLink: string;
   }
@@ -249,6 +251,8 @@ function historyNoticeText(
   switch (code) {
     case "export_locked":
       return copy.exportChatLocked;
+    case "export_limit":
+      return copy.exportChatLimit;
     case "team_unlinked":
       return copy.shareTeamNeedsLink;
     case "unauthorized":
@@ -1165,7 +1169,8 @@ export default function Page() {
                                         await exportPdf(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                       } catch (e) {
                                         console.error(e);
-                                        if (!saveWasToasted(e)) showToast(s.chat.pdfFailed, "err");
+                                        if (isExportLimitError(e)) showToast(e.message, "err");
+                                        else if (!saveWasToasted(e)) showToast(s.chat.pdfFailed, "err");
                                       }
                                     }}
                                     title={s.chat.exportPdf}
@@ -1187,7 +1192,8 @@ export default function Page() {
                                           await exportWordDocx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                         } catch (e) {
                                           console.error(e);
-                                          if (!saveWasToasted(e)) showToast(s.chat.wordFailed, "err");
+                                          if (isExportLimitError(e)) showToast(e.message, "err");
+                                          else if (!saveWasToasted(e)) showToast(s.chat.wordFailed, "err");
                                         }
                                       }}
                                       title={s.chat.exportWord}
@@ -1205,7 +1211,8 @@ export default function Page() {
                                           await exportPptx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                                         } catch (e) {
                                           console.error(e);
-                                          if (!saveWasToasted(e)) showToast(s.chat.pptFailed, "err");
+                                          if (isExportLimitError(e)) showToast(e.message, "err");
+                                          else if (!saveWasToasted(e)) showToast(s.chat.pptFailed, "err");
                                         }
                                       }}
                                       title={s.chat.exportPpt}

@@ -1,5 +1,6 @@
 // app/api/export/diagram/svg/route.ts
 import { NextResponse } from "next/server";
+import { exportLocale, guardExport } from "@/lib/exportQuotaGate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,12 +82,16 @@ function textToSvg(text: string, title: string) {
 }
 
 export async function POST(req: Request) {
+  let release = async () => {};
   try {
     const body = (await req.json()) as Partial<ReqBody>;
     const content = (body.content || "").toString();
     if (!content.trim()) {
       return NextResponse.json({ error: "Missing content" }, { status: 400 });
     }
+    const quota = await guardExport(req, exportLocale(req, (body as { locale?: unknown }).locale));
+    if (!quota.ok) return quota.response;
+    release = quota.release;
 
     const title = (body.title || "engineerit.ai diagram").toString();
     const svg = textToSvg(content, title);
@@ -103,6 +108,7 @@ export async function POST(req: Request) {
       },
     });
   } catch (e: any) {
+    await release();
     return NextResponse.json(
       { error: "SVG diagram export failed", detail: e?.message || String(e) },
       { status: 500 }

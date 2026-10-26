@@ -1,3 +1,4 @@
+import { exportDeniedError, exportRequestHeaders } from "@/lib/exportClient";
 import { downloadName } from "@/lib/exportName";
 import { deliverBlob } from "@/lib/saveFile";
 import { buildShareHtml } from "@/lib/shareDocument";
@@ -88,7 +89,7 @@ export async function exportPdf(
 ) {
   const res = await fetch("/api/export/pdf", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await exportRequestHeaders(options?.locale),
     body: JSON.stringify({
       title: options?.title || filename,
       subtitle: options?.subtitle,
@@ -99,7 +100,7 @@ export async function exportPdf(
     }),
   });
 
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw await exportDeniedError(res, "PDF export failed.");
   const blob = await res.blob();
   await downloadBlob(blob, downloadName(options?.title || filename, "pdf"));
 }
@@ -151,7 +152,7 @@ export async function exportWordDocx(
 ) {
   const res = await fetch("/api/export/docx", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await exportRequestHeaders(options?.locale),
     body: JSON.stringify({
       text: aiText,
       title: options?.title || filename,
@@ -161,7 +162,7 @@ export async function exportWordDocx(
       diagrams: options?.diagrams,
     }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw await exportDeniedError(res, "Word export failed.");
   const blob = await res.blob();
   await downloadBlob(blob, downloadName(options?.title || filename, "docx"));
 }
@@ -173,7 +174,7 @@ export async function exportPptx(
 ) {
   const res = await fetch("/api/export/pptx", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await exportRequestHeaders(options?.locale),
     body: JSON.stringify({
       text: aiText,
       title: options?.title || filename,
@@ -183,7 +184,7 @@ export async function exportPptx(
       diagrams: options?.diagrams,
     }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw await exportDeniedError(res, "PowerPoint export failed.");
   const blob = await res.blob();
   await downloadBlob(blob, downloadName(options?.title || filename, "pptx"));
 }

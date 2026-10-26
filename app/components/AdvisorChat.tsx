@@ -9,6 +9,7 @@ import { formatDaySeparator } from "@/lib/messageTime";
 import { applyComposerHeight, resetComposerHeight } from "@/lib/fitComposer";
 import MessageMarkdown from "@/app/components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "@/app/components/copyRich";
+import { isExportLimitError } from "@/lib/exportClient";
 import { saveWasToasted } from "@/lib/saveFile";
 import { showToast } from "@/lib/toast";
 import { exportMeta } from "@/lib/messageDocument";
@@ -592,7 +593,8 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                               await exportPdf(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                             } catch (err) {
                               console.error(err);
-                              if (!saveWasToasted(err)) showToast(s.chat.pdfFailed, "err");
+                              if (isExportLimitError(err)) showToast(err.message, "err");
+                              else if (!saveWasToasted(err)) showToast(s.chat.pdfFailed, "err");
                             }
                           }}
                         >
@@ -611,7 +613,8 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                                 await exportWordDocx(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                               } catch (err) {
                                 console.error(err);
-                                if (!saveWasToasted(err)) showToast(s.chat.wordFailed, "err");
+                                if (isExportLimitError(err)) showToast(err.message, "err");
+                                else if (!saveWasToasted(err)) showToast(s.chat.wordFailed, "err");
                               }
                             }}
                           >
@@ -627,7 +630,8 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                                 await exportPptx(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
                               } catch (err) {
                                 console.error(err);
-                                if (!saveWasToasted(err)) showToast(s.chat.pptFailed, "err");
+                                if (isExportLimitError(err)) showToast(err.message, "err");
+                                else if (!saveWasToasted(err)) showToast(s.chat.pptFailed, "err");
                               }
                             }}
                           >
