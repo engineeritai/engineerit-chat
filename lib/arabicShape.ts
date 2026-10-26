@@ -21,7 +21,38 @@ function paragraphRtl(text: string): boolean {
 }
 
 function isLatinToken(token: string): boolean {
-  return /[A-Za-z]/.test(token) && !ARABIC.test(token);
+  return /[A-Za-z0-9]/.test(token) && !ARABIC.test(token);
+}
+
+/** Split a word where Latin or digits sit against Arabic, including "PDF،". */
+function splitMixed(token: string): string[] {
+  if (/^\s+$/.test(token)) return [token];
+  const pieces: string[] = [];
+  let buf = "";
+  let kind: "ar" | "lat" | "other" | "" = "";
+  const classify = (ch: string): "ar" | "lat" | "other" => {
+    if (ARABIC.test(ch)) return "ar";
+    if (/[A-Za-z0-9]/.test(ch)) return "lat";
+    return "other";
+  };
+  for (const ch of token) {
+    const next = classify(ch);
+    if (!kind || kind === "other" || next === "other") {
+      buf += ch;
+      if (next !== "other") kind = next;
+      else if (!kind) kind = "other";
+      continue;
+    }
+    if (next !== kind) {
+      pieces.push(buf);
+      buf = ch;
+      kind = next;
+      continue;
+    }
+    buf += ch;
+  }
+  if (buf) pieces.push(buf);
+  return pieces.length ? pieces : [token];
 }
 
 /**
@@ -30,7 +61,7 @@ function isLatinToken(token: string): boolean {
  * in reading order ("engineer it", not "it engineer").
  */
 export function visualTokens(text: string): string[] {
-  const parts = text.split(/(\s+)/).filter((part) => part.length > 0);
+  const parts = text.split(/(\s+)/).flatMap(splitMixed).filter((part) => part.length > 0);
   if (!parts.length) return [""];
   if (!paragraphRtl(text)) return parts;
   const groups: string[][] = [];
@@ -60,7 +91,7 @@ export function visualTokens(text: string): string[] {
 
 /** Logical runs for a host bidi engine. Latin stays an LTR run inside Arabic. */
 export function directionalRuns(text: string): { text: string; rtl: boolean }[] {
-  const parts = text.split(/(\s+)/).filter((part) => part.length > 0);
+  const parts = text.split(/(\s+)/).flatMap(splitMixed).filter((part) => part.length > 0);
   const dirOf = (token: string): boolean | null => {
     if (ARABIC.test(token)) return true;
     if (/[A-Za-z]/.test(token)) return false;

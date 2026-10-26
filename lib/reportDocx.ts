@@ -1,3 +1,4 @@
+import JSZip from "jszip";
 import {
   AlignmentType,
   BorderStyle,
@@ -6,6 +7,7 @@ import {
   Header,
   HeadingLevel,
   ImageRun,
+  LevelFormat,
   Packer,
   PageNumber,
   PageOrientation,
@@ -15,12 +17,15 @@ import {
   TableRow,
   TableLayoutType,
   TextRun,
+  UnderlineType,
   VerticalAlign,
   WidthType,
+  ExternalHyperlink,
 } from "docx";
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
+import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 const border = { style: BorderStyle.SINGLE, size: 4, color: "D0D7E2" };
@@ -31,7 +36,7 @@ function runFont(rtl: boolean) {
   return { ascii: name, hAnsi: name, cs: name, eastAsia: name };
 }
 
-function textRun(value: string, opts: { bold?: boolean; size?: number; color?: string; rtl: boolean }) {
+function textRun(value: string, opts: { bold?: boolean; size?: number; color?: string; rtl: boolean; underline?: boolean }) {
   const size = opts.size ?? 22;
   return new TextRun({
     text: value || " ",
@@ -42,6 +47,7 @@ function textRun(value: string, opts: { bold?: boolean; size?: number; color?: s
     font: runFont(opts.rtl),
     rightToLeft: opts.rtl,
     color: opts.color,
+    underline: opts.underline ? { type: UnderlineType.SINGLE, color: opts.color } : undefined,
     language: opts.rtl ? { value: "ar-SA", bidirectional: "ar-SA" } : { value: "en-US" },
   });
 }
@@ -60,13 +66,30 @@ function subtitleParagraph(value: string) {
 function paragraph(
   value: string,
   rtl: boolean,
-  align?: (typeof AlignmentType)[keyof typeof AlignmentType]
+  align?: (typeof AlignmentType)[keyof typeof AlignmentType],
+  opts?: {
+    bold?: boolean;
+    size?: number;
+    color?: string;
+    spacing?: { before?: number; after?: number };
+    heading?: (typeof HeadingLevel)[keyof typeof HeadingLevel];
+  }
 ) {
+  const runs = directionalRuns(plainInline(value));
+  const paragraphRtl = rtl || runs.some((run) => run.rtl);
   return new Paragraph({
-    bidirectional: rtl,
-    alignment: align ?? (rtl ? AlignmentType.RIGHT : AlignmentType.LEFT),
-    spacing: { after: 80 },
-    children: [textRun(plainInline(value), { rtl, size: 22 })],
+    heading: opts?.heading,
+    bidirectional: paragraphRtl,
+    alignment: align ?? (paragraphRtl ? AlignmentType.START : AlignmentType.LEFT),
+    spacing: opts?.spacing ?? { after: 80 },
+    children: runs.map((run) =>
+      textRun(run.text, {
+        rtl: run.rtl,
+        bold: opts?.bold,
+        size: opts?.size ?? 22,
+        color: opts?.color,
+      })
+    ),
   });
 }
 
@@ -141,24 +164,17 @@ function makeHeader(title: string, rtl: boolean, logo: Uint8Array, landscape: bo
   const titleCol = total - iconCol;
   const icon = new Paragraph({
     spacing: { before: 0, after: 0 },
-    alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+    alignment: AlignmentType.LEFT,
     children: [eitRun(logo, 16)],
   });
+  const titleRuns = directionalRuns(title);
   const heading = new Paragraph({
-    bidirectional: rtl,
+    bidirectional: rtl || titleRuns.some((run) => run.rtl),
     spacing: { before: 0, after: 0 },
-    alignment: rtl ? AlignmentType.LEFT : AlignmentType.RIGHT,
-    children: [textRun(title, { bold: true, size: 20, rtl, color: "0F172A" })],
+    alignment: rtl ? AlignmentType.START : AlignmentType.RIGHT,
+    children: titleRuns.map((run) => textRun(run.text, { bold: true, size: 20, rtl: run.rtl, color: "0F172A" })),
   });
   const rule = { style: BorderStyle.SINGLE, size: 12, color: "1A56FF", space: 1 };
-  // Keep the Arabic title in a left column so bidi alignment cannot slide it into the icon.
-  if (rtl) {
-    const titleWidth = Math.round(total * 0.62);
-    const gap = new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun("")] });
-    return new Header({
-      children: [chromeTable(total, [titleWidth, total - titleWidth - iconCol, iconCol], "bottom", rule, [heading, gap, icon])],
-    });
-  }
   return new Header({
     children: [chromeTable(total, [iconCol, titleCol], "bottom", rule, [icon, heading])],
   });
@@ -174,31 +190,87 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
     : ["Page ", PageNumber.CURRENT, " of ", PageNumber.TOTAL_PAGES];
   const brand = new Paragraph({
     spacing: { before: 0, after: 0 },
-    alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
-    children: rtl
-      ? [textRun(`${REPORT_FOOTER_LINE}  `, { size: 16, rtl: false, color: "64748B" }), eitRun(report.logo, 14)]
-      : [eitRun(report.logo, 14), textRun(`  ${REPORT_FOOTER_LINE}`, { size: 16, rtl: false, color: "64748B" })],
+    alignment: AlignmentType.LEFT,
+    children: [eitRun(report.logo, 14), textRun(`  ${REPORT_FOOTER_LINE}`, { size: 16, rtl: false, color: "64748B" })],
   });
+  const pageNumber = (which: (typeof PageNumber)[keyof typeof PageNumber]) =>
+    new TextRun({
+      children: [which],
+      font: runFont(false),
+      size: 16,
+      sizeComplexScript: 16,
+      color: "64748B",
+      rightToLeft: false,
+      language: { value: "en-US" },
+    });
   const pages = new Paragraph({
     bidirectional: rtl,
     spacing: { before: 0, after: 0 },
-    alignment: rtl ? AlignmentType.LEFT : AlignmentType.RIGHT,
+    alignment: rtl ? AlignmentType.START : AlignmentType.RIGHT,
+    children: rtl
+      ? [
+          textRun("صفحة ", { size: 16, rtl: true, color: "64748B" }),
+          pageNumber(PageNumber.CURRENT),
+          textRun(" من ", { size: 16, rtl: true, color: "64748B" }),
+          pageNumber(PageNumber.TOTAL_PAGES),
+        ]
+      : [
+          new TextRun({
+            children: pageLabel,
+            font: runFont(false),
+            size: 16,
+            sizeComplexScript: 16,
+            color: "64748B",
+          }),
+        ],
+  });
+  const rule = { style: BorderStyle.SINGLE, size: 6, color: "D0D7E2", space: 1 };
+  const gray = OUTPUT_DISCLAIMER_GRAY.slice(1);
+  const noteRuns = directionalRuns(outputDisclaimerBody(report.locale));
+  const link = new ExternalHyperlink({
+    link: OUTPUT_POLICY_URL[report.locale],
     children: [
-      new TextRun({
-        children: pageLabel,
-        font: runFont(rtl),
-        size: 16,
-        sizeComplexScript: 16,
-        color: "64748B",
-        rightToLeft: rtl,
-        language: rtl ? { value: "ar-SA", bidirectional: "ar-SA" } : { value: "en-US" },
+      textRun(OUTPUT_POLICY_LABEL, {
+        rtl: false,
+        size: 14,
+        color: gray,
+        underline: true,
       }),
     ],
   });
-  const rule = { style: BorderStyle.SINGLE, size: 6, color: "D0D7E2", space: 1 };
+  const note = new Paragraph({
+    bidirectional: rtl,
+    alignment: rtl ? AlignmentType.START : AlignmentType.LEFT,
+    spacing: { before: 0, after: 60 },
+    children: [
+      ...noteRuns.map((run) => textRun(run.rtl ? `${run.text} ` : run.text, { rtl: run.rtl, size: 14, color: gray })),
+      link,
+    ],
+  });
   return new Footer({
     children: [
-      chromeTable(total, rtl ? [pageCol, brandCol] : [brandCol, pageCol], "top", rule, rtl ? [pages, brand] : [brand, pages]),
+      note,
+      chromeTable(total, [brandCol, pageCol], "top", rule, [brand, pages]),
+    ],
+  });
+}
+
+function isWorkingHeader(header: string): boolean {
+  const name = plainInline(header).trim();
+  return name === "طريقة الحساب" || /^working$/i.test(name);
+}
+
+/** A working formula stays one left-to-right paragraph so digits are not reordered. */
+function formulaParagraph(value: string) {
+  return new Paragraph({
+    alignment: AlignmentType.RIGHT,
+    spacing: { before: 0, after: 0 },
+    children: [
+      textRun(plainInline(value), {
+        rtl: false,
+        size: 18,
+        color: "0F172A",
+      }),
     ],
   });
 }
@@ -206,7 +278,9 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
 function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape: boolean) {
   const total = landscape ? 13900 : 9026;
   const columnWidths = headers.map(() => Math.floor(total / headers.length));
-  const cell = (value: string, header: boolean, zebra: boolean) =>
+  const workingIndex = headers.findIndex((header) => isWorkingHeader(header));
+  const centered = headers.map((header) => isCenteredBoqColumn(plainInline(header)));
+  const cell = (value: string, header: boolean, zebra: boolean, formula: boolean, center: boolean) =>
     new TableCell({
       borders,
       width: { size: columnWidths[0], type: WidthType.DXA },
@@ -214,36 +288,100 @@ function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape:
       margins: { top: 60, bottom: 60, left: 80, right: 80 },
       verticalAlign: VerticalAlign.CENTER,
       children: [
-        new Paragraph({
-          bidirectional: rtl,
-          alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
-          children: [textRun(plainInline(value), { bold: header, size: 18, rtl, color: header ? "1E3A8A" : "0F172A" })],
-        }),
+        formula
+          ? formulaParagraph(value)
+          : paragraph(value, rtl, center ? AlignmentType.CENTER : rtl ? AlignmentType.START : AlignmentType.LEFT, {
+              bold: header,
+              size: 18,
+              color: header ? "1E3A8A" : "0F172A",
+              spacing: { before: 0, after: 0 },
+            }),
       ],
     });
   return new Table({
     width: { size: total, type: WidthType.DXA },
     columnWidths,
+    alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
     visuallyRightToLeft: rtl,
     rows: [
       new TableRow({
         tableHeader: true,
         cantSplit: true,
-        children: headers.map((header) => cell(header, true, false)),
+        children: headers.map((header, cellIndex) => cell(header, true, false, false, centered[cellIndex])),
       }),
       ...rows.map(
         (row, index) =>
           new TableRow({
             cantSplit: true,
-            children: headers.map((_, cellIndex) => cell(row[cellIndex] ?? "", false, index % 2 === 1)),
+            children: headers.map((_, cellIndex) =>
+              cell(row[cellIndex] ?? "", false, index % 2 === 1, rtl && cellIndex === workingIndex, centered[cellIndex])
+            ),
           })
       ),
     ],
   });
 }
 
+const RTL_BULLETS = "rtl-bullets";
+const RTL_NUMBERS = "rtl-numbers";
+
+function rtlLevel(level: number, format: (typeof LevelFormat)[keyof typeof LevelFormat], text: string) {
+  return {
+    level,
+    format,
+    text,
+    alignment: AlignmentType.RIGHT,
+    style: {
+      run: {
+        font: runFont(true),
+        rightToLeft: true,
+        size: 22,
+        sizeComplexScript: 22,
+      },
+      paragraph: { indent: { right: 720 + level * 360, hanging: 360 } },
+    },
+  };
+}
+
+function listParagraph(value: string, ordered: boolean, depth: number) {
+  const runs = directionalRuns(plainInline(value));
+  return new Paragraph({
+    bidirectional: true,
+    alignment: AlignmentType.START,
+    numbering: { reference: ordered ? RTL_NUMBERS : RTL_BULLETS, level: Math.min(depth, 2) },
+    spacing: { after: 80 },
+    children: runs.map((run) => textRun(run.text, { rtl: run.rtl })),
+  });
+}
+
 type Child = Paragraph | Table;
 type Bucket = { landscape: boolean; cover: boolean; children: Child[] };
+
+function withSectionBidi(xml: string): string {
+  return xml.replace(/<w:sectPr\b[^>]*>[\s\S]*?<\/w:sectPr>/g, (block) =>
+    /<w:bidi\/>|<w:bidi[\s/>]/.test(block) ? block : block.replace("</w:sectPr>", "<w:bidi/></w:sectPr>")
+  );
+}
+
+function withNumberingBidi(xml: string): string {
+  return xml.replace(/<w:lvl\b[\s\S]*?<\/w:lvl>/g, (level) => {
+    if (!level.includes('w:val="bullet"') && !level.includes('w:val="decimal"')) return level;
+    let next = level.includes("<w:bidi/>") ? level : level.replace("<w:pPr>", "<w:pPr><w:bidi/>");
+    if (!next.includes("<w:pPr>")) next = next.replace("</w:lvl>", "<w:pPr><w:bidi/></w:pPr></w:lvl>");
+    next = next.replace(/<w:lvlJc w:val="[^"]+"\/>/, '<w:lvlJc w:val="right"/>');
+    next = next.replace(/<w:ind w:left="(\d+)" w:hanging="(\d+)"\/>/, '<w:ind w:right="$1" w:hanging="$2"/>');
+    if (!/<w:rtl\/>|<w:rtl[\s/>]/.test(next)) {
+      next = next.includes("<w:rPr>")
+        ? next.replace("<w:rPr>", '<w:rPr><w:rtl/><w:szCs w:val="22"/>')
+        : next.replace("</w:lvl>", '<w:rPr><w:rtl/><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:szCs w:val="22"/></w:rPr></w:lvl>');
+    }
+    return next;
+  });
+}
+
+function keepChromeTablesLogical(xml: string): string {
+  return xml.replace(/<w:tblPr>/g, (open) => `${open}<w:bidiVisual w:val="0"/>`);
+}
 
 export async function buildReportDocx(report: PreparedReport): Promise<Uint8Array> {
   const rtlDoc = report.locale === "ar";
@@ -264,12 +402,11 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
         }),
       ],
     }),
-    new Paragraph({
-      heading: HeadingLevel.TITLE,
-      alignment: AlignmentType.CENTER,
-      bidirectional: blockDir(report.title, report.locale) === "rtl",
+    paragraph(report.title, blockDir(report.title, report.locale) === "rtl", AlignmentType.CENTER, {
+      bold: true,
+      size: 56,
       spacing: { before: 400, after: 160 },
-      children: [textRun(report.title, { bold: true, size: 56, rtl: blockDir(report.title, report.locale) === "rtl" })],
+      heading: HeadingLevel.TITLE,
     }),
     subtitleParagraph(report.subtitle),
     paragraph(report.stamp, rtlDoc, AlignmentType.CENTER),
@@ -292,18 +429,17 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       const headings = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6];
       const heading = headings[block.level - 1] || HeadingLevel.HEADING_3;
       const size = block.level === 1 ? 32 : block.level === 2 ? 28 : block.level === 3 ? 24 : 22;
-      current.children.push(
-        new Paragraph({
-          heading,
-          bidirectional: rtl,
-          alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
-          spacing: { before: 280, after: 80 },
-          children: [textRun(block.text, { bold: true, size, rtl, color: "1A56FF" })],
-        })
-      );
+      current.children.push(paragraph(block.text, rtl, rtl ? AlignmentType.START : AlignmentType.LEFT, {
+        bold: true,
+        size,
+        color: "1A56FF",
+        spacing: { before: 280, after: 80 },
+        heading,
+      }));
       return;
     }
     if (block.type === "paragraph") {
+      if (isOutputDisclaimer(plainInline(block.text), report.locale)) return;
       useBucket(false);
       current.children.push(paragraph(block.text, blockDir(block.text, report.locale) === "rtl"));
       return;
@@ -312,10 +448,13 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       useBucket(false);
       const pushItems = (items: typeof block.items, ordered: boolean, depth: number) => {
         items.forEach((item, index) => {
-          const rtl = blockDir(item.text, report.locale) === "rtl";
-          const marker = ordered ? `${index + 1}. ` : "• ";
-          const pad = "  ".repeat(depth);
-          current.children.push(paragraph(`${pad}${marker}${item.text}`, rtl));
+          const rtl = rtlDoc || blockDir(item.text, report.locale) === "rtl";
+          if (rtl) current.children.push(listParagraph(item.text, ordered, depth));
+          else {
+            const marker = ordered ? `${index + 1}. ` : "• ";
+            const pad = "  ".repeat(depth);
+            current.children.push(paragraph(`${pad}${marker}${item.text}`, false));
+          }
           if (item.children.length) pushItems(item.children, item.orderedChildren, depth + 1);
         });
       };
@@ -327,7 +466,7 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       const landscape = block.headers.length >= 7;
       useBucket(landscape);
       current.children.push(tableFrom(block.headers, block.rows, rtl, landscape));
-      current.children.push(new Paragraph({ text: "" }));
+      current.children.push(new Paragraph({ bidirectional: rtl, text: "" }));
       return;
     }
     if (block.type === "chart" || block.type === "diagram") {
@@ -335,7 +474,7 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       if (!image) return;
       useBucket(true);
       const caption = block.type === "chart" ? block.model.title : report.locale === "ar" ? "مخطط" : "Diagram";
-      current.children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 200, after: 80 }, children: [imageRun(image, 900)] }));
+      current.children.push(new Paragraph({ bidirectional: rtlDoc, alignment: AlignmentType.CENTER, spacing: { before: 200, after: 80 }, children: [imageRun(image, 900)] }));
       current.children.push(paragraph(caption, blockDir(caption, report.locale) === "rtl", AlignmentType.CENTER));
     }
   };
@@ -347,6 +486,20 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
     title: report.title,
     subject: report.subtitle,
     creator: "engineerit.ai",
+    numbering: rtlDoc
+      ? {
+          config: [
+            {
+              reference: RTL_BULLETS,
+              levels: [0, 1, 2].map((level) => rtlLevel(level, LevelFormat.BULLET, "•")),
+            },
+            {
+              reference: RTL_NUMBERS,
+              levels: [0, 1, 2].map((level) => rtlLevel(level, LevelFormat.DECIMAL, `%${level + 1}.`)),
+            },
+          ],
+        }
+      : undefined,
     styles: {
       default: {
         document: { run: { font: rtlDoc ? "Arial" : "Calibri", size: 22 } },
@@ -358,7 +511,7 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
           size: {
             orientation: bucket.landscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
           },
-          margin: { top: 900, bottom: 800, left: 720, right: 720, header: 400, footer: 400 },
+          margin: { top: 900, bottom: 1500, left: 720, right: 720, header: 400, footer: 280 },
         },
       },
       headers: bucket.cover ? undefined : { default: makeHeader(report.title, rtlDoc, report.logo, bucket.landscape) },
@@ -367,5 +520,23 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
     })),
   });
   const buffer = await Packer.toBuffer(doc);
-  return new Uint8Array(buffer);
+  if (!rtlDoc) return new Uint8Array(buffer);
+  const zip = await JSZip.loadAsync(buffer);
+  const settings = await zip.file("word/settings.xml")!.async("string");
+  if (!settings.includes("w:themeFontLang")) {
+    zip.file(
+      "word/settings.xml",
+      settings.replace("</w:settings>", '<w:themeFontLang w:val="en-US" w:eastAsia="en-US" w:bidi="ar-SA"/></w:settings>')
+    );
+  }
+  const documentXml = await zip.file("word/document.xml")!.async("string");
+  zip.file("word/document.xml", withSectionBidi(documentXml));
+  const numbering = zip.file("word/numbering.xml");
+  if (numbering) zip.file("word/numbering.xml", withNumberingBidi(await numbering.async("string")));
+  for (const name of Object.keys(zip.files)) {
+    if (!/^word\/(header|footer)\d+\.xml$/.test(name)) continue;
+    zip.file(name, keepChromeTablesLogical(await zip.file(name)!.async("string")));
+  }
+  const marked = await zip.generateAsync({ type: "nodebuffer" });
+  return new Uint8Array(marked);
 }

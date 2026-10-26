@@ -71,6 +71,7 @@ export default function RegisterPage() {
         password,
         fullName,
         captchaToken,
+        accepted: true,
         ...(pending ? { pending } : {}),
       });
 
@@ -224,11 +225,14 @@ export default function RegisterPage() {
                     required
                   />
                   <span>
-                    {s.auth.agreePrefix}{" "}
-                    <Link href="/legal/terms" className="link">
-                      {s.auth.policyName}
+                    {s.auth.agreeLead}
+                    <Link href={`/legal/terms?lang=${locale}`} className="link">
+                      {s.auth.termsLink}
                     </Link>
-                    {s.auth.agreeSuffix}
+                    {s.auth.agreeAnd}
+                    <Link href={`/legal/privacy?lang=${locale}`} className="link">
+                      {s.auth.privacyLink}
+                    </Link>
                   </span>
                 </label>
               </div>

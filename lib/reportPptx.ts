@@ -1,6 +1,7 @@
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
+import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 // pptxgenjs ships a CommonJS build whose default import is unreliable under Next.
@@ -9,7 +10,7 @@ const PptxGenJS = require("pptxgenjs");
 
 type Slide = {
   addImage: (opts: Record<string, unknown>) => void;
-  addText: (text: string, opts: Record<string, unknown>) => void;
+  addText: (text: unknown, opts: Record<string, unknown>) => void;
   addTable: (rows: unknown[], opts: Record<string, unknown>) => void;
   addShape: (shape: string, opts: Record<string, unknown>) => void;
 };
@@ -34,6 +35,42 @@ function pngData(image: ReportImage) {
   return `data:image/png;base64,${Buffer.from(image.png).toString("base64")}`;
 }
 
+function isWorkingHeader(header: string): boolean {
+  const name = plainInline(header).trim();
+  return name === "طريقة الحساب" || /^working$/i.test(name);
+}
+
+function columnWidths(headers: string[], total: number): number[] {
+  const weight = (header: string) => {
+    const name = plainInline(header).trim().toLowerCase();
+    if (/^(item|البند)$/.test(name)) return 0.7;
+    if (/^(unit|الوحدة)$/.test(name)) return 0.75;
+    if (/^(quantity|qty|الكمية)$/.test(name)) return 0.95;
+    if (/working|طريقة/.test(name)) return 2.3;
+    if (/^(description|الوصف)$/.test(name)) return 1.7;
+    return 1.15;
+  };
+  const weights = headers.map(weight);
+  const sum = weights.reduce((totalWeight, value) => totalWeight + value, 0) || 1;
+  return weights.map((value) => (value / sum) * total);
+}
+
+function rowBox(cells: string[], colW: number[], fontSize: number): number {
+  const lines = Math.max(
+    1,
+    ...cells.map((cell, index) => {
+      const cpl = Math.max(4, Math.floor(((Math.max(0.4, colW[index] - 0.2) * 72 * 2.3) / fontSize)));
+      return plainInline(cell)
+        .split("\n")
+        .reduce((total, part) => {
+          const arabic = part.match(/[\u0600-\u06FF]/g)?.length ?? 0;
+          return total + Math.max(1, Math.ceil((part.length + arabic * 0.7) / cpl));
+        }, 0);
+    })
+  );
+  return lines * ((fontSize * 1.67) / 100) + 0.16;
+}
+
 export async function buildReportPptx(report: PreparedReport): Promise<Uint8Array> {
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: "WIDE", width: W, height: H });
@@ -56,6 +93,47 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
   const footer = (slide: Slide, page: number, total: number) => {
     const icon = 0.24;
     const label = rtl ? `شريحة ${page} من ${total}` : `Slide ${page} of ${total}`;
+    const gray = OUTPUT_DISCLAIMER_GRAY.slice(1);
+    const disclaimerRuns = directionalRuns(`${outputDisclaimerBody(report.locale)} `);
+    slide.addText(
+      [
+        ...disclaimerRuns.map((run) => ({
+          text: run.text,
+          options: {
+            color: gray,
+            rtlMode: run.rtl,
+            align: rtl ? "right" : "left",
+            lang: run.rtl ? "ar-SA" : "en-US",
+            fontFace: run.rtl ? "Arial" : "Calibri",
+          },
+        })),
+        {
+          text: OUTPUT_POLICY_LABEL,
+          options: {
+            color: gray,
+            underline: { style: "sng", color: gray },
+            hyperlink: { url: OUTPUT_POLICY_URL[report.locale] },
+            rtlMode: false,
+            align: rtl ? "right" : "left",
+            lang: "en-US",
+            fontFace: "Calibri",
+          },
+        },
+      ],
+      {
+        x: 0.38,
+        y: 6.55,
+        w: W - 0.76,
+        h: 0.46,
+        fontFace: rtl ? "Arial" : face,
+        lang: rtl ? "ar-SA" : "en-US",
+        fontSize: 8,
+        color: gray,
+        align: rtl ? "right" : "left",
+        valign: "top",
+        rtlMode: rtl,
+      }
+    );
     if (rtl) {
       slide.addImage({ data: logoData(report), x: W - 0.38 - icon, y: 7.1, w: icon, h: icon });
       slide.addText(REPORT_FOOTER_LINE, {
@@ -165,9 +243,10 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       fill: { color: "1A56FF" },
       line: { color: "1A56FF" },
     });
-    slide.addImage({ data: logoData(report), x: rtl ? W - 0.42 - icon : 0.42, y: 0.26, w: icon, h: icon });
+    slide.addImage({ data: logoData(report), x: 0.42, y: 0.26, w: icon, h: icon });
+    const titleRtl = rtl || blockDir(title, report.locale) === "rtl";
     slide.addText(title, {
-      x: rtl ? 0.42 : 0.42 + icon + 0.12,
+      x: 0.42 + icon + 0.12,
       y: 0.2,
       w: W - 0.84 - icon - 0.12,
       h: 0.42,
@@ -175,14 +254,23 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       fontSize: 20,
       bold: true,
       color: "0F172A",
-      align: rtl ? "left" : "right",
-      rtlMode: blockDir(title, report.locale) === "rtl",
+      align: "right",
+      rtlMode: titleRtl,
     });
     return slide;
   };
 
   let body: string[] = [];
   let bodyTitle = report.title;
+  let preface = "";
+  const nextBlock = (start: number) => {
+    for (let index = start; index < report.blocks.length; index += 1) {
+      const block = report.blocks[index];
+      if (block.type === "paragraph" && isOutputDisclaimer(plainInline(block.text), report.locale)) continue;
+      return block;
+    }
+    return null;
+  };
   const flushBody = () => {
     const text = body.join("\n").trim();
     body = [];
@@ -203,7 +291,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
         x: 0.55,
         y: 0.85,
         w: W - 1.1,
-        h: 5.9,
+        h: 5.5,
         fontFace: face, lang,
         fontSize: 18,
         color: "0F172A",
@@ -214,13 +302,22 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
     }
   };
 
-  for (const block of report.blocks) {
+  for (let index = 0; index < report.blocks.length; index += 1) {
+    const block = report.blocks[index];
     if (block.type === "heading") {
-      flushBody();
+      const introducesTable = nextBlock(index + 1)?.type === "table";
+      const pending = body.join("\n").trim();
+      if (introducesTable && pending.length > 0 && pending.length <= 220) {
+        body = [];
+        preface = pending;
+      } else {
+        flushBody();
+      }
       bodyTitle = block.text;
       continue;
     }
     if (block.type === "paragraph") {
+      if (isOutputDisclaimer(plainInline(block.text), report.locale)) continue;
       body.push(plainInline(block.text));
       body.push("");
       continue;
@@ -252,42 +349,94 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
     }
     if (block.type === "table") {
       flushBody();
-      const slide = contentSlide(bodyTitle);
       const tableRtl = rtl || block.headers.some((header) => /[\u0600-\u06FF]/.test(header));
-      const head = block.headers.map((header) => ({
-        text: plainInline(header),
-        options: { fill: { color: "E7EEFF" }, color: "1E3A8A", bold: true, align: tableRtl ? "right" : "left" },
-      }));
-      const rows = [
-        head,
-        ...block.rows.map((row, index) =>
-          block.headers.map((_, cell) => ({
-            text: plainInline(row[cell] ?? ""),
-            options: {
-              fill: { color: index % 2 ? "F8FAFC" : "FFFFFF" },
-              color: "0F172A",
-              align: tableRtl ? "right" : "left",
-            },
-          }))
-        ),
-      ];
-      slide.addTable(rows, {
-        x: 0.45,
-        y: 0.85,
-        w: W - 0.9,
-        h: 5.9,
-        colW: block.headers.map(() => (W - 0.9) / block.headers.length),
-        border: [
-          { pt: 0.5, color: "D0D7E2" },
-          { pt: 0.5, color: "D0D7E2" },
-          { pt: 0.5, color: "D0D7E2" },
-          { pt: 0.5, color: "D0D7E2" },
-        ],
-        fontFace: face, lang,
-        fontSize: block.headers.length >= 7 ? 11 : 13,
-        valign: "middle",
-        rtlMode: tableRtl,
+      const tableW = W - 0.9;
+      const fontSize = block.headers.length >= 7 ? 11 : 12;
+      const sourceWidths = columnWidths(block.headers, tableW);
+      const sourceHeaders = block.headers.map((header) => plainInline(header));
+      const sourceRows = block.rows.map((row) => block.headers.map((_, cell) => plainInline(row[cell] ?? "")));
+      const order = tableRtl ? sourceHeaders.map((_, index) => sourceHeaders.length - 1 - index) : sourceHeaders.map((_, index) => index);
+      const colW = order.map((index) => sourceWidths[index]);
+      const headerCells = order.map((index) => sourceHeaders[index]);
+      const bodyRows = sourceRows.map((row) => order.map((index) => row[index] ?? ""));
+      const workingSource = sourceHeaders.findIndex((header) => isWorkingHeader(header));
+      const centered = sourceHeaders.map((header) => isCenteredBoqColumn(header));
+      const cell = (text: string, header: boolean, fill: string, formula: boolean, center: boolean) => ({
+        text,
+        options: {
+          fill: { color: fill },
+          color: header ? "1E3A8A" : "0F172A",
+          bold: header,
+          align: center ? "center" : tableRtl ? "right" : "left",
+          rtlMode: formula ? false : tableRtl,
+        },
       });
+      let cursor = 0;
+      let firstSlide = true;
+      do {
+        const slide = contentSlide(bodyTitle);
+        const tableY = firstSlide && preface ? 1.22 : 0.85;
+        if (firstSlide && preface) {
+          const prefaceRtl = blockDir(preface, report.locale) === "rtl";
+          slide.addText(preface, {
+            x: 0.5,
+            y: 0.72,
+            w: W - 1,
+            h: 0.42,
+            fontFace: face, lang,
+            fontSize: 13,
+            color: "334155",
+            align: prefaceRtl ? "right" : "left",
+            valign: "top",
+            rtlMode: prefaceRtl,
+          });
+          preface = "";
+        }
+        const limit = 6.4 - tableY;
+        let used = rowBox(headerCells, colW, fontSize);
+        let end = cursor;
+        while (end < bodyRows.length) {
+          const next = rowBox(bodyRows[end], colW, fontSize);
+          if (end > cursor && used + next > limit) break;
+          used += next;
+          end += 1;
+          if (used > limit) break;
+        }
+        if (end === cursor && cursor < bodyRows.length) end = cursor + 1;
+        const rows = [
+          headerCells.map((text, displayIndex) => cell(text, true, "E7EEFF", false, centered[order[displayIndex]])),
+          ...bodyRows.slice(cursor, end).map((row, index) =>
+            row.map((text, displayIndex) =>
+              cell(
+                text,
+                false,
+                (cursor + index) % 2 ? "F8FAFC" : "FFFFFF",
+                tableRtl && order[displayIndex] === workingSource,
+                centered[order[displayIndex]]
+              )
+            )
+          ),
+        ];
+        slide.addTable(rows, {
+          x: 0.45,
+          y: tableY,
+          w: tableW,
+          colW,
+          border: [
+            { pt: 0.5, color: "D0D7E2" },
+            { pt: 0.5, color: "D0D7E2" },
+            { pt: 0.5, color: "D0D7E2" },
+            { pt: 0.5, color: "D0D7E2" },
+          ],
+          fontFace: face, lang,
+          fontSize,
+          valign: "middle",
+          rtlMode: tableRtl,
+          autoPage: false,
+        });
+        cursor = end;
+        firstSlide = false;
+      } while (cursor < bodyRows.length);
     }
   }
   flushBody();

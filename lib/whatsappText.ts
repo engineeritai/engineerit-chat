@@ -1,4 +1,7 @@
 import { parseMessage, plainInline, tokenizeInline, type ListItem } from "@/lib/messageDocument";
+import { outputDisclaimer } from "@/lib/outputDisclaimer";
+import type { UiLocale } from "@/lib/replyLanguage";
+import { markRtlPlain, shareLanguage } from "@/lib/shareDirection";
 
 function cleanMarks(value: string): string {
   return value.replace(/[*_~`#]/g, "").replace(/\s+/g, " ").trim();
@@ -40,8 +43,20 @@ function flowLine(source: string): string {
   return nodes.length >= 2 ? nodes.join(" → ") : "";
 }
 
+/** Keep the policy line when a share payload has to be shortened. */
+export function clipSharedText(text: string, limit = 3500): string {
+  if (text.length <= limit) return text;
+  const url = "https://engineerit.ai/legal/terms";
+  const at = text.lastIndexOf(url);
+  if (at < 0) return text.slice(0, limit);
+  const lineStart = text.lastIndexOf("\n\n", at);
+  const tail = text.slice(lineStart >= 0 ? lineStart : at);
+  if (tail.length >= limit) return tail.slice(0, limit);
+  return `${text.slice(0, limit - tail.length).trimEnd()}${tail}`;
+}
+
 /** WhatsApp text: *bold*, • bullets, numbered lines, and no markdown fences. */
-export function toWhatsApp(markdown: string, link?: string): string {
+export function toWhatsApp(markdown: string, link?: string, locale?: UiLocale): string {
   const parts: string[] = [];
   for (const block of parseMessage(markdown)) {
     if (block.type === "heading") {
@@ -71,5 +86,8 @@ export function toWhatsApp(markdown: string, link?: string): string {
   let text = parts.filter(Boolean).join("\n\n").replace(/```/g, "").replace(/^#{1,6}\s+/gm, "").trim();
   const href = (link || "").trim();
   if (href && !text.includes(href)) text = text ? `${text}\n\n${href}` : href;
-  return text;
+  const lang: UiLocale = shareLanguage(markdown, locale === "ar" ? "ar" : "en");
+  const note = outputDisclaimer(lang);
+  if (!text.includes(note)) text = text ? `${text}\n\n${note}` : note;
+  return markRtlPlain(text);
 }

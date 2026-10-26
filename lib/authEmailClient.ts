@@ -8,6 +8,7 @@ export async function requestAuthEmail(
     password?: string;
     fullName?: string;
     captchaToken?: string;
+    accepted?: boolean;
     pending?: { planId: string; interval: string; extraSeats: number };
   }
 ) {

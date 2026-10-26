@@ -102,7 +102,7 @@ test("charts, loose numbered lists, and wrapped tables survive the model formats
   assert.match(plain, /3\. Book the asphalt/);
   assert.equal(plain.split(/\n1\. /).length, 2);
   const share = buildShareHtml({ title: "Road", markdown: chartCaseEn, locale: "en", now });
-  assert.match(share, /<ol>/);
+  assert.match(share, /<ol[\s>]/);
   assert.equal(share.match(/<li\b/g)?.length, 3);
   assert.match(share, /data-chart="pie"/);
   assert.match(share, /white-space: normal/);
@@ -133,7 +133,7 @@ test("share html carries open graph tags and direction", () => {
   assert.match(html, /https:\/\/engineerit\.ai\/share\/abc123xyz/);
   assert.match(html, /twitter:card" content="summary_large_image"/);
   assert.match(html, /dir="rtl"/);
-  assert.match(html, /<table>/);
+  assert.match(html, /<table[\s>]/);
   assert.match(html, /data-kind="milestone"/);
 });
 

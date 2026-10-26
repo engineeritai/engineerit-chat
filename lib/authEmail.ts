@@ -3,6 +3,7 @@ import { checkAuthRate, consumeAuthDaily } from "@/lib/authRateLimit";
 import { isProductionMailRuntime, mailDecision } from "@/lib/mailPolicy";
 import { RESET_REDIRECT } from "@/lib/password";
 import { classifySignupError, isDuplicateSignup } from "@/lib/registerAccount";
+import { missingTermsColumn, termsMetadata } from "@/lib/termsAcceptance";
 import { isSelfServePlan, normalizeExtraSeats, parseInterval } from "@/lib/plans";
 import { getSupabaseAdmin } from "@/lib/serverSupabase";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -31,6 +32,7 @@ export async function createAuthLinkWithoutEmail(args: {
   email: string;
   password?: string;
   fullName?: string;
+  termsAcceptedAt?: string;
   env?: NodeJS.ProcessEnv;
 }) {
   const env = args.env || process.env;
@@ -50,7 +52,10 @@ export async function createAuthLinkWithoutEmail(args: {
             password: args.password || "sink-only-not-sent",
             options: {
               redirectTo: RESET_REDIRECT,
-              data: args.fullName ? { full_name: args.fullName } : undefined,
+              data: {
+                ...(args.fullName ? { full_name: args.fullName } : {}),
+                ...(args.termsAcceptedAt ? termsMetadata(args.termsAcceptedAt) : {}),
+              },
             },
           });
     const { data, error } = generated;
@@ -67,6 +72,7 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
     password?: string;
     fullName?: string;
     captchaToken?: string;
+    accepted?: boolean;
     pending?: { planId?: string; interval?: string; extraSeats?: number } | null;
   } | null;
   const email = (body?.email || "").trim().toLowerCase();
@@ -77,6 +83,10 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
   }
   if (action === "signup" && password.length < 8) {
     return Response.json({ ok: false, code: "password_short" }, { status: 400 });
+  }
+  const acceptedAt = new Date().toISOString();
+  if (action === "signup" && body?.accepted !== true) {
+    return Response.json({ ok: false, code: "policy" }, { status: 400 });
   }
 
   const ip = clientIp(req);
@@ -93,7 +103,13 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
   const mode = authEmailMode({ email, testHeader: req.headers.get("x-engineerit-test") });
   if (mode === "sink") {
     if (!isProductionMailRuntime()) {
-      const link = await createAuthLinkWithoutEmail({ action, email, password, fullName });
+      const link = await createAuthLinkWithoutEmail({
+        action,
+        email,
+        password,
+        fullName,
+        termsAcceptedAt: action === "signup" ? acceptedAt : undefined,
+      });
       console.info("[mail-sink] auth email suppressed", action, email, link.ok ? (link.link ? "link" : "no-link") : link.error);
     } else {
       console.info("[mail-sink] production test recipient suppressed", action, email);
@@ -130,6 +146,7 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
         data: {
           ...(fullName ? { full_name: fullName } : {}),
           ...(pending ? { pending_checkout: pending } : {}),
+          ...termsMetadata(acceptedAt),
         },
       },
     });
@@ -140,6 +157,7 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
     if (isDuplicateSignup(data.user)) {
       return Response.json({ ok: false, code: "duplicate" }, { status: 409 });
     }
+    if (data.user?.id) await recordTermsOnProfile(data.user.id, acceptedAt);
     return Response.json({ ok: true, sent: true, needsConfirmation: !data.session });
   }
   if (action === "resend") {
@@ -158,6 +176,31 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
     console.error("password reset", error.message);
   }
   return Response.json({ ok: true, sent: true });
+}
+
+async function recordTermsOnProfile(userId: string, acceptedAt: string) {
+  if (placeholderSupabase(process.env)) return;
+  try {
+    const admin = getSupabaseAdmin();
+    const { error } = await admin
+      .from("profiles")
+      .update(termsMetadata(acceptedAt))
+      .eq("id", userId)
+      .is("terms_accepted_at", null);
+    if (!error) return;
+    if (missingTermsColumn(error.message || "")) {
+      console.warn("terms acceptance skipped; profiles.terms_accepted_at is not on this database yet");
+      return;
+    }
+    console.error("terms acceptance", error.message);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (missingTermsColumn(message)) {
+      console.warn("terms acceptance skipped; profiles.terms_accepted_at is not on this database yet");
+      return;
+    }
+    console.error("terms acceptance", message);
+  }
 }
 
 function signupPending(raw: { planId?: string; interval?: string; extraSeats?: number } | null | undefined) {

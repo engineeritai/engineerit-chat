@@ -1,9 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
+import { PDFDocument, PDFName, PDFString, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import { containsArabic, visualTokens } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
+import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 const PORTRAIT = { w: 595.28, h: 841.89 };
@@ -11,6 +12,11 @@ const LANDSCAPE = { w: 841.89, h: 595.28 };
 const MARGIN = 46;
 const INK = rgb(0.059, 0.09, 0.16);
 const MUTED = rgb(0.39, 0.45, 0.55);
+const DISCLAIMER_INK = rgb(
+  parseInt(OUTPUT_DISCLAIMER_GRAY.slice(1, 3), 16) / 255,
+  parseInt(OUTPUT_DISCLAIMER_GRAY.slice(3, 5), 16) / 255,
+  parseInt(OUTPUT_DISCLAIMER_GRAY.slice(5, 7), 16) / 255
+);
 const BRAND = rgb(0.102, 0.337, 1);
 const LINE = rgb(0.816, 0.843, 0.89);
 const TINT = rgb(0.906, 0.933, 1);
@@ -26,6 +32,48 @@ function tokenFont(token: string, fonts: Fonts, bold: boolean): PDFFont {
 
 function lineWidth(text: string, fonts: Fonts, size: number, bold: boolean): number {
   return visualTokens(text).reduce((sum, token) => sum + tokenFont(token, fonts, bold).widthOfTextAtSize(token, size), 0);
+}
+
+function addUriLink(page: PDFPage, x: number, y: number, width: number, height: number, url: string) {
+  const context = page.doc.context;
+  const annot = context.obj({
+    Type: "Annot",
+    Subtype: "Link",
+    Rect: [x, y, x + width, y + height],
+    Border: [0, 0, 0],
+    A: { Type: "Action", S: "URI", URI: PDFString.of(url) },
+  });
+  const ref = context.register(annot);
+  const existing = page.node.lookup(PDFName.of("Annots"));
+  if (existing) {
+    const list = existing as unknown as { push: (item: unknown) => void };
+    list.push(ref);
+    return;
+  }
+  page.node.set(PDFName.of("Annots"), context.obj([ref]));
+}
+
+function linkUrlInLine(page: PDFPage, line: string, x: number, y: number, fonts: Fonts, size: number, url: string) {
+  let cursor = x;
+  for (const token of visualTokens(line)) {
+    const font = tokenFont(token, fonts, false);
+    const width = font.widthOfTextAtSize(token, size);
+    const at = token.indexOf(url);
+    if (at >= 0) {
+      const before = token.slice(0, at);
+      const beforeW = before ? font.widthOfTextAtSize(before, size) : 0;
+      const urlW = font.widthOfTextAtSize(url, size);
+      const linkX = cursor + beforeW;
+      addUriLink(page, linkX, y - 2, urlW, size + 4, url);
+      page.drawLine({
+        start: { x: linkX, y: y - 1.2 },
+        end: { x: linkX + urlW, y: y - 1.2 },
+        thickness: 0.4,
+        color: DISCLAIMER_INK,
+      });
+    }
+    cursor += width;
+  }
 }
 
 function drawLogicalLine(
@@ -160,7 +208,7 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     y = current.size.h - 64;
   };
   const ensure = (height: number, landscape = false) => {
-    if (y - height < 56) newContentPage(landscape);
+    if (y - height < 96) newContentPage(landscape);
   };
 
   const drawLines = (lines: string[], size: number, bold: boolean, indent: number, alignRtl: boolean) => {
@@ -175,20 +223,29 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     }
   };
 
-  const drawTable = (headers: string[], rows: string[][]) => {
+  const tableLayout = (headers: string[], rows: string[][]) => {
     const sample = headers.map((header, index) => {
       const cells = [header, ...rows.map((row) => row[index] || "")];
       return Math.max(36, ...cells.map((cell) => Math.min(lineWidth(plainInline(cell), fonts, 8, false) + 14, 220)));
     });
     const natural = sample.reduce((sum, width) => sum + width, 0);
     const portraitUsable = PORTRAIT.w - MARGIN * 2;
-    const landscape = headers.length >= 7 || natural > portraitUsable + 8;
+    return { sample, natural, landscape: headers.length >= 7 || natural > portraitUsable + 8 };
+  };
+
+  const drawTable = (headers: string[], rows: string[][], heading?: { text: string; level: number }) => {
+    const { sample, natural, landscape } = tableLayout(headers, rows);
     const pageW = landscape ? LANDSCAPE.w : PORTRAIT.w;
     const usable = pageW - MARGIN * 2;
     const widths = sample.map((width) => (width / natural) * usable);
+    const centered = headers.map((header) => isCenteredBoqColumn(plainInline(header)));
     const tableRtl = rtlDoc || headers.some((header) => containsArabic(header));
     if (landscape !== (current.page.getWidth() > current.page.getHeight())) newContentPage(landscape);
 
+    const headingSize = heading ? (heading.level === 1 ? 18 : heading.level === 2 ? 15 : heading.level === 3 ? 13 : 12) : 0;
+    const headingLines = heading ? wrap(heading.text, fonts, headingSize, current.page.getWidth() - MARGIN * 2, true) : [];
+    const headingStep = headingSize + 4;
+    const headingHeight = headingLines.length ? headingLines.length * headingStep + (heading!.level === 1 ? 8 : 4) : 0;
     const rowHeight = (cells: string[], header: boolean) => {
       const lines = cells.map((cell, index) => wrap(cell, fonts, header ? 9 : 8, widths[index] - 10, header));
       const count = Math.max(1, ...lines.map((item) => item.length));
@@ -213,17 +270,37 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
         cellLines.forEach((line, lineIndex) => {
           const size = header ? 9 : 8;
           const width = lineWidth(line, fonts, size, header);
-          const textX = tableRtl ? colX + widths[index] - 5 - width : colX + 5;
+          const pad = 5;
+          const textX = centered[index]
+            ? colX + pad + Math.max(0, (widths[index] - pad * 2 - width) / 2)
+            : tableRtl
+              ? colX + widths[index] - pad - width
+              : colX + pad;
           drawLogicalLine(current.page, line, textX, top - 12 - lineIndex * (header ? 12 : 11), fonts, size, header, INK);
         });
       });
       y -= laid.height;
     };
 
+    const headerLaid = rowHeight(headers, true);
+    if (y - (headingHeight + headerLaid.height) < 96) newContentPage(landscape);
+    if (heading && headingLines.length) {
+      y -= heading.level === 1 ? 8 : 4;
+      const alignRtl = blockDir(heading.text, report.locale) === "rtl";
+      for (const line of headingLines) {
+        const width = lineWidth(line, fonts, headingSize, true);
+        const usableW = current.page.getWidth();
+        const x = alignRtl ? usableW - MARGIN - width : MARGIN;
+        drawLogicalLine(current.page, line, x, y, fonts, headingSize, true, INK);
+        y -= headingStep;
+      }
+    }
+
     const paintHeader = () => paint(headers, true, TINT);
     paintHeader();
     rows.forEach((row, index) => {
-      if (y - 24 < 56) {
+      const laid = rowHeight(row, false);
+      if (y - laid.height < 96) {
         newContentPage(landscape);
         paintHeader();
       }
@@ -248,11 +325,56 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     gap();
   };
 
-  for (const block of report.blocks) {
-    await paintBlock(block);
+  // A short lead-in followed by a wide table belongs on that table's landscape
+  // page. Otherwise the portrait page is left with a heading and a blank body.
+  const shortLeadOnLandscape = () => {
+    let chars = 0;
+    for (const block of report.blocks) {
+      if (block.type === "paragraph" && isOutputDisclaimer(plainInline(block.text), report.locale)) continue;
+      if (block.type === "heading" || block.type === "paragraph") {
+        chars += plainInline(block.text).length;
+        if (chars > 400) return false;
+        continue;
+      }
+      if (block.type === "table") return tableLayout(block.headers, block.rows).landscape;
+      return false;
+    }
+    return false;
+  };
+  if (shortLeadOnLandscape()) {
+    pdf.removePage(pdf.getPageCount() - 1);
+    sheets.pop();
+    current = addPage(true);
+    drawHeader(current.page, current.size);
+    y = current.size.h - 64;
   }
 
-  async function paintBlock(block: Block) {
+  const nextBlock = (start: number) => {
+    for (let index = start; index < report.blocks.length; index += 1) {
+      const block = report.blocks[index];
+      if (block.type === "paragraph" && isOutputDisclaimer(plainInline(block.text), report.locale)) continue;
+      return block;
+    }
+    return null;
+  };
+
+  for (let index = 0; index < report.blocks.length; index += 1) {
+    const block = report.blocks[index];
+    if (block.type === "heading" && nextBlock(index + 1)?.type === "table") continue;
+    const heading = block.type === "table" ? previousHeading(index) : undefined;
+    await paintBlock(block, heading);
+  }
+
+  function previousHeading(tableIndex: number) {
+    for (let index = tableIndex - 1; index >= 0; index -= 1) {
+      const block = report.blocks[index];
+      if (block.type === "paragraph" && isOutputDisclaimer(plainInline(block.text), report.locale)) continue;
+      return block.type === "heading" ? block : undefined;
+    }
+    return undefined;
+  }
+
+  async function paintBlock(block: Block, heading?: { text: string; level: number }) {
     if (block.type === "heading") {
       const size = block.level === 1 ? 18 : block.level === 2 ? 15 : block.level === 3 ? 13 : 12;
       const lines = wrap(block.text, fonts, size, current.page.getWidth() - MARGIN * 2, true);
@@ -261,6 +383,7 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
       return;
     }
     if (block.type === "paragraph") {
+      if (isOutputDisclaimer(plainInline(block.text), report.locale)) return;
       const lines = wrap(block.text, fonts, 11, current.page.getWidth() - MARGIN * 2);
       drawLines(lines, 11, false, 0, blockDir(block.text, report.locale) === "rtl");
       gap();
@@ -281,7 +404,7 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
       return;
     }
     if (block.type === "table") {
-      drawTable(block.headers, block.rows);
+      drawTable(block.headers, block.rows, heading);
       return;
     }
     if (block.type === "chart") {
@@ -303,6 +426,8 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
   }
 
   const total = sheets.length;
+    const disclaimer = outputDisclaimer(report.locale);
+    const policyUrl = OUTPUT_POLICY_URL[report.locale];
   sheets.forEach((sheet, index) => {
     const pageLabel = report.locale === "ar" ? `صفحة ${index + 1} من ${total}` : `Page ${index + 1} of ${total}`;
     const pageW = lineWidth(pageLabel, fonts, 9, false);
@@ -310,18 +435,27 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     const brandW = fonts.body.widthOfTextAtSize(brand, 9);
     const icon = 12;
     const gap = 5;
+    const noteLines = wrap(disclaimer, fonts, 8, sheet.width - MARGIN * 2);
+    const lineY = 52 + noteLines.length * 10;
     sheet.page.drawLine({
-      start: { x: MARGIN, y: 42 },
-      end: { x: sheet.width - MARGIN, y: 42 },
+      start: { x: MARGIN, y: lineY },
+      end: { x: sheet.width - MARGIN, y: lineY },
       thickness: 0.6,
       color: LINE,
     });
+    noteLines.forEach((line, lineIndex) => {
+      const width = lineWidth(line, fonts, 8, false);
+      const x = rtlDoc ? sheet.width - MARGIN - width : MARGIN;
+      const y = lineY - 12 - lineIndex * 10;
+      drawLogicalLine(sheet.page, line, x, y, fonts, 8, false, DISCLAIMER_INK);
+      linkUrlInLine(sheet.page, line, x, y, fonts, 8, policyUrl);
+    });
     const logoX = rtlDoc ? sheet.width - MARGIN - icon : MARGIN;
-    sheet.page.drawImage(logo, { x: logoX, y: 22, width: icon, height: icon });
+    sheet.page.drawImage(logo, { x: logoX, y: 16, width: icon, height: icon });
     const brandX = rtlDoc ? logoX - gap - brandW : logoX + icon + gap;
-    sheet.page.drawText(brand, { x: brandX, y: 24, size: 9, font: fonts.body, color: MUTED });
+    sheet.page.drawText(brand, { x: brandX, y: 18, size: 9, font: fonts.body, color: MUTED });
     const pageX = rtlDoc ? MARGIN : sheet.width - MARGIN - pageW;
-    drawLogicalLine(sheet.page, pageLabel, pageX, 24, fonts, 9, false, MUTED);
+    drawLogicalLine(sheet.page, pageLabel, pageX, 18, fonts, 9, false, MUTED);
   });
 
   return pdf.save();

@@ -1,5 +1,7 @@
 // app/api/export/diagram/svg/route.ts
 import { NextResponse } from "next/server";
+import { outputDisclaimer, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import type { UiLocale } from "@/lib/replyLanguage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,6 +10,7 @@ type ReqBody = {
   title?: string;
   content?: string; // ascii / code
   filename?: string;
+  locale?: string;
 };
 
 function safeFilename(name: string) {
@@ -33,7 +36,22 @@ function escapeXml(s: string) {
  * Render text as SVG with monospace and preserved whitespace.
  * This keeps ASCII diagrams aligned on all devices.
  */
-function textToSvg(text: string, title: string) {
+function wrapNotice(locale: UiLocale): string[] {
+  const words = outputDisclaimer(locale).split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > 70 && current) {
+      lines.push(current);
+      current = word;
+    } else current = next;
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+function textToSvg(text: string, title: string, locale: UiLocale = "en") {
   const lines = (text || "").replace(/\r\n/g, "\n").split("\n");
 
   // basic sizing heuristics
@@ -42,12 +60,16 @@ function textToSvg(text: string, title: string) {
   const paddingX = 24;
   const paddingY = 24;
 
-  const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
+  const notice = wrapNotice(locale);
+  const longest = Math.max(
+    lines.reduce((m, l) => Math.max(m, l.length), 0),
+    ...notice.map((line) => line.length)
+  );
 
   // Approx monospace width ~ 0.62 * fontSize
   const charW = Math.ceil(fontSize * 0.62);
-  const width = Math.max(560, paddingX * 2 + longest * charW);
-  const height = Math.max(260, paddingY * 2 + (lines.length + 3) * lineHeight);
+  const width = Math.max(720, paddingX * 2 + longest * charW);
+  const height = Math.max(260, paddingY * 2 + (lines.length + 3 + notice.length) * lineHeight);
 
   const safeTitle = escapeXml(title || "engineerit.ai diagram");
 
@@ -56,6 +78,15 @@ function textToSvg(text: string, title: string) {
       const safeLine = escapeXml(l);
       const y = paddingY + (i + 2) * lineHeight;
       return `<text x="${paddingX}" y="${y}" xml:space="preserve">${safeLine}</text>`;
+    })
+    .join("\n");
+  const anchor = locale === "ar" ? "end" : "start";
+  const noticeX = locale === "ar" ? width - paddingX : paddingX;
+  const noticeBlock = notice
+    .map((line, index) => {
+      const y = height - paddingY - (notice.length - 1 - index) * 16;
+      const body = `<text class="disclaimer" x="${noticeX}" y="${y}" text-anchor="${anchor}">${escapeXml(line)}</text>`;
+      return line.includes("http") ? `<a href="${escapeXml(OUTPUT_POLICY_URL[locale])}">${body}</a>` : body;
     })
     .join("\n");
 
@@ -67,6 +98,7 @@ function textToSvg(text: string, title: string) {
       .card { fill: #ffffff; stroke: #e5e7eb; stroke-width: 1.5; }
       .title { font-family: system-ui, -apple-system, Segoe UI, sans-serif; font-size: 16px; font-weight: 700; fill: #111827; }
       .brand { font-family: system-ui, -apple-system, Segoe UI, sans-serif; font-size: 12px; fill: #2563eb; }
+      .disclaimer { font-family: system-ui, -apple-system, "Noto Naskh Arabic", "Segoe UI", sans-serif; font-size: 11px; fill: ${OUTPUT_DISCLAIMER_GRAY}; }
       text { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: ${fontSize}px; fill: #111827; }
     </style>
   </defs>
@@ -77,6 +109,7 @@ function textToSvg(text: string, title: string) {
   <text class="brand" x="${width - 140}" y="${paddingY + lineHeight}">engineerit.ai</text>
 
   ${textBlock}
+  ${noticeBlock}
 </svg>`;
 }
 
@@ -89,7 +122,8 @@ export async function POST(req: Request) {
     }
 
     const title = (body.title || "engineerit.ai diagram").toString();
-    const svg = textToSvg(content, title);
+    const locale: UiLocale = body.locale === "ar" ? "ar" : "en";
+    const svg = textToSvg(content, title, locale);
 
     const requested = body.filename ? safeFilename(body.filename) : "engineerit-diagram";
     const outName = requested.toLowerCase().endsWith(".svg") ? requested : `${requested}.svg`;
