@@ -7,6 +7,7 @@ import {
   Header,
   HeadingLevel,
   ImageRun,
+  LevelFormat,
   Packer,
   PageNumber,
   PageOrientation,
@@ -163,24 +164,17 @@ function makeHeader(title: string, rtl: boolean, logo: Uint8Array, landscape: bo
   const titleCol = total - iconCol;
   const icon = new Paragraph({
     spacing: { before: 0, after: 0 },
-    alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+    alignment: AlignmentType.LEFT,
     children: [eitRun(logo, 16)],
   });
+  const titleRuns = directionalRuns(title);
   const heading = new Paragraph({
-    bidirectional: rtl,
+    bidirectional: rtl || titleRuns.some((run) => run.rtl),
     spacing: { before: 0, after: 0 },
-    alignment: rtl ? AlignmentType.LEFT : AlignmentType.RIGHT,
-    children: [textRun(title, { bold: true, size: 20, rtl, color: "0F172A" })],
+    alignment: rtl ? AlignmentType.START : AlignmentType.RIGHT,
+    children: titleRuns.map((run) => textRun(run.text, { bold: true, size: 20, rtl: run.rtl, color: "0F172A" })),
   });
   const rule = { style: BorderStyle.SINGLE, size: 12, color: "1A56FF", space: 1 };
-  // Keep the Arabic title in a left column so bidi alignment cannot slide it into the icon.
-  if (rtl) {
-    const titleWidth = Math.round(total * 0.62);
-    const gap = new Paragraph({ spacing: { before: 0, after: 0 }, children: [new TextRun("")] });
-    return new Header({
-      children: [chromeTable(total, [titleWidth, total - titleWidth - iconCol, iconCol], "bottom", rule, [heading, gap, icon])],
-    });
-  }
   return new Header({
     children: [chromeTable(total, [iconCol, titleCol], "bottom", rule, [icon, heading])],
   });
@@ -196,26 +190,39 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
     : ["Page ", PageNumber.CURRENT, " of ", PageNumber.TOTAL_PAGES];
   const brand = new Paragraph({
     spacing: { before: 0, after: 0 },
-    alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
-    children: rtl
-      ? [textRun(`${REPORT_FOOTER_LINE}  `, { size: 16, rtl: false, color: "64748B" }), eitRun(report.logo, 14)]
-      : [eitRun(report.logo, 14), textRun(`  ${REPORT_FOOTER_LINE}`, { size: 16, rtl: false, color: "64748B" })],
+    alignment: AlignmentType.LEFT,
+    children: [eitRun(report.logo, 14), textRun(`  ${REPORT_FOOTER_LINE}`, { size: 16, rtl: false, color: "64748B" })],
   });
+  const pageNumber = (which: (typeof PageNumber)[keyof typeof PageNumber]) =>
+    new TextRun({
+      children: [which],
+      font: runFont(false),
+      size: 16,
+      sizeComplexScript: 16,
+      color: "64748B",
+      rightToLeft: false,
+      language: { value: "en-US" },
+    });
   const pages = new Paragraph({
     bidirectional: rtl,
     spacing: { before: 0, after: 0 },
-    alignment: rtl ? AlignmentType.LEFT : AlignmentType.RIGHT,
-    children: [
-      new TextRun({
-        children: pageLabel,
-        font: runFont(rtl),
-        size: 16,
-        sizeComplexScript: 16,
-        color: "64748B",
-        rightToLeft: rtl,
-        language: rtl ? { value: "ar-SA", bidirectional: "ar-SA" } : { value: "en-US" },
-      }),
-    ],
+    alignment: rtl ? AlignmentType.START : AlignmentType.RIGHT,
+    children: rtl
+      ? [
+          textRun("صفحة ", { size: 16, rtl: true, color: "64748B" }),
+          pageNumber(PageNumber.CURRENT),
+          textRun(" من ", { size: 16, rtl: true, color: "64748B" }),
+          pageNumber(PageNumber.TOTAL_PAGES),
+        ]
+      : [
+          new TextRun({
+            children: pageLabel,
+            font: runFont(false),
+            size: 16,
+            sizeComplexScript: 16,
+            color: "64748B",
+          }),
+        ],
   });
   const rule = { style: BorderStyle.SINGLE, size: 6, color: "D0D7E2", space: 1 };
   const gray = OUTPUT_DISCLAIMER_GRAY.slice(1);
@@ -243,7 +250,7 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
   return new Footer({
     children: [
       note,
-      chromeTable(total, rtl ? [pageCol, brandCol] : [brandCol, pageCol], "top", rule, rtl ? [pages, brand] : [brand, pages]),
+      chromeTable(total, [brandCol, pageCol], "top", rule, [brand, pages]),
     ],
   });
 }
@@ -270,6 +277,7 @@ function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape:
   return new Table({
     width: { size: total, type: WidthType.DXA },
     columnWidths,
+    alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
     visuallyRightToLeft: rtl,
     rows: [
       new TableRow({
@@ -288,8 +296,66 @@ function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape:
   });
 }
 
+const RTL_BULLETS = "rtl-bullets";
+const RTL_NUMBERS = "rtl-numbers";
+
+function rtlLevel(level: number, format: (typeof LevelFormat)[keyof typeof LevelFormat], text: string) {
+  return {
+    level,
+    format,
+    text,
+    alignment: AlignmentType.RIGHT,
+    style: {
+      run: {
+        font: runFont(true),
+        rightToLeft: true,
+        size: 22,
+        sizeComplexScript: 22,
+      },
+      paragraph: { indent: { right: 720 + level * 360, hanging: 360 } },
+    },
+  };
+}
+
+function listParagraph(value: string, ordered: boolean, depth: number) {
+  const runs = directionalRuns(plainInline(value));
+  return new Paragraph({
+    bidirectional: true,
+    alignment: AlignmentType.START,
+    numbering: { reference: ordered ? RTL_NUMBERS : RTL_BULLETS, level: Math.min(depth, 2) },
+    spacing: { after: 80 },
+    children: runs.map((run) => textRun(run.text, { rtl: run.rtl })),
+  });
+}
+
 type Child = Paragraph | Table;
 type Bucket = { landscape: boolean; cover: boolean; children: Child[] };
+
+function withSectionBidi(xml: string): string {
+  return xml.replace(/<w:sectPr\b[^>]*>[\s\S]*?<\/w:sectPr>/g, (block) =>
+    /<w:bidi\/>|<w:bidi[\s/>]/.test(block) ? block : block.replace("</w:sectPr>", "<w:bidi/></w:sectPr>")
+  );
+}
+
+function withNumberingBidi(xml: string): string {
+  return xml.replace(/<w:lvl\b[\s\S]*?<\/w:lvl>/g, (level) => {
+    if (!level.includes('w:val="bullet"') && !level.includes('w:val="decimal"')) return level;
+    let next = level.includes("<w:bidi/>") ? level : level.replace("<w:pPr>", "<w:pPr><w:bidi/>");
+    if (!next.includes("<w:pPr>")) next = next.replace("</w:lvl>", "<w:pPr><w:bidi/></w:pPr></w:lvl>");
+    next = next.replace(/<w:lvlJc w:val="[^"]+"\/>/, '<w:lvlJc w:val="right"/>');
+    next = next.replace(/<w:ind w:left="(\d+)" w:hanging="(\d+)"\/>/, '<w:ind w:right="$1" w:hanging="$2"/>');
+    if (!/<w:rtl\/>|<w:rtl[\s/>]/.test(next)) {
+      next = next.includes("<w:rPr>")
+        ? next.replace("<w:rPr>", '<w:rPr><w:rtl/><w:szCs w:val="22"/>')
+        : next.replace("</w:lvl>", '<w:rPr><w:rtl/><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:szCs w:val="22"/></w:rPr></w:lvl>');
+    }
+    return next;
+  });
+}
+
+function keepChromeTablesLogical(xml: string): string {
+  return xml.replace(/<w:tblPr>/g, (open) => `${open}<w:bidiVisual w:val="0"/>`);
+}
 
 export async function buildReportDocx(report: PreparedReport): Promise<Uint8Array> {
   const rtlDoc = report.locale === "ar";
@@ -356,10 +422,13 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       useBucket(false);
       const pushItems = (items: typeof block.items, ordered: boolean, depth: number) => {
         items.forEach((item, index) => {
-          const rtl = blockDir(item.text, report.locale) === "rtl";
-          const marker = ordered ? `${index + 1}. ` : "• ";
-          const pad = "  ".repeat(depth);
-          current.children.push(paragraph(`${pad}${marker}${item.text}`, rtl));
+          const rtl = rtlDoc || blockDir(item.text, report.locale) === "rtl";
+          if (rtl) current.children.push(listParagraph(item.text, ordered, depth));
+          else {
+            const marker = ordered ? `${index + 1}. ` : "• ";
+            const pad = "  ".repeat(depth);
+            current.children.push(paragraph(`${pad}${marker}${item.text}`, false));
+          }
           if (item.children.length) pushItems(item.children, item.orderedChildren, depth + 1);
         });
       };
@@ -371,7 +440,7 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       const landscape = block.headers.length >= 7;
       useBucket(landscape);
       current.children.push(tableFrom(block.headers, block.rows, rtl, landscape));
-      current.children.push(new Paragraph({ text: "" }));
+      current.children.push(new Paragraph({ bidirectional: rtl, text: "" }));
       return;
     }
     if (block.type === "chart" || block.type === "diagram") {
@@ -379,7 +448,7 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       if (!image) return;
       useBucket(true);
       const caption = block.type === "chart" ? block.model.title : report.locale === "ar" ? "مخطط" : "Diagram";
-      current.children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 200, after: 80 }, children: [imageRun(image, 900)] }));
+      current.children.push(new Paragraph({ bidirectional: rtlDoc, alignment: AlignmentType.CENTER, spacing: { before: 200, after: 80 }, children: [imageRun(image, 900)] }));
       current.children.push(paragraph(caption, blockDir(caption, report.locale) === "rtl", AlignmentType.CENTER));
     }
   };
@@ -391,6 +460,20 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
     title: report.title,
     subject: report.subtitle,
     creator: "engineerit.ai",
+    numbering: rtlDoc
+      ? {
+          config: [
+            {
+              reference: RTL_BULLETS,
+              levels: [0, 1, 2].map((level) => rtlLevel(level, LevelFormat.BULLET, "•")),
+            },
+            {
+              reference: RTL_NUMBERS,
+              levels: [0, 1, 2].map((level) => rtlLevel(level, LevelFormat.DECIMAL, `%${level + 1}.`)),
+            },
+          ],
+        }
+      : undefined,
     styles: {
       default: {
         document: { run: { font: rtlDoc ? "Arial" : "Calibri", size: 22 } },
@@ -419,6 +502,14 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       "word/settings.xml",
       settings.replace("</w:settings>", '<w:themeFontLang w:val="en-US" w:eastAsia="en-US" w:bidi="ar-SA"/></w:settings>')
     );
+  }
+  const documentXml = await zip.file("word/document.xml")!.async("string");
+  zip.file("word/document.xml", withSectionBidi(documentXml));
+  const numbering = zip.file("word/numbering.xml");
+  if (numbering) zip.file("word/numbering.xml", withNumberingBidi(await numbering.async("string")));
+  for (const name of Object.keys(zip.files)) {
+    if (!/^word\/(header|footer)\d+\.xml$/.test(name)) continue;
+    zip.file(name, keepChromeTablesLogical(await zip.file(name)!.async("string")));
   }
   const marked = await zip.generateAsync({ type: "nodebuffer" });
   return new Uint8Array(marked);

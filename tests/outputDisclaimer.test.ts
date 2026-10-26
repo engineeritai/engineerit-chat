@@ -348,11 +348,26 @@ test("arabic exports are right to left", async () => {
   assert.match(word, /<w:rtl\/>|<w:rtl w:val="1"\/>|<w:rtl /);
   assert.match(word, /<w:bidiVisual\/>|<w:bidiVisual w:val="1"\/>|<w:bidiVisual /);
   assert.match(word, /w:bidi="ar-SA"/);
+  assert.match(word, /<w:szCs /);
+  assert.match(word, /w:cs="Arial"/);
+  const documentXml = wordParts.find((part) => part.startsWith("word/document.xml")) ?? "";
+  assert.match(documentXml, /<w:sectPr\b[^>]*>[\s\S]*<w:bidi\/><\/w:sectPr>/);
+  const tableHeaders = documentXml.slice(documentXml.indexOf("<w:tbl>"), documentXml.indexOf("</w:tbl>"));
+  assert.ok(tableHeaders.indexOf("البند") < tableHeaders.indexOf("طريقة الحساب"), "columns stay in logical order");
+  assert.match(tableHeaders, /<w:bidiVisual\/>/);
+  const pdfRun = documentXml.slice(Math.max(0, documentXml.indexOf(">PDF<") - 400), documentXml.indexOf(">PDF<"));
+  assert.match(pdfRun, /<w:rtl w:val="false"\/>/);
+  const numbering = wordParts.find((part) => part.startsWith("word/numbering.xml")) ?? "";
+  assert.match(numbering, /<w:bidi\/>/);
+  assert.match(numbering, /<w:rtl\/>/);
   const footer = wordParts.find((part) => part.startsWith("word/footer1.xml")) ?? "";
   assert.match(footer, /<w:bidi\/>/);
   assert.match(footer, /<w:rtl\/>/);
   assert.match(footer, /w:val="start"/);
+  assert.ok(footer.indexOf("صفحة") < footer.indexOf("instrText") || footer.indexOf("صفحة") < footer.indexOf("PAGE"));
   assert.ok(footer.indexOf("مولد بالذكاء الاصطناعي") < footer.indexOf("engineerit.ai/legal/terms"));
+  const disclaimerRun = footer.slice(footer.indexOf("مولد بالذكاء الاصطناعي") - 500, footer.indexOf("مولد بالذكاء الاصطناعي"));
+  assert.match(disclaimerRun, /<w:rtl\/>/);
 
   const book = await zipText(await buildReportXlsx(report));
   assert.match(book, /rightToLeft="1"/);
