@@ -12,7 +12,7 @@ import MessageMarkdown from "../components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "../components/copyRich";
 import { publishAndShare, publishShare, shareToWhatsApp } from "@/lib/chatActions";
 import ReportViewer from "../components/ReportViewer";
-import { isReportContent, reportLocale, viewerDownloads } from "@/lib/reportViewer";
+import { isReportContent, reportLocale, reportViewerEnabled, viewerDownloads } from "@/lib/reportViewer";
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
 import { showToast } from "@/lib/toast";
 import { markRtlPlain } from "@/lib/shareDirection";
@@ -371,6 +371,7 @@ export default function Page() {
   const attachmentsAllowed = isPaidPlan && !isGuest;
 
   const exportCaps = exportCapabilities(planId, isGuest);
+  const viewerOn = reportViewerEnabled();
   const canExportPdf = tier === "professional" || tier === "consultant";
   const canExportWordPpt = tier === "consultant";
   const canShareBenefits = tier !== "assistant";
@@ -503,7 +504,7 @@ export default function Page() {
         },
         { id: "fixture-ai", role: "assistant", content, attachments: [], createdAt: isoOnDay(0, 16, 32) },
       ]);
-      if (params.get("viewer") === "1") {
+      if (params.get("viewer") === "1" && reportViewerEnabled()) {
         setReportViewer({
           id: "fixture-ai",
           title: ar ? "حصر القواعد" : "Footing take-off",
@@ -862,7 +863,7 @@ export default function Page() {
         content,
       };
       history.appendLocal(assistantMessage);
-      if (isReportContent(content)) {
+      if (viewerOn && isReportContent(content)) {
         const lang = reportLocale(content, locale);
         const meta = exportMeta(content, thread?.title, lang, userText);
         setReportViewer({
@@ -1244,12 +1245,25 @@ export default function Page() {
                                     type="button"
                                     className="msg-action-btn"
                                     onClick={() => {
-                                      setReportViewer({
-                                        id: m.id,
-                                        title: meta.source || topic,
-                                        markdown: m.content,
-                                        locale: reportLocale(m.content, locale),
-                                      });
+                                      if (viewerOn) {
+                                        setReportViewer({
+                                          id: m.id,
+                                          title: meta.source || topic,
+                                          markdown: m.content,
+                                          locale: reportLocale(m.content, locale),
+                                        });
+                                        return;
+                                      }
+                                      void (async () => {
+                                        try {
+                                          const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
+                                          const diagrams = root ? await collectDiagramPngs(root) : [];
+                                          await exportPdf(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
+                                        } catch (e) {
+                                          console.error(e);
+                                          if (!saveWasToasted(e)) showToast(s.chat.pdfFailed, "err");
+                                        }
+                                      })();
                                     }}
                                     title={s.chat.exportPdf}
                                   >
@@ -1264,12 +1278,25 @@ export default function Page() {
                                       type="button"
                                       className="msg-action-btn"
                                       onClick={() => {
-                                        setReportViewer({
-                                          id: m.id,
-                                          title: meta.source || topic,
-                                          markdown: m.content,
-                                          locale: reportLocale(m.content, locale),
-                                        });
+                                        if (viewerOn) {
+                                          setReportViewer({
+                                            id: m.id,
+                                            title: meta.source || topic,
+                                            markdown: m.content,
+                                            locale: reportLocale(m.content, locale),
+                                          });
+                                          return;
+                                        }
+                                        void (async () => {
+                                          try {
+                                            const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
+                                            const diagrams = root ? await collectDiagramPngs(root) : [];
+                                            await exportWordDocx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
+                                          } catch (e) {
+                                            console.error(e);
+                                            if (!saveWasToasted(e)) showToast(s.chat.wordFailed, "err");
+                                          }
+                                        })();
                                       }}
                                       title={s.chat.exportWord}
                                     >
@@ -1280,12 +1307,25 @@ export default function Page() {
                                       type="button"
                                       className="msg-action-btn"
                                       onClick={() => {
-                                        setReportViewer({
-                                          id: m.id,
-                                          title: meta.source || topic,
-                                          markdown: m.content,
-                                          locale: reportLocale(m.content, locale),
-                                        });
+                                        if (viewerOn) {
+                                          setReportViewer({
+                                            id: m.id,
+                                            title: meta.source || topic,
+                                            markdown: m.content,
+                                            locale: reportLocale(m.content, locale),
+                                          });
+                                          return;
+                                        }
+                                        void (async () => {
+                                          try {
+                                            const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
+                                            const diagrams = root ? await collectDiagramPngs(root) : [];
+                                            await exportPptx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
+                                          } catch (e) {
+                                            console.error(e);
+                                            if (!saveWasToasted(e)) showToast(s.chat.pptFailed, "err");
+                                          }
+                                        })();
                                       }}
                                       title={s.chat.exportPpt}
                                     >
@@ -1724,7 +1764,7 @@ export default function Page() {
           </div>
         )}
       </div>
-      {reportViewer ? (
+      {viewerOn && reportViewer ? (
         <ReportViewer
           title={reportViewer.title}
           markdown={reportViewer.markdown}

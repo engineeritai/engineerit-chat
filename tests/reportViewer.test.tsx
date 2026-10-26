@@ -18,6 +18,7 @@ import {
   reportDocumentHtml,
   reportFragmentHtml,
   reportLocale,
+  reportViewerEnabled,
   shareText,
   viewerDownloads,
   type ReportViewerLabels,
@@ -137,6 +138,23 @@ test("the report HTML is right to left, centres unit and quantity, and carries t
   assert.match(english, new RegExp(disclaimerBody("en").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.equal(isMeasureColumn("Working"), false);
   assert.equal(isMeasureColumn("طريقة الحساب"), false);
+});
+
+test("the viewer flag defaults on and off restores direct export", () => {
+  assert.equal(reportViewerEnabled(""), true);
+  assert.equal(reportViewerEnabled("1"), true);
+  assert.equal(reportViewerEnabled("true"), true);
+  assert.equal(reportViewerEnabled("on"), true);
+  assert.equal(reportViewerEnabled("0"), false);
+  assert.equal(reportViewerEnabled("false"), false);
+  assert.equal(reportViewerEnabled("OFF"), false);
+  const page = readFileSync("app/chat/page.tsx", "utf8");
+  assert.match(page, /const viewerOn = reportViewerEnabled\(\)/);
+  assert.match(page, /if \(viewerOn && isReportContent\(content\)\)/);
+  assert.match(page, /viewerOn && reportViewer/);
+  assert.match(page, /await exportPdf\(m\.content, \{ title: meta\.source \|\| topic, subtitle: meta\.subtitle, locale, diagrams \}\)/);
+  assert.match(page, /await exportWordDocx\(m\.content, \{ title: meta\.source \|\| topic, subtitle: meta\.subtitle, locale, diagrams \}\)/);
+  assert.match(page, /await exportPptx\(m\.content, \{ title: meta\.source \|\| topic, subtitle: meta\.subtitle, locale, diagrams \}\)/);
 });
 
 test("the viewer adds no Supabase client usage", () => {

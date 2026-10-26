@@ -12,6 +12,17 @@ import { renderChartSvg } from "@/lib/scheduleSvg";
 
 export const RLM = "\u200F";
 
+/**
+ * NEXT_PUBLIC_REPORT_VIEWER is read at build time.
+ * Unset, 1, true, or on keeps the viewer. 0, false, or off restores the
+ * previous export buttons. Preview stays on when the variable is unset.
+ * Set it to 0 on Production and redeploy that environment to turn it off.
+ */
+export function reportViewerEnabled(raw: string | undefined = process.env.NEXT_PUBLIC_REPORT_VIEWER): boolean {
+  const value = (raw ?? "").trim().toLowerCase();
+  return value !== "0" && value !== "false" && value !== "off";
+}
+
 export type ViewerDownload = "pdf" | "docx" | "pptx" | "xlsx";
 
 export type ReportViewerLabels = {
