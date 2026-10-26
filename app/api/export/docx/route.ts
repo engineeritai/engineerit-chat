@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { contentDisposition } from "@/lib/exportName";
+import { checkExportQuota, exportLocale } from "@/lib/exportQuota";
 import { buildReportDocx } from "@/lib/reportDocx";
 import { prepareReport } from "@/lib/reportModel";
 
@@ -19,6 +20,8 @@ export async function POST(req: Request) {
     };
     const markdown = (body.content ?? body.text ?? "").toString();
     if (!markdown.trim()) return NextResponse.json({ error: "Missing content." }, { status: 400 });
+    const denied = await checkExportQuota(req, exportLocale(req, body.locale));
+    if (denied) return denied;
     const report = await prepareReport({
       title: body.title,
       subtitle: body.subtitle,

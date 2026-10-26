@@ -1,6 +1,7 @@
 // app/api/export/diagram/pdf/route.ts
 import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { checkExportQuota, exportLocale } from "@/lib/exportQuota";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,6 +29,8 @@ export async function POST(req: Request) {
     if (!content.trim()) {
       return NextResponse.json({ error: "Missing content" }, { status: 400 });
     }
+    const denied = await checkExportQuota(req, exportLocale(req, (body as { locale?: unknown }).locale));
+    if (denied) return denied;
 
     const title = (body.title || "engineerit.ai diagram").toString();
 

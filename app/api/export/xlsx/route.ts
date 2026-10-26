@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { contentDisposition, shortTopic } from "@/lib/exportName";
+import { checkExportQuota, exportLocale } from "@/lib/exportQuota";
 import { riyadhStamp } from "@/lib/ksaTime";
 import { prepareReport } from "@/lib/reportModel";
 import { buildReportXlsx, buildTableXlsx } from "@/lib/reportXlsx";
@@ -20,6 +21,8 @@ export async function POST(req: Request) {
       filename?: string;
     };
     const locale = body.locale === "ar" ? "ar" : "en";
+    const denied = await checkExportQuota(req, exportLocale(req, locale));
+    if (denied) return denied;
     const bytes =
       body.headers && body.rows
         ? await buildTableXlsx({

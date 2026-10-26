@@ -4,6 +4,7 @@ import { historyCode, isUuid, requireHistoryUser } from "@/lib/historyAccess";
 import { canExportChatHistory } from "@/lib/historyRetention";
 import { getVisibleConversation, listMessages, summaryFor } from "@/lib/historyDb";
 import { buildChatDocx, buildChatPdf, exportFilename } from "@/lib/chatExport";
+import { checkExportQuota, exportLocale } from "@/lib/exportQuota";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +34,8 @@ export async function GET(request: Request, context: RouteContext) {
     if (!row || !summary) return historyCode(404, "not_found");
     const messages = await listMessages(row.id);
     const locale = localeFrom(request);
+    const denied = await checkExportQuota(request, exportLocale(request, locale));
+    if (denied) return denied;
     const bytes =
       format === "pdf"
         ? await buildChatPdf({ title: summary.title, messages, locale })

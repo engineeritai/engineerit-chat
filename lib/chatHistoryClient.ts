@@ -11,6 +11,7 @@ export type HistoryCode =
   | "invalid"
   | "failed"
   | "export_locked"
+  | "export_limit"
   | "team_unlinked";
 
 export type { ConversationSummary, StoredMessage };
@@ -31,6 +32,7 @@ async function readCode(res: Response): Promise<HistoryCode> {
     code === "not_found" ||
     code === "invalid" ||
     code === "export_locked" ||
+    code === "export_limit" ||
     code === "team_unlinked"
   ) {
     return code;

@@ -1,5 +1,6 @@
-import type { Locale } from "@/lib/i18n";
 import type { EngineerToolId } from "@/lib/engineerTools";
+import { EXPORT_LIMIT_COPY } from "@/lib/exportLimitCopy";
+import type { Locale } from "@/lib/i18n";
 
 export type ShellCopy = {
   nav: {
@@ -148,6 +149,7 @@ export type ShellCopy = {
     exportChatWord: string;
     exportChatFailed: string;
     exportChatLocked: string;
+    exportChatLimit: string;
     shareTeamFailed: string;
     shareTeamNeedsLink: string;
     noSearchResults: string;
@@ -646,6 +648,7 @@ const en: ShellCopy = {
     exportChatWord: "Export chat Word",
     exportChatFailed: "Could not export this chat.",
     exportChatLocked: "Chat export is available on Professional Engineer and above.",
+    exportChatLimit: EXPORT_LIMIT_COPY.en,
     shareTeamFailed: "Could not share this chat with the team.",
     shareTeamNeedsLink: "Link this account to a team before sharing.",
     noSearchResults: "No matching chats.",
@@ -1160,6 +1163,7 @@ const ar: ShellCopy = {
     exportChatWord: "تصدير المحادثة وورد",
     exportChatFailed: "تعذر تصدير هذه المحادثة.",
     exportChatLocked: "تصدير المحادثة متاح من باقة المهندس المحترف فما فوق.",
+    exportChatLimit: EXPORT_LIMIT_COPY.ar,
     shareTeamFailed: "تعذرت مشاركة هذه المحادثة مع الفريق.",
     shareTeamNeedsLink: "اربط هذا الحساب بفريق قبل المشاركة.",
     noSearchResults: "لا توجد محادثات مطابقة.",
