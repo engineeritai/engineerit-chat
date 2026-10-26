@@ -992,6 +992,7 @@ html[dir="rtl"] .diagram-fade.is-end {
   inset: 0;
   z-index: 240;
   color: #111418;
+  background: #0f172a;
   overscroll-behavior: none;
   touch-action: none;
 }
@@ -1002,7 +1003,7 @@ html[dir="rtl"] .diagram-fade.is-end {
   z-index: 0;
   border: 0;
   padding: 0;
-  background: rgba(15, 23, 42, 0.82);
+  background: #0f172a;
   touch-action: manipulation;
   cursor: pointer;
 }
@@ -3790,6 +3791,66 @@ label,
   }
 }
 
+/* Message share actions: bottom sheet on a phone, menu card on a wide screen. */
+.msg-share-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(17, 20, 24, 0.46);
+}
+
+.msg-share-sheet {
+  width: 100%;
+  max-height: min(70dvh, 420px);
+  overflow: auto;
+  margin: 0;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  border-radius: 16px 16px 0 0;
+  background: #fff;
+  color: #111418;
+  box-shadow: 0 -12px 32px rgba(17, 20, 24, 0.18);
+}
+
+.msg-share-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #111418;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.3;
+  text-align: start;
+  cursor: pointer;
+}
+
+.msg-share-item:active,
+.msg-share-item:focus-visible {
+  background: #f2f4f8;
+}
+
+@media (min-width: 801px) {
+  .msg-share-backdrop {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .msg-share-sheet {
+    width: min(320px, 100%);
+    padding: 8px;
+    border-radius: 16px;
+  }
+}
+
 /* In-chat report viewer: docked on the inline end, full-screen sheet on a phone. */
 .report-viewer {
   position: fixed;
@@ -3964,6 +4025,18 @@ label,
 
 .report-viewer-doc p {
   margin: 0 0 12px;
+}
+
+.report-viewer-doc .report-chart {
+  margin: 0 0 16px;
+  overflow-x: auto;
+}
+
+.report-viewer-doc .report-chart svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
 }
 
 .report-viewer-doc .report-table {

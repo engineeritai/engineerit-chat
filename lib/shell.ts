@@ -127,6 +127,7 @@ export type ShellCopy = {
     print: string;
     whatsapp: string;
     closeShare: string;
+    viewerOpen: string;
     viewerDownload: string;
     viewerPdf: string;
     viewerWord: string;
@@ -638,6 +639,7 @@ const en: ShellCopy = {
     print: "Print",
     whatsapp: "WhatsApp",
     closeShare: "Close",
+    viewerOpen: "View",
     viewerDownload: "Download",
     viewerPdf: "PDF",
     viewerWord: "Word",
@@ -1164,6 +1166,7 @@ const ar: ShellCopy = {
     print: "طباعة",
     whatsapp: "واتساب",
     closeShare: "إغلاق",
+    viewerOpen: "عرض",
     viewerDownload: "تنزيل",
     viewerPdf: "بي دي إف",
     viewerWord: "وورد",

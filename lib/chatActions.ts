@@ -49,9 +49,47 @@ export function saveHtml(aiText: string, title = "Report", locale?: string) {
   });
 }
 
-export function printHtml(aiText: string, title = "Report", locale?: string) {
-  const html = buildHtmlDocument(aiText, title, locale);
+/** iPhone, iPad, and iPadOS desktop-mode Safari. Hidden iframe print does not run there. */
+export function iosPrintHost(ua: string, platform = "", maxTouchPoints = 0): boolean {
+  return /iPad|iPhone|iPod/i.test(ua) || (platform === "MacIntel" && maxTouchPoints > 1);
+}
 
+/**
+ * Desktop keeps the hidden iframe. iOS Safari and the home-screen app open a
+ * print-ready tab. A blocked popup falls back to the system share sheet.
+ */
+export function printChannel(args: { ios: boolean; opened: boolean }): "iframe" | "tab" | "share" {
+  if (!args.ios) return "iframe";
+  return args.opened ? "tab" : "share";
+}
+
+function escapePrint(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Print-ready copy of the share HTML, with a visible Print control hidden on paper. */
+export function printDocumentHtml(html: string, printLabel: string): string {
+  const bar = `<div class="print-call" style="position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;gap:8px;padding:8px 12px;background:#fff;border-bottom:1px solid #e5e7eb"><button type="button" onclick="window.print()" style="min-height:44px;padding:0 16px;border:0;border-radius:999px;background:#111418;color:#fff;font:inherit;font-weight:650">${escapePrint(printLabel)}</button></div><style>@media print{.print-call{display:none!important}}</style><script>window.addEventListener("load",function(){setTimeout(function(){try{window.print()}catch(e){}},60)});</script>`;
+  if (/<body[^>]*>/i.test(html)) return html.replace(/<body([^>]*)>/i, `<body$1>${bar}`);
+  return bar + html;
+}
+
+function openPrintTab(html: string, printLabel: string): boolean {
+  const tab = window.open("", "_blank");
+  if (!tab) return false;
+  tab.document.open();
+  tab.document.write(printDocumentHtml(html, printLabel));
+  tab.document.close();
+  try {
+    tab.focus();
+    tab.print();
+  } catch {
+    /* the document script calls print again after load */
+  }
+  return true;
+}
+
+function printInFrame(html: string) {
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
   iframe.style.right = "0";
@@ -65,7 +103,7 @@ export function printHtml(aiText: string, title = "Report", locale?: string) {
   const doc = iframe.contentWindow?.document;
   if (!doc) {
     iframe.remove();
-    return;
+    return false;
   }
 
   doc.open();
@@ -80,6 +118,24 @@ export function printHtml(aiText: string, title = "Report", locale?: string) {
       setTimeout(() => iframe.remove(), 900);
     }
   }, 250);
+  return true;
+}
+
+export function printHtml(aiText: string, title = "Report", locale?: string) {
+  const html = buildHtmlDocument(aiText, title, locale);
+  const printLabel = locale === "ar" || isArabicText(aiText) ? "طباعة" : "Print";
+  const ios =
+    typeof navigator !== "undefined" &&
+    iosPrintHost(navigator.userAgent || "", navigator.platform || "", navigator.maxTouchPoints || 0);
+  if (ios) {
+    const opened = openPrintTab(html, printLabel);
+    if (printChannel({ ios: true, opened }) === "share") {
+      const { blob, file } = htmlFileFromText(aiText, title, locale);
+      void deliverBlob(blob, file.name);
+    }
+    return;
+  }
+  if (!printInFrame(html)) openPrintTab(html, printLabel);
 }
 
 export async function exportPdf(

@@ -8,6 +8,7 @@ import { DaySeparator, MessageTime, useMessageTimeZone } from "@/app/components/
 import { formatDaySeparator } from "@/lib/messageTime";
 import { applyComposerHeight, resetComposerHeight } from "@/lib/fitComposer";
 import MessageMarkdown from "@/app/components/MessageMarkdown";
+import MessageShareMenu from "@/app/components/MessageShareMenu";
 import { collectDiagramPngs, copyRichElement } from "@/app/components/copyRich";
 import { saveWasToasted } from "@/lib/saveFile";
 import { showToast } from "@/lib/toast";
@@ -637,45 +638,30 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                       )}
                     </div>
                   )}
-                  {openShareFor === message.id && (
-                    <div className="advisor-share-extra">
-                      <button
-                        type="button"
-                        className="msg-action-btn"
-                        onClick={() => saveHtml(message.content, topic, locale)}
-                      >
-                        Save HTML
-                      </button>
-                      <button
-                        type="button"
-                        className="msg-action-btn"
-                        onClick={() => printHtml(message.content, topic, locale)}
-                      >
-                        Print
-                      </button>
-                      <button
-                        type="button"
-                        className="msg-action-btn"
-                        onClick={async () => {
-                          const url = await publishShare({ title: topic, markdown: message.content, locale });
-                          if (!url) {
-                            showToast(s.chat.shareFailed, "err");
-                            return;
-                          }
-                          shareToWhatsApp(message.content, url);
-                        }}
-                      >
-                        WhatsApp
-                      </button>
-                      <button
-                        type="button"
-                        className="msg-action-btn"
-                        onClick={() => setOpenShareFor(null)}
-                      >
-                        ✕ Close
-                      </button>
-                    </div>
-                  )}
+                  <MessageShareMenu
+                    open={openShareFor === message.id}
+                    dir={rtl ? "rtl" : "ltr"}
+                    label={s.chat.share}
+                    onClose={() => setOpenShareFor(null)}
+                    actions={[
+                      { label: s.chat.saveHtml, onSelect: () => saveHtml(message.content, topic, locale) },
+                      { label: s.chat.print, onSelect: () => printHtml(message.content, topic, locale) },
+                      {
+                        label: s.chat.whatsapp,
+                        onSelect: () => {
+                          void (async () => {
+                            const url = await publishShare({ title: topic, markdown: message.content, locale });
+                            if (!url) {
+                              showToast(s.chat.shareFailed, "err");
+                              return;
+                            }
+                            shareToWhatsApp(message.content, url);
+                          })();
+                        },
+                      },
+                      { label: `✕ ${s.chat.closeShare}`, onSelect: () => setOpenShareFor(null) },
+                    ]}
+                  />
                 </div>
               </div>
               </div>

@@ -3892,6 +3892,20 @@ button.advisor-card-link {
   display: block;
 }
 
+.share-footer-policy {
+  margin: 0 0 8px;
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.share-footer-policy a {
+  color: #9ca3af;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .share-footer-meta {
   display: flex;
   align-items: center;

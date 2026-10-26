@@ -241,13 +241,14 @@ async function assertViewerFit(page: Page) {
       startOnScreen: Boolean(start?.fully),
       startText: start?.text || "",
       chartOk: contained || intersects,
+      widthFits: canvasBox.width <= stageBox.width + 2,
       offscreen: boxes.filter((box) => !box.fits).map((box) => box.text),
     };
   });
   expect(fit.count).toBeGreaterThan(0);
   expect(fit.scale).toBeLessThanOrEqual(2.01);
-  expect(fit.textPx).toBeGreaterThanOrEqual(12);
   expect(fit.textPx).toBeLessThanOrEqual(16.05);
+  expect(fit.widthFits, "chart opens wider than the screen").toBe(true);
   expect(fit.allFit, `text larger than the stage: ${fit.offscreen.join(", ")}`).toBe(true);
   expect(fit.someOnScreen).toBe(true);
   expect(fit.startOnScreen, `start text off-screen: ${fit.startText}`).toBe(true);

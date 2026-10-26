@@ -79,6 +79,15 @@ export function isReportContent(markdown: string): boolean {
   return false;
 }
 
+/**
+ * Reports, flow diagrams, and charts (roadmap, timeline, Gantt, S-curve) open
+ * the viewer. A plain answer does not. Plan caps still decide the downloads.
+ */
+export function isViewerContent(markdown: string): boolean {
+  if (isReportContent(markdown)) return true;
+  return parseMessage(markdown || "").some((block) => block.type === "diagram" || block.type === "chart");
+}
+
 /** Arabic UI or Arabic content opens the panel right-to-left. Same rule as a shared answer. */
 export function reportLocale(markdown: string, uiLocale: string): "en" | "ar" {
   return shareLanguage(markdown, uiLocale === "ar" ? "ar" : "en");

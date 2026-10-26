@@ -1,4 +1,8 @@
-/** Contain the chart, keep labels near 12–16px, and never scale above 2×. */
+/**
+ * Open fitted to the stage width so the whole chart is visible.
+ * Labels may grow toward 14px only while that still fits the width, and never above 2×.
+ * Pinch-zoom and pan stay available for the detail. Horizontal pan is unchanged.
+ */
 export function viewerScale(
   natural: { w: number; h: number; font: number },
   stage: { w: number; h: number },
@@ -10,8 +14,9 @@ export function viewerScale(
   const stageW = Math.max(1, stage.w);
   const stageH = Math.max(1, stage.h);
   const cap = Math.min(2, 16 / font);
-  let scale = Math.min(stageW / natW, stageH / natH, cap);
-  if (scale * font < 12) scale = Math.min(14 / font, cap);
+  const widthFit = stageW / natW;
+  let scale = Math.min(widthFit, cap);
+  if (scale * font < 12) scale = Math.min(14 / font, cap, widthFit);
   const scaledW = natW * scale;
   const scaledH = natH * scale;
   const panX = scaledW > stageW + 0.5;

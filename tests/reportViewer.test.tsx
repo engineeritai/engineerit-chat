@@ -12,6 +12,7 @@ import {
   intentLinks,
   isMeasureColumn,
   isReportContent,
+  isViewerContent,
   messageShareUrl,
   nextTrapIndex,
   prefersMobileShare,
@@ -79,6 +80,21 @@ test("a take-off or report opens the viewer and a chart reply does not", () => {
   assert.equal(isReportContent("# تقرير الحصر\n\nنص"), true);
   assert.equal(isReportContent(SCURVE), false);
   assert.equal(isReportContent("The footing is 500 mm deep."), false);
+});
+
+test("diagrams and roadmaps open the viewer on every plan while downloads stay capped", () => {
+  const roadmap = "```timeline\ntitle Factory roadmap\n2026-01-01 : Project Initiation\n2026-03-01 : Site Selection\n```";
+  const flow = "```mermaid\nflowchart LR\nA-->B\n```";
+  const curve = "```scurve\ntitle Progress\nSep | 20 | 18\nOct | 45 | 40\n```";
+  assert.equal(isViewerContent(EN_BOQ), true);
+  assert.equal(isViewerContent(roadmap), true);
+  assert.equal(isViewerContent(flow), true);
+  assert.equal(isViewerContent(curve), true);
+  assert.equal(isViewerContent(SCURVE), false);
+  assert.equal(isViewerContent("The footing is 500 mm deep."), false);
+  assert.equal(isReportContent(roadmap), false);
+  assert.deepEqual(viewerDownloads(exportCapabilities("engineer")), []);
+  assert.deepEqual(viewerDownloads(exportCapabilities("professional")), ["pdf"]);
 });
 
 test("Arabic content is right to left even when the chat locale is English", () => {
@@ -150,7 +166,8 @@ test("the viewer flag defaults on and off restores direct export", () => {
   assert.equal(reportViewerEnabled("OFF"), false);
   const page = readFileSync("app/chat/page.tsx", "utf8");
   assert.match(page, /const viewerOn = reportViewerEnabled\(\)/);
-  assert.match(page, /if \(viewerOn && isReportContent\(content\)\)/);
+  assert.match(page, /if \(viewerOn && isViewerContent\(content\)\)/);
+  assert.match(page, /viewerOn && isViewerContent\(m\.content\)/);
   assert.match(page, /viewerOn && reportViewer/);
   assert.match(page, /await exportPdf\(m\.content, \{ title: meta\.source \|\| topic, subtitle: meta\.subtitle, locale, diagrams \}\)/);
   assert.match(page, /await exportWordDocx\(m\.content, \{ title: meta\.source \|\| topic, subtitle: meta\.subtitle, locale, diagrams \}\)/);

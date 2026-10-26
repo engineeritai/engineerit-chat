@@ -10,9 +10,10 @@ import React, {
 import Link from "next/link";
 import MessageMarkdown from "../components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "../components/copyRich";
-import { publishAndShare, publishShare, shareToWhatsApp } from "@/lib/chatActions";
+import { printHtml, publishAndShare, publishShare, shareToWhatsApp } from "@/lib/chatActions";
+import MessageShareMenu from "../components/MessageShareMenu";
 import ReportViewer from "../components/ReportViewer";
-import { isReportContent, reportLocale, reportViewerEnabled, viewerDownloads } from "@/lib/reportViewer";
+import { isViewerContent, reportLocale, reportViewerEnabled, viewerDownloads } from "@/lib/reportViewer";
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
 import { showToast } from "@/lib/toast";
 import { markRtlPlain } from "@/lib/shareDirection";
@@ -123,45 +124,6 @@ function saveHtml(aiText: string, title = "Report", locale: "en" | "ar" = "en") 
   void deliverBlob(blob, downloadName(title, "html")).catch(() => {
     /* deliverBlob already confirms or reports the failure */
   });
-}
-
-/**
- * Modern reliable print (avoids popup + blank print)
- * - Creates hidden iframe
- * - Writes HTML
- * - Prints after render tick
- */
-function printHtml(aiText: string, title = "Report", locale: "en" | "ar" = "en") {
-  const html = buildHtmlDocument(aiText, title, locale);
-
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  iframe.setAttribute("aria-hidden", "true");
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentWindow?.document;
-  if (!doc) {
-    iframe.remove();
-    return;
-  }
-
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  setTimeout(() => {
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } finally {
-      setTimeout(() => iframe.remove(), 900);
-    }
-  }, 250);
 }
 
 /**
@@ -489,7 +451,7 @@ export default function Page() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const kind = params.get("fixture");
-    const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "actions-en", "actions-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar", "boq-en", "boq-ar"]);
+    const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "actions-en", "actions-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar", "boq-en", "boq-ar", "roadmap-en", "roadmap-ar"]);
     if (!kind || !kinds.has(kind)) return;
     if (kind === "boq-en" || kind === "boq-ar") {
       const ar = kind === "boq-ar";
@@ -552,6 +514,38 @@ export default function Page() {
       ]);
       return;
     }
+    const roadmapEn = [
+      "Here's a simple roadmap for an automotive supply parts factory:",
+      "",
+      "## Automotive Supply Parts Factory Roadmap",
+      "",
+      "```timeline",
+      "title Automotive Supply Parts Factory Roadmap",
+      "2026-01-01 : Project Initiation",
+      "2026-03-01 : Site Selection",
+      "2026-05-01 : Design Phase Complete",
+      "2026-08-01 : Construction Start",
+      "2026-12-01 : Construction Complete",
+      "```",
+      "",
+      "This roadmap outlines the key milestones from project initiation to market launch, focusing on construction and operational setup phases.",
+    ].join("\n");
+    const roadmapAr = [
+      "هذه خريطة طريق مبسطة لمصنع قطع غيار السيارات:",
+      "",
+      "## خريطة طريق مصنع قطع غيار السيارات",
+      "",
+      "```timeline",
+      "title خريطة طريق مصنع قطع غيار السيارات",
+      "2026-01-01 : بدء المشروع",
+      "2026-03-01 : اختيار الموقع",
+      "2026-05-01 : اكتمال التصميم",
+      "2026-08-01 : بدء الإنشاء",
+      "2026-12-01 : اكتمال الإنشاء",
+      "```",
+      "",
+      "تعرض الخريطة المحطات الرئيسية من بدء المشروع حتى التشغيل.",
+    ].join("\n");
     const shutdownEn = `Here is the shutdown plan.\n\n## Preparation:\n\n## Shutdown:\n\n## Post-Shutdown:`;
     const shutdownAr = `هذه خطة الإيقاف.\n\n## التحضير:\n\n## الإيقاف:\n\n## ما بعد الإيقاف:`;
     const content =
@@ -577,7 +571,11 @@ export default function Page() {
                       ? scurveAr
                       : kind === "scurve-en"
                         ? scurveEn
-                        : sampleEn;
+                        : kind === "roadmap-ar"
+                          ? roadmapAr
+                          : kind === "roadmap-en"
+                            ? roadmapEn
+                            : sampleEn;
     const prompt =
       kind === "flow-en"
         ? "Draw a process diagram of a hydrocracker plant"
@@ -593,7 +591,11 @@ export default function Page() {
                   ? "انقل ملاحظات اجتماع الموقع إلى جدول بنود عمل."
                   : kind === "actions-en"
                     ? "Turn the site meeting notes into an action items table."
-                    : kind === "ar"
+                    : kind === "roadmap-ar"
+                      ? "أنشئ خريطة طريق لمصنع قطع غيار السيارات"
+                      : kind === "roadmap-en"
+                        ? "Create roadmap for automotive supply parts factory"
+                        : kind === "ar"
                       ? "اعرض الجدول الزمني والمقارنة."
                       : "Show the schedule and the comparison table.";
     setFixture([
@@ -607,6 +609,19 @@ export default function Page() {
       { id: "fixture-ai", role: "assistant", content, attachments: [], createdAt: isoOnDay(0, 16, 32) },
     ]);
   }, []);
+
+  useEffect(() => {
+    if (!fixture?.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const message = [...fixture].reverse().find((item) => item.role === "assistant");
+    if (!message) return;
+    if (params.get("shareMenu") === "1") setOpenShareFor(message.id);
+    if (params.get("viewer") === "1" && viewerOn && isViewerContent(message.content)) {
+      const lang = reportLocale(message.content, locale);
+      const meta = exportMeta(message.content, undefined, lang);
+      setReportViewer({ id: message.id, title: meta.title, markdown: message.content, locale: lang });
+    }
+  }, [fixture, locale, viewerOn]);
 
   useEffect(() => {
     const el = conversationRef.current;
@@ -863,7 +878,7 @@ export default function Page() {
         content,
       };
       history.appendLocal(assistantMessage);
-      if (viewerOn && isReportContent(content)) {
+      if (viewerOn && isViewerContent(content)) {
         const lang = reportLocale(content, locale);
         const meta = exportMeta(content, thread?.title, lang, userText);
         setReportViewer({
@@ -1201,6 +1216,22 @@ export default function Page() {
                           <>
                             {canShareBenefits && (
                               <>
+                                {viewerOn && isViewerContent(m.content) ? (
+                                  <button
+                                    type="button"
+                                    className="msg-action-btn"
+                                    onClick={() =>
+                                      setReportViewer({
+                                        id: m.id,
+                                        title: meta.source || topic,
+                                        markdown: m.content,
+                                        locale: reportLocale(m.content, locale),
+                                      })
+                                    }
+                                  >
+                                    {s.chat.viewerOpen}
+                                  </button>
+                                ) : null}
                                 <button
                                   type="button"
                                   className="msg-action-btn"
@@ -1336,56 +1367,30 @@ export default function Page() {
                               </>
                             )}
 
-                            {openShareFor === m.id && (
-                              <div
-                                style={{
-                                  marginTop: 6,
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 8,
-                                  paddingLeft: 8,
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  className="msg-action-btn"
-                                  onClick={() => saveHtml(m.content, topic, locale)}
-                                >
-                                  {s.chat.saveHtml}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  className="msg-action-btn"
-                                  onClick={() => printHtml(m.content, topic, locale)}
-                                >
-                                  {s.chat.print}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  className="msg-action-btn"
-                                  onClick={async () => {
-                                    const url = await publishShare({ title: topic, markdown: m.content, locale });
-                                    if (!url) {
-                                      showToast(s.chat.shareFailed, "err");
-                                      return;
-                                    }
-                                    shareToWhatsApp(m.content, url);
-                                  }}
-                                >
-                                  {s.chat.whatsapp}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  className="msg-action-btn"
-                                  onClick={() => setOpenShareFor(null)}
-                                >
-                                  ✕ {s.chat.closeShare}
-                                </button>
-                              </div>
-                            )}
+                            <MessageShareMenu
+                              open={openShareFor === m.id}
+                              dir={rtl ? "rtl" : "ltr"}
+                              label={s.chat.share}
+                              onClose={() => setOpenShareFor(null)}
+                              actions={[
+                                { label: s.chat.saveHtml, onSelect: () => saveHtml(m.content, topic, locale) },
+                                { label: s.chat.print, onSelect: () => printHtml(m.content, topic, locale) },
+                                {
+                                  label: s.chat.whatsapp,
+                                  onSelect: () => {
+                                    void (async () => {
+                                      const url = await publishShare({ title: topic, markdown: m.content, locale });
+                                      if (!url) {
+                                        showToast(s.chat.shareFailed, "err");
+                                        return;
+                                      }
+                                      shareToWhatsApp(m.content, url);
+                                    })();
+                                  },
+                                },
+                                { label: `✕ ${s.chat.closeShare}`, onSelect: () => setOpenShareFor(null) },
+                              ]}
+                            />
                           </>
                         )}
                       </div>
