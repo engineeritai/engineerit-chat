@@ -255,10 +255,31 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
   });
 }
 
+function isWorkingHeader(header: string): boolean {
+  const name = plainInline(header).trim();
+  return name === "طريقة الحساب" || /^working$/i.test(name);
+}
+
+/** A working formula stays one left-to-right paragraph so digits are not reordered. */
+function formulaParagraph(value: string) {
+  return new Paragraph({
+    alignment: AlignmentType.RIGHT,
+    spacing: { before: 0, after: 0 },
+    children: [
+      textRun(plainInline(value), {
+        rtl: false,
+        size: 18,
+        color: "0F172A",
+      }),
+    ],
+  });
+}
+
 function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape: boolean) {
   const total = landscape ? 13900 : 9026;
   const columnWidths = headers.map(() => Math.floor(total / headers.length));
-  const cell = (value: string, header: boolean, zebra: boolean) =>
+  const workingIndex = headers.findIndex((header) => isWorkingHeader(header));
+  const cell = (value: string, header: boolean, zebra: boolean, formula: boolean) =>
     new TableCell({
       borders,
       width: { size: columnWidths[0], type: WidthType.DXA },
@@ -266,12 +287,14 @@ function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape:
       margins: { top: 60, bottom: 60, left: 80, right: 80 },
       verticalAlign: VerticalAlign.CENTER,
       children: [
-        paragraph(value, rtl, rtl ? AlignmentType.START : AlignmentType.LEFT, {
-          bold: header,
-          size: 18,
-          color: header ? "1E3A8A" : "0F172A",
-          spacing: { before: 0, after: 0 },
-        }),
+        formula
+          ? formulaParagraph(value)
+          : paragraph(value, rtl, rtl ? AlignmentType.START : AlignmentType.LEFT, {
+              bold: header,
+              size: 18,
+              color: header ? "1E3A8A" : "0F172A",
+              spacing: { before: 0, after: 0 },
+            }),
       ],
     });
   return new Table({
@@ -283,13 +306,15 @@ function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape:
       new TableRow({
         tableHeader: true,
         cantSplit: true,
-        children: headers.map((header) => cell(header, true, false)),
+        children: headers.map((header) => cell(header, true, false, false)),
       }),
       ...rows.map(
         (row, index) =>
           new TableRow({
             cantSplit: true,
-            children: headers.map((_, cellIndex) => cell(row[cellIndex] ?? "", false, index % 2 === 1)),
+            children: headers.map((_, cellIndex) =>
+              cell(row[cellIndex] ?? "", false, index % 2 === 1, rtl && cellIndex === workingIndex)
+            ),
           })
       ),
     ],

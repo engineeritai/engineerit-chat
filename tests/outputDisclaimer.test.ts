@@ -24,6 +24,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ShareView from "../app/share/view";
 import { buildHtmlDocument } from "../lib/chatActions";
+import { visualTokens } from "../lib/arabicShape";
 import { RLM } from "../lib/shareDirection";
 import type { ShareRecord } from "../lib/shareStore";
 import { clipSharedText, toWhatsApp } from "../lib/whatsappText";
@@ -376,6 +377,79 @@ test("arabic exports are right to left", async () => {
   assert.match(html, /<body dir="rtl" lang="ar">/);
   assert.match(html, /<article dir="rtl"/);
   assert.match(html, /text-align: start/);
+});
+
+function xmlParagraph(xml: string, needle: string, open: string): string {
+  const at = xml.indexOf(needle);
+  assert.ok(at >= 0, needle);
+  const start = xml.lastIndexOf(open, at);
+  const close = open.startsWith("<w:p") ? "</w:p>" : "</a:p>";
+  const end = xml.indexOf(close, at);
+  assert.ok(start >= 0 && end > at, needle);
+  return xml.slice(start, end + close.length);
+}
+
+test("arabic working formulas keep source order", async () => {
+  const parsed = parseDrawingText(S101);
+  const items = calculateTakeoff(parsed.reading);
+  const markdown = renderTakeoff("ar", parsed.reading, items, "pdf-text");
+  const formulas = items.map((item) => item.working).filter((working) => /^\d/.test(working));
+  const marked = items.map((item) => item.working).filter((working) => /^[A-Z]\d+:/.test(working));
+  assert.ok(formulas.some((working) => working.startsWith("40 × 7.95 + 54 × 5.95 = 639.3 m × 0.888 = 567.698")));
+  assert.ok(formulas.some((working) => working.startsWith("329.802 + 567.698 = 897.5")));
+  assert.ok(marked.some((working) => working.startsWith("F1:")));
+  assert.ok(marked.some((working) => working.startsWith("C1:")));
+  assert.ok(marked.some((working) => working.startsWith("S1:")));
+
+  const report = await prepareReport({
+    title: "حصر كميات أولي",
+    markdown,
+    locale: "ar",
+    now: new Date("2026-10-26T12:00:00Z"),
+  });
+  const wordZip = await JSZip.loadAsync(await buildReportDocx(report));
+  const documentXml = await wordZip.file("word/document.xml")!.async("string");
+  for (const formula of [...formulas, ...marked]) {
+    const paragraph = xmlParagraph(documentXml, formula, "<w:p");
+    assert.equal(/<w:bidi\/>|<w:bidi w:val="(?:1|true|on)"/.test(paragraph), false, formula);
+    assert.match(paragraph, /<w:jc w:val="(?:right|end)"\/>/, formula);
+    const text = [...paragraph.matchAll(/<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g)].map((match) => match[1]).join("");
+    assert.equal(text, formula);
+  }
+  assert.match(xmlParagraph(documentXml, "جدول الكميات", "<w:p"), /<w:bidi\/>/);
+
+  const slides = await slideXml(await buildReportPptx(report));
+  for (const formula of formulas) {
+    const slide = slides.find((part) => part.includes(formula));
+    assert.ok(slide, formula);
+    const paragraph = xmlParagraph(slide, formula, "<a:p");
+    assert.equal(paragraph.includes('rtl="1"'), false, formula);
+    assert.match(paragraph, /algn="r"/, formula);
+  }
+
+  for (const formula of formulas) assert.equal(visualTokens(formula).join(""), formula);
+  const pdf = pdfText(await buildReportPdf(report));
+  assert.match(pdf, /40 × 7\.95 \+ 54 × 5\.95/);
+  assert.match(pdf, /329\.802 \+ 567\.698/);
+
+  const html = buildShareHtml({ title: "حصر كميات أولي", markdown, locale: "en" });
+  const page = renderToStaticMarkup(
+    createElement(ShareView, {
+      share: {
+        id: "formulacheck1",
+        title: "حصر كميات أولي",
+        markdown,
+        locale: "en",
+        description: "حصر كميات أولي",
+        createdAt: "2026-10-26T12:00:00.000Z",
+      },
+    })
+  );
+  for (const formula of [...formulas, ...marked]) {
+    const isolated = `<bdi dir="ltr">${formula}</bdi>`;
+    assert.ok(html.includes(isolated), formula);
+    assert.ok(page.includes(isolated), formula);
+  }
 });
 
 const ARABIC_SHARE = [

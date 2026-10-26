@@ -23,7 +23,10 @@ function esc(value: string): string {
 }
 
 function isolatedHtml(value: string, force = false): string {
-  if (!force && !/[\u0600-\u06FF]/.test(value)) return esc(value);
+  if (!/[\u0600-\u06FF]/.test(value)) {
+    // One isolate keeps a formula such as "40 × 7.95 + 54 × 5.95" in source order inside an RTL cell.
+    return force ? `<bdi dir="ltr">${esc(value)}</bdi>` : esc(value);
+  }
   return isolatePieces(value)
     .map((piece) => (piece.isolate ? `<bdi dir="ltr">${esc(piece.text)}</bdi>` : esc(piece.text)))
     .join("");

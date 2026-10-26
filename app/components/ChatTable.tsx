@@ -12,7 +12,10 @@ import { showToast } from "@/lib/toast";
 type Labels = { copyTable: string; exportExcel: string };
 
 function CellText({ value, rtl }: { value: string; rtl: boolean }) {
-  if (!rtl && !/[\u0600-\u06FF]/.test(value)) return value;
+  if (!/[\u0600-\u06FF]/.test(value)) {
+    if (!rtl) return value;
+    return <bdi dir="ltr">{value}</bdi>;
+  }
   const pieces = isolatePieces(value);
   if (pieces.length === 1 && !pieces[0].isolate) return value;
   return pieces.map((piece, index) =>

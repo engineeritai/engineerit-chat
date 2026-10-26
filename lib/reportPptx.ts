@@ -35,6 +35,11 @@ function pngData(image: ReportImage) {
   return `data:image/png;base64,${Buffer.from(image.png).toString("base64")}`;
 }
 
+function isWorkingHeader(header: string): boolean {
+  const name = plainInline(header).trim();
+  return name === "طريقة الحساب" || /^working$/i.test(name);
+}
+
 function columnWidths(headers: string[], total: number): number[] {
   const weight = (header: string) => {
     const name = plainInline(header).trim().toLowerCase();
@@ -354,14 +359,15 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       const colW = order.map((index) => sourceWidths[index]);
       const headerCells = order.map((index) => sourceHeaders[index]);
       const bodyRows = sourceRows.map((row) => order.map((index) => row[index] ?? ""));
-      const cell = (text: string, header: boolean, fill: string) => ({
+      const workingSource = sourceHeaders.findIndex((header) => isWorkingHeader(header));
+      const cell = (text: string, header: boolean, fill: string, formula: boolean) => ({
         text,
         options: {
           fill: { color: fill },
           color: header ? "1E3A8A" : "0F172A",
           bold: header,
           align: tableRtl ? "right" : "left",
-          rtlMode: tableRtl,
+          rtlMode: formula ? false : tableRtl,
         },
       });
       let cursor = 0;
@@ -397,9 +403,11 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
         }
         if (end === cursor && cursor < bodyRows.length) end = cursor + 1;
         const rows = [
-          headerCells.map((text) => cell(text, true, "E7EEFF")),
+          headerCells.map((text) => cell(text, true, "E7EEFF", false)),
           ...bodyRows.slice(cursor, end).map((row, index) =>
-            row.map((text) => cell(text, false, (cursor + index) % 2 ? "F8FAFC" : "FFFFFF"))
+            row.map((text, displayIndex) =>
+              cell(text, false, (cursor + index) % 2 ? "F8FAFC" : "FFFFFF", tableRtl && order[displayIndex] === workingSource)
+            )
           ),
         ];
         slide.addTable(rows, {
