@@ -4,7 +4,7 @@ import ChatTable from "@/app/components/ChatTable";
 import MermaidFigure from "@/app/components/MermaidFigure";
 import ScheduleFigure from "@/app/components/ScheduleFigure";
 import { parseMessage, tokenizeInline, type Inline, type ListItem } from "@/lib/messageDocument";
-import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, isQuantityTable, outputDisclaimerBody, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 
 export type MessageLabels = {
   copyTable: string;
@@ -73,8 +73,11 @@ export default function MessageMarkdown({
   endDisclaimer?: boolean;
 }) {
   const blocks = parseMessage(markdown);
-  const lastTable = blocks.reduce((found, block, index) => (block.type === "table" ? index : found), -1);
   const hasDisclaimer = blocks.some((block) => block.type === "paragraph" && isOutputDisclaimer(block.text, locale));
+  const lastQuantityTable = blocks.reduce(
+    (found, block, index) => (block.type === "table" && isQuantityTable(block.headers) ? index : found),
+    -1
+  );
   const diagramLabels = {
     copy: labels.diagramCopy,
     png: labels.diagramPng,
@@ -106,7 +109,7 @@ export default function MessageMarkdown({
           return <ListView key={index} ordered={block.ordered} items={block.items} />;
         }
         if (block.type === "table") {
-          const note = endDisclaimer && !hasDisclaimer && index === lastTable ? <DisclaimerLine locale={locale} /> : null;
+          const note = endDisclaimer && !hasDisclaimer && index === lastQuantityTable ? <DisclaimerLine locale={locale} /> : null;
           return (
             <div key={index}>
               <ChatTable headers={block.headers} rows={block.rows} dir={dir} locale={locale} labels={labels} fileBase={fileBase} />

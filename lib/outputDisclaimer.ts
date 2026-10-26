@@ -28,6 +28,15 @@ export function outputDisclaimer(locale: UiLocale): string {
   return `${outputDisclaimerBody(locale)} ${OUTPUT_POLICY_URL[locale]}`;
 }
 
+const QUANTITY_UNIT = /^(unit|الوحدة)$/i;
+const QUANTITY_AMOUNT = /^(quantity|qty|الكمية)$/i;
+
+/** Take-off and bill-of-quantities tables have a unit column and a quantity column. */
+export function isQuantityTable(headers: string[]): boolean {
+  const cells = headers.map((header) => header.trim());
+  return cells.some((header) => QUANTITY_UNIT.test(header)) && cells.some((header) => QUANTITY_AMOUNT.test(header));
+}
+
 export function isOutputDisclaimer(text: string, locale: UiLocale): boolean {
   const plain = text.replace(/\s+/g, " ").trim();
   const body = outputDisclaimerBody(locale);
