@@ -21,7 +21,9 @@ export async function POST(req: Request) {
           .update(terms)
           .eq("id", user.id)
           .is("terms_accepted_at", null);
-        if (termsError && !missingTermsColumn(termsError.message || "")) {
+        if (termsError && missingTermsColumn(termsError.message || "")) {
+          console.warn("terms acceptance skipped; profiles.terms_accepted_at is not on this database yet");
+        } else if (termsError) {
           console.error("terms acceptance", termsError.message);
         }
       }
@@ -31,6 +33,7 @@ export async function POST(req: Request) {
     const row = newProfileRow(user);
     let { error: insertError } = await admin.from("profiles").insert(row);
     if (insertError && missingTermsColumn(insertError.message || "")) {
+      console.warn("terms acceptance skipped; profiles.terms_accepted_at is not on this database yet");
       const retry = await admin.from("profiles").insert(withoutTermsColumns(row));
       insertError = retry.error;
     }

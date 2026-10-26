@@ -423,4 +423,65 @@ describe("confirmation and reset email", () => {
     assert.match(readFileSync("lib/authEmail.ts", "utf8"), /accepted !== true/);
     assert.match(readFileSync("lib/authEmail.ts", "utf8"), /termsMetadata/);
   });
+
+  it("creates the account when the terms columns are not on profiles yet", async () => {
+    process.env.MAIL_TRANSPORT = "";
+    process.env.VERCEL_ENV = "production";
+    (process.env as Record<string, string>).NODE_ENV = "production";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://auth.example.test";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key-0123456789";
+    delete process.env.TURNSTILE_SECRET_KEY;
+
+    const calls: string[] = [];
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args.map((item) => String(item)).join(" "));
+    };
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.includes("/auth/v1/signup")) {
+        return new Response(JSON.stringify({ id: "user-terms-missing", identities: [{ id: "identity-1" }] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.includes("/rest/v1/profiles")) {
+        return new Response(
+          JSON.stringify({
+            code: "PGRST204",
+            message: "Could not find the 'terms_accepted_at' column of 'profiles' in the schema cache",
+          }),
+          { status: 400, headers: { "content-type": "application/json" } }
+        );
+      }
+      return new Response(JSON.stringify({ msg: "unexpected", url }), { status: 500 });
+    }) as typeof fetch;
+
+    try {
+      const blocked = await handleAuthEmail(
+        request("/api/auth/signup", { email: "nora.missing-column@example.com", password: "engineer1", accepted: false }),
+        "signup"
+      );
+      assert.equal(blocked.status, 400);
+      assert.equal(((await blocked.json()) as { code?: string }).code, "policy");
+      assert.equal(calls.length, 0);
+
+      const signup = await handleAuthEmail(
+        request("/api/auth/signup", { email: "nora.missing-column@example.com", password: "engineer1", accepted: true }),
+        "signup"
+      );
+      assert.equal(signup.status, 200);
+      const body = (await signup.json()) as { ok?: boolean; sent?: boolean };
+      assert.equal(body.ok, true);
+      assert.equal(body.sent, true);
+      assert.equal(calls.some((url) => url.includes("/auth/v1/signup")), true);
+      assert.equal(calls.some((url) => url.includes("/rest/v1/profiles")), true);
+      assert.equal(warnings.some((line) => line.includes("terms_accepted_at is not on this database yet")), true);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
 });

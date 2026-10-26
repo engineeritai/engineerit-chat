@@ -187,11 +187,19 @@ async function recordTermsOnProfile(userId: string, acceptedAt: string) {
       .update(termsMetadata(acceptedAt))
       .eq("id", userId)
       .is("terms_accepted_at", null);
-    if (error && !missingTermsColumn(error.message || "")) {
-      console.error("terms acceptance", error.message);
+    if (!error) return;
+    if (missingTermsColumn(error.message || "")) {
+      console.warn("terms acceptance skipped; profiles.terms_accepted_at is not on this database yet");
+      return;
     }
+    console.error("terms acceptance", error.message);
   } catch (err) {
-    console.error("terms acceptance", err instanceof Error ? err.message : err);
+    const message = err instanceof Error ? err.message : String(err);
+    if (missingTermsColumn(message)) {
+      console.warn("terms acceptance skipped; profiles.terms_accepted_at is not on this database yet");
+      return;
+    }
+    console.error("terms acceptance", message);
   }
 }
 
