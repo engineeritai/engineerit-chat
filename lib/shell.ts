@@ -197,8 +197,10 @@ export type ShellCopy = {
     confirmEmailPlaceholder: string;
     confirmPassword: string;
     confirmPasswordPlaceholder: string;
-    agreePrefix: string;
-    agreeSuffix: string;
+    agreeLead: string;
+    termsLink: string;
+    agreeAnd: string;
+    privacyLink: string;
     creating: string;
     create: string;
     emailConfirmTitle: string;
@@ -221,7 +223,6 @@ export type ShellCopy = {
     createdConfirm: string;
     createdRedirect: string;
     upgradeAnytime: string;
-    policyName: string;
   };
   password: {
     changeTitle: string;
@@ -704,9 +705,10 @@ const en: ShellCopy = {
     confirmEmailPlaceholder: "Repeat your email",
     confirmPassword: "Confirm password",
     confirmPasswordPlaceholder: "Repeat your password",
-    agreePrefix: "I have read and agree to the",
-    agreeSuffix:
-      ", including cancellation and refund policies, and I understand that engineerit.ai is not responsible for decisions based on its outputs.",
+    agreeLead: "I agree to the ",
+    termsLink: "Terms and Conditions",
+    agreeAnd: " and ",
+    privacyLink: "Privacy Policy",
     creating: "Creating account...",
     create: "Create account",
     emailConfirmTitle: "Email confirmation required",
@@ -722,7 +724,7 @@ const en: ShellCopy = {
     emailMismatch: "Email and confirmation email do not match.",
     passwordMismatch: "Password and confirmation password do not match.",
     passwordMin: "Password must be at least 8 characters.",
-    policyRequired: "Agree to the user policy to create an account.",
+    policyRequired: "Agree to the Terms and Conditions and Privacy Policy to create an account.",
     captchaRequired: "Complete the captcha and try again.",
     duplicateEmail: "An account with this email already exists. Sign in instead.",
     planWaiting: "Your chosen plan is saved. Confirm your email, then sign in to open checkout.",
@@ -731,7 +733,6 @@ const en: ShellCopy = {
       "Account created. We sent a confirmation email. Check your inbox and junk folder, confirm the address, then sign in from the top bar.",
     createdRedirect: "Account created. Redirecting to your profile...",
     upgradeAnytime: "You can change your plan at any time from your profile or the pricing page.",
-    policyName: "User policy and agreement",
   },
   password: {
     changeTitle: "Change password",
@@ -1218,8 +1219,10 @@ const ar: ShellCopy = {
     confirmEmailPlaceholder: "أعد كتابة البريد",
     confirmPassword: "تأكيد كلمة المرور",
     confirmPasswordPlaceholder: "أعد كتابة كلمة المرور",
-    agreePrefix: "قرأت وأوافق على",
-    agreeSuffix: "، بما في ذلك سياسات الإلغاء والاسترداد، وأفهم أن engineerit.ai غير مسؤول عن القرارات المبنية على مخرجاته.",
+    agreeLead: "أوافق على ",
+    termsLink: "الشروط والأحكام",
+    agreeAnd: " و",
+    privacyLink: "سياسة الخصوصية",
     creating: "جاري إنشاء الحساب...",
     create: "إنشاء الحساب",
     emailConfirmTitle: "يلزم تأكيد البريد",
@@ -1235,7 +1238,7 @@ const ar: ShellCopy = {
     emailMismatch: "البريد وتأكيده غير متطابقين.",
     passwordMismatch: "كلمة المرور وتأكيدها غير متطابقين.",
     passwordMin: "كلمة المرور يجب أن تكون 8 أحرف على الأقل.",
-    policyRequired: "وافق على سياسة الاستخدام لإنشاء الحساب.",
+    policyRequired: "وافق على الشروط والأحكام وسياسة الخصوصية لإنشاء الحساب.",
     captchaRequired: "أكمل التحقق ثم حاول مرة أخرى.",
     duplicateEmail: "يوجد حساب بهذا البريد. سجل الدخول.",
     planWaiting: "باقتك المختارة محفوظة. أكد البريد ثم سجل الدخول لفتح الدفع.",
@@ -1244,7 +1247,6 @@ const ar: ShellCopy = {
       "تم إنشاء الحساب. أرسلنا رسالة تأكيد. راجع الوارد والبريد غير الهام، ثم أكد العنوان وادخل من الشريط العلوي.",
     createdRedirect: "تم إنشاء الحساب. جاري التحويل إلى ملفك...",
     upgradeAnytime: "يمكنك تغيير الباقة في أي وقت من ملفك أو صفحة الأسعار.",
-    policyName: "سياسة الاستخدام والاتفاق",
   },
   password: {
     changeTitle: "تغيير كلمة المرور",

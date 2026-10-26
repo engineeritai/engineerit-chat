@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { newProfileRow } from "@/lib/ensureProfile";
+import { newProfileRow, withoutTermsColumns } from "@/lib/ensureProfile";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
+import { missingTermsColumn, profileTermsFromMetadata } from "@/lib/termsAcceptance";
 
 export const runtime = "nodejs";
 
@@ -12,9 +13,27 @@ export async function POST(req: Request) {
     const admin = getSupabaseAdmin();
     const { data, error } = await admin.from("profiles").select("id").eq("id", user.id).maybeSingle();
     if (error) return NextResponse.json({ error: "Could not read the profile." }, { status: 500 });
-    if (data?.id) return NextResponse.json({ ok: true, created: false });
+    if (data?.id) {
+      const terms = profileTermsFromMetadata(user.user_metadata, new Date().toISOString());
+      if (terms) {
+        const { error: termsError } = await admin
+          .from("profiles")
+          .update(terms)
+          .eq("id", user.id)
+          .is("terms_accepted_at", null);
+        if (termsError && !missingTermsColumn(termsError.message || "")) {
+          console.error("terms acceptance", termsError.message);
+        }
+      }
+      return NextResponse.json({ ok: true, created: false });
+    }
 
-    const { error: insertError } = await admin.from("profiles").insert(newProfileRow(user));
+    const row = newProfileRow(user);
+    let { error: insertError } = await admin.from("profiles").insert(row);
+    if (insertError && missingTermsColumn(insertError.message || "")) {
+      const retry = await admin.from("profiles").insert(withoutTermsColumns(row));
+      insertError = retry.error;
+    }
     if (insertError && !/duplicate|unique/i.test(insertError.message || "")) {
       return NextResponse.json({ error: "Could not create the profile." }, { status: 500 });
     }

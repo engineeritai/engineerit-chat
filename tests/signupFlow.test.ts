@@ -4,7 +4,7 @@ import { afterEach, describe, it } from "node:test";
 import { authCallbackKind, shouldForwardSignupConfirm } from "../lib/authCallback";
 import { handleAuthEmail } from "../lib/authEmail";
 import { resetAuthRateLimits } from "../lib/authRateLimit";
-import { newProfileRow } from "../lib/ensureProfile";
+import { newProfileRow, withoutTermsColumns } from "../lib/ensureProfile";
 import { RESET_REDIRECT } from "../lib/password";
 import { parsePendingCheckout, pendingFromMetadata } from "../lib/pendingCheckout";
 import {
@@ -15,6 +15,7 @@ import {
   validateRegistration,
 } from "../lib/registerAccount";
 import { shellCopy } from "../lib/shell";
+import { missingTermsColumn, profileTermsFromMetadata, TERMS_VERSION } from "../lib/termsAcceptance";
 
 const valid = {
   email: "nora@example.com",
@@ -128,7 +129,32 @@ describe("profile row on first login", () => {
     });
     assert.equal(row.subscription_tier, "assistant");
     assert.equal(row.full_name, "Nora Ahmed");
+    assert.equal(row.terms_accepted_at, undefined);
+    assert.equal(row.terms_version, undefined);
     assert.equal("number" in row, false);
+    const accepted = newProfileRow(
+      {
+        id: "22222222-2222-4222-8222-222222222222",
+        email: "nora@example.com",
+        user_metadata: {
+          full_name: "Nora Ahmed",
+          terms_accepted_at: "2026-10-26T12:00:00.000Z",
+          terms_version: TERMS_VERSION,
+        },
+      },
+      "2026-10-26T12:00:00.000Z"
+    );
+    assert.equal(accepted.terms_accepted_at, "2026-10-26T12:00:00.000Z");
+    assert.equal(accepted.terms_version, TERMS_VERSION);
+    assert.equal(accepted.subscription_tier, "assistant");
+    assert.deepEqual(withoutTermsColumns(accepted), {
+      id: accepted.id,
+      full_name: "Nora Ahmed",
+      subscription_tier: "assistant",
+      updated_at: "2026-10-26T12:00:00.000Z",
+    });
+    assert.equal(profileTermsFromMetadata({}, "2026-10-26T12:00:00.000Z"), null);
+    assert.equal(missingTermsColumn("Could not find the terms_accepted_at column of profiles in the schema cache"), true);
     const sql = readFileSync("supabase/migrations/20261023150000_profile_on_signup.sql", "utf8");
     assert.match(sql, /enable row level security/);
     assert.match(sql, /revoke all on public\.profiles from public, anon/);
@@ -143,7 +169,42 @@ describe("profile row on first login", () => {
     assert.match(sql, /status in \('pending', 'paid', 'cancelled'\)/);
     const ensure = readFileSync("app/api/profile/ensure/route.ts", "utf8");
     assert.match(ensure, /newProfileRow/);
+    assert.match(ensure, /withoutTermsColumns/);
+    assert.match(ensure, /\.is\("terms_accepted_at", null\)/);
     assert.doesNotMatch(ensure, /handle_new_user/);
+    const termsSql = readFileSync("supabase/migrations/20261026180000_profile_terms_acceptance.sql", "utf8");
+    assert.match(termsSql, /add column if not exists terms_accepted_at timestamptz/);
+    assert.match(termsSql, /add column if not exists terms_version text/);
+    assert.match(termsSql, /on conflict \(id\) do nothing/);
+    assert.doesNotMatch(termsSql, /update\s+public\.profiles/i);
+    assert.doesNotMatch(termsSql, /not null/);
+    assert.doesNotMatch(termsSql, /create trigger/i);
+    assert.match(termsSql, /proname = 'handle_new_user'/);
+    assert.match(termsSql, /not like '%terms_accepted_at%'/);
+    const register = readFileSync("app/register/page.tsx", "utf8");
+    assert.match(register, /type="checkbox"/);
+    assert.match(register, /required/);
+    assert.match(register, /disabled=\{loading \|\| !accepted\}/);
+    assert.match(register, /accepted: true/);
+    assert.match(register, /\/legal\/terms\?lang=\$\{locale\}/);
+    assert.match(register, /\/legal\/privacy\?lang=\$\{locale\}/);
+    assert.equal(
+      `${shellCopy.en.auth.agreeLead}${shellCopy.en.auth.termsLink}${shellCopy.en.auth.agreeAnd}${shellCopy.en.auth.privacyLink}`,
+      "I agree to the Terms and Conditions and Privacy Policy"
+    );
+    assert.equal(
+      `${shellCopy.ar.auth.agreeLead}${shellCopy.ar.auth.termsLink}${shellCopy.ar.auth.agreeAnd}${shellCopy.ar.auth.privacyLink}`,
+      "أوافق على الشروط والأحكام وسياسة الخصوصية"
+    );
+    assert.doesNotMatch(
+      `${shellCopy.ar.auth.agreeLead}${shellCopy.ar.auth.termsLink}${shellCopy.ar.auth.privacyLink}${shellCopy.ar.auth.policyRequired}`,
+      /[\u064B-\u0652]/
+    );
+    assert.match(shellCopy.en.auth.policyRequired, /Terms and Conditions/);
+    assert.match(shellCopy.ar.auth.policyRequired, /سياسة/);
+    assert.doesNotMatch(readFileSync("lib/authEmail.ts", "utf8"), /signInWithOAuth/);
+    assert.doesNotMatch(register, /signInWithOAuth/);
+    assert.doesNotMatch(readFileSync("app/login/page.tsx", "utf8"), /signInWithOAuth/);
     const profile = readFileSync("app/profile/page.tsx", "utf8");
     const upsert = profile.slice(profile.indexOf(".upsert("), profile.indexOf("onConflict"));
     assert.doesNotMatch(upsert, /subscription_tier/);
@@ -223,6 +284,7 @@ describe("confirmation and reset email", () => {
       request("/api/auth/signup", {
         email: "nora.signup@example.com",
         password: "engineer1",
+        accepted: true,
         pending: { planId: "engineer", interval: "year", extraSeats: 0 },
       }),
       "signup"
@@ -243,8 +305,14 @@ describe("confirmation and reset email", () => {
     assert.equal(new URL(signupCall?.url || "https://invalid").searchParams.get("redirect_to"), null);
     assert.equal(JSON.stringify(signupCall?.body || {}).includes("auth/confirmed"), false);
     assert.equal(new URL(resetCall?.url || "https://invalid").searchParams.get("redirect_to"), "https://engineerit.ai/reset-password");
-    const pending = (signupCall?.body?.data as { pending_checkout?: { planId?: string } } | undefined)?.pending_checkout;
-    assert.equal(pending?.planId, "engineer");
+    const signupData = signupCall?.body?.data as {
+      pending_checkout?: { planId?: string };
+      terms_accepted_at?: string;
+      terms_version?: string;
+    } | undefined;
+    assert.equal(signupData?.pending_checkout?.planId, "engineer");
+    assert.equal(signupData?.terms_version, TERMS_VERSION);
+    assert.match(signupData?.terms_accepted_at || "", /^\d{4}-\d{2}-\d{2}T/);
     assert.equal(calls.some((call) => call.url.includes("moyasar") || call.url.includes("smtp")), false);
   });
 
@@ -273,14 +341,14 @@ describe("confirmation and reset email", () => {
     }) as typeof fetch;
 
     const empty = await handleAuthEmail(
-      request("/api/auth/signup", { email: "taken.empty@example.com", password: "engineer1" }),
+      request("/api/auth/signup", { email: "taken.empty@example.com", password: "engineer1", accepted: true }),
       "signup"
     );
     assert.equal(empty.status, 409);
     assert.equal(((await empty.json()) as { code?: string }).code, "duplicate");
 
     const message = await handleAuthEmail(
-      request("/api/auth/signup", { email: "taken.message@example.com", password: "engineer1" }),
+      request("/api/auth/signup", { email: "taken.message@example.com", password: "engineer1", accepted: true }),
       "signup"
     );
     assert.equal(message.status, 409);
@@ -303,7 +371,7 @@ describe("confirmation and reset email", () => {
     }) as typeof fetch;
 
     const response = await handleAuthEmail(
-      request("/api/auth/signup", { email: "nora.sink@example.com", password: "engineer1" }, { "x-engineerit-test": "1" }),
+      request("/api/auth/signup", { email: "nora.sink@example.com", password: "engineer1", accepted: true }, { "x-engineerit-test": "1" }),
       "signup"
     );
     const body = (await response.json()) as { ok?: boolean; sent?: boolean };
@@ -311,5 +379,48 @@ describe("confirmation and reset email", () => {
     assert.equal(body.ok, true);
     assert.equal(body.sent, false);
     assert.equal(called, false);
+  });
+
+  it("refuses signup until the terms box is ticked and does not create an account", async () => {
+    process.env.MAIL_TRANSPORT = "log";
+    process.env.VERCEL_ENV = "development";
+    (process.env as Record<string, string>).NODE_ENV = "test";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "public-anon-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "dummy-key";
+    delete process.env.TURNSTILE_SECRET_KEY;
+
+    let called = false;
+    globalThis.fetch = (async () => {
+      called = true;
+      return new Response("{}", { status: 500 });
+    }) as typeof fetch;
+
+    const missing = await handleAuthEmail(
+      request("/api/auth/signup", { email: "nora.policy@example.com", password: "engineer1" }, { "x-engineerit-test": "1" }),
+      "signup"
+    );
+    assert.equal(missing.status, 400);
+    assert.equal(((await missing.json()) as { code?: string }).code, "policy");
+
+    const declined = await handleAuthEmail(
+      request(
+        "/api/auth/signup",
+        { email: "nora.policy@example.com", password: "engineer1", accepted: false },
+        { "x-engineerit-test": "1" }
+      ),
+      "signup"
+    );
+    assert.equal(declined.status, 400);
+    assert.equal(((await declined.json()) as { code?: string }).code, "policy");
+
+    const reset = await handleAuthEmail(
+      request("/api/auth/recover", { email: "nora.policy@example.com" }, { "x-engineerit-test": "1" }),
+      "reset"
+    );
+    assert.equal(reset.status, 200);
+    assert.equal(called, false);
+    assert.match(readFileSync("lib/authEmail.ts", "utf8"), /accepted !== true/);
+    assert.match(readFileSync("lib/authEmail.ts", "utf8"), /termsMetadata/);
   });
 });
