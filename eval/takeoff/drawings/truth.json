@@ -39,5 +39,14 @@
     "floor_tiles_m2": 20.0,
     "screed_m3": 1.0,
     "skirting_m": 17.1
+  },
+  "S201": {
+    "slab_on_grade_m3": 64.965,
+    "slab_wwf_m2": 426.28,
+    "strip_concrete_m3": 17.972,
+    "wall_concrete_m3": 29.227,
+    "longitudinal_#5_kg": 450.388,
+    "total_concrete_4000PSI_m3": 112.164,
+    "total_rebar_kg": 450.388
   }
 }

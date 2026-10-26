@@ -39,6 +39,26 @@ export function closedBarCount(lengthMm: number, spacingMm: number): number {
   return Math.max(1, Math.round(lengthMm / spacingMm));
 }
 
+/** ASTM A615 nominal weights. 1 lb/ft = 1.488164 kg/m. */
+export const LB_PER_FT_TO_KG_PER_M = 0.45359237 / 0.3048;
+
+export function kgPerMFromLbPerFt(lbPerFt: number): number {
+  return lbPerFt * LB_PER_FT_TO_KG_PER_M;
+}
+
+/** Published US bar weights, pounds per foot. */
+export const STANDARD_LB_PER_FT: Record<string, number> = {
+  "#3": 0.376,
+  "#4": 0.668,
+  "#5": 1.043,
+  "#6": 1.502,
+  "#7": 2.044,
+  "#8": 2.67,
+  "#9": 3.4,
+  "#10": 4.303,
+  "#11": 5.313,
+};
+
 /** Published unit masses, used only when the drawing does not state one. */
 export const STANDARD_KG_PER_M: Record<string, number> = {
   T6: 0.222,
@@ -50,6 +70,10 @@ export const STANDARD_KG_PER_M: Record<string, number> = {
   T25: 3.854,
   T32: 6.313,
 };
+
+for (const [bar, lbPerFt] of Object.entries(STANDARD_LB_PER_FT)) {
+  STANDARD_KG_PER_M[bar] = kgPerMFromLbPerFt(lbPerFt);
+}
 
 export function barMass(table: Record<string, number>, bar: string): { kgPerM: number; fromDrawing: boolean } {
   const key = bar.toUpperCase();

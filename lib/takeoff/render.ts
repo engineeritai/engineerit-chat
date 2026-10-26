@@ -1,6 +1,6 @@
 import type { UiLocale } from "@/lib/replyLanguage";
 import type { BoqLine, ReadSource, Reading } from "@/lib/takeoff/types";
-import { formatQty } from "@/lib/takeoff/numbers";
+import { formatQty, STANDARD_LB_PER_FT } from "@/lib/takeoff/numbers";
 
 const EN_DESC: Record<string, string> = {
   excavation_m3: "Excavation for foundations, vertical sides, working space included",
@@ -10,6 +10,9 @@ const EN_DESC: Record<string, string> = {
   column_concrete_m3: "In-situ concrete in columns",
   column_formwork_m2: "Formwork to column sides",
   slab_concrete_m3: "In-situ concrete in suspended slab",
+  slab_on_grade_m3: "In-situ concrete in slab on grade",
+  slab_wwf_m2: "Welded wire fabric in the slab on grade",
+  wall_concrete_m3: "In-situ concrete in foundation walls",
   slab_soffit_formwork_m2: "Formwork to slab soffit",
   slab_edge_formwork_m2: "Formwork to slab edges",
   strip_concrete_m3: "In-situ concrete in strip footing",
@@ -31,6 +34,9 @@ const AR_DESC: Record<string, string> = {
   column_concrete_m3: "خرسانة الأعمدة",
   column_formwork_m2: "شدة الأعمدة",
   slab_concrete_m3: "خرسانة البلاطة المعلقة",
+  slab_on_grade_m3: "خرسانة البلاطة على الأرض",
+  slab_wwf_m2: "شبك ملحوم في البلاطة على الأرض",
+  wall_concrete_m3: "خرسانة جدران الأساسات",
   slab_soffit_formwork_m2: "شدة بطن البلاطة",
   slab_edge_formwork_m2: "شدة جوانب البلاطة",
   strip_concrete_m3: "خرسانة القواعد الشريطية",
@@ -81,6 +87,17 @@ function describe(locale: UiLocale, item: BoqLine): string {
   return base;
 }
 
+function usedBars(reading: Reading): string[] {
+  const bars = new Set<string>();
+  for (const pad of reading.pads) if (pad.bottomBar) bars.add(pad.bottomBar);
+  for (const strip of reading.strips) {
+    if (strip.longitudinalBar) bars.add(strip.longitudinalBar);
+    if (strip.transverseBar) bars.add(strip.transverseBar);
+  }
+  for (const slab of reading.slabs) if (slab.meshBar) bars.add(slab.meshBar);
+  return [...bars];
+}
+
 function assumptions(locale: UiLocale, reading: Reading): string[] {
   const ar = locale === "ar";
   const lines: string[] = [];
@@ -90,13 +107,17 @@ function assumptions(locale: UiLocale, reading: Reading): string[] {
       : "This is a first-pass take-off for a quantity surveyor to check. It is not a tender bill and it is not an order quantity."
   );
   lines.push(
-    reading.dimensionsInMm
+    reading.unitSystem === "ft"
       ? ar
-        ? "أبعاد الرسم بالمليمتر، وحولت إلى المتر بالقسمة على 1000."
-        : "Drawing dimensions are in millimetres and were converted to metres by dividing by 1000."
-      : ar
-        ? "أبعاد الأعضاء أخذت بوحدة الرسم."
-        : "Member sizes were taken in the drawing unit."
+        ? "الأبعاد مكتوبة بالقدم والبوصة، وحولت باستخدام 304.8 مم للقدم و 25.4 مم للبوصة."
+        : "Dimensions were printed in feet and inches. They were converted with 304.8 mm per foot and 25.4 mm per inch."
+      : reading.dimensionsInMm
+        ? ar
+          ? "أبعاد الرسم بالمليمتر، وحولت إلى المتر بالقسمة على 1000."
+          : "Drawing dimensions are in millimetres and were converted to metres by dividing by 1000."
+        : ar
+          ? "أبعاد الأعضاء أخذت بوحدة الرسم."
+          : "Member sizes were taken in the drawing unit."
   );
   if (reading.formationBelowNglM != null) {
     const depth = formatQty(reading.formationBelowNglM);
@@ -180,11 +201,25 @@ function assumptions(locale: UiLocale, reading: Reading): string[] {
         : "Slab reinforcement is one bottom layer, both ways. Top reinforcement is nil on the drawing."
     );
   }
-  if (reading.slabs.length > 0) {
+  if (reading.slabs.some((slab) => !slab.onGrade)) {
     lines.push(
       ar
         ? "خرسانة البلاطة وشدة البطن على المسقط الكامل. الأعمدة لا تخصم من البلاطة، وتقاس وحدها حتى بطن البلاطة."
         : "Slab concrete and soffit formwork are the overall plan. Columns are not deducted from the slab. Columns are measured on their own up to the slab soffit."
+    );
+  }
+  if (reading.slabs.some((slab) => slab.onGrade)) {
+    lines.push(
+      ar
+        ? "البلاطة على الأرض هي المساحة الداخلية المكتوبة. لا تقاس شدة بطن لها."
+        : "The slab on grade is the inside area stated on the drawing. Soffit formwork is not measured."
+    );
+  }
+  if (reading.walls.some((wall) => wall.material === "concrete")) {
+    lines.push(
+      ar
+        ? "جدران الأساسات خرسانة مصبوبة على المحور والسمك والارتفاع المكتوب. لا تقاس كمباني طابوق ولا لياسة."
+        : "Foundation walls are in-situ concrete on the stated centreline, thickness, and height. They are not measured as blockwork or plaster."
     );
   }
   if (reading.columnRebarByOthers) {
@@ -207,12 +242,26 @@ function assumptions(locale: UiLocale, reading: Reading): string[] {
         : `Column concrete grade is not written on the column line. It is taken as ${grade}, the grade of the slab and the footings on this drawing.`
     );
   }
-  const stated = Object.entries(reading.steelKgPerM).map(([bar, kg]) => `${bar} = ${kg} kg/m`);
+  const stated = Object.entries(reading.steelKgPerM).map(([bar, kg]) => {
+    const lb = reading.steelLbPerFt[bar];
+    return lb != null ? `${bar} = ${lb} lb/ft` : `${bar} = ${kg} kg/m`;
+  });
   if (stated.length) {
     lines.push(
       ar
-        ? `وزن المتر للحديد من الملاحظة: ${stated.join("، ")}.`
+        ? `وزن الحديد من الملاحظة: ${stated.join("، ")}.`
         : `Steel unit mass from the notes: ${stated.join(", ")}.`
+    );
+  }
+  const published = usedBars(reading).filter(
+    (bar) => reading.steelKgPerM[bar] == null && STANDARD_LB_PER_FT[bar] != null
+  );
+  if (published.length) {
+    const list = published.map((bar) => `${bar} = ${STANDARD_LB_PER_FT[bar]} lb/ft`).join(", ");
+    lines.push(
+      ar
+        ? `وزن القضبان الأمريكية غير المكتوب على الرسم أخذ من الوزن القياسي: ${list}.`
+        : `US bar sizes with no printed unit mass use the standard weight: ${list}.`
     );
   }
   return lines;
