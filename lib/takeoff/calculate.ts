@@ -18,6 +18,10 @@ function num(mm: number): string {
   return formatQty(metresFromMm(mm));
 }
 
+function massFactor(kgPerM: number): string {
+  return kgPerM.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+}
+
 /**
  * Every quantity is produced here. The model is not asked to multiply.
  * Excavation depth is the formation level (underside of blinding below NGL),
@@ -138,7 +142,7 @@ export function calculateTakeoff(reading: Reading): BoqLine[] {
         const mass = barMass(reading.steelKgPerM, bar);
         const kg = bucket.metres * mass.kgPerM;
         const code = `footing_${bar}_kg`;
-        const steel = line(code, "kg", kg, `${bucket.parts.join("; ")}; ${formatQty(bucket.metres)} m × ${mass.kgPerM}`);
+        const steel = line(code, "kg", kg, `${bucket.parts.join("; ")}; ${formatQty(bucket.metres)} m × ${massFactor(mass.kgPerM)}`);
         lines.push(steel);
         addRebar(steel.quantity, formatQty(steel.quantity));
       }
@@ -169,39 +173,37 @@ export function calculateTakeoff(reading: Reading): BoqLine[] {
     lines.push(line("strip_side_formwork_m2", "m2", area, sideParts.join(" + ")));
 
     const cover = reading.coverFootingMm;
-    if (cover != null) {
-      for (const strip of reading.strips) {
-        if (strip.longitudinalBar && strip.longitudinalCount) {
-          const barMm = strip.closed ? strip.lengthMm : strip.lengthMm - 2 * cover;
-          const metres = (strip.count * strip.longitudinalCount * barMm) / 1000;
-          const mass = barMass(reading.steelKgPerM, strip.longitudinalBar);
-          const kg = metres * mass.kgPerM;
-          const steel = line(
-            `longitudinal_${strip.longitudinalBar}_kg`,
-            "kg",
-            kg,
-            `${strip.mark}: ${strip.count} × ${strip.longitudinalCount} × ${num(barMm)} m × ${mass.kgPerM}`
-          );
-          lines.push(steel);
-          addRebar(steel.quantity, formatQty(steel.quantity));
-        }
-        if (strip.transverseBar && strip.transverseSpacingMm) {
-          const count = strip.closed
-            ? closedBarCount(strip.lengthMm, strip.transverseSpacingMm)
-            : straightBarCount(strip.lengthMm - 2 * cover, strip.transverseSpacingMm);
-          const barMm = strip.widthMm - 2 * cover;
-          const metres = (strip.count * count * barMm) / 1000;
-          const mass = barMass(reading.steelKgPerM, strip.transverseBar);
-          const kg = metres * mass.kgPerM;
-          const steel = line(
-            `transverse_${strip.transverseBar}_kg`,
-            "kg",
-            kg,
-            `${strip.mark}: ${strip.count} × ${count} × ${num(barMm)} m × ${mass.kgPerM}`
-          );
-          lines.push(steel);
-          addRebar(steel.quantity, formatQty(steel.quantity));
-        }
+    for (const strip of reading.strips) {
+      if (strip.longitudinalBar && strip.longitudinalCount && (strip.closed || cover != null)) {
+        const barMm = strip.closed ? strip.lengthMm : strip.lengthMm - 2 * (cover ?? 0);
+        const metres = (strip.count * strip.longitudinalCount * barMm) / 1000;
+        const mass = barMass(reading.steelKgPerM, strip.longitudinalBar);
+        const kg = metres * mass.kgPerM;
+        const steel = line(
+          `longitudinal_${strip.longitudinalBar}_kg`,
+          "kg",
+          kg,
+          `${strip.mark}: ${strip.count} × ${strip.longitudinalCount} × ${num(barMm)} m × ${massFactor(mass.kgPerM)}`
+        );
+        lines.push(steel);
+        addRebar(steel.quantity, formatQty(steel.quantity));
+      }
+      if (strip.transverseBar && strip.transverseSpacingMm && cover != null) {
+        const count = strip.closed
+          ? closedBarCount(strip.lengthMm, strip.transverseSpacingMm)
+          : straightBarCount(strip.lengthMm - 2 * cover, strip.transverseSpacingMm);
+        const barMm = strip.widthMm - 2 * cover;
+        const metres = (strip.count * count * barMm) / 1000;
+        const mass = barMass(reading.steelKgPerM, strip.transverseBar);
+        const kg = metres * mass.kgPerM;
+        const steel = line(
+          `transverse_${strip.transverseBar}_kg`,
+          "kg",
+          kg,
+          `${strip.mark}: ${strip.count} × ${count} × ${num(barMm)} m × ${massFactor(mass.kgPerM)}`
+        );
+        lines.push(steel);
+        addRebar(steel.quantity, formatQty(steel.quantity));
       }
     }
   }
@@ -238,7 +240,7 @@ export function calculateTakeoff(reading: Reading): BoqLine[] {
   for (const slab of reading.slabs) {
     const qty = m3FromMm(slab.lengthMm, slab.widthMm, slab.thicknessMm);
     const concreteLine = line(
-      "slab_concrete_m3",
+      slab.onGrade ? "slab_on_grade_m3" : "slab_concrete_m3",
       "m3",
       qty,
       `${slab.mark}: ${num(slab.lengthMm)} × ${num(slab.widthMm)} × ${num(slab.thicknessMm)}`,
@@ -246,22 +248,34 @@ export function calculateTakeoff(reading: Reading): BoqLine[] {
     );
     lines.push(concreteLine);
     addConcrete(slab.grade, concreteLine.quantity, formatQty(concreteLine.quantity));
-    lines.push(
-      line(
-        "slab_soffit_formwork_m2",
-        "m2",
-        m2FromMm(slab.lengthMm, slab.widthMm),
-        `${slab.mark}: ${num(slab.lengthMm)} × ${num(slab.widthMm)}`
-      )
-    );
-    lines.push(
-      line(
-        "slab_edge_formwork_m2",
-        "m2",
-        m2FromMm(2 * (slab.lengthMm + slab.widthMm), slab.thicknessMm),
-        `${slab.mark}: 2 × (${num(slab.lengthMm)} + ${num(slab.widthMm)}) × ${num(slab.thicknessMm)}`
-      )
-    );
+    if (slab.onGrade && slab.wwf) {
+      lines.push(
+        line(
+          "slab_wwf_m2",
+          "m2",
+          m2FromMm(slab.lengthMm, slab.widthMm),
+          `${slab.mark}: ${num(slab.lengthMm)} × ${num(slab.widthMm)}`
+        )
+      );
+    }
+    if (!slab.onGrade) {
+      lines.push(
+        line(
+          "slab_soffit_formwork_m2",
+          "m2",
+          m2FromMm(slab.lengthMm, slab.widthMm),
+          `${slab.mark}: ${num(slab.lengthMm)} × ${num(slab.widthMm)}`
+        )
+      );
+      lines.push(
+        line(
+          "slab_edge_formwork_m2",
+          "m2",
+          m2FromMm(2 * (slab.lengthMm + slab.widthMm), slab.thicknessMm),
+          `${slab.mark}: 2 × (${num(slab.lengthMm)} + ${num(slab.widthMm)}) × ${num(slab.thicknessMm)}`
+        )
+      );
+    }
     if (slab.meshBar && slab.spacingMm && reading.coverSlabMm != null) {
       const clearL = slab.lengthMm - 2 * reading.coverSlabMm;
       const clearW = slab.widthMm - 2 * reading.coverSlabMm;
@@ -272,20 +286,40 @@ export function calculateTakeoff(reading: Reading): BoqLine[] {
       const mass = barMass(reading.steelKgPerM, slab.meshBar);
       const kg = metres * layers * mass.kgPerM;
       const expr = slab.bothWays
-        ? `${nLong} × ${num(clearL)} + ${nShort} × ${num(clearW)} = ${formatQty(metres)} m × ${mass.kgPerM}`
-        : `${nLong} × ${num(clearL)} m × ${mass.kgPerM}`;
+        ? `${nLong} × ${num(clearL)} + ${nShort} × ${num(clearW)} = ${formatQty(metres)} m × ${massFactor(mass.kgPerM)}`
+        : `${nLong} × ${num(clearL)} m × ${massFactor(mass.kgPerM)}`;
       const steel = line(`slab_${slab.meshBar}_kg`, "kg", kg, expr);
       lines.push(steel);
       addRebar(steel.quantity, formatQty(steel.quantity));
     }
   }
 
-  if (reading.walls.length > 0) {
+  const blockWalls = reading.walls.filter((wall) => wall.material !== "concrete");
+  const concreteWalls = reading.walls.filter((wall) => wall.material === "concrete");
+  if (concreteWalls.length > 0) {
+    const parts: string[] = [];
+    let volume = 0;
+    const grade = concreteWalls.every((wall) => wall.grade && wall.grade === concreteWalls[0].grade)
+      ? concreteWalls[0].grade
+      : null;
+    for (const wall of concreteWalls) {
+      const qty = m3FromMm(wall.centrelineMm, wall.thicknessMm, wall.heightMm, wall.count);
+      volume += qty;
+      parts.push(
+        `${wall.mark}: ${wall.count} × ${num(wall.centrelineMm)} × ${num(wall.thicknessMm)} × ${num(wall.heightMm)}`
+      );
+    }
+    const concreteLine = line("wall_concrete_m3", "m3", volume, parts.join(" + "), grade || undefined);
+    lines.push(concreteLine);
+    addConcrete(grade, concreteLine.quantity, formatQty(concreteLine.quantity));
+  }
+
+  if (blockWalls.length > 0) {
     let grossMm2 = 0;
-    let thickness = reading.walls[0].thicknessMm;
+    let thickness = blockWalls[0].thicknessMm;
     let plasterSides = 0;
     const grossParts: string[] = [];
-    for (const wall of reading.walls) {
+    for (const wall of blockWalls) {
       grossMm2 += wall.centrelineMm * wall.heightMm * wall.count;
       thickness = wall.thicknessMm;
       plasterSides = Math.max(plasterSides, wall.plasterSides);

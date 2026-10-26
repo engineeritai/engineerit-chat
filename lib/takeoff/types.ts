@@ -48,6 +48,10 @@ export type Slab = {
   spacingMm: number | null;
   bothWays: boolean;
   topNil: boolean;
+  /** True for a slab on grade. Soffit formwork is not measured. */
+  onGrade: boolean;
+  /** Welded wire fabric over the slab area. No bar mass is implied. */
+  wwf: boolean;
 };
 
 export type Wall = {
@@ -57,6 +61,8 @@ export type Wall = {
   centrelineMm: number;
   count: number;
   plasterSides: number;
+  material: "block" | "concrete";
+  grade: string | null;
 };
 
 export type Opening = {
@@ -79,6 +85,8 @@ export type FloorFinish = {
 export type Reading = {
   title: string;
   dimensionsInMm: boolean;
+  /** ft means the sheet was dimensioned in feet and inches. */
+  unitSystem: "mm" | "ft";
   pads: PadFooting[];
   strips: StripFooting[];
   columns: Column[];
@@ -99,6 +107,8 @@ export type Reading = {
   mentionedExcavation: boolean;
   mentionedBlinding: boolean;
   steelKgPerM: Record<string, number>;
+  /** Printed pound-per-foot masses, when the sheet states them. */
+  steelLbPerFt: Record<string, number>;
   columnRebarByOthers: boolean;
   slabTopNil: boolean;
 };
@@ -125,6 +135,7 @@ export function emptyReading(): Reading {
   return {
     title: "",
     dimensionsInMm: true,
+    unitSystem: "mm",
     pads: [],
     strips: [],
     columns: [],
@@ -144,6 +155,7 @@ export function emptyReading(): Reading {
     mentionedExcavation: false,
     mentionedBlinding: false,
     steelKgPerM: {},
+    steelLbPerFt: {},
     columnRebarByOthers: false,
     slabTopNil: false,
   };

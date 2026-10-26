@@ -1,3 +1,4 @@
+import { kgPerMFromLbPerFt, STANDARD_KG_PER_M } from "@/lib/takeoff/numbers";
 import type { Confidence, Reading } from "@/lib/takeoff/types";
 import { emptyReading } from "@/lib/takeoff/types";
 
@@ -9,7 +10,11 @@ import { emptyReading } from "@/lib/takeoff/types";
 const PLAUSIBLE_MM = new Set([10, 15, 20, 25, 40, 50, 75, 100, 150, 200, 250, 300]);
 
 export function normalizeDrawingText(raw: string): string {
-  const spaced = raw.replace(/\u00a0/g, " ").replace(/[×✕]/g, "x");
+  const spaced = raw
+    .replace(/\u00a0/g, " ")
+    .replace(/[×✕]/g, "x")
+    // OCR reads a zero in "0 in" as the letter O.
+    .replace(/(\d+\s*ft\s+)[Oo](\s+in\b)/g, "$10$2");
   return spaced.replace(/\b(\d{1,2})\.(\d{2,3})\s*mm\b/g, (full, note, mm) => {
     const index = Number(note);
     const thickness = Number(mm);
@@ -23,6 +28,37 @@ function lengthToMm(value: number, dimensionsInMm: boolean): number {
   return Math.round(value * 1000);
 }
 
+/** Feet-and-inches, or a bare inch mark. Returns millimetres. */
+const FEET_INCHES =
+  String.raw`(?:\d+\s*'\s*-\s*\d+(?:\s+\d+\s*/\s*\d+)?\s*"|\d+\s*ft\s+\d+\s*in|\d+\s*"|\d+\s*in\b)`;
+
+export function parseLengthToMm(raw: string): number | null {
+  const t = raw
+    .trim()
+    .replace(/[′’`]/g, "'")
+    .replace(/[″“”]/g, '"')
+    .replace(/\s+/g, " ");
+  const feet = t.match(/^(\d+)\s*(?:'|ft)\s*(?:-\s*)?(\d+)(?:\s+(\d+)\s*\/\s*(\d+))?\s*(?:"|in)?$/i);
+  if (feet) {
+    const whole = Number(feet[2]);
+    const frac = feet[3] ? Number(feet[3]) / Number(feet[4]) : 0;
+    return (Number(feet[1]) * 12 + whole + frac) * 25.4;
+  }
+  const inches = t.match(/^(\d+)(?:\s+(\d+)\s*\/\s*(\d+))?\s*(?:"|in)$/i);
+  if (inches) {
+    const frac = inches[2] ? Number(inches[2]) / Number(inches[3]) : 0;
+    return (Number(inches[1]) + frac) * 25.4;
+  }
+  return null;
+}
+
+function sheetGrades(text: string): string[] {
+  const found = new Set<string>();
+  for (const match of text.matchAll(/\b(C\d+)\b/gi)) found.add(match[1].toUpperCase());
+  for (const match of text.matchAll(/\b(\d+)\s*PSI\b/gi)) found.add(`${match[1]}PSI`);
+  return [...found];
+}
+
 export function parseDrawingText(raw: string): { reading: Reading; confidence: Confidence } {
   const text = normalizeDrawingText(raw || "");
   const reading = emptyReading();
@@ -33,6 +69,10 @@ export function parseDrawingText(raw: string): { reading: Reading; confidence: C
     text.match(/\b([SA]-\d{2,})\b/)?.[1] ||
     "";
   reading.dimensionsInMm = /all dimensions in mm/i.test(text);
+  if (/all dimensions in feet and inches/i.test(text)) {
+    reading.dimensionsInMm = false;
+    reading.unitSystem = "ft";
+  }
   reading.mentionedExcavation = /below\s+NGL|working space/i.test(text);
   reading.mentionedBlinding = /blinding/i.test(text);
   reading.columnRebarByOthers = /rebar by others/i.test(text);
@@ -73,6 +113,12 @@ export function parseDrawingText(raw: string): { reading: Reading; confidence: C
   for (const match of text.matchAll(/\bT(\d+)\s*=\s*(\d+(?:\.\d+)?)\s*kg\s*\/\s*m/gi)) {
     reading.steelKgPerM[`T${match[1]}`] = Number(match[2]);
   }
+  for (const match of text.matchAll(/#(\d+)\s*=\s*(\d+(?:\.\d+)?)\s*lb\s*\/\s*ft/gi)) {
+    const bar = `#${match[1]}`;
+    const lb = Number(match[2]);
+    reading.steelLbPerFt[bar] = lb;
+    reading.steelKgPerM[bar] = kgPerMFromLbPerFt(lb);
+  }
 
   const padGrade = text.match(/FOOTING SCHEDULE\s*\([^)]*?,\s*(C\d+)\)/i)?.[1]?.toUpperCase() || null;
   for (const match of text.matchAll(
@@ -110,6 +156,65 @@ export function parseDrawingText(raw: string): { reading: Reading; confidence: C
     });
   }
 
+  const imperialStrip = new RegExp(
+    String.raw`\b(CF\d+)\s+(${FEET_INCHES})\s*wide\s*x\s*(${FEET_INCHES})\s*thick\s+(?:cent(?:re|er)line\s+(${FEET_INCHES})\s+)?(perimeter(?:\s+closed)?|closed|straight)\s+\((\d+)\s*no\.?\)\s+LONG\s+\((\d+)\)\s*(#\d+)`,
+    "gi"
+  );
+  const imperialGrade =
+    text.match(/CONTINUOUS FOOTING SCHEDULE\s*\((\d+)\s*PSI\)/i)?.[1] != null
+      ? `${text.match(/CONTINUOUS FOOTING SCHEDULE\s*\((\d+)\s*PSI\)/i)?.[1]}PSI`
+      : text.match(/CONTINUOUS FOOTING SCHEDULE\s*\((C\d+)\)/i)?.[1]?.toUpperCase() || null;
+  for (const match of text.matchAll(imperialStrip)) {
+    const width = parseLengthToMm(match[2]);
+    const thickness = parseLengthToMm(match[3]);
+    const stated = match[4] ? parseLengthToMm(match[4]) : null;
+    if (width == null || thickness == null) continue;
+    const kind = match[5].toLowerCase();
+    reading.strips.push({
+      mark: match[1].toUpperCase(),
+      widthMm: width,
+      thicknessMm: thickness,
+      lengthMm: stated ?? 0,
+      count: Number(match[6]),
+      closed: kind !== "straight",
+      grade: imperialGrade,
+      longitudinalBar: match[8].toUpperCase(),
+      longitudinalCount: Number(match[7]),
+      transverseBar: null,
+      transverseSpacingMm: null,
+    });
+  }
+
+  // Column schedule as printed: "CF24  2'-0"  1'-0"  (3) #5", length elsewhere.
+  if (/CONTINUOUS FOOTING SCHEDULE/i.test(text)) {
+    const columnRow = new RegExp(
+      String.raw`\b(CF\d+)\s+(${FEET_INCHES})\s+(${FEET_INCHES})\s+\((\d+)\)\s*(#\d+)`,
+      "gi"
+    );
+    const seen = new Set(reading.strips.map((strip) => strip.mark));
+    for (const match of text.matchAll(columnRow)) {
+      const mark = match[1].toUpperCase();
+      if (seen.has(mark)) continue;
+      const width = parseLengthToMm(match[2]);
+      const thickness = parseLengthToMm(match[3]);
+      if (width == null || thickness == null) continue;
+      seen.add(mark);
+      reading.strips.push({
+        mark,
+        widthMm: width,
+        thicknessMm: thickness,
+        lengthMm: 0,
+        count: 1,
+        closed: true,
+        grade: imperialGrade,
+        longitudinalBar: match[5].toUpperCase(),
+        longitudinalCount: Number(match[4]),
+        transverseBar: null,
+        transverseSpacingMm: null,
+      });
+    }
+  }
+
   for (const match of text.matchAll(
     /\bCOLUMN\s+(C\d+)\s+(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)\s*,\s*(\d+)\s*no\.?\s*,\s*height\s+(\d+(?:\.\d+)?)/gi
   )) {
@@ -139,7 +244,36 @@ export function parseDrawingText(raw: string): { reading: Reading; confidence: C
       spacingMm: mesh ? lengthToMm(Number(mesh[2]), reading.dimensionsInMm) : null,
       bothWays: Boolean(mesh?.[3]),
       topNil: reading.slabTopNil,
+      onGrade: false,
+      wwf: false,
     });
+  }
+
+  const slabOnGrade = text.match(
+    new RegExp(
+      String.raw`(${FEET_INCHES})\s*THK\s+CONCRETE\s+SLAB-ON-GRADE\s+inside\s+(${FEET_INCHES})\s*x\s*(${FEET_INCHES})(?:\s*\((\d+)\s*PSI\))?`,
+      "i"
+    )
+  );
+  if (slabOnGrade) {
+    const thickness = parseLengthToMm(slabOnGrade[1]);
+    const length = parseLengthToMm(slabOnGrade[2]);
+    const width = parseLengthToMm(slabOnGrade[3]);
+    if (thickness != null && length != null && width != null) {
+      reading.slabs.push({
+        mark: "S1",
+        lengthMm: length,
+        widthMm: width,
+        thicknessMm: thickness,
+        grade: slabOnGrade[4] ? `${slabOnGrade[4]}PSI` : null,
+        meshBar: null,
+        spacingMm: null,
+        bothWays: false,
+        topNil: false,
+        onGrade: true,
+        wwf: /WWF|welded wire/i.test(text),
+      });
+    }
   }
 
   const plasterSides = /PLASTER\s+both\s+sides/i.test(text) ? 2 : /PLASTER\s+one\s+side/i.test(text) ? 1 : 0;
@@ -153,6 +287,29 @@ export function parseDrawingText(raw: string): { reading: Reading; confidence: C
       centrelineMm: Math.round(Number(match[4])),
       count: Number(match[5]),
       plasterSides,
+      material: "block",
+      grade: null,
+    });
+  }
+
+  const concreteWall = new RegExp(
+    String.raw`\bWALL\s+([A-Z]+\d+)\s+concrete\s+(${FEET_INCHES})\s*thk,\s*height\s+(${FEET_INCHES}),\s*cent(?:re|er)line\s+(${FEET_INCHES})\s*\((\d+)\s*no\.?\)`,
+    "gi"
+  );
+  for (const match of text.matchAll(concreteWall)) {
+    const thickness = parseLengthToMm(match[2]);
+    const height = parseLengthToMm(match[3]);
+    const centreline = parseLengthToMm(match[4]);
+    if (thickness == null || height == null || centreline == null) continue;
+    reading.walls.push({
+      mark: match[1].toUpperCase(),
+      thicknessMm: thickness,
+      heightMm: height,
+      centrelineMm: centreline,
+      count: Number(match[5]),
+      plasterSides: 0,
+      material: "concrete",
+      grade: null,
     });
   }
 
@@ -182,7 +339,43 @@ export function parseDrawingText(raw: string): { reading: Reading; confidence: C
     });
   }
 
+  fillPerimeterFromOutToOut(text, reading);
+  reading.strips = reading.strips.filter((strip) => strip.lengthMm > 0);
+  const grades = sheetGrades(text);
+  if (grades.length === 1) {
+    const grade = grades[0];
+    for (const strip of reading.strips) if (!strip.grade) strip.grade = grade;
+    for (const slab of reading.slabs) if (!slab.grade) slab.grade = grade;
+    for (const wall of reading.walls) {
+      if (wall.material === "concrete" && !wall.grade) wall.grade = grade;
+    }
+  }
+
   return { reading, confidence: confidenceOf(reading) };
+}
+
+/**
+ * A closed perimeter footing with no printed length takes the centreline of
+ * an out-to-out rectangle: 2 x ((length - thickness) + (width - thickness)).
+ */
+function fillPerimeterFromOutToOut(text: string, reading: Reading): void {
+  const overall = text.match(
+    new RegExp(String.raw`out-to-out(?:\s+[A-Za-z]+){0,2}\s+(${FEET_INCHES})\s*x\s*(${FEET_INCHES})`, "i")
+  );
+  if (!overall) return;
+  const length = parseLengthToMm(overall[1]);
+  const width = parseLengthToMm(overall[2]);
+  const wall = reading.walls.find((item) => item.material === "concrete" && item.thicknessMm > 0);
+  if (length == null || width == null || !wall) return;
+  const centreline = 2 * (length + width - 2 * wall.thicknessMm);
+  for (const strip of reading.strips) {
+    if (strip.closed && strip.lengthMm <= 0) strip.lengthMm = centreline;
+  }
+}
+
+function barMassKnown(reading: Reading, bar: string): boolean {
+  if (reading.steelKgPerM[bar] != null) return true;
+  return bar.startsWith("#") && STANDARD_KG_PER_M[bar] != null;
 }
 
 function steelNeeded(reading: Reading): string[] {
@@ -208,11 +401,12 @@ export function confidenceOf(reading: Reading): Confidence {
 
   const bars = steelNeeded(reading);
   if (reading.pads.some((pad) => pad.bottomBar) && reading.coverFootingMm == null) return "partial";
-  if (reading.strips.some((strip) => strip.longitudinalBar || strip.transverseBar) && reading.coverFootingMm == null) {
-    return "partial";
-  }
+  const stripNeedsCover = reading.strips.some(
+    (strip) => strip.transverseBar || (strip.longitudinalBar && !strip.closed)
+  );
+  if (stripNeedsCover && reading.coverFootingMm == null) return "partial";
   if (reading.slabs.some((slab) => slab.meshBar) && reading.coverSlabMm == null) return "partial";
-  if (bars.some((bar) => reading.steelKgPerM[bar] == null)) return "partial";
+  if (bars.some((bar) => !barMassKnown(reading, bar))) return "partial";
   if (reading.mentionedExcavation && (reading.formationBelowNglM == null || reading.workingSpaceMm == null)) {
     return "partial";
   }
