@@ -16,7 +16,7 @@ export type PdfTextEngine = "auto" | "unpdf" | "pdftotext";
  * enough for the module to finish loading.
  */
 function ensureIteratorGlobal(): void {
-  const scope = globalThis as typeof globalThis & { Iterator?: new () => unknown };
+  const scope = globalThis as unknown as { Iterator?: unknown };
   if (typeof scope.Iterator === "undefined") {
     scope.Iterator = class Iterator {};
   }
