@@ -17,6 +17,12 @@ test("arabic title tokens stay logical and read from the right", () => {
   assert.deepEqual(directionalRuns("Report · Engineered with engineer it"), [
     { text: "Report · Engineered with engineer it", rtl: false },
   ]);
+  assert.deepEqual(visualTokens("ملف PDF، ثم"), ["ثم", " ", "،", "PDF", " ", "ملف"]);
+  assert.deepEqual(directionalRuns("ملف PDF، ثم"), [
+    { text: "ملف ", rtl: true },
+    { text: "PDF", rtl: false },
+    { text: "، ثم", rtl: true },
+  ]);
 });
 
 test("Noto Sans Arabic shapes the logical title with joining forms", () => {

@@ -1,3 +1,4 @@
+import JSZip from "jszip";
 import {
   AlignmentType,
   BorderStyle,
@@ -64,13 +65,30 @@ function subtitleParagraph(value: string) {
 function paragraph(
   value: string,
   rtl: boolean,
-  align?: (typeof AlignmentType)[keyof typeof AlignmentType]
+  align?: (typeof AlignmentType)[keyof typeof AlignmentType],
+  opts?: {
+    bold?: boolean;
+    size?: number;
+    color?: string;
+    spacing?: { before?: number; after?: number };
+    heading?: (typeof HeadingLevel)[keyof typeof HeadingLevel];
+  }
 ) {
+  const runs = directionalRuns(plainInline(value));
+  const paragraphRtl = rtl || runs.some((run) => run.rtl);
   return new Paragraph({
-    bidirectional: rtl,
-    alignment: align ?? (rtl ? AlignmentType.RIGHT : AlignmentType.LEFT),
-    spacing: { after: 80 },
-    children: [textRun(plainInline(value), { rtl, size: 22 })],
+    heading: opts?.heading,
+    bidirectional: paragraphRtl,
+    alignment: align ?? (paragraphRtl ? AlignmentType.START : AlignmentType.LEFT),
+    spacing: opts?.spacing ?? { after: 80 },
+    children: runs.map((run) =>
+      textRun(run.text, {
+        rtl: run.rtl,
+        bold: opts?.bold,
+        size: opts?.size ?? 22,
+        color: opts?.color,
+      })
+    ),
   });
 }
 
@@ -215,10 +233,10 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
   });
   const note = new Paragraph({
     bidirectional: rtl,
-    alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+    alignment: rtl ? AlignmentType.START : AlignmentType.LEFT,
     spacing: { before: 0, after: 60 },
     children: [
-      ...noteRuns.map((run) => textRun(`${run.text} `, { rtl: run.rtl, size: 14, color: gray })),
+      ...noteRuns.map((run) => textRun(run.rtl ? `${run.text} ` : run.text, { rtl: run.rtl, size: 14, color: gray })),
       link,
     ],
   });
@@ -241,10 +259,11 @@ function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape:
       margins: { top: 60, bottom: 60, left: 80, right: 80 },
       verticalAlign: VerticalAlign.CENTER,
       children: [
-        new Paragraph({
-          bidirectional: rtl,
-          alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
-          children: [textRun(plainInline(value), { bold: header, size: 18, rtl, color: header ? "1E3A8A" : "0F172A" })],
+        paragraph(value, rtl, rtl ? AlignmentType.START : AlignmentType.LEFT, {
+          bold: header,
+          size: 18,
+          color: header ? "1E3A8A" : "0F172A",
+          spacing: { before: 0, after: 0 },
         }),
       ],
     });
@@ -291,12 +310,11 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
         }),
       ],
     }),
-    new Paragraph({
-      heading: HeadingLevel.TITLE,
-      alignment: AlignmentType.CENTER,
-      bidirectional: blockDir(report.title, report.locale) === "rtl",
+    paragraph(report.title, blockDir(report.title, report.locale) === "rtl", AlignmentType.CENTER, {
+      bold: true,
+      size: 56,
       spacing: { before: 400, after: 160 },
-      children: [textRun(report.title, { bold: true, size: 56, rtl: blockDir(report.title, report.locale) === "rtl" })],
+      heading: HeadingLevel.TITLE,
     }),
     subtitleParagraph(report.subtitle),
     paragraph(report.stamp, rtlDoc, AlignmentType.CENTER),
@@ -319,15 +337,13 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       const headings = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6];
       const heading = headings[block.level - 1] || HeadingLevel.HEADING_3;
       const size = block.level === 1 ? 32 : block.level === 2 ? 28 : block.level === 3 ? 24 : 22;
-      current.children.push(
-        new Paragraph({
-          heading,
-          bidirectional: rtl,
-          alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
-          spacing: { before: 280, after: 80 },
-          children: [textRun(block.text, { bold: true, size, rtl, color: "1A56FF" })],
-        })
-      );
+      current.children.push(paragraph(block.text, rtl, rtl ? AlignmentType.START : AlignmentType.LEFT, {
+        bold: true,
+        size,
+        color: "1A56FF",
+        spacing: { before: 280, after: 80 },
+        heading,
+      }));
       return;
     }
     if (block.type === "paragraph") {
@@ -395,5 +411,15 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
     })),
   });
   const buffer = await Packer.toBuffer(doc);
-  return new Uint8Array(buffer);
+  if (!rtlDoc) return new Uint8Array(buffer);
+  const zip = await JSZip.loadAsync(buffer);
+  const settings = await zip.file("word/settings.xml")!.async("string");
+  if (!settings.includes("w:themeFontLang")) {
+    zip.file(
+      "word/settings.xml",
+      settings.replace("</w:settings>", '<w:themeFontLang w:val="en-US" w:eastAsia="en-US" w:bidi="ar-SA"/></w:settings>')
+    );
+  }
+  const marked = await zip.generateAsync({ type: "nodebuffer" });
+  return new Uint8Array(marked);
 }

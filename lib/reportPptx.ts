@@ -89,18 +89,29 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
     const icon = 0.24;
     const label = rtl ? `شريحة ${page} من ${total}` : `Slide ${page} of ${total}`;
     const gray = OUTPUT_DISCLAIMER_GRAY.slice(1);
+    const disclaimerRuns = directionalRuns(`${outputDisclaimerBody(report.locale)} `);
     slide.addText(
       [
-        {
-          text: `${outputDisclaimerBody(report.locale)} `,
-          options: { color: gray },
-        },
+        ...disclaimerRuns.map((run) => ({
+          text: run.text,
+          options: {
+            color: gray,
+            rtlMode: run.rtl,
+            align: rtl ? "right" : "left",
+            lang: run.rtl ? "ar-SA" : "en-US",
+            fontFace: run.rtl ? "Arial" : "Calibri",
+          },
+        })),
         {
           text: OUTPUT_POLICY_LABEL,
           options: {
             color: gray,
             underline: { style: "sng", color: gray },
             hyperlink: { url: OUTPUT_POLICY_URL[report.locale] },
+            rtlMode: false,
+            align: rtl ? "right" : "left",
+            lang: "en-US",
+            fontFace: "Calibri",
           },
         },
       ],
@@ -227,9 +238,10 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       fill: { color: "1A56FF" },
       line: { color: "1A56FF" },
     });
-    slide.addImage({ data: logoData(report), x: rtl ? W - 0.42 - icon : 0.42, y: 0.26, w: icon, h: icon });
+    slide.addImage({ data: logoData(report), x: 0.42, y: 0.26, w: icon, h: icon });
+    const titleRtl = rtl || blockDir(title, report.locale) === "rtl";
     slide.addText(title, {
-      x: rtl ? 0.42 : 0.42 + icon + 0.12,
+      x: 0.42 + icon + 0.12,
       y: 0.2,
       w: W - 0.84 - icon - 0.12,
       h: 0.42,
@@ -237,8 +249,8 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       fontSize: 20,
       bold: true,
       color: "0F172A",
-      align: rtl ? "left" : "right",
-      rtlMode: blockDir(title, report.locale) === "rtl",
+      align: "right",
+      rtlMode: titleRtl,
     });
     return slide;
   };
@@ -335,9 +347,13 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       const tableRtl = rtl || block.headers.some((header) => /[\u0600-\u06FF]/.test(header));
       const tableW = W - 0.9;
       const fontSize = block.headers.length >= 7 ? 11 : 12;
-      const colW = columnWidths(block.headers, tableW);
-      const headerCells = block.headers.map((header) => plainInline(header));
-      const bodyRows = block.rows.map((row) => block.headers.map((_, cell) => plainInline(row[cell] ?? "")));
+      const sourceWidths = columnWidths(block.headers, tableW);
+      const sourceHeaders = block.headers.map((header) => plainInline(header));
+      const sourceRows = block.rows.map((row) => block.headers.map((_, cell) => plainInline(row[cell] ?? "")));
+      const order = tableRtl ? sourceHeaders.map((_, index) => sourceHeaders.length - 1 - index) : sourceHeaders.map((_, index) => index);
+      const colW = order.map((index) => sourceWidths[index]);
+      const headerCells = order.map((index) => sourceHeaders[index]);
+      const bodyRows = sourceRows.map((row) => order.map((index) => row[index] ?? ""));
       const cell = (text: string, header: boolean, fill: string) => ({
         text,
         options: {
@@ -345,6 +361,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
           color: header ? "1E3A8A" : "0F172A",
           bold: header,
           align: tableRtl ? "right" : "left",
+          rtlMode: tableRtl,
         },
       });
       let cursor = 0;

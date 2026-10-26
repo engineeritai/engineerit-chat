@@ -105,7 +105,7 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: "Noto Naskh Arabic", "IBM Plex Sans Arabic", "Noto Sans Arabic", Inter, "Segoe UI", sans-serif; color: #0f172a; background: #f5f7fb; }
+  body { margin: 0; font-family: "Noto Naskh Arabic", "IBM Plex Sans Arabic", "Noto Sans Arabic", Inter, "Segoe UI", sans-serif; color: #0f172a; background: #f5f7fb; text-align: start; }
   header, footer { display: flex; align-items: center; gap: 12px; padding: 16px 22px; background: #fff; }
   header { border-bottom: 3px solid #1a56ff; }
   header h1 { margin: 0; font-size: 22px; font-weight: 700; }

@@ -69,7 +69,7 @@ function addTableSheet(book: ExcelJS.Workbook, name: string, title: string, stam
   note.font = { name: rtl ? "Arial" : "Calibri", size: 8, color: { argb: `FF${OUTPUT_DISCLAIMER_GRAY.slice(1)}` }, underline: true };
   note.alignment = { horizontal: rtl ? "right" : "left", vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
   sheet.getRow(noteRow).height = 28;
-  const footer = `&L&8&K${OUTPUT_DISCLAIMER_GRAY.slice(1)}${outputDisclaimer(rtl ? "ar" : "en").replace(/&/g, "&&")}`;
+  const footer = `&${rtl ? "R" : "L"}&8&K${OUTPUT_DISCLAIMER_GRAY.slice(1)}${outputDisclaimer(rtl ? "ar" : "en").replace(/&/g, "&&")}`;
   sheet.headerFooter.oddFooter = footer;
   sheet.headerFooter.evenFooter = footer;
   fitColumns(sheet);

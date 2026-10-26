@@ -282,14 +282,76 @@ test("a quantity heading stays with its table, and a continued table repeats the
   assert.match(pages[last], /\bItem\b/);
   assert.match(pages[last], /Quantity/);
   assert.equal(pages[last].includes("Bill of quantities"), false);
-  const slides = await slideXml(await buildReportPptx(report));
-  const continued = slides.filter((slide) => slide.includes("row-36"));
+  const continuedSlides = await slideXml(await buildReportPptx(report));
+  const continued = continuedSlides.filter((slide) => slide.includes("row-36"));
   assert.equal(continued.length, 1);
   assert.match(continued[0], /<a:tbl/);
   assert.match(continued[0], />Item</);
-  for (const slide of slides) {
+  for (const slide of continuedSlides) {
     for (const bottom of tableBottoms(slide)) {
       assert.ok(bottom <= 6.45, `long table ends at ${bottom.toFixed(2)}in`);
     }
   }
+});
+
+test("arabic exports are right to left", async () => {
+  const parsed = parseDrawingText(S101);
+  const markdown = renderTakeoff("ar", parsed.reading, calculateTakeoff(parsed.reading), "pdf-text");
+  const report = await prepareReport({
+    title: "S-101",
+    markdown,
+    locale: "ar",
+    now: new Date("2026-10-26T12:00:00Z"),
+  });
+  const pdf = await buildReportPdf(report);
+  const doc = await PDFDocument.load(pdf);
+  let sawPdf = false;
+  for (let page = 1; page <= doc.getPageCount(); page += 1) {
+    const text = pdfText(pdf, page);
+    if (text.includes("جدول الكميات")) {
+      assert.match(text, /البند/);
+      assert.match(text, /60\.016/);
+    }
+    if (text.includes("PDF")) sawPdf = true;
+  }
+  assert.equal(sawPdf, true, "Latin PDF was dropped or drawn without a Unicode mapping");
+
+  const slides = await slideXml(await buildReportPptx(report));
+  const tableSlides = slides.filter((slide) => slide.includes("جدول الكميات") && slide.includes("<a:tbl"));
+  assert.ok(tableSlides.length >= 1);
+  for (const slide of tableSlides) {
+    assert.match(slide, /<a:pPr rtl="1"[^>]*algn="r"|<a:pPr[^>]*rtl="1"[^>]*algn="r"/);
+    const labels = [...slide.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((match) => match[1]);
+    const item = labels.indexOf("البند");
+    const working = labels.indexOf("طريقة الحساب");
+    assert.ok(item > working && working >= 0, "table columns are not mirrored");
+  }
+  const disclaimer = slides.find((slide) => slide.includes("مولد بالذكاء الاصطناعي"));
+  assert.ok(disclaimer);
+  assert.match(disclaimer, /rtl="1"/);
+  assert.ok(disclaimer.indexOf("مولد بالذكاء الاصطناعي") < disclaimer.indexOf("engineerit.ai/legal/terms"));
+
+  const wordZip = await JSZip.loadAsync(await buildReportDocx(report));
+  const wordParts = await Promise.all(
+    Object.keys(wordZip.files)
+      .filter((name) => name.startsWith("word/") && name.endsWith(".xml"))
+      .map(async (name) => `${name}\n${await wordZip.file(name)!.async("string")}`)
+  );
+  const word = wordParts.join("\n");
+  assert.match(word, /<w:bidi\/>|<w:bidi w:val="1"\/>|<w:bidi /);
+  assert.match(word, /<w:rtl\/>|<w:rtl w:val="1"\/>|<w:rtl /);
+  assert.match(word, /<w:bidiVisual\/>|<w:bidiVisual w:val="1"\/>|<w:bidiVisual /);
+  assert.match(word, /w:bidi="ar-SA"/);
+  const footer = wordParts.find((part) => part.startsWith("word/footer1.xml")) ?? "";
+  assert.match(footer, /<w:bidi\/>/);
+  assert.match(footer, /<w:rtl\/>/);
+  assert.match(footer, /w:val="start"/);
+  assert.ok(footer.indexOf("مولد بالذكاء الاصطناعي") < footer.indexOf("engineerit.ai/legal/terms"));
+
+  const book = await zipText(await buildReportXlsx(report));
+  assert.match(book, /rightToLeft="1"/);
+  const html = buildShareHtml({ title: "حصر", markdown, locale: "ar" });
+  assert.match(html, /<html lang="ar" dir="rtl">/);
+  assert.match(html, /<article dir="rtl">/);
+  assert.match(html, /text-align: start/);
 });
