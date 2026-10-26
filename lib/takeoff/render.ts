@@ -1,3 +1,4 @@
+import { outputDisclaimer } from "@/lib/outputDisclaimer";
 import type { UiLocale } from "@/lib/replyLanguage";
 import type { BoqLine, ReadSource, Reading } from "@/lib/takeoff/types";
 import { formatQty, STANDARD_LB_PER_FT } from "@/lib/takeoff/numbers";
@@ -359,6 +360,8 @@ export function renderTakeoff(locale: UiLocale, reading: Reading, items: BoqLine
     `| ${headers.join(" | ")} |`,
     `| ${headers.map(() => "---").join(" | ")} |`,
     ...rows,
+    "",
+    outputDisclaimer(locale),
     "",
     ar ? "## الافتراضات" : "## Assumptions",
     "",

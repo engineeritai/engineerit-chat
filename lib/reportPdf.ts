@@ -4,6 +4,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import { containsArabic, visualTokens } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
+import { outputDisclaimer } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 const PORTRAIT = { w: 595.28, h: 841.89 };
@@ -160,7 +161,7 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     y = current.size.h - 64;
   };
   const ensure = (height: number, landscape = false) => {
-    if (y - height < 56) newContentPage(landscape);
+    if (y - height < 96) newContentPage(landscape);
   };
 
   const drawLines = (lines: string[], size: number, bold: boolean, indent: number, alignRtl: boolean) => {
@@ -303,6 +304,7 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
   }
 
   const total = sheets.length;
+  const disclaimer = outputDisclaimer(report.locale);
   sheets.forEach((sheet, index) => {
     const pageLabel = report.locale === "ar" ? `صفحة ${index + 1} من ${total}` : `Page ${index + 1} of ${total}`;
     const pageW = lineWidth(pageLabel, fonts, 9, false);
@@ -310,18 +312,25 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     const brandW = fonts.body.widthOfTextAtSize(brand, 9);
     const icon = 12;
     const gap = 5;
+    const noteLines = wrap(disclaimer, fonts, 8, sheet.width - MARGIN * 2);
+    const lineY = 52 + noteLines.length * 10;
     sheet.page.drawLine({
-      start: { x: MARGIN, y: 42 },
-      end: { x: sheet.width - MARGIN, y: 42 },
+      start: { x: MARGIN, y: lineY },
+      end: { x: sheet.width - MARGIN, y: lineY },
       thickness: 0.6,
       color: LINE,
     });
+    noteLines.forEach((line, lineIndex) => {
+      const width = lineWidth(line, fonts, 8, false);
+      const x = rtlDoc ? sheet.width - MARGIN - width : MARGIN;
+      drawLogicalLine(sheet.page, line, x, lineY - 12 - lineIndex * 10, fonts, 8, false, MUTED);
+    });
     const logoX = rtlDoc ? sheet.width - MARGIN - icon : MARGIN;
-    sheet.page.drawImage(logo, { x: logoX, y: 22, width: icon, height: icon });
+    sheet.page.drawImage(logo, { x: logoX, y: 16, width: icon, height: icon });
     const brandX = rtlDoc ? logoX - gap - brandW : logoX + icon + gap;
-    sheet.page.drawText(brand, { x: brandX, y: 24, size: 9, font: fonts.body, color: MUTED });
+    sheet.page.drawText(brand, { x: brandX, y: 18, size: 9, font: fonts.body, color: MUTED });
     const pageX = rtlDoc ? MARGIN : sheet.width - MARGIN - pageW;
-    drawLogicalLine(sheet.page, pageLabel, pageX, 24, fonts, 9, false, MUTED);
+    drawLogicalLine(sheet.page, pageLabel, pageX, 18, fonts, 9, false, MUTED);
   });
 
   return pdf.save();

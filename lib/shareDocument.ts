@@ -1,6 +1,7 @@
 import { flowSvg } from "@/lib/flowSvg";
 import { riyadhStamp } from "@/lib/ksaTime";
-import { parseMessage, tokenizeInline, type Block, type ListItem } from "@/lib/messageDocument";
+import { parseMessage, plainInline, tokenizeInline, type Block, type ListItem } from "@/lib/messageDocument";
+import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { renderChartSvg } from "@/lib/scheduleSvg";
 
 export function shareDescription(markdown: string): string {
@@ -41,18 +42,26 @@ function listHtml(ordered: boolean, items: ListItem[]): string {
   return `<${tag}>${body}</${tag}>`;
 }
 
-function blocksHtml(blocks: Block[], dir: "ltr" | "rtl"): string {
+function disclaimerHtml(locale: "en" | "ar"): string {
+  const href = OUTPUT_POLICY_URL[locale];
+  return `<p class="output-disclaimer">${esc(outputDisclaimerBody(locale))} <a href="${esc(href)}">${esc(href)}</a></p>`;
+}
+
+function blocksHtml(blocks: Block[], dir: "ltr" | "rtl", locale: "en" | "ar"): string {
   return blocks
-    .map((block) => {
+    .map((block, index) => {
       if (block.type === "heading") return `<h${block.level}>${inlineHtml(block.text)}</h${block.level}>`;
       if (block.type === "paragraph") return `<p>${inlineHtml(block.text)}</p>`;
       if (block.type === "list") return listHtml(block.ordered, block.items);
       if (block.type === "table") {
         const head = block.headers.map((cell) => `<th>${inlineHtml(cell)}</th>`).join("");
         const body = block.rows
-          .map((row) => `<tr>${block.headers.map((_, index) => `<td>${inlineHtml(row[index] ?? "")}</td>`).join("")}</tr>`)
+          .map((row) => `<tr>${block.headers.map((_, cell) => `<td>${inlineHtml(row[cell] ?? "")}</td>`).join("")}</tr>`)
           .join("");
-        return `<div class="table-scroll" dir="${dir}"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+        const next = blocks[index + 1];
+        const already = next?.type === "paragraph" && isOutputDisclaimer(plainInline(next.text), locale);
+        const note = already ? "" : disclaimerHtml(locale);
+        return `<div class="table-scroll" dir="${dir}"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>${note}`;
       }
       if (block.type === "chart") {
         const svg = renderChartSvg(block.model, dir, "light");
@@ -128,14 +137,17 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
   li { margin: 3px 0; }
   li ul, li ol { margin: 4px 0; }
   strong { font-weight: 700; }
-  footer { border-top: 1px solid #e5e7eb; color: #64748b; font-size: 13px; justify-content: space-between; }
+  footer { border-top: 1px solid #e5e7eb; color: #64748b; font-size: 13px; display: block; }
+  .footer-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .output-disclaimer { margin: 0 0 8px; font-size: 12px; line-height: 1.45; }
+  .output-disclaimer a { color: #1a56ff; }
   @media (max-width: 640px) { header h1 { font-size: 18px; } main { padding: 12px; } }
   @media print {
     body { background: #fff; }
     header, footer { position: fixed; left: 0; right: 0; background: #fff; }
     header { top: 0; }
     footer { bottom: 0; }
-    main { padding-top: 78px; padding-bottom: 64px; }
+    main { padding-top: 78px; padding-bottom: 108px; }
     article { border: 0; }
     h1, h2, h3, h4, figure, table { break-inside: avoid; }
   }
@@ -148,12 +160,15 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
 </header>
 <main>
   <article dir="${dir}">
-    ${blocksHtml(blocks, dir)}
+    ${blocksHtml(blocks, dir, args.locale)}
   </article>
 </main>
 <footer>
-  <span><img src="https://engineerit.ai/icon-192.png" alt=""/> engineer it · engineerit.ai</span>
-  <span>${esc(stamp)}</span>
+  <p class="output-disclaimer">${esc(outputDisclaimerBody(args.locale))} <a href="${esc(OUTPUT_POLICY_URL[args.locale])}">${esc(OUTPUT_POLICY_URL[args.locale])}</a></p>
+  <div class="footer-meta">
+    <span><img src="https://engineerit.ai/icon-192.png" alt=""/> engineer it · engineerit.ai</span>
+    <span>${esc(stamp)}</span>
+  </div>
 </footer>
 </body>
 </html>`;

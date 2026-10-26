@@ -1,6 +1,12 @@
 // app/api/export/diagram/pdf/route.ts
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import fontkit from "@pdf-lib/fontkit";
 import { NextResponse } from "next/server";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { containsArabic, visualTokens } from "@/lib/arabicShape";
+import { OUTPUT_POLICY_URL, outputDisclaimerBody } from "@/lib/outputDisclaimer";
+import type { UiLocale } from "@/lib/replyLanguage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,7 +15,41 @@ type ReqBody = {
   title?: string;
   content?: string;
   filename?: string;
+  locale?: string;
 };
+
+function wrapWords(text: string, max: number): string[] {
+  const lines: string[] = [];
+  let current = "";
+  for (const word of text.split(/\s+/)) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > max && current) {
+      lines.push(current);
+      current = word;
+    } else current = next;
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+function drawNotice(page: PDFPage, font: PDFFont, lines: string[], pageW: number, margin: number) {
+  const color = rgb(0.39, 0.45, 0.55);
+  lines.forEach((line, index) => {
+    const y = margin + 28 - index * 11;
+    if (!containsArabic(line)) {
+      page.drawText(line, { x: margin, y, size: 8, font, color });
+      return;
+    }
+    const tokens = visualTokens(line);
+    const width = tokens.reduce((sum, token) => sum + font.widthOfTextAtSize(token, 8), 0);
+    let cursor = pageW - margin - width;
+    for (const token of tokens) {
+      const tokenWidth = font.widthOfTextAtSize(token, 8);
+      if (token.trim()) page.drawText(token, { x: cursor, y, size: 8, font, color });
+      cursor += tokenWidth;
+    }
+  });
+}
 
 function safeFilename(name: string) {
   return (
@@ -30,10 +70,17 @@ export async function POST(req: Request) {
     }
 
     const title = (body.title || "engineerit.ai diagram").toString();
+    const locale: UiLocale = body.locale === "ar" ? "ar" : "en";
+    const footerLines = [...wrapWords(outputDisclaimerBody(locale), 88), OUTPUT_POLICY_URL[locale]];
 
     const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
     const font = await pdfDoc.embedFont(StandardFonts.Courier);
     const fontUI = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const noticeFont =
+      locale === "ar"
+        ? await pdfDoc.embedFont(await readFile(path.join(process.cwd(), "assets/fonts/NotoSansArabic-Regular.ttf")), { subset: true })
+        : fontUI;
 
     const pageW = 595.28; // A4
     const pageH = 841.89; // A4
@@ -43,7 +90,7 @@ export async function POST(req: Request) {
 
     const lines = content.replace(/\r\n/g, "\n").split("\n");
 
-    const linesPerPage = Math.floor((pageH - margin * 2 - 70) / lineH);
+    const linesPerPage = Math.floor((pageH - margin * 2 - 70 - footerLines.length * 11) / lineH);
 
     let idx = 0;
     let pageNo = 1;
@@ -90,7 +137,16 @@ export async function POST(req: Request) {
         y -= lineH;
       }
 
-      // Footer
+      const bodyLines = footerLines.slice(0, -1);
+      const url = footerLines[footerLines.length - 1] || "";
+      drawNotice(page, noticeFont, bodyLines, pageW, margin);
+      page.drawText(url, {
+        x: margin,
+        y: margin + 28 - bodyLines.length * 11,
+        size: 8,
+        font: fontUI,
+        color: rgb(0.39, 0.45, 0.55),
+      });
       page.drawText(`Page ${pageNo}`, {
         x: pageW - margin - 60,
         y: margin - 10,

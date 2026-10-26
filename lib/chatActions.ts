@@ -1,7 +1,7 @@
 import { downloadName } from "@/lib/exportName";
 import { deliverBlob } from "@/lib/saveFile";
 import { buildShareHtml } from "@/lib/shareDocument";
-import { toWhatsApp } from "@/lib/whatsappText";
+import { clipSharedText, toWhatsApp } from "@/lib/whatsappText";
 
 export function isArabicText(text: string) {
   return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text);
@@ -105,7 +105,7 @@ export async function exportPdf(
 }
 
 export async function nativeShareHtml(aiText: string, title = "Report", locale?: string, link?: string) {
-  const text = toWhatsApp(aiText, link).slice(0, 3500);
+  const text = clipSharedText(toWhatsApp(aiText, link, locale === "ar" ? "ar" : locale === "en" ? "en" : undefined));
   const { file } = htmlFileFromText(aiText, title, locale);
   try {
     if (navigator.share) {
@@ -126,7 +126,7 @@ export async function nativeShareHtml(aiText: string, title = "Report", locale?:
 export async function publishAndShare(args: { title: string; markdown: string; locale: string }): Promise<{ url: string | null; shared: boolean }> {
   const url = await publishShare(args);
   if (!url) return { url: null, shared: false };
-  const text = toWhatsApp(args.markdown, url).slice(0, 3500);
+  const text = clipSharedText(toWhatsApp(args.markdown, url, args.locale === "ar" ? "ar" : "en"));
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
       await navigator.share({ title: args.title, text, url });
@@ -139,7 +139,7 @@ export async function publishAndShare(args: { title: string; markdown: string; l
 }
 
 export function shareToWhatsApp(markdown: string, link?: string) {
-  const payload = toWhatsApp(markdown, link).slice(0, 3500);
+  const payload = clipSharedText(toWhatsApp(markdown, link));
   const wa = `https://wa.me/?text=${encodeURIComponent(payload)}`;
   window.open(wa, "_blank", "noopener,noreferrer");
 }

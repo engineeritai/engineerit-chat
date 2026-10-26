@@ -2,6 +2,7 @@
 
 import MessageMarkdown from "@/app/components/MessageMarkdown";
 import { riyadhStamp } from "@/lib/ksaTime";
+import { outputDisclaimerBody, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import type { ShareRecord } from "@/lib/shareStore";
 
 const labels = {
@@ -26,10 +27,18 @@ export default function ShareView({ share }: { share: ShareRecord }) {
         </article>
       </main>
       <footer className="share-footer">
-        <span>
-          <img src="/icon-192.png" alt="" width={16} height={16} /> engineer it · engineerit.ai
-        </span>
-        <span>{stamp}</span>
+        <p className="output-disclaimer">
+          {outputDisclaimerBody(share.locale)}{" "}
+          <a href={OUTPUT_POLICY_URL[share.locale]} target="_blank" rel="noreferrer">
+            {OUTPUT_POLICY_URL[share.locale]}
+          </a>
+        </p>
+        <div className="share-footer-meta">
+          <span>
+            <img src="/icon-192.png" alt="" width={16} height={16} /> engineer it · engineerit.ai
+          </span>
+          <span>{stamp}</span>
+        </div>
       </footer>
     </div>
   );

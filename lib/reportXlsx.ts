@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { plainInline } from "@/lib/messageDocument";
+import { outputDisclaimer } from "@/lib/outputDisclaimer";
 import type { PreparedReport } from "@/lib/reportModel";
 
 function styleHeader(cell: ExcelJS.Cell, rtl: boolean) {
@@ -57,6 +58,16 @@ function addTableSheet(book: ExcelJS.Workbook, name: string, title: string, stam
     });
   });
   sheet.getRow(4).height = 22;
+  const noteRow = 6 + rows.length;
+  sheet.mergeCells(noteRow, 1, noteRow, span);
+  const note = sheet.getCell(noteRow, 1);
+  note.value = outputDisclaimer(rtl ? "ar" : "en");
+  note.font = { name: rtl ? "Arial" : "Calibri", size: 9, italic: true, color: { argb: "FF64748B" } };
+  note.alignment = { horizontal: rtl ? "right" : "left", vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
+  sheet.getRow(noteRow).height = 36;
+  const footer = `&L${outputDisclaimer(rtl ? "ar" : "en").replace(/&/g, "&&")}`;
+  sheet.headerFooter.oddFooter = footer;
+  sheet.headerFooter.evenFooter = footer;
   fitColumns(sheet);
   sheet.autoFilter = {
     from: { row: 4, column: 1 },

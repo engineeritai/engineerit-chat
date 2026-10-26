@@ -21,6 +21,7 @@ import {
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
+import { outputDisclaimer } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 const border = { style: BorderStyle.SINGLE, size: 4, color: "D0D7E2" };
@@ -196,8 +197,16 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
     ],
   });
   const rule = { style: BorderStyle.SINGLE, size: 6, color: "D0D7E2", space: 1 };
+  const noteRuns = directionalRuns(outputDisclaimer(report.locale));
+  const note = new Paragraph({
+    bidirectional: rtl,
+    alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
+    spacing: { before: 0, after: 60 },
+    children: noteRuns.map((run) => textRun(run.text, { rtl: run.rtl, size: 14, color: "64748B" })),
+  });
   return new Footer({
     children: [
+      note,
       chromeTable(total, rtl ? [pageCol, brandCol] : [brandCol, pageCol], "top", rule, rtl ? [pages, brand] : [brand, pages]),
     ],
   });
@@ -358,7 +367,7 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
           size: {
             orientation: bucket.landscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
           },
-          margin: { top: 900, bottom: 800, left: 720, right: 720, header: 400, footer: 400 },
+          margin: { top: 900, bottom: 1500, left: 720, right: 720, header: 400, footer: 280 },
         },
       },
       headers: bucket.cover ? undefined : { default: makeHeader(report.title, rtlDoc, report.logo, bucket.landscape) },

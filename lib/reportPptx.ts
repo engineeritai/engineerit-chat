@@ -1,6 +1,7 @@
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
+import { outputDisclaimer } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 // pptxgenjs ships a CommonJS build whose default import is unreliable under Next.
@@ -56,6 +57,19 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
   const footer = (slide: Slide, page: number, total: number) => {
     const icon = 0.24;
     const label = rtl ? `شريحة ${page} من ${total}` : `Slide ${page} of ${total}`;
+    slide.addText(outputDisclaimer(report.locale), {
+      x: 0.38,
+      y: 6.55,
+      w: W - 0.76,
+      h: 0.46,
+      fontFace: rtl ? "Arial" : face,
+      lang: rtl ? "ar-SA" : "en-US",
+      fontSize: 9,
+      color: "64748B",
+      align: rtl ? "right" : "left",
+      valign: "top",
+      rtlMode: rtl,
+    });
     if (rtl) {
       slide.addImage({ data: logoData(report), x: W - 0.38 - icon, y: 7.1, w: icon, h: icon });
       slide.addText(REPORT_FOOTER_LINE, {
@@ -203,7 +217,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
         x: 0.55,
         y: 0.85,
         w: W - 1.1,
-        h: 5.9,
+        h: 5.5,
         fontFace: face, lang,
         fontSize: 18,
         color: "0F172A",
@@ -275,7 +289,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
         x: 0.45,
         y: 0.85,
         w: W - 0.9,
-        h: 5.9,
+        h: 5.5,
         colW: block.headers.map(() => (W - 0.9) / block.headers.length),
         border: [
           { pt: 0.5, color: "D0D7E2" },

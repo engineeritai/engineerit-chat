@@ -13,7 +13,7 @@ import { collectDiagramPngs, copyRichElement } from "../components/copyRich";
 import { publishAndShare, publishShare, shareToWhatsApp } from "@/lib/chatActions";
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
 import { showToast } from "@/lib/toast";
-import { toWhatsApp } from "@/lib/whatsappText";
+import { clipSharedText, toWhatsApp } from "@/lib/whatsappText";
 import { downloadName } from "@/lib/exportName";
 import { exportMeta } from "@/lib/messageDocument";
 import { buildShareHtml } from "@/lib/shareDocument";
@@ -1141,7 +1141,7 @@ export default function Page() {
                                     }
                                     if (shared) return;
                                     try {
-                                      await navigator.clipboard.writeText(toWhatsApp(m.content, url));
+                                      await navigator.clipboard.writeText(clipSharedText(toWhatsApp(m.content, url, locale)));
                                     } catch {
                                       /* the menu still offers WhatsApp */
                                     }
