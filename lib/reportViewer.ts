@@ -1,7 +1,16 @@
 import { flowSvg } from "@/lib/flowSvg";
 import { riyadhStamp } from "@/lib/ksaTime";
-import { parseMessage, tokenizeInline, type ListItem } from "@/lib/messageDocument";
+import { parseMessage, plainInline, tokenizeInline, type ListItem } from "@/lib/messageDocument";
+import {
+  isCenteredBoqColumn,
+  isOutputDisclaimer,
+  outputDisclaimerBody,
+  OUTPUT_DISCLAIMER_GRAY,
+  OUTPUT_POLICY_LABEL,
+  OUTPUT_POLICY_URL,
+} from "@/lib/outputDisclaimer";
 import { renderChartSvg } from "@/lib/scheduleSvg";
+import { blockDirection, hasArabicContent, isolatePieces, RLM, shareDir, shareLanguage } from "@/lib/shareDirection";
 
 /**
  * In-chat report viewer helpers.
@@ -10,7 +19,7 @@ import { renderChartSvg } from "@/lib/scheduleSvg";
  * an export route. Downloads stay on the existing export endpoints.
  */
 
-export const RLM = "\u200F";
+export { RLM };
 
 /**
  * NEXT_PUBLIC_REPORT_VIEWER is read at build time.
@@ -70,11 +79,9 @@ export function isReportContent(markdown: string): boolean {
   return false;
 }
 
-/** Arabic UI or Arabic content opens the panel right-to-left. */
+/** Arabic UI or Arabic content opens the panel right-to-left. Same rule as a shared answer. */
 export function reportLocale(markdown: string, uiLocale: string): "en" | "ar" {
-  if (uiLocale === "ar") return "ar";
-  if (/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(markdown || "")) return "ar";
-  return "en";
+  return shareLanguage(markdown, uiLocale === "ar" ? "ar" : "en");
 }
 
 /**
@@ -88,26 +95,18 @@ export function viewerDownloads(caps: { pdf: boolean; wordPpt: boolean }): Viewe
   return items;
 }
 
-/** Same wording as the export footer. Kept here so this branch does not import that module. */
-export const DISCLAIMER_GRAY = "#9CA3AF";
-export const POLICY_LABEL = "engineerit.ai/legal/terms";
-export const POLICY_URL = {
-  en: "https://engineerit.ai/legal/terms",
-  ar: "https://engineerit.ai/legal/terms?lang=ar",
-} as const;
+/** Same wording and colour as the export footer. */
+export const DISCLAIMER_GRAY = OUTPUT_DISCLAIMER_GRAY;
+export const POLICY_LABEL = OUTPUT_POLICY_LABEL;
+export const POLICY_URL = OUTPUT_POLICY_URL;
 
 export function disclaimerBody(locale: "en" | "ar"): string {
-  if (locale === "ar") return "مولد بالذكاء الاصطناعي وقد يحتوي على أخطاء. يرجى التحقق قبل الاستخدام. راجع";
-  return "AI-generated, may contain errors. Please verify before use. See";
+  return outputDisclaimerBody(locale);
 }
-
-const UNIT = /^(unit|الوحدة)$/i;
-const QTY = /^(quantity|qty|الكمية)$/i;
 
 /** Unit and quantity headers, in English or Arabic. Other columns stay as they are. */
 export function isMeasureColumn(header: string): boolean {
-  const name = header.replace(/[*_`]/g, "").replace(/\s+/g, " ").trim();
-  return UNIT.test(name) || QTY.test(name);
+  return isCenteredBoqColumn(header.replace(/[*_`]/g, ""));
 }
 
 /** A share URL already present in the message. This does not create one. */
@@ -155,31 +154,45 @@ function esc(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function inlineHtml(value: string): string {
+function isolatedHtml(value: string, force = false): string {
+  if (!/[\u0600-\u06FF]/.test(value)) return force ? `<bdi dir="ltr">${esc(value)}</bdi>` : esc(value);
+  return isolatePieces(value)
+    .map((piece) => (piece.isolate ? `<bdi dir="ltr">${esc(piece.text)}</bdi>` : esc(piece.text)))
+    .join("");
+}
+
+function inlineHtml(value: string, forceIsolate = false): string {
+  const isolate = forceIsolate || /[\u0600-\u06FF]/.test(value);
   return tokenizeInline(value)
     .map((token) => {
-      if (token.type === "link") return `<a href="${esc(token.href)}">${esc(token.text)}</a>`;
-      const text = esc(token.text);
+      if (token.type === "link") {
+        const label = isolate ? `<bdi dir="ltr">${esc(token.text)}</bdi>` : esc(token.text);
+        return `<a href="${esc(token.href)}">${label}</a>`;
+      }
+      const text = isolate ? isolatedHtml(token.text, forceIsolate) : esc(token.text);
       return token.bold ? `<strong>${text}</strong>` : text;
     })
     .join("");
 }
 
-function cellHtml(value: string, rtlDoc: boolean): string {
-  const html = inlineHtml(value);
-  if (rtlDoc && value && !/[\u0600-\u06FF]/.test(value)) return `<bdi dir="ltr">${html}</bdi>`;
-  return html;
+function listText(items: ListItem[]): string {
+  return items.map((item) => `${item.text}\n${listText(item.children)}`).join("\n");
 }
 
-function listHtml(ordered: boolean, items: ListItem[]): string {
+function listHtml(ordered: boolean, items: ListItem[], docDir: "ltr" | "rtl"): string {
   const tag = ordered ? "ol" : "ul";
+  const dir = hasArabicContent(listText(items)) ? "rtl" : docDir;
   const body = items
     .map((item, index) => {
-      const nested = item.children.length ? listHtml(item.orderedChildren, item.children) : "";
-      return `<li${ordered ? ` value="${index + 1}"` : ""}>${inlineHtml(item.text)}${nested}</li>`;
+      const nested = item.children.length ? listHtml(item.orderedChildren, item.children, docDir) : "";
+      return `<li dir="${blockDirection(item.text)}"${ordered ? ` value="${index + 1}"` : ""}>${inlineHtml(item.text)}${nested}</li>`;
     })
     .join("");
-  return `<${tag}>${body}</${tag}>`;
+  return `<${tag} dir="${dir}">${body}</${tag}>`;
+}
+
+function cellHtml(value: string, rtlDoc: boolean): string {
+  return inlineHtml(value, rtlDoc);
 }
 
 function taggedCell(tag: "th" | "td", header: string, value: string, rtlDoc: boolean): string {
@@ -195,19 +208,27 @@ export function disclaimerHtml(locale: "en" | "ar"): string {
 
 /** Report body rendered in the panel. No network and no share-page record. */
 export function reportFragmentHtml(markdown: string, locale: "en" | "ar"): string {
-  const dir = locale === "ar" ? "rtl" : "ltr";
-  const rtlDoc = dir === "rtl";
+  const dir = shareDir(markdown, locale);
   const blocks = parseMessage(markdown || "")
     .map((block) => {
-      if (block.type === "heading") return `<h${block.level}>${inlineHtml(block.text)}</h${block.level}>`;
-      if (block.type === "paragraph") return `<p>${inlineHtml(block.text)}</p>`;
-      if (block.type === "list") return listHtml(block.ordered, block.items);
+      if (block.type === "heading") {
+        return `<h${block.level} dir="${blockDirection(block.text)}">${inlineHtml(block.text)}</h${block.level}>`;
+      }
+      if (block.type === "paragraph") {
+        const plain = plainInline(block.text);
+        if (isOutputDisclaimer(plain, locale) || isOutputDisclaimer(plain, locale === "ar" ? "en" : "ar")) return "";
+        return `<p dir="${blockDirection(block.text)}">${inlineHtml(block.text)}</p>`;
+      }
+      if (block.type === "list") return listHtml(block.ordered, block.items, dir);
       if (block.type === "table") {
-        const head = block.headers.map((cell) => taggedCell("th", cell, cell, rtlDoc)).join("");
+        const tableText = [...block.headers, ...block.rows.flat()].join("\n");
+        const tableDir = hasArabicContent(tableText) ? "rtl" : dir;
+        const isolate = tableDir === "rtl";
+        const head = block.headers.map((cell) => taggedCell("th", cell, cell, isolate)).join("");
         const body = block.rows
-          .map((row) => `<tr>${block.headers.map((header, index) => taggedCell("td", header, row[index] ?? "", rtlDoc)).join("")}</tr>`)
+          .map((row) => `<tr>${block.headers.map((header, index) => taggedCell("td", header, row[index] ?? "", isolate)).join("")}</tr>`)
           .join("");
-        return `<div class="report-table" dir="${dir}"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+        return `<div class="report-table" dir="${tableDir}"><table dir="${tableDir}"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
       }
       if (block.type === "chart") {
         return `<figure class="report-chart"><figcaption>${esc(block.model.title)}</figcaption>${renderChartSvg(block.model, dir, "light")}</figure>`;
@@ -216,7 +237,7 @@ export function reportFragmentHtml(markdown: string, locale: "en" | "ar"): strin
         const svg = flowSvg(block.source, dir);
         return svg ? `<figure class="report-chart">${svg}</figure>` : `<pre>${esc(block.source)}</pre>`;
       }
-      return `<pre>${esc(block.text)}</pre>`;
+      return `<pre dir="ltr">${esc(block.text)}</pre>`;
     })
     .join("\n");
   return blocks;
@@ -236,10 +257,11 @@ const REPORT_STYLE = `
 
 /** Standalone HTML file for the share sheet. Built in the browser from the message. */
 export function reportDocumentHtml(args: { title: string; markdown: string; locale: "en" | "ar"; now?: Date }): string {
-  const dir = args.locale === "ar" ? "rtl" : "ltr";
-  const stamp = riyadhStamp(args.now ?? new Date(), args.locale);
+  const lang = shareLanguage(args.markdown, args.locale);
+  const dir = shareDir(args.markdown, args.locale);
+  const stamp = riyadhStamp(args.now ?? new Date(), lang);
   return `<!doctype html>
-<html lang="${args.locale}" dir="${dir}">
+<html lang="${lang}" dir="${dir}">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -250,8 +272,8 @@ export function reportDocumentHtml(args: { title: string; markdown: string; loca
 <main dir="${dir}">
 <h1>${esc(args.title)}</h1>
 <p class="report-stamp">${esc(stamp)}</p>
-${reportFragmentHtml(args.markdown, args.locale)}
-${disclaimerHtml(args.locale)}
+${reportFragmentHtml(args.markdown, lang)}
+${disclaimerHtml(lang)}
 </main>
 </body>
 </html>`;

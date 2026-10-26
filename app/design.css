@@ -3800,7 +3800,10 @@ label,
   display: flex;
   flex-direction: column;
   width: min(680px, 48vw);
+  height: 100dvh;
+  max-height: 100dvh;
   min-width: 0;
+  overflow: hidden;
   background: #fff;
   color: #111827;
   border-inline-start: 1px solid #e5e7eb;
@@ -3993,6 +3996,8 @@ label,
 
 .report-viewer-disclaimer {
   flex: 0 0 auto;
+  position: relative;
+  z-index: 4;
   margin: 0;
   padding: 10px 16px 14px;
   background: #fff;
@@ -4023,10 +4028,24 @@ label,
   color: #4b5563;
 }
 
+@media (min-width: 801px) {
+  .report-viewer {
+    top: var(--header-h, 64px);
+    height: calc(100dvh - var(--header-h, 64px));
+    max-height: calc(100dvh - var(--header-h, 64px));
+  }
+
+  .report-viewer-disclaimer {
+    display: block;
+  }
+}
+
 @media (max-width: 800px) {
   .report-viewer {
     inset: 0;
     width: auto;
+    height: 100dvh;
+    max-height: 100dvh;
     border: 0;
   }
 
