@@ -78,10 +78,10 @@ test("html export renders the urea note instead of a markdown dump", () => {
   assert.ok(list && list.type === "list" && list.items[0].children.length > 0);
   const html = buildShareHtml({ title, markdown: urea, locale: "en", now: new Date("2026-10-16T23:34:00Z") });
   assert.match(html, /<title>Technical Grade Urea Production<\/title>/);
-  assert.match(html, /<h3>/);
-  assert.match(html, /<h4>/);
+  assert.match(html, /<h3[\s>]/);
+  assert.match(html, /<h4[\s>]/);
   assert.match(html, /<strong>/);
-  assert.match(html, /<ul>/);
+  assert.match(html, /<ul[\s>]/);
   assert.match(html, /<svg/);
   assert.match(html, /engineerit\.ai/);
   assert.match(html, /KSA/);

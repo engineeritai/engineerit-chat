@@ -1,6 +1,7 @@
 import { parseMessage, plainInline, tokenizeInline, type ListItem } from "@/lib/messageDocument";
 import { outputDisclaimer } from "@/lib/outputDisclaimer";
 import type { UiLocale } from "@/lib/replyLanguage";
+import { markRtlPlain, shareLanguage } from "@/lib/shareDirection";
 
 function cleanMarks(value: string): string {
   return value.replace(/[*_~`#]/g, "").replace(/\s+/g, " ").trim();
@@ -85,8 +86,8 @@ export function toWhatsApp(markdown: string, link?: string, locale?: UiLocale): 
   let text = parts.filter(Boolean).join("\n\n").replace(/```/g, "").replace(/^#{1,6}\s+/gm, "").trim();
   const href = (link || "").trim();
   if (href && !text.includes(href)) text = text ? `${text}\n\n${href}` : href;
-  const lang: UiLocale = locale === "ar" || locale === "en" ? locale : /[\u0600-\u06FF]/.test(markdown) ? "ar" : "en";
+  const lang: UiLocale = shareLanguage(markdown, locale === "ar" ? "ar" : "en");
   const note = outputDisclaimer(lang);
   if (!text.includes(note)) text = text ? `${text}\n\n${note}` : note;
-  return text;
+  return markRtlPlain(text);
 }

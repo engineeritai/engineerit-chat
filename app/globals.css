@@ -1427,6 +1427,12 @@ a.auth-follow {
   border-spacing: 0;
 }
 
+.msg-content bdi,
+.share-page bdi,
+.chat-table bdi {
+  unicode-bidi: isolate;
+}
+
 .msg-content ol {
   list-style: decimal;
   margin: 8px 0 12px;
@@ -3821,6 +3827,16 @@ button.advisor-card-link {
   background: #f5f7fb;
   display: flex;
   flex-direction: column;
+  text-align: start;
+}
+
+.share-page[dir="rtl"] .share-header {
+  direction: ltr;
+}
+
+.share-page[dir="rtl"] .share-header h1 {
+  margin-inline-start: auto;
+  text-align: right;
 }
 
 .share-header,
@@ -3844,6 +3860,23 @@ button.advisor-card-link {
 .share-body {
   flex: 1;
   overflow: auto;
+  text-align: start;
+}
+
+.share-page .msg-content,
+.share-page .output-disclaimer,
+.share-page li,
+.share-page h1,
+.share-page h2,
+.share-page h3 {
+  text-align: start;
+}
+
+.share-page ul,
+.share-page ol {
+  padding-left: 0;
+  padding-right: 0;
+  padding-inline-start: 1.4em;
 }
 
 .share-footer {
@@ -3878,4 +3911,19 @@ button.advisor-card-link {
 .share-expired a {
   color: #1a56ff;
   font-weight: 600;
+}
+
+@media print {
+  .share-page {
+    background: #fff;
+  }
+
+  .share-header,
+  .share-footer {
+    background: #fff;
+  }
+
+  .share-body {
+    overflow: visible;
+  }
 }

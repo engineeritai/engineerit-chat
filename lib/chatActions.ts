@@ -1,6 +1,7 @@
 import { downloadName } from "@/lib/exportName";
 import { deliverBlob } from "@/lib/saveFile";
 import { buildShareHtml } from "@/lib/shareDocument";
+import { markRtlPlain } from "@/lib/shareDirection";
 import { clipSharedText, toWhatsApp } from "@/lib/whatsappText";
 
 export function isArabicText(text: string) {
@@ -25,7 +26,7 @@ export async function copyAsHtml(aiText: string, title = "Report") {
     if (navigator.clipboard && window.ClipboardItem) {
       const item = new ClipboardItem({
         "text/html": new Blob([html], { type: "text/html" }),
-        "text/plain": new Blob([aiText], { type: "text/plain" }),
+        "text/plain": new Blob([markRtlPlain(aiText)], { type: "text/plain" }),
       });
       await navigator.clipboard.write([item]);
       return true;
@@ -34,7 +35,7 @@ export async function copyAsHtml(aiText: string, title = "Report") {
     /* fall through to plain text */
   }
   try {
-    await navigator.clipboard.writeText(aiText);
+    await navigator.clipboard.writeText(markRtlPlain(aiText));
     return true;
   } catch {
     return false;

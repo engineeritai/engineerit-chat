@@ -20,6 +20,12 @@ import { buildShareHtml } from "../lib/shareDocument";
 import { parseDrawingText } from "../lib/takeoff/parseText";
 import { calculateTakeoff } from "../lib/takeoff/calculate";
 import { renderTakeoff } from "../lib/takeoff/render";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import ShareView from "../app/share/view";
+import { buildHtmlDocument } from "../lib/chatActions";
+import { RLM } from "../lib/shareDirection";
+import type { ShareRecord } from "../lib/shareStore";
 import { clipSharedText, toWhatsApp } from "../lib/whatsappText";
 
 const MARKDOWN = "# Note\n\n| Item | Qty |\n| --- | --- |\n| Slab | 10 |\n";
@@ -352,6 +358,66 @@ test("arabic exports are right to left", async () => {
   assert.match(book, /rightToLeft="1"/);
   const html = buildShareHtml({ title: "حصر", markdown, locale: "ar" });
   assert.match(html, /<html lang="ar" dir="rtl">/);
-  assert.match(html, /<article dir="rtl">/);
+  assert.match(html, /<body dir="rtl" lang="ar">/);
+  assert.match(html, /<article dir="rtl"/);
   assert.match(html, /text-align: start/);
+});
+
+const ARABIC_SHARE = [
+  "## جدول الكميات",
+  "",
+  "قرئت الأبعاد من نص ملف PDF، ثم حسبت الكميات في الكود لا في النموذج.",
+  "",
+  "- حفر بكمية 60.016 م³",
+  "- خرسانة القواعد F1",
+  "",
+  "| البند | الوحدة | الكمية |",
+  "| --- | --- | --- |",
+  "| حفر | م³ | 60.016 |",
+].join("\n");
+
+test("an Arabic answer shared from an English interface stays right to left", () => {
+  const html = buildShareHtml({ title: "حصر كميات", markdown: ARABIC_SHARE, locale: "en" });
+  assert.match(html, /<html lang="ar" dir="rtl">/);
+  assert.match(html, /<body dir="rtl" lang="ar">/);
+  assert.match(html, /<article dir="rtl" lang="ar">/);
+  assert.match(html, /<p dir="auto">/);
+  assert.match(html, /<bdi dir="ltr">PDF<\/bdi>/);
+  assert.match(html, /<bdi dir="ltr">60\.016<\/bdi>/);
+  assert.match(html, /unicode-bidi: isolate/);
+  assert.match(html, /<ul dir="rtl">/);
+  assert.match(html, /<table dir="rtl">/);
+  assert.match(html, /property="og:locale" content="ar_SA"/);
+  assert.match(html, /@media print/);
+  assert.match(html, /قد يحتوي على أخطاء/);
+
+  const printed = buildHtmlDocument(ARABIC_SHARE, "حصر كميات", "en");
+  assert.match(printed, /<body dir="rtl" lang="ar">/);
+
+  const share: ShareRecord = {
+    id: "sharearabic1",
+    title: "حصر كميات",
+    markdown: ARABIC_SHARE,
+    locale: "en",
+    description: "حصر كميات",
+    createdAt: "2026-10-26T12:00:00.000Z",
+  };
+  const page = renderToStaticMarkup(createElement(ShareView, { share }));
+  const root = page.match(/<div class="share-page"[^>]*>/)?.[0] ?? "";
+  assert.match(root, /dir="rtl"/);
+  assert.match(root, /lang="ar"/);
+  assert.match(page, /class="msg-content"[^>]*dir="rtl"/);
+  assert.match(page, /<p dir="auto">/);
+  assert.match(page, /<ul dir="rtl">/);
+  assert.match(page, /class="chat-table"[^>]*dir="rtl"/);
+  assert.match(page, /<bdi dir="ltr">PDF<\/bdi>/);
+  assert.match(page, /<bdi dir="ltr">60\.016<\/bdi>/);
+
+  const shared = toWhatsApp(ARABIC_SHARE, "https://engineerit.ai/share/sharearabic1", "en");
+  assert.equal(shared.startsWith(RLM), true);
+  assert.match(shared, new RegExp(`${RLM}قرئت`));
+  assert.match(shared, /قد يحتوي على أخطاء/);
+  const english = toWhatsApp("# Note\n\nHello\n\n- One", "https://engineerit.ai/share/note", "en");
+  assert.equal(english.includes(RLM), false);
+  assert.match(english, /may contain errors/);
 });

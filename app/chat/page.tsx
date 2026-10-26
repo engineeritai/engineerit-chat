@@ -13,6 +13,7 @@ import { collectDiagramPngs, copyRichElement } from "../components/copyRich";
 import { publishAndShare, publishShare, shareToWhatsApp } from "@/lib/chatActions";
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
 import { showToast } from "@/lib/toast";
+import { markRtlPlain } from "@/lib/shareDirection";
 import { clipSharedText, toWhatsApp } from "@/lib/whatsappText";
 import { downloadName } from "@/lib/exportName";
 import { exportMeta } from "@/lib/messageDocument";
@@ -101,7 +102,7 @@ async function copyAsHtml(aiText: string, title = "Report", locale: "en" | "ar" 
     if (navigator.clipboard && window.ClipboardItem) {
       const item = new ClipboardItem({
         "text/html": new Blob([html], { type: "text/html" }),
-        "text/plain": new Blob([aiText], { type: "text/plain" }),
+        "text/plain": new Blob([markRtlPlain(aiText)], { type: "text/plain" }),
       });
       // @ts-ignore
       await navigator.clipboard.write([item]);
@@ -109,7 +110,7 @@ async function copyAsHtml(aiText: string, title = "Report", locale: "en" | "ar" 
     }
   } catch {}
   try {
-    await navigator.clipboard.writeText(aiText);
+    await navigator.clipboard.writeText(markRtlPlain(aiText));
     return true;
   } catch {}
   return false;

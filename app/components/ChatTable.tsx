@@ -6,9 +6,25 @@ import { copyTable } from "@/app/components/copyRich";
 import { downloadName, shortTopic } from "@/lib/exportName";
 import { riyadhStamp } from "@/lib/ksaTime";
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
+import { isolatePieces } from "@/lib/shareDirection";
 import { showToast } from "@/lib/toast";
 
 type Labels = { copyTable: string; exportExcel: string };
+
+function CellText({ value, rtl }: { value: string; rtl: boolean }) {
+  if (!rtl && !/[\u0600-\u06FF]/.test(value)) return value;
+  const pieces = isolatePieces(value);
+  if (pieces.length === 1 && !pieces[0].isolate) return value;
+  return pieces.map((piece, index) =>
+    piece.isolate ? (
+      <bdi key={index} dir="ltr">
+        {piece.text}
+      </bdi>
+    ) : (
+      <span key={index}>{piece.text}</span>
+    )
+  );
+}
 
 export default function ChatTable({
   headers,
@@ -107,7 +123,9 @@ export default function ChatTable({
             <tr>
               {headers.map((header, index) => (
                 <th key={`${header}-${index}`}>
-                  <span className="chat-table-text">{header}</span>
+                  <span className="chat-table-text">
+                    <CellText value={header} rtl={dir === "rtl"} />
+                  </span>
                 </th>
               ))}
             </tr>
@@ -130,7 +148,9 @@ export default function ChatTable({
             <tr>
               {headers.map((header, index) => (
                 <th key={`${header}-${index}`}>
-                  <span className="chat-table-text">{header}</span>
+                  <span className="chat-table-text">
+                    <CellText value={header} rtl={dir === "rtl"} />
+                  </span>
                 </th>
               ))}
             </tr>
@@ -140,7 +160,9 @@ export default function ChatTable({
               <tr key={rowIndex}>
                 {headers.map((_, cellIndex) => (
                   <td key={cellIndex}>
-                    <span className="chat-table-text">{row[cellIndex] ?? ""}</span>
+                    <span className="chat-table-text">
+                      <CellText value={row[cellIndex] ?? ""} rtl={dir === "rtl"} />
+                    </span>
                   </td>
                 ))}
               </tr>
