@@ -1,0 +1,470 @@
+{
+  "generatedAt": "2026-10-26T11:31:50.805Z",
+  "report": [
+    {
+      "file": "S101.pdf",
+      "source": "pdf-text",
+      "runs": 3,
+      "maxErrorPct": 0,
+      "stable": true,
+      "rows": [
+        {
+          "code": "excavation_m3",
+          "expected": 60.016,
+          "actual": 60.016,
+          "errorPct": 0
+        },
+        {
+          "code": "blinding_m3",
+          "expected": 1.376,
+          "actual": 1.376,
+          "errorPct": 0
+        },
+        {
+          "code": "footing_concrete_m3",
+          "expected": 12.288,
+          "actual": 12.288,
+          "errorPct": 0
+        },
+        {
+          "code": "column_concrete_m3",
+          "expected": 2.88,
+          "actual": 2.88,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_concrete_m3",
+          "expected": 9.6,
+          "actual": 9.6,
+          "errorPct": 0
+        },
+        {
+          "code": "footing_side_formwork_m2",
+          "expected": 24.96,
+          "actual": 24.96,
+          "errorPct": 0
+        },
+        {
+          "code": "column_formwork_m2",
+          "expected": 28.8,
+          "actual": 28.8,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_soffit_formwork_m2",
+          "expected": 48,
+          "actual": 48,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_edge_formwork_m2",
+          "expected": 5.6,
+          "actual": 5.6,
+          "errorPct": 0
+        },
+        {
+          "code": "footing_T16_kg",
+          "expected": 329.802,
+          "actual": 329.802,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_T12_kg",
+          "expected": 567.698,
+          "actual": 567.698,
+          "errorPct": 0
+        },
+        {
+          "code": "total_concrete_C30_m3",
+          "expected": 24.768,
+          "actual": 24.768,
+          "errorPct": 0
+        },
+        {
+          "code": "total_rebar_kg",
+          "expected": 897.5,
+          "actual": 897.5,
+          "errorPct": 0
+        }
+      ]
+    },
+    {
+      "file": "S101.png",
+      "source": "ocr",
+      "runs": 3,
+      "maxErrorPct": 0,
+      "stable": true,
+      "rows": [
+        {
+          "code": "excavation_m3",
+          "expected": 60.016,
+          "actual": 60.016,
+          "errorPct": 0
+        },
+        {
+          "code": "blinding_m3",
+          "expected": 1.376,
+          "actual": 1.376,
+          "errorPct": 0
+        },
+        {
+          "code": "footing_concrete_m3",
+          "expected": 12.288,
+          "actual": 12.288,
+          "errorPct": 0
+        },
+        {
+          "code": "column_concrete_m3",
+          "expected": 2.88,
+          "actual": 2.88,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_concrete_m3",
+          "expected": 9.6,
+          "actual": 9.6,
+          "errorPct": 0
+        },
+        {
+          "code": "footing_side_formwork_m2",
+          "expected": 24.96,
+          "actual": 24.96,
+          "errorPct": 0
+        },
+        {
+          "code": "column_formwork_m2",
+          "expected": 28.8,
+          "actual": 28.8,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_soffit_formwork_m2",
+          "expected": 48,
+          "actual": 48,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_edge_formwork_m2",
+          "expected": 5.6,
+          "actual": 5.6,
+          "errorPct": 0
+        },
+        {
+          "code": "footing_T16_kg",
+          "expected": 329.802,
+          "actual": 329.802,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_T12_kg",
+          "expected": 567.698,
+          "actual": 567.698,
+          "errorPct": 0
+        },
+        {
+          "code": "total_concrete_C30_m3",
+          "expected": 24.768,
+          "actual": 24.768,
+          "errorPct": 0
+        },
+        {
+          "code": "total_rebar_kg",
+          "expected": 897.5,
+          "actual": 897.5,
+          "errorPct": 0
+        }
+      ]
+    },
+    {
+      "file": "S102.pdf",
+      "source": "pdf-text",
+      "runs": 3,
+      "maxErrorPct": 0,
+      "stable": true,
+      "rows": [
+        {
+          "code": "excavation_m3",
+          "expected": 47.52,
+          "actual": 47.52,
+          "errorPct": 0
+        },
+        {
+          "code": "blinding_m3",
+          "expected": 1.44,
+          "actual": 1.44,
+          "errorPct": 0
+        },
+        {
+          "code": "strip_concrete_m3",
+          "expected": 8.64,
+          "actual": 8.64,
+          "errorPct": 0
+        },
+        {
+          "code": "strip_side_formwork_m2",
+          "expected": 28.8,
+          "actual": 28.8,
+          "errorPct": 0
+        },
+        {
+          "code": "longitudinal_T12_kg",
+          "expected": 95.904,
+          "actual": 95.904,
+          "errorPct": 0
+        },
+        {
+          "code": "transverse_T10_kg",
+          "expected": 55.53,
+          "actual": 55.53,
+          "errorPct": 0
+        },
+        {
+          "code": "total_concrete_C25_m3",
+          "expected": 8.64,
+          "actual": 8.64,
+          "errorPct": 0
+        },
+        {
+          "code": "total_rebar_kg",
+          "expected": 151.434,
+          "actual": 151.434,
+          "errorPct": 0
+        }
+      ]
+    },
+    {
+      "file": "S102.png",
+      "source": "ocr",
+      "runs": 3,
+      "maxErrorPct": 0,
+      "stable": true,
+      "rows": [
+        {
+          "code": "excavation_m3",
+          "expected": 47.52,
+          "actual": 47.52,
+          "errorPct": 0
+        },
+        {
+          "code": "blinding_m3",
+          "expected": 1.44,
+          "actual": 1.44,
+          "errorPct": 0
+        },
+        {
+          "code": "strip_concrete_m3",
+          "expected": 8.64,
+          "actual": 8.64,
+          "errorPct": 0
+        },
+        {
+          "code": "strip_side_formwork_m2",
+          "expected": 28.8,
+          "actual": 28.8,
+          "errorPct": 0
+        },
+        {
+          "code": "longitudinal_T12_kg",
+          "expected": 95.904,
+          "actual": 95.904,
+          "errorPct": 0
+        },
+        {
+          "code": "transverse_T10_kg",
+          "expected": 55.53,
+          "actual": 55.53,
+          "errorPct": 0
+        },
+        {
+          "code": "total_concrete_C25_m3",
+          "expected": 8.64,
+          "actual": 8.64,
+          "errorPct": 0
+        },
+        {
+          "code": "total_rebar_kg",
+          "expected": 151.434,
+          "actual": 151.434,
+          "errorPct": 0
+        }
+      ]
+    },
+    {
+      "file": "A101.pdf",
+      "source": "pdf-text",
+      "runs": 3,
+      "maxErrorPct": 0,
+      "stable": true,
+      "rows": [
+        {
+          "code": "wall_net_m2",
+          "expected": 53.07,
+          "actual": 53.07,
+          "errorPct": 0
+        },
+        {
+          "code": "blockwork_m3",
+          "expected": 10.614,
+          "actual": 10.614,
+          "errorPct": 0
+        },
+        {
+          "code": "plaster_m2",
+          "expected": 106.14,
+          "actual": 106.14,
+          "errorPct": 0
+        },
+        {
+          "code": "floor_tiles_m2",
+          "expected": 20,
+          "actual": 20,
+          "errorPct": 0
+        },
+        {
+          "code": "screed_m3",
+          "expected": 1,
+          "actual": 1,
+          "errorPct": 0
+        },
+        {
+          "code": "skirting_m",
+          "expected": 17.1,
+          "actual": 17.1,
+          "errorPct": 0
+        }
+      ]
+    },
+    {
+      "file": "A101.png",
+      "source": "ocr",
+      "runs": 3,
+      "maxErrorPct": 0,
+      "stable": true,
+      "rows": [
+        {
+          "code": "wall_net_m2",
+          "expected": 53.07,
+          "actual": 53.07,
+          "errorPct": 0
+        },
+        {
+          "code": "blockwork_m3",
+          "expected": 10.614,
+          "actual": 10.614,
+          "errorPct": 0
+        },
+        {
+          "code": "plaster_m2",
+          "expected": 106.14,
+          "actual": 106.14,
+          "errorPct": 0
+        },
+        {
+          "code": "floor_tiles_m2",
+          "expected": 20,
+          "actual": 20,
+          "errorPct": 0
+        },
+        {
+          "code": "screed_m3",
+          "expected": 1,
+          "actual": 1,
+          "errorPct": 0
+        },
+        {
+          "code": "skirting_m",
+          "expected": 17.1,
+          "actual": 17.1,
+          "errorPct": 0
+        }
+      ]
+    },
+    {
+      "file": "S101-source.pdf",
+      "source": "pdf-text",
+      "runs": 3,
+      "maxErrorPct": 0,
+      "stable": true,
+      "rows": [
+        {
+          "code": "excavation_m3",
+          "expected": 60.016,
+          "actual": 60.016,
+          "errorPct": 0
+        },
+        {
+          "code": "blinding_m3",
+          "expected": 1.376,
+          "actual": 1.376,
+          "errorPct": 0
+        },
+        {
+          "code": "footing_concrete_m3",
+          "expected": 12.288,
+          "actual": 12.288,
+          "errorPct": 0
+        },
+        {
+          "code": "column_concrete_m3",
+          "expected": 2.88,
+          "actual": 2.88,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_concrete_m3",
+          "expected": 9.6,
+          "actual": 9.6,
+          "errorPct": 0
+        },
+        {
+          "code": "footing_side_formwork_m2",
+          "expected": 24.96,
+          "actual": 24.96,
+          "errorPct": 0
+        },
+        {
+          "code": "column_formwork_m2",
+          "expected": 28.8,
+          "actual": 28.8,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_soffit_formwork_m2",
+          "expected": 48,
+          "actual": 48,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_edge_formwork_m2",
+          "expected": 5.6,
+          "actual": 5.6,
+          "errorPct": 0
+        },
+        {
+          "code": "footing_T16_kg",
+          "expected": 329.802,
+          "actual": 329.802,
+          "errorPct": 0
+        },
+        {
+          "code": "slab_T12_kg",
+          "expected": 567.698,
+          "actual": 567.698,
+          "errorPct": 0
+        },
+        {
+          "code": "total_concrete_C30_m3",
+          "expected": 24.768,
+          "actual": 24.768,
+          "errorPct": 0
+        },
+        {
+          "code": "total_rebar_kg",
+          "expected": 897.5,
+          "actual": 897.5,
+          "errorPct": 0
+        }
+      ]
+    }
+  ]
+}

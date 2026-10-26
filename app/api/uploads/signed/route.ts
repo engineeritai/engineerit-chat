@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gateAdvisor } from "@/lib/advisorGate";
+import { assertFileAnalysisAccess } from "@/lib/fileAnalysisAccess";
 import { IncomingFileError, createIncomingUpload } from "@/lib/incomingStorage";
 import {
   MAX_UPLOAD_BYTES,
   directUploadFailedMessage,
   fileTooLargeMessage,
+  messageLocale,
 } from "@/lib/uploadLimits";
 
 export const runtime = "nodejs";
@@ -48,6 +50,11 @@ export async function POST(req: NextRequest) {
       playbookId: body?.playbookId,
     });
     if (advisorGate.active && !advisorGate.ok) return advisorGate.response;
+    const access = await assertFileAnalysisAccess(
+      req,
+      messageLocale(body?.locale ?? req.cookies.get("engineerit_locale")?.value)
+    );
+    if (!access.ok) return access.response;
 
     const signed = await createIncomingUpload(filename);
     return NextResponse.json(signed);

@@ -18,6 +18,7 @@ import {
 } from "@/lib/diagramReply";
 import { appendSources, sourcesFromResponse, type SearchResponse } from "@/lib/citations";
 import { replyLanguageRule, uiLocale } from "@/lib/replyLanguage";
+import { subjectFromSession } from "@/lib/sessionSubject";
 
 export const runtime = "nodejs";
 
@@ -115,11 +116,12 @@ async function enforceDailyLimit(args: {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { discipline, messages, attachments, planId, userId, advisorId, locale: rawLocale, playbookId } = body as {
+  const { discipline, messages, attachments, planId, advisorId, locale: rawLocale, playbookId } = body as {
     discipline: string;
     messages: { role: "user" | "assistant"; content: string }[];
     attachments?: { type: "image" | "file"; url: string }[];
     planId?: string;
+    /** Ignored. The plan follows the session, not a user id in the body. */
     userId?: string | null;
     advisorId?: string;
     locale?: string;
@@ -128,7 +130,7 @@ export async function POST(req: NextRequest) {
 
   const locale = uiLocale(rawLocale);
   const authed = await getUserFromRequest(req).catch(() => null);
-  const subjectId = authed?.id || (userId && userId !== "guest" ? userId : null);
+  const subjectId = subjectFromSession(authed?.id);
   let enforcedPlan = subjectId ? "assistant" : "guest";
   if (subjectId) {
     try {
@@ -146,7 +148,7 @@ export async function POST(req: NextRequest) {
   const ip = getIp(req);
   const limit = await enforceDailyLimit({
     ip,
-    userId: userId ?? null,
+    userId: subjectId,
     planId: enforcedPlan,
   });
 

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@resvg/resvg-js", "exceljs"],
+  serverExternalPackages: ["@resvg/resvg-js", "exceljs", "tesseract.js", "unpdf"],
   devIndicators: false,
   skipTrailingSlashRedirect: true,
   outputFileTracingIncludes: {

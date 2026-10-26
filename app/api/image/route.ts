@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
 import { gateAdvisor } from "@/lib/advisorGate";
+import { assertFileAnalysisAccess } from "@/lib/fileAnalysisAccess";
 import {
   IncomingFileError,
   filenameFromStoragePath,
@@ -8,7 +9,13 @@ import {
   removeIncomingFile,
 } from "@/lib/incomingStorage";
 import { MAX_UPLOAD_BYTES, fileTooLargeMessage, messageLocale } from "@/lib/uploadLimits";
-import { replyLanguageRule, type UiLocale } from "@/lib/replyLanguage";
+import { replyLanguage, replyLanguageRule, type UiLocale } from "@/lib/replyLanguage";
+import { isTakeoffRequest } from "@/lib/takeoff/detect";
+import { completeTakeoffExtraction } from "@/lib/takeoff/openaiExtract";
+import { prepareTakeoff } from "@/lib/takeoff/pipeline";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -39,8 +46,18 @@ async function analyzeImageBuffer(
   mime: string,
   question: string,
   advisorSystem: string | undefined,
-  locale: UiLocale
+  locale: UiLocale,
+  filename = "drawing.png"
 ): Promise<string> {
+  if (isTakeoffRequest(question)) {
+    const result = await prepareTakeoff({
+      filename,
+      buffer,
+      locale: replyLanguage(locale, question),
+      complete: completeTakeoffExtraction,
+    });
+    return result.reply;
+  }
   const completion = await client.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -113,6 +130,11 @@ async function handleStoredImage(req: NextRequest) {
     await removeIncomingFile(storagePath);
     return opened.response;
   }
+  const access = await assertFileAnalysisAccess(req, locale);
+  if (!access.ok) {
+    await removeIncomingFile(storagePath);
+    return access.response;
+  }
 
   let buffer: Buffer;
   try {
@@ -131,7 +153,14 @@ async function handleStoredImage(req: NextRequest) {
       filename,
       typeof body?.contentType === "string" ? body.contentType : undefined
     );
-    const reply = await analyzeImageBuffer(buffer, mime, question, opened.advisorSystem, locale);
+    const reply = await analyzeImageBuffer(
+      buffer,
+      mime,
+      question,
+      opened.advisorSystem,
+      locale,
+      filename
+    );
     return Response.json({ reply });
   } finally {
     await removeIncomingFile(storagePath);
@@ -152,6 +181,8 @@ async function handleFormImage(req: NextRequest) {
 
   const opened = await openAdvisor(req, advisorField, localeField, playbookField);
   if ("response" in opened) return opened.response;
+  const access = await assertFileAnalysisAccess(req, locale);
+  if (!access.ok) return access.response;
 
   if (!(file instanceof File)) {
     return new Response(locale === "ar" ? "لم ترفع صورة" : "No image uploaded", { status: 400 });
@@ -166,7 +197,8 @@ async function handleFormImage(req: NextRequest) {
     imageMime(file.name, file.type),
     question,
     opened.advisorSystem,
-    locale
+    locale,
+    file.name || "drawing.png"
   );
   return Response.json({ reply });
 }
