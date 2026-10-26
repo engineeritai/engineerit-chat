@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { workingsMatchQuantities } from "../lib/takeoff/calculate";
+import { calculateTakeoff, workingsMatchQuantities } from "../lib/takeoff/calculate";
+import { extractPdfText } from "../lib/takeoff/pdfText";
+import { parseDrawingText } from "../lib/takeoff/parseText";
 import { prepareTakeoff } from "../lib/takeoff/pipeline";
 
 const truth = JSON.parse(readFileSync("eval/takeoff/drawings/truth.json", "utf8")) as Record<
@@ -86,5 +88,19 @@ test("the original S-101 PDF from the trial matches the hand quantities", async 
   const { qty } = await measure("S101-source.pdf");
   for (const code of MAIN.S101) {
     assert.equal(qty[code], truth.S101[code], code);
+  }
+});
+
+test("PDF.js reads the drawing text layer on Node 20 without poppler", async () => {
+  for (const drawing of ["S101", "S102", "A101"] as const) {
+    const text = await extractPdfText(readFileSync(`eval/takeoff/drawings/${drawing}.pdf`), "unpdf");
+    const parsed = parseDrawingText(text);
+    assert.equal(parsed.confidence, "high", `${drawing} confidence`);
+    const lines = calculateTakeoff(parsed.reading);
+    assert.equal(workingsMatchQuantities(lines), true, drawing);
+    const qty = Object.fromEntries(lines.map((line) => [line.code, line.quantity]));
+    for (const code of MAIN[drawing]) {
+      assert.equal(qty[code], truth[drawing][code], `${drawing} ${code}`);
+    }
   }
 });
