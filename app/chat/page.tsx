@@ -2,6 +2,7 @@
 
 import React, {
   useEffect,
+  useMemo,
   useRef,
   useState,
   KeyboardEvent,
@@ -11,6 +12,8 @@ import Link from "next/link";
 import MessageMarkdown from "../components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "../components/copyRich";
 import { publishAndShare, publishShare, shareToWhatsApp } from "@/lib/chatActions";
+import ReportViewer from "../components/ReportViewer";
+import { isReportContent, reportLocale, viewerDownloads } from "@/lib/reportViewer";
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
 import { showToast } from "@/lib/toast";
 import { markRtlPlain } from "@/lib/shareDirection";
@@ -41,7 +44,7 @@ import { canShareChatWithTeam } from "@/lib/historyRetention";
 import { useChatHistory, type ChatMessage } from "@/lib/useChatHistory";
 import type { HistoryCode } from "@/lib/chatHistoryClient";
 import { ENGINEER_TOOLS, type EngineerToolId } from "@/lib/engineerTools";
-import { ADVISOR_IDS, hasAdvisorAccess, unlockPlanForAdvisor, type AdvisorId } from "@/lib/advisors";
+import { ADVISOR_IDS, exportCapabilities, hasAdvisorAccess, unlockPlanForAdvisor, type AdvisorId } from "@/lib/advisors";
 import { trackProduct } from "@/lib/attribution";
 import { featureTier, HEADER_PLAN_ABBREV, isPlanId, PLAN_THEME, type PlanId, type SelfServePlanId } from "@/lib/plans";
 import { hasToolAccess, toolRequiredPlan } from "@/lib/toolAccess";
@@ -166,7 +169,10 @@ function printHtml(aiText: string, title = "Report", locale: "en" | "ar" = "en")
  * ✅ REAL PDF export for Professional/Consultant
  * Downloads a true PDF file from /api/export/pdf (works on Windows + iOS + Android).
  */
-async function exportPdf(aiText: string, extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[] }) {
+async function exportPdf(
+  aiText: string,
+  extra?: { title?: string; subtitle?: string; locale?: string; diagrams?: { index: number; pngBase64: string }[]; download?: boolean }
+) {
   const res = await fetch("/api/export/pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -182,7 +188,23 @@ async function exportPdf(aiText: string, extra?: { title?: string; subtitle?: st
 
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
-  await deliverBlob(blob, downloadName(extra?.title || "Report", "pdf"));
+  if (extra?.download !== false) await deliverBlob(blob, downloadName(extra?.title || "Report", "pdf"));
+  return blob;
+}
+
+async function exportXlsx(aiText: string, extra?: { title?: string; locale?: string }) {
+  const res = await fetch("/api/export/xlsx", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: extra?.title || "Report",
+      content: aiText,
+      locale: extra?.locale,
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const blob = await res.blob();
+  await deliverBlob(blob, downloadName(extra?.title || "Report", "xlsx"));
 }
 
 
@@ -260,6 +282,28 @@ function historyNoticeText(
   }
 }
 
+const BOQ_FIXTURE_EN = `# Footing take-off
+
+## Bill of quantities
+
+| Item | Description | Unit | Quantity | Working |
+| --- | --- | --- | --- | --- |
+| F1 | Footing 1800×1800×500 | m3 | 1.620 | 1.8 × 1.8 × 0.5 = 1.620 |
+| C1 | Column 400×400 | m3 | 0.480 | 0.4 × 0.4 × 3.0 = 0.480 |
+| S1 | Slab | m2 | 60.016 | plan area |
+`;
+
+const BOQ_FIXTURE_AR = `# حصر القواعد
+
+## جدول الكميات
+
+| البند | الوصف | الوحدة | الكمية | طريقة الحساب |
+| --- | --- | --- | --- | --- |
+| F1 | قاعدة 1800×1800×500 | م3 | 1.620 | 1.8 × 1.8 × 0.5 = 1.620 |
+| C1 | عمود 400×400 | م3 | 0.480 | 0.4 × 0.4 × 3.0 = 0.480 |
+| S1 | بلاطة | م2 | 60.016 | مساحة المخطط |
+`;
+
 export default function Page() {
   const [discipline, setDiscipline] = useState("General");
   const [input, setInput] = useState("");
@@ -308,6 +352,12 @@ export default function Page() {
   }, []);
 
   const [openShareFor, setOpenShareFor] = useState<string | null>(null);
+  const [reportViewer, setReportViewer] = useState<{
+    id: string;
+    title: string;
+    markdown: string;
+    locale: "en" | "ar";
+  } | null>(null);
 
   // Gate modal (Register / Upgrade)
   const [showGate, setShowGate] = useState(false);
@@ -321,6 +371,11 @@ export default function Page() {
 
   const attachmentsAllowed = isPaidPlan && !isGuest;
 
+  const exportCaps = exportCapabilities(planId, isGuest);
+  const reportStamp = useMemo(
+    () => new Date().toISOString(),
+    [reportViewer?.id, reportViewer?.markdown]
+  );
   const canExportPdf = tier === "professional" || tier === "consultant";
   const canExportWordPpt = tier === "consultant";
   const canShareBenefits = tier !== "assistant";
@@ -436,9 +491,33 @@ export default function Page() {
   const messages: Message[] = fixture ?? thread?.messages ?? [];
 
   useEffect(() => {
-    const kind = new URLSearchParams(window.location.search).get("fixture");
-    const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "actions-en", "actions-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar"]);
+    const params = new URLSearchParams(window.location.search);
+    const kind = params.get("fixture");
+    const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "actions-en", "actions-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar", "boq-en", "boq-ar"]);
     if (!kind || !kinds.has(kind)) return;
+    if (kind === "boq-en" || kind === "boq-ar") {
+      const ar = kind === "boq-ar";
+      const content = ar ? BOQ_FIXTURE_AR : BOQ_FIXTURE_EN;
+      setFixture([
+        {
+          id: "fixture-user",
+          role: "user",
+          content: ar ? "اعمل حصر الكميات" : "Prepare the quantity take-off",
+          attachments: [],
+          createdAt: isoOnDay(-1, 16, 32),
+        },
+        { id: "fixture-ai", role: "assistant", content, attachments: [], createdAt: isoOnDay(0, 16, 32) },
+      ]);
+      if (params.get("viewer") === "1") {
+        setReportViewer({
+          id: "fixture-ai",
+          title: ar ? "حصر القواعد" : "Footing take-off",
+          markdown: content,
+          locale: ar ? "ar" : "en",
+        });
+      }
+      return;
+    }
     const scurveEn = `Based on the provided weekly progress data, here's how the S-Curve would look:\n\n## Weekly Progress Data\n\n| Week | Cumulative Progress (%) |\n| --- | --- |\n| Wk1 | 10% |\n| Wk2 | 25% |\n| Wk3 | 67% |\n| Wk4 | 89% |\n| Wk5 | 100% |\n\n## S-Curve Chart\n\nThe curve starts slowly, accelerates in week 3, and reaches 100% in week 5.`;
     const scurveAr = `بناء على نسب التقدم الأسبوعية، هذا منحنى التقدم:\n\n## بيانات التقدم\n\n| الأسبوع | التقدم التراكمي |\n| --- | --- |\n| أسبوع 1 | 10٪ |\n| أسبوع 2 | 25٪ |\n| أسبوع 3 | 67٪ |\n| أسبوع 4 | 89٪ |\n| أسبوع 5 | 100٪ |\n\n## منحنى التقدم\n\nيبدأ المنحنى ببطء، يتسارع في الأسبوع 3، ويصل إلى 100٪ في الأسبوع 5.`;
     if (kind === "gate-en" || kind === "gate-ar") {
@@ -788,6 +867,16 @@ export default function Page() {
         content,
       };
       history.appendLocal(assistantMessage);
+      if (isReportContent(content)) {
+        const lang = reportLocale(content, locale);
+        const meta = exportMeta(content, thread?.title, lang, userText);
+        setReportViewer({
+          id: assistantMessage.id,
+          title: meta.title,
+          markdown: content,
+          locale: lang,
+        });
+      }
       await savedUser;
       await history.persistMessages([assistantMessage]);
     };
@@ -921,7 +1010,7 @@ export default function Page() {
 
   return (
     <MarketingShell>
-    <div className="app-shell chat-page">
+    <div className={"app-shell chat-page" + (reportViewer ? " report-viewer-open" : "")}>
       <Sidebar
         onRefresh={() => history.refresh()}
         discipline={discipline}
@@ -1159,15 +1248,13 @@ export default function Page() {
                                   <button
                                     type="button"
                                     className="msg-action-btn"
-                                    onClick={async () => {
-                                      try {
-                                        const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
-                                        const diagrams = root ? await collectDiagramPngs(root) : [];
-                                        await exportPdf(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
-                                      } catch (e) {
-                                        console.error(e);
-                                        if (!saveWasToasted(e)) showToast(s.chat.pdfFailed, "err");
-                                      }
+                                    onClick={() => {
+                                      setReportViewer({
+                                        id: m.id,
+                                        title: meta.source || topic,
+                                        markdown: m.content,
+                                        locale: reportLocale(m.content, locale),
+                                      });
                                     }}
                                     title={s.chat.exportPdf}
                                   >
@@ -1181,15 +1268,13 @@ export default function Page() {
                                     <button
                                       type="button"
                                       className="msg-action-btn"
-                                      onClick={async () => {
-                                        try {
-                                          const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
-                                          const diagrams = root ? await collectDiagramPngs(root) : [];
-                                          await exportWordDocx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
-                                        } catch (e) {
-                                          console.error(e);
-                                          if (!saveWasToasted(e)) showToast(s.chat.wordFailed, "err");
-                                        }
+                                      onClick={() => {
+                                        setReportViewer({
+                                          id: m.id,
+                                          title: meta.source || topic,
+                                          markdown: m.content,
+                                          locale: reportLocale(m.content, locale),
+                                        });
                                       }}
                                       title={s.chat.exportWord}
                                     >
@@ -1199,15 +1284,13 @@ export default function Page() {
                                     <button
                                       type="button"
                                       className="msg-action-btn"
-                                      onClick={async () => {
-                                        try {
-                                          const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
-                                          const diagrams = root ? await collectDiagramPngs(root) : [];
-                                          await exportPptx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
-                                        } catch (e) {
-                                          console.error(e);
-                                          if (!saveWasToasted(e)) showToast(s.chat.pptFailed, "err");
-                                        }
+                                      onClick={() => {
+                                        setReportViewer({
+                                          id: m.id,
+                                          title: meta.source || topic,
+                                          markdown: m.content,
+                                          locale: reportLocale(m.content, locale),
+                                        });
                                       }}
                                       title={s.chat.exportPpt}
                                     >
@@ -1646,6 +1729,76 @@ export default function Page() {
           </div>
         )}
       </div>
+      {reportViewer ? (
+        <ReportViewer
+          title={reportViewer.title}
+          markdown={reportViewer.markdown}
+          locale={reportViewer.locale}
+          createdAt={reportStamp}
+          labels={{
+            close: s.chat.close,
+            share: s.chat.share,
+            download: s.chat.viewerDownload,
+            pdf: s.chat.viewerPdf,
+            word: s.chat.viewerWord,
+            powerPoint: s.chat.viewerPowerPoint,
+            excel: s.chat.viewerExcel,
+            copied: s.chat.viewerCopied,
+            copyLink: s.chat.viewerCopyLink,
+            linkedIn: s.chat.viewerLinkedIn,
+            email: s.chat.viewerEmail,
+            whatsapp: s.chat.whatsapp,
+            report: s.chat.viewerReport,
+            pdfPreview: s.chat.viewerPdfPreview,
+            preparing: s.chat.viewerPreparing,
+            shareFailed: s.chat.shareFailed,
+            pdfFailed: s.chat.pdfFailed,
+          }}
+          downloads={viewerDownloads(exportCaps)}
+          canShare={exportCaps.copyShare}
+          onClose={() => setReportViewer(null)}
+          onPublish={() =>
+            publishShare({
+              title: reportViewer.title,
+              markdown: reportViewer.markdown,
+              locale: reportViewer.locale,
+            })
+          }
+          onPreviewPdf={async () => {
+            const root = document.querySelector<HTMLElement>(`[data-message-id="${reportViewer.id}"]`);
+            const diagrams = root ? await collectDiagramPngs(root) : [];
+            return exportPdf(reportViewer.markdown, {
+              title: reportViewer.title,
+              locale: reportViewer.locale,
+              diagrams,
+              download: false,
+            });
+          }}
+          onDownload={async (format) => {
+            const root = document.querySelector<HTMLElement>(`[data-message-id="${reportViewer.id}"]`);
+            const diagrams = root ? await collectDiagramPngs(root) : [];
+            const extra = { title: reportViewer.title, locale: reportViewer.locale, diagrams };
+            try {
+              if (format === "pdf") await exportPdf(reportViewer.markdown, extra);
+              else if (format === "docx") await exportWordDocx(reportViewer.markdown, extra);
+              else if (format === "pptx") await exportPptx(reportViewer.markdown, extra);
+              else await exportXlsx(reportViewer.markdown, extra);
+            } catch (error) {
+              console.error(error);
+              if (saveWasToasted(error)) return;
+              const message =
+                format === "pdf"
+                  ? s.chat.pdfFailed
+                  : format === "docx"
+                    ? s.chat.wordFailed
+                    : format === "pptx"
+                      ? s.chat.pptFailed
+                      : s.chat.excelFailed;
+              showToast(message, "err");
+            }
+          }}
+        />
+      ) : null}
     </div>
     </MarketingShell>
   );
