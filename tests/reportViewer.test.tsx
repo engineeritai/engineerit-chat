@@ -1,17 +1,24 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ReportViewer from "../app/components/ReportViewer";
 import { exportCapabilities } from "../lib/advisors";
 import {
+  DISCLAIMER_GRAY,
   RLM,
+  disclaimerBody,
   intentLinks,
+  isMeasureColumn,
   isReportContent,
+  messageShareUrl,
   nextTrapIndex,
   prefersMobileShare,
+  reportDocumentHtml,
+  reportFragmentHtml,
   reportLocale,
-  sharePayload,
+  shareText,
   viewerDownloads,
   type ReportViewerLabels,
 } from "../lib/reportViewer";
@@ -90,23 +97,61 @@ test("download menu follows the plan", () => {
 });
 
 test("Arabic share text carries an RLM prefix and intent links", () => {
-  const url = "https://engineerit.ai/share/abc";
-  const arabic = sharePayload("حصر القواعد", url, "ar");
-  assert.equal(arabic.text.startsWith(RLM), true);
-  assert.equal(arabic.title.startsWith(RLM), true);
-  assert.equal(arabic.text.includes("حصر القواعد"), true);
-  const english = sharePayload("Footing take-off", url, "en");
-  assert.equal(english.text.startsWith(RLM), false);
-  assert.equal(english.text, "Footing take-off");
+  const url = "https://engineerit.ai/share/abc12345";
+  const arabic = shareText("حصر القواعد", "ar", url);
+  assert.equal(arabic.startsWith(RLM), true);
+  assert.equal(arabic.includes("حصر القواعد"), true);
+  assert.equal(arabic.includes(url), true);
+  const english = shareText("Footing take-off", "en");
+  assert.equal(english.startsWith(RLM), false);
+  assert.equal(english, "Footing take-off");
+  assert.equal(messageShareUrl(`See ${url} for the sheet.`), url);
+  assert.equal(messageShareUrl(EN_BOQ), null);
 
-  const links = intentLinks("حصر القواعد", url, "ar");
+  const links = intentLinks("حصر القواعد", "ar", url);
   assert.match(links.whatsapp, /^https:\/\/wa\.me\/\?text=/);
-  assert.match(links.linkedin, /^https:\/\/www\.linkedin\.com\/sharing\/share-offsite\/\?url=/);
+  assert.match(links.linkedin || "", /^https:\/\/www\.linkedin\.com\/sharing\/share-offsite\/\?url=/);
   assert.match(links.email, /^mailto:\?subject=/);
   assert.match(decodeURIComponent(links.whatsapp), new RegExp(`^https:\\/\\/wa\\.me\\/\\?text=${RLM}`));
+  assert.equal(intentLinks("Footing take-off", "en").linkedin, null);
   assert.equal(prefersMobileShare({ width: 390, canShare: true }), true);
   assert.equal(prefersMobileShare({ width: 1280, canShare: true }), false);
   assert.equal(prefersMobileShare({ width: 390, canShare: false }), false);
+});
+
+test("the report HTML is right to left, centres unit and quantity, and carries the gray disclaimer", () => {
+  const arabic = reportDocumentHtml({ title: "حصر القواعد", markdown: AR_BOQ, locale: "ar", now: new Date("2026-10-26T12:00:00Z") });
+  assert.match(arabic, /dir="rtl"/);
+  assert.match(arabic, /class="measure" style="text-align:center"[^>]*>[\s\S]*الوحدة/);
+  assert.match(arabic, /class="measure" style="text-align:center"[^>]*>[\s\S]*الكمية/);
+  assert.doesNotMatch(reportFragmentHtml(AR_BOQ, "ar"), /class="measure"[^>]*>[\s\S]*الوصف/);
+  assert.match(arabic, new RegExp(disclaimerBody("ar").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(arabic, new RegExp(`color:${DISCLAIMER_GRAY}`, "i"));
+  assert.match(arabic, /https:\/\/engineerit\.ai\/legal\/terms\?lang=ar/);
+
+  const english = reportDocumentHtml({ title: "Footing take-off", markdown: EN_BOQ, locale: "en", now: new Date("2026-10-26T12:00:00Z") });
+  assert.match(english, /dir="ltr"/);
+  assert.match(english, /th\.measure, td\.measure \{ text-align: center; \}/);
+  assert.match(english, /class="measure" style="text-align:center"[^>]*>Unit/);
+  assert.match(english, /class="measure" style="text-align:center"[^>]*>Quantity/);
+  assert.match(english, new RegExp(disclaimerBody("en").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.equal(isMeasureColumn("Working"), false);
+  assert.equal(isMeasureColumn("طريقة الحساب"), false);
+});
+
+test("the viewer adds no Supabase client usage", () => {
+  const banned = /supabase|@supabase\/|\/api\/share|publishShare|createShare|shared_pages|createClient\(/i;
+  const code = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  for (const file of ["lib/reportViewer.ts", "app/components/ReportViewer.tsx"]) {
+    assert.doesNotMatch(code(readFileSync(file, "utf8")), banned);
+  }
+  const page = readFileSync("app/chat/page.tsx", "utf8");
+  const start = page.indexOf("<ReportViewer");
+  const end = page.indexOf("/>", start);
+  assert.ok(start > 0 && end > start);
+  const usage = page.slice(start, end);
+  assert.doesNotMatch(usage, banned);
+  assert.doesNotMatch(usage, /onPublish/);
 });
 
 test("focus wraps inside the dialog", () => {
@@ -131,7 +176,6 @@ test("opening the viewer renders the share page and does not export", () => {
       labels={{ ...labels, close: "إغلاق", share: "مشاركة", download: "تنزيل" }}
       downloads={["pdf", "docx", "pptx", "xlsx"]}
       canShare
-      createdAt="2026-10-26T12:00:00.000Z"
       defaultMenu="download"
       onClose={() => undefined}
       onDownload={touch}
@@ -139,7 +183,6 @@ test("opening the viewer renders the share page and does not export", () => {
         calls += 1;
         return Promise.reject(new Error("preview"));
       }}
-      onPublish={touch}
     />
   );
   assert.equal(calls, 0);
@@ -154,8 +197,10 @@ test("opening the viewer renders the share page and does not export", () => {
   assert.match(html, />Word</);
   assert.match(html, />PowerPoint</);
   assert.match(html, />Excel</);
-  assert.match(html, /share-page/);
+  assert.match(html, /report-viewer-disclaimer/);
+  assert.match(html, /مولد بالذكاء الاصطناعي/);
   assert.match(html, /جدول الكميات/);
+  assert.match(html, /text-align:center/);
   assert.doesNotMatch(html, /<iframe/);
   assert.doesNotMatch(html, /\/api\/export/);
 
@@ -167,11 +212,9 @@ test("opening the viewer renders the share page and does not export", () => {
       labels={labels}
       downloads={["pdf"]}
       canShare
-      createdAt="2026-10-26T12:00:00.000Z"
       onClose={() => undefined}
       onDownload={touch}
       onPreviewPdf={() => Promise.reject(new Error("preview"))}
-      onPublish={touch}
     />
   );
   assert.match(english, /dir="ltr"/);

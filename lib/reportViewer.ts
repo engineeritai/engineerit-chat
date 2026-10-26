@@ -1,9 +1,13 @@
+import { flowSvg } from "@/lib/flowSvg";
+import { riyadhStamp } from "@/lib/ksaTime";
+import { parseMessage, tokenizeInline, type ListItem } from "@/lib/messageDocument";
+import { renderChartSvg } from "@/lib/scheduleSvg";
+
 /**
  * In-chat report viewer helpers.
- * The panel renders through ShareView. Disclaimer text, content RTL, and
- * centred Unit / Quantity cells stay in that renderer so this branch does
- * not fork them.
- * Opening the HTML panel does not call an export route.
+ * The panel renders the message as HTML in the browser. It does not create a
+ * share page and it does not call Supabase. Opening the panel does not call
+ * an export route. Downloads stay on the existing export endpoints.
  */
 
 export const RLM = "\u200F";
@@ -73,19 +77,49 @@ export function viewerDownloads(caps: { pdf: boolean; wordPpt: boolean }): Viewe
   return items;
 }
 
-export function sharePayload(title: string, url: string, locale: "en" | "ar") {
-  const cleanTitle = title.trim() || (locale === "ar" ? "تقرير" : "Report");
-  const text = locale === "ar" ? `${RLM}${cleanTitle}` : cleanTitle;
-  return { title: text, text, url };
+/** Same wording as the export footer. Kept here so this branch does not import that module. */
+export const DISCLAIMER_GRAY = "#9CA3AF";
+export const POLICY_LABEL = "engineerit.ai/legal/terms";
+export const POLICY_URL = {
+  en: "https://engineerit.ai/legal/terms",
+  ar: "https://engineerit.ai/legal/terms?lang=ar",
+} as const;
+
+export function disclaimerBody(locale: "en" | "ar"): string {
+  if (locale === "ar") return "مولد بالذكاء الاصطناعي وقد يحتوي على أخطاء. يرجى التحقق قبل الاستخدام. راجع";
+  return "AI-generated, may contain errors. Please verify before use. See";
 }
 
-export function intentLinks(title: string, url: string, locale: "en" | "ar") {
-  const payload = sharePayload(title, url, locale);
-  const message = `${payload.text}\n${url}`;
+const UNIT = /^(unit|الوحدة)$/i;
+const QTY = /^(quantity|qty|الكمية)$/i;
+
+/** Unit and quantity headers, in English or Arabic. Other columns stay as they are. */
+export function isMeasureColumn(header: string): boolean {
+  const name = header.replace(/[*_`]/g, "").replace(/\s+/g, " ").trim();
+  return UNIT.test(name) || QTY.test(name);
+}
+
+/** A share URL already present in the message. This does not create one. */
+export function messageShareUrl(markdown: string): string | null {
+  const match = /https?:\/\/[^\s<>"')]+\/share\/[A-Za-z0-9_-]{8,32}\b/.exec(markdown || "");
+  return match ? match[0] : null;
+}
+
+export function shareText(title: string, locale: "en" | "ar", existingUrl?: string | null): string {
+  const cleanTitle = title.trim() || (locale === "ar" ? "تقرير" : "Report");
+  const line = locale === "ar" ? `${RLM}${cleanTitle}` : cleanTitle;
+  const url = (existingUrl || "").trim();
+  return url ? `${line}\n${url}` : line;
+}
+
+export function intentLinks(title: string, locale: "en" | "ar", existingUrl?: string | null) {
+  const text = shareText(title, locale, existingUrl);
+  const subject = shareText(title, locale);
+  const url = (existingUrl || "").trim();
   return {
-    whatsapp: `https://wa.me/?text=${encodeURIComponent(message)}`,
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
-    email: `mailto:?subject=${encodeURIComponent(payload.title)}&body=${encodeURIComponent(message)}`,
+    whatsapp: `https://wa.me/?text=${encodeURIComponent(text)}`,
+    linkedin: url ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}` : null,
+    email: `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`,
   };
 }
 
@@ -100,4 +134,114 @@ export function nextTrapIndex(index: number, count: number, shift: boolean): num
   const current = Number.isFinite(index) ? index : 0;
   if (shift) return current <= 0 ? count - 1 : current - 1;
   return current >= count - 1 ? 0 : current + 1;
+}
+
+function esc(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function inlineHtml(value: string): string {
+  return tokenizeInline(value)
+    .map((token) => {
+      if (token.type === "link") return `<a href="${esc(token.href)}">${esc(token.text)}</a>`;
+      const text = esc(token.text);
+      return token.bold ? `<strong>${text}</strong>` : text;
+    })
+    .join("");
+}
+
+function cellHtml(value: string, rtlDoc: boolean): string {
+  const html = inlineHtml(value);
+  if (rtlDoc && value && !/[\u0600-\u06FF]/.test(value)) return `<bdi dir="ltr">${html}</bdi>`;
+  return html;
+}
+
+function listHtml(ordered: boolean, items: ListItem[]): string {
+  const tag = ordered ? "ol" : "ul";
+  const body = items
+    .map((item, index) => {
+      const nested = item.children.length ? listHtml(item.orderedChildren, item.children) : "";
+      return `<li${ordered ? ` value="${index + 1}"` : ""}>${inlineHtml(item.text)}${nested}</li>`;
+    })
+    .join("");
+  return `<${tag}>${body}</${tag}>`;
+}
+
+function taggedCell(tag: "th" | "td", header: string, value: string, rtlDoc: boolean): string {
+  const measure = isMeasureColumn(header);
+  const attrs = measure ? ' class="measure" style="text-align:center"' : "";
+  return `<${tag}${attrs}>${cellHtml(value, rtlDoc)}</${tag}>`;
+}
+
+export function disclaimerHtml(locale: "en" | "ar"): string {
+  const dir = locale === "ar" ? "rtl" : "ltr";
+  return `<footer class="report-disclaimer" dir="${dir}" style="color:${DISCLAIMER_GRAY}"><p>${esc(disclaimerBody(locale))} <a href="${POLICY_URL[locale]}" style="color:${DISCLAIMER_GRAY}"><bdi dir="ltr">${POLICY_LABEL}</bdi></a></p></footer>`;
+}
+
+/** Report body rendered in the panel. No network and no share-page record. */
+export function reportFragmentHtml(markdown: string, locale: "en" | "ar"): string {
+  const dir = locale === "ar" ? "rtl" : "ltr";
+  const rtlDoc = dir === "rtl";
+  const blocks = parseMessage(markdown || "")
+    .map((block) => {
+      if (block.type === "heading") return `<h${block.level}>${inlineHtml(block.text)}</h${block.level}>`;
+      if (block.type === "paragraph") return `<p>${inlineHtml(block.text)}</p>`;
+      if (block.type === "list") return listHtml(block.ordered, block.items);
+      if (block.type === "table") {
+        const head = block.headers.map((cell) => taggedCell("th", cell, cell, rtlDoc)).join("");
+        const body = block.rows
+          .map((row) => `<tr>${block.headers.map((header, index) => taggedCell("td", header, row[index] ?? "", rtlDoc)).join("")}</tr>`)
+          .join("");
+        return `<div class="report-table" dir="${dir}"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+      }
+      if (block.type === "chart") {
+        return `<figure class="report-chart"><figcaption>${esc(block.model.title)}</figcaption>${renderChartSvg(block.model, dir, "light")}</figure>`;
+      }
+      if (block.type === "diagram") {
+        const svg = flowSvg(block.source, dir);
+        return svg ? `<figure class="report-chart">${svg}</figure>` : `<pre>${esc(block.source)}</pre>`;
+      }
+      return `<pre>${esc(block.text)}</pre>`;
+    })
+    .join("\n");
+  return blocks;
+}
+
+const REPORT_STYLE = `
+  body { margin: 0; color: #111827; background: #f5f7fb; font-family: "Noto Naskh Arabic", "IBM Plex Sans Arabic", "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 22px 16px 32px; }
+  h1, h2, h3 { line-height: 1.35; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  th, td { padding: 8px 10px; border: 1px solid #e5e7eb; text-align: start; vertical-align: top; }
+  th { background: #e7eeff; }
+  th.measure, td.measure { text-align: center; }
+  .report-disclaimer, .report-disclaimer a { color: ${DISCLAIMER_GRAY}; font-size: 12px; }
+  .report-table { overflow-x: auto; }
+`;
+
+/** Standalone HTML file for the share sheet. Built in the browser from the message. */
+export function reportDocumentHtml(args: { title: string; markdown: string; locale: "en" | "ar"; now?: Date }): string {
+  const dir = args.locale === "ar" ? "rtl" : "ltr";
+  const stamp = riyadhStamp(args.now ?? new Date(), args.locale);
+  return `<!doctype html>
+<html lang="${args.locale}" dir="${dir}">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>${esc(args.title)}</title>
+<style>${REPORT_STYLE}</style>
+</head>
+<body>
+<main dir="${dir}">
+<h1>${esc(args.title)}</h1>
+<p class="report-stamp">${esc(stamp)}</p>
+${reportFragmentHtml(args.markdown, args.locale)}
+${disclaimerHtml(args.locale)}
+</main>
+</body>
+</html>`;
 }

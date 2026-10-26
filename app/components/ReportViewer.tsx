@@ -1,16 +1,22 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import ShareView from "@/app/share/view";
+import { downloadName } from "@/lib/exportName";
 import {
+  DISCLAIMER_GRAY,
+  POLICY_LABEL,
+  POLICY_URL,
+  disclaimerBody,
   intentLinks,
+  messageShareUrl,
   nextTrapIndex,
   prefersMobileShare,
-  sharePayload,
+  reportDocumentHtml,
+  reportFragmentHtml,
+  shareText,
   type ReportViewerLabels,
   type ViewerDownload,
 } from "@/lib/reportViewer";
-import type { ShareRecord } from "@/lib/shareStore";
 import { showToast } from "@/lib/toast";
 
 const FOCUSABLE =
@@ -50,12 +56,10 @@ export default function ReportViewer({
   labels,
   downloads,
   canShare,
-  createdAt,
   defaultMenu,
   onClose,
   onDownload,
   onPreviewPdf,
-  onPublish,
 }: {
   title: string;
   markdown: string;
@@ -63,12 +67,10 @@ export default function ReportViewer({
   labels: ReportViewerLabels;
   downloads: ViewerDownload[];
   canShare: boolean;
-  createdAt: string;
   defaultMenu?: "download";
   onClose: () => void;
   onDownload: (format: ViewerDownload) => Promise<void> | void;
   onPreviewPdf: () => Promise<Blob>;
-  onPublish: () => Promise<string | null>;
 }) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -79,19 +81,12 @@ export default function ReportViewer({
   const [preparing, setPreparing] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(defaultMenu === "download");
   const [shareOpen, setShareOpen] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const canPreviewPdf = downloads.includes("pdf");
   const dir = locale === "ar" ? "rtl" : "ltr";
-
-  const share: ShareRecord = {
-    id: "preview",
-    title,
-    markdown,
-    locale,
-    description: title,
-    createdAt,
-  };
+  const knownUrl = messageShareUrl(markdown);
+  const links = intentLinks(title, locale, knownUrl);
+  const fragment = reportFragmentHtml(markdown, locale);
 
   useEffect(() => {
     restoreRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -133,35 +128,31 @@ export default function ReportViewer({
     return () => document.removeEventListener("keydown", onKey);
   }, [downloadOpen, onClose, shareOpen]);
 
-  async function publishOrReuse() {
-    if (shareUrl) return shareUrl;
-    const url = await onPublish();
-    if (url) setShareUrl(url);
-    return url;
-  }
-
   async function shareReport() {
     setDownloadOpen(false);
-    const url = await publishOrReuse();
-    if (!url) {
-      showToast(labels.shareFailed, "err");
-      return;
-    }
-    const payload = sharePayload(title, url, locale);
+    const text = shareText(title, locale, knownUrl);
+    const html = reportDocumentHtml({ title, markdown, locale });
+    const file = new File([html], downloadName(title, "html"), { type: "text/html" });
     const mobile = prefersMobileShare({
       width: window.innerWidth,
       canShare: typeof navigator.share === "function",
     });
     if (mobile) {
       try {
-        await navigator.share({ title: payload.title, text: payload.text, url: payload.url });
+        const withFiles = typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
+        if (withFiles) {
+          await navigator.share({ title: shareText(title, locale), text, files: [file] });
+          setShareOpen(false);
+          return;
+        }
+        await navigator.share({ title: shareText(title, locale), text, ...(knownUrl ? { url: knownUrl } : {}) });
         setShareOpen(false);
         return;
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
       }
     }
-    if (await copyText(url)) showToast(labels.copied);
+    if (await copyText(text)) showToast(labels.copied);
     setShareOpen(true);
   }
 
@@ -195,7 +186,6 @@ export default function ReportViewer({
     }
   }
 
-  const links = shareUrl ? intentLinks(title, shareUrl, locale) : null;
   const formatLabel: Record<ViewerDownload, string> = {
     pdf: labels.pdf,
     docx: labels.word,
@@ -242,14 +232,13 @@ export default function ReportViewer({
               <span>{labels.download}</span>
             </button>
           ) : null}
-          {shareOpen && links ? (
+          {shareOpen ? (
             <div className="report-viewer-menu" role="menu">
               <button
                 type="button"
                 role="menuitem"
                 onClick={() => {
-                  if (!shareUrl) return;
-                  void copyText(shareUrl).then((ok) => {
+                  void copyText(shareText(title, locale, knownUrl)).then((ok) => {
                     if (ok) showToast(labels.copied);
                   });
                 }}
@@ -259,9 +248,11 @@ export default function ReportViewer({
               <a role="menuitem" href={links.whatsapp} target="_blank" rel="noreferrer">
                 {labels.whatsapp}
               </a>
-              <a role="menuitem" href={links.linkedin} target="_blank" rel="noreferrer">
-                {labels.linkedIn}
-              </a>
+              {links.linkedin ? (
+                <a role="menuitem" href={links.linkedin} target="_blank" rel="noreferrer">
+                  {labels.linkedIn}
+                </a>
+              ) : null}
               <a role="menuitem" href={links.email}>
                 {labels.email}
               </a>
@@ -298,9 +289,19 @@ export default function ReportViewer({
             </p>
           )
         ) : (
-          <ShareView share={share} />
+          <article className="report-viewer-doc" dir={dir} lang={locale} dangerouslySetInnerHTML={{ __html: fragment }} />
         )}
       </div>
+      {tab === "html" ? (
+        <footer className="report-viewer-disclaimer" dir={dir} style={{ color: DISCLAIMER_GRAY }}>
+          <p>
+            {disclaimerBody(locale)}{" "}
+            <a href={POLICY_URL[locale]} style={{ color: DISCLAIMER_GRAY }}>
+              <bdi dir="ltr">{POLICY_LABEL}</bdi>
+            </a>
+          </p>
+        </footer>
+      ) : null}
     </div>
   );
 }

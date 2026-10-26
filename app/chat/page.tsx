@@ -2,7 +2,6 @@
 
 import React, {
   useEffect,
-  useMemo,
   useRef,
   useState,
   KeyboardEvent,
@@ -372,10 +371,6 @@ export default function Page() {
   const attachmentsAllowed = isPaidPlan && !isGuest;
 
   const exportCaps = exportCapabilities(planId, isGuest);
-  const reportStamp = useMemo(
-    () => new Date().toISOString(),
-    [reportViewer?.id, reportViewer?.markdown]
-  );
   const canExportPdf = tier === "professional" || tier === "consultant";
   const canExportWordPpt = tier === "consultant";
   const canShareBenefits = tier !== "assistant";
@@ -1734,7 +1729,6 @@ export default function Page() {
           title={reportViewer.title}
           markdown={reportViewer.markdown}
           locale={reportViewer.locale}
-          createdAt={reportStamp}
           labels={{
             close: s.chat.close,
             share: s.chat.share,
@@ -1757,13 +1751,6 @@ export default function Page() {
           downloads={viewerDownloads(exportCaps)}
           canShare={exportCaps.copyShare}
           onClose={() => setReportViewer(null)}
-          onPublish={() =>
-            publishShare({
-              title: reportViewer.title,
-              markdown: reportViewer.markdown,
-              locale: reportViewer.locale,
-            })
-          }
           onPreviewPdf={async () => {
             const root = document.querySelector<HTMLElement>(`[data-message-id="${reportViewer.id}"]`);
             const diagrams = root ? await collectDiagramPngs(root) : [];
