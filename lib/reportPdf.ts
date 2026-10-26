@@ -223,20 +223,28 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     }
   };
 
-  const drawTable = (headers: string[], rows: string[][]) => {
+  const tableLayout = (headers: string[], rows: string[][]) => {
     const sample = headers.map((header, index) => {
       const cells = [header, ...rows.map((row) => row[index] || "")];
       return Math.max(36, ...cells.map((cell) => Math.min(lineWidth(plainInline(cell), fonts, 8, false) + 14, 220)));
     });
     const natural = sample.reduce((sum, width) => sum + width, 0);
     const portraitUsable = PORTRAIT.w - MARGIN * 2;
-    const landscape = headers.length >= 7 || natural > portraitUsable + 8;
+    return { sample, natural, landscape: headers.length >= 7 || natural > portraitUsable + 8 };
+  };
+
+  const drawTable = (headers: string[], rows: string[][], heading?: { text: string; level: number }) => {
+    const { sample, natural, landscape } = tableLayout(headers, rows);
     const pageW = landscape ? LANDSCAPE.w : PORTRAIT.w;
     const usable = pageW - MARGIN * 2;
     const widths = sample.map((width) => (width / natural) * usable);
     const tableRtl = rtlDoc || headers.some((header) => containsArabic(header));
     if (landscape !== (current.page.getWidth() > current.page.getHeight())) newContentPage(landscape);
 
+    const headingSize = heading ? (heading.level === 1 ? 18 : heading.level === 2 ? 15 : heading.level === 3 ? 13 : 12) : 0;
+    const headingLines = heading ? wrap(heading.text, fonts, headingSize, current.page.getWidth() - MARGIN * 2, true) : [];
+    const headingStep = headingSize + 4;
+    const headingHeight = headingLines.length ? headingLines.length * headingStep + (heading!.level === 1 ? 8 : 4) : 0;
     const rowHeight = (cells: string[], header: boolean) => {
       const lines = cells.map((cell, index) => wrap(cell, fonts, header ? 9 : 8, widths[index] - 10, header));
       const count = Math.max(1, ...lines.map((item) => item.length));
@@ -268,10 +276,25 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
       y -= laid.height;
     };
 
+    const headerLaid = rowHeight(headers, true);
+    if (y - (headingHeight + headerLaid.height) < 96) newContentPage(landscape);
+    if (heading && headingLines.length) {
+      y -= heading.level === 1 ? 8 : 4;
+      const alignRtl = blockDir(heading.text, report.locale) === "rtl";
+      for (const line of headingLines) {
+        const width = lineWidth(line, fonts, headingSize, true);
+        const usableW = current.page.getWidth();
+        const x = alignRtl ? usableW - MARGIN - width : MARGIN;
+        drawLogicalLine(current.page, line, x, y, fonts, headingSize, true, INK);
+        y -= headingStep;
+      }
+    }
+
     const paintHeader = () => paint(headers, true, TINT);
     paintHeader();
     rows.forEach((row, index) => {
-      if (y - 24 < 56) {
+      const laid = rowHeight(row, false);
+      if (y - laid.height < 96) {
         newContentPage(landscape);
         paintHeader();
       }
@@ -296,11 +319,56 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     gap();
   };
 
-  for (const block of report.blocks) {
-    await paintBlock(block);
+  // A short lead-in followed by a wide table belongs on that table's landscape
+  // page. Otherwise the portrait page is left with a heading and a blank body.
+  const shortLeadOnLandscape = () => {
+    let chars = 0;
+    for (const block of report.blocks) {
+      if (block.type === "paragraph" && isOutputDisclaimer(plainInline(block.text), report.locale)) continue;
+      if (block.type === "heading" || block.type === "paragraph") {
+        chars += plainInline(block.text).length;
+        if (chars > 400) return false;
+        continue;
+      }
+      if (block.type === "table") return tableLayout(block.headers, block.rows).landscape;
+      return false;
+    }
+    return false;
+  };
+  if (shortLeadOnLandscape()) {
+    pdf.removePage(pdf.getPageCount() - 1);
+    sheets.pop();
+    current = addPage(true);
+    drawHeader(current.page, current.size);
+    y = current.size.h - 64;
   }
 
-  async function paintBlock(block: Block) {
+  const nextBlock = (start: number) => {
+    for (let index = start; index < report.blocks.length; index += 1) {
+      const block = report.blocks[index];
+      if (block.type === "paragraph" && isOutputDisclaimer(plainInline(block.text), report.locale)) continue;
+      return block;
+    }
+    return null;
+  };
+
+  for (let index = 0; index < report.blocks.length; index += 1) {
+    const block = report.blocks[index];
+    if (block.type === "heading" && nextBlock(index + 1)?.type === "table") continue;
+    const heading = block.type === "table" ? previousHeading(index) : undefined;
+    await paintBlock(block, heading);
+  }
+
+  function previousHeading(tableIndex: number) {
+    for (let index = tableIndex - 1; index >= 0; index -= 1) {
+      const block = report.blocks[index];
+      if (block.type === "paragraph" && isOutputDisclaimer(plainInline(block.text), report.locale)) continue;
+      return block.type === "heading" ? block : undefined;
+    }
+    return undefined;
+  }
+
+  async function paintBlock(block: Block, heading?: { text: string; level: number }) {
     if (block.type === "heading") {
       const size = block.level === 1 ? 18 : block.level === 2 ? 15 : block.level === 3 ? 13 : 12;
       const lines = wrap(block.text, fonts, size, current.page.getWidth() - MARGIN * 2, true);
@@ -330,7 +398,7 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
       return;
     }
     if (block.type === "table") {
-      drawTable(block.headers, block.rows);
+      drawTable(block.headers, block.rows, heading);
       return;
     }
     if (block.type === "chart") {

@@ -181,3 +181,115 @@ test("take-off tables, whatsapp shares, and diagram downloads include the same l
   assert.match(readFileSync("lib/reportPdf.ts", "utf8"), /DISCLAIMER_INK/);
   assert.doesNotMatch(readFileSync("lib/reportPdf.ts", "utf8"), /const MUTED = rgb\(0\.612/);
 });
+
+const S101 = `
+FOOTING SCHEDULE (isolated pad, C30)
+F1 1800 x 1800 x 500 thk (4 no.) BOTTOM T16 @ 200 B.W.
+F2 2200 x 2200 x 600 thk (2 no.) BOTTOM T16 @ 200 B.W.
+COLUMN C1 400 x 400, 6 no., height 3000 (top of footing to soffit of slab), rebar by others
+SLAB S1
+200 mm THK RC SLAB (C30)
+BOTTOM: T12 @ 150 B.W.
+TOP: NIL (single mesh)
+NOTES
+1. All dimensions in mm. Slab edge flush with grid lines (slab 8000 x 6000).
+2. Covers: slab 25 mm, footings 75 mm. Straight bars, no laps or hooks.
+3.50 mm C15 blinding under footings, projecting 100 mm each side.
+4. Underside of blinding at -1.55 m below NGL. Excavation with vertical sides,
+300 mm working space each side beyond footing.
+5. Steel unit mass: T12 = 0.888 kg/m, T16 = 1.578 kg/m.
+`;
+
+function tableBottoms(xml: string): number[] {
+  const bottoms: number[] = [];
+  for (const part of xml.split("<a:tbl>").slice(0, -1)) {
+    const frames = [...part.matchAll(/<a:off x="\d+" y="(\d+)"\/><a:ext cx="\d+" cy="(\d+)"\/>/g)];
+    const frame = frames[frames.length - 1];
+    if (!frame) continue;
+    bottoms.push((Number(frame[1]) + Number(frame[2])) / 914400);
+  }
+  return bottoms;
+}
+
+async function slideXml(bytes: Uint8Array): Promise<string[]> {
+  const zip = await JSZip.loadAsync(bytes);
+  const names = Object.keys(zip.files)
+    .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+    .sort((a, b) => Number(a.match(/slide(\d+)/)![1]) - Number(b.match(/slide(\d+)/)![1]));
+  const slides: string[] = [];
+  for (const name of names) slides.push(await zip.file(name)!.async("string"));
+  return slides;
+}
+
+test("a quantity heading stays with its table, and a continued table repeats the header", async () => {
+  const parsed = parseDrawingText(S101);
+  const lines = calculateTakeoff(parsed.reading);
+  for (const locale of ["en", "ar"] as const) {
+    const heading = locale === "ar" ? "جدول الكميات" : "Bill of quantities";
+    const column = locale === "ar" ? "البند" : "Item";
+    const lead = locale === "ar" ? "قرئت الأبعاد من نص ملف PDF" : "Dimensions were read from the PDF text";
+    const report = await prepareReport({
+      title: "S-101",
+      markdown: renderTakeoff(locale, parsed.reading, lines, "pdf-text"),
+      locale,
+      now: new Date("2026-10-26T12:00:00Z"),
+    });
+    const pdf = await buildReportPdf(report);
+    const doc = await PDFDocument.load(pdf);
+    let headingPage = 0;
+    for (let page = 1; page <= doc.getPageCount(); page += 1) {
+      const text = pdfText(pdf, page);
+      if (!text.includes(heading)) continue;
+      headingPage = page;
+      assert.match(text, new RegExp(column), `${locale} heading page ${page} is missing the table`);
+      assert.match(text, /60\.016/, `${locale} heading page ${page} is missing the quantity`);
+      assert.match(text, locale === "ar" ? /قرئت/ : new RegExp(lead), `${locale} heading page ${page} dropped the source line`);
+    }
+    assert.ok(headingPage > 1, `${locale} pdf did not draw ${heading}`);
+    const slides = await slideXml(await buildReportPptx(report));
+    const withHeading = slides.filter((slide) => slide.includes(heading));
+    assert.ok(withHeading.length >= 1, `${locale} pptx heading count`);
+    for (const slide of withHeading) {
+      assert.match(slide, /<a:tbl/);
+      assert.match(slide, new RegExp(column));
+      for (const bottom of tableBottoms(slide)) {
+        assert.ok(bottom <= 6.45, `${locale} table ends at ${bottom.toFixed(2)}in`);
+      }
+    }
+    assert.ok(withHeading.some((slide) => slide.includes("60.016")));
+    assert.ok(withHeading.some((slide) => slide.includes(lead)));
+    for (const slide of slides) {
+      if (slide.includes(lead)) assert.match(slide, /<a:tbl/, `${locale} intro slide has no table`);
+    }
+  }
+
+  const header = "| Item | Description | Unit | Quantity | Rate | Amount | Working |";
+  const rows = Array.from({ length: 36 }, (_, index) => {
+    const n = String(index + 1).padStart(2, "0");
+    return `| ${n} | Concrete element ${n} | m3 | ${(index + 1).toFixed(3)} | 120 | ${index + 1} | 12.500 x 8.250 x 0.450 = row-${n} |`;
+  });
+  const markdown = ["# Take off", "", "Short note before the schedule.", "", "## Bill of quantities", "", header, "| --- | --- | --- | --- | --- | --- | --- |", ...rows].join("\n");
+  const report = await prepareReport({ title: "Long BOQ", markdown, locale: "en", now: new Date("2026-10-26T12:00:00Z") });
+  const pdf = await buildReportPdf(report);
+  const doc = await PDFDocument.load(pdf);
+  const pages: string[] = [];
+  for (let page = 1; page <= doc.getPageCount(); page += 1) pages.push(pdfText(pdf, page));
+  const first = pages.findIndex((text) => text.includes("row-01"));
+  const last = pages.findIndex((text) => text.includes("row-36"));
+  assert.ok(first > 0 && last > first, `table pages ${first} -> ${last} of ${pages.length}`);
+  assert.match(pages[first], /Bill of quantities/);
+  assert.match(pages[first], /Item/);
+  assert.match(pages[last], /\bItem\b/);
+  assert.match(pages[last], /Quantity/);
+  assert.equal(pages[last].includes("Bill of quantities"), false);
+  const slides = await slideXml(await buildReportPptx(report));
+  const continued = slides.filter((slide) => slide.includes("row-36"));
+  assert.equal(continued.length, 1);
+  assert.match(continued[0], /<a:tbl/);
+  assert.match(continued[0], />Item</);
+  for (const slide of slides) {
+    for (const bottom of tableBottoms(slide)) {
+      assert.ok(bottom <= 6.45, `long table ends at ${bottom.toFixed(2)}in`);
+    }
+  }
+});
