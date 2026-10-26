@@ -5,7 +5,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { containsArabic, visualTokens } from "@/lib/arabicShape";
-import { OUTPUT_POLICY_URL, outputDisclaimerBody } from "@/lib/outputDisclaimer";
+import { OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_URL, outputDisclaimerBody } from "@/lib/outputDisclaimer";
 import type { UiLocale } from "@/lib/replyLanguage";
 
 export const runtime = "nodejs";
@@ -32,8 +32,16 @@ function wrapWords(text: string, max: number): string[] {
   return lines;
 }
 
+function disclaimerInk() {
+  return rgb(
+    parseInt(OUTPUT_DISCLAIMER_GRAY.slice(1, 3), 16) / 255,
+    parseInt(OUTPUT_DISCLAIMER_GRAY.slice(3, 5), 16) / 255,
+    parseInt(OUTPUT_DISCLAIMER_GRAY.slice(5, 7), 16) / 255
+  );
+}
+
 function drawNotice(page: PDFPage, font: PDFFont, lines: string[], pageW: number, margin: number) {
-  const color = rgb(0.39, 0.45, 0.55);
+  const color = disclaimerInk();
   lines.forEach((line, index) => {
     const y = margin + 28 - index * 11;
     if (!containsArabic(line)) {
@@ -145,7 +153,7 @@ export async function POST(req: Request) {
         y: margin + 28 - bodyLines.length * 11,
         size: 8,
         font: fontUI,
-        color: rgb(0.39, 0.45, 0.55),
+        color: disclaimerInk(),
       });
       page.drawText(`Page ${pageNo}`, {
         x: pageW - margin - 60,

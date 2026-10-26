@@ -361,8 +361,6 @@ export function renderTakeoff(locale: UiLocale, reading: Reading, items: BoqLine
     `| ${headers.map(() => "---").join(" | ")} |`,
     ...rows,
     "",
-    outputDisclaimer(locale),
-    "",
     ar ? "## الافتراضات" : "## Assumptions",
     "",
     ...assumptionLines,
@@ -371,5 +369,6 @@ export function renderTakeoff(locale: UiLocale, reading: Reading, items: BoqLine
     "",
     ...checkLines,
     "",
+    outputDisclaimer(locale),
   ].join("\n");
 }

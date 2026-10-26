@@ -1,7 +1,7 @@
 import { flowSvg } from "@/lib/flowSvg";
 import { riyadhStamp } from "@/lib/ksaTime";
 import { parseMessage, plainInline, tokenizeInline, type Block, type ListItem } from "@/lib/messageDocument";
-import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { renderChartSvg } from "@/lib/scheduleSvg";
 
 export function shareDescription(markdown: string): string {
@@ -42,26 +42,21 @@ function listHtml(ordered: boolean, items: ListItem[]): string {
   return `<${tag}>${body}</${tag}>`;
 }
 
-function disclaimerHtml(locale: "en" | "ar"): string {
-  const href = OUTPUT_POLICY_URL[locale];
-  return `<p class="output-disclaimer">${esc(outputDisclaimerBody(locale))} <a href="${esc(href)}">${esc(href)}</a></p>`;
-}
-
 function blocksHtml(blocks: Block[], dir: "ltr" | "rtl", locale: "en" | "ar"): string {
   return blocks
-    .map((block, index) => {
+    .map((block) => {
       if (block.type === "heading") return `<h${block.level}>${inlineHtml(block.text)}</h${block.level}>`;
-      if (block.type === "paragraph") return `<p>${inlineHtml(block.text)}</p>`;
+      if (block.type === "paragraph") {
+        if (isOutputDisclaimer(plainInline(block.text), locale)) return "";
+        return `<p>${inlineHtml(block.text)}</p>`;
+      }
       if (block.type === "list") return listHtml(block.ordered, block.items);
       if (block.type === "table") {
         const head = block.headers.map((cell) => `<th>${inlineHtml(cell)}</th>`).join("");
         const body = block.rows
           .map((row) => `<tr>${block.headers.map((_, cell) => `<td>${inlineHtml(row[cell] ?? "")}</td>`).join("")}</tr>`)
           .join("");
-        const next = blocks[index + 1];
-        const already = next?.type === "paragraph" && isOutputDisclaimer(plainInline(next.text), locale);
-        const note = already ? "" : disclaimerHtml(locale);
-        return `<div class="table-scroll" dir="${dir}"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>${note}`;
+        return `<div class="table-scroll" dir="${dir}"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
       }
       if (block.type === "chart") {
         const svg = renderChartSvg(block.model, dir, "light");
@@ -139,8 +134,8 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
   strong { font-weight: 700; }
   footer { border-top: 1px solid #e5e7eb; color: #64748b; font-size: 13px; display: block; }
   .footer-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .output-disclaimer { margin: 0 0 8px; font-size: 12px; line-height: 1.45; }
-  .output-disclaimer a { color: #1a56ff; }
+  .output-disclaimer { margin: 0 0 8px; font-size: 11px; line-height: 1.45; color: ${OUTPUT_DISCLAIMER_GRAY}; }
+  .output-disclaimer a { color: ${OUTPUT_DISCLAIMER_GRAY}; text-decoration: underline; }
   @media (max-width: 640px) { header h1 { font-size: 18px; } main { padding: 12px; } }
   @media print {
     body { background: #fff; }

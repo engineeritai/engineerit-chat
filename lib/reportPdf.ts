@@ -4,7 +4,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import { containsArabic, visualTokens } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
-import { outputDisclaimer } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 const PORTRAIT = { w: 595.28, h: 841.89 };
@@ -12,6 +12,11 @@ const LANDSCAPE = { w: 841.89, h: 595.28 };
 const MARGIN = 46;
 const INK = rgb(0.059, 0.09, 0.16);
 const MUTED = rgb(0.39, 0.45, 0.55);
+const DISCLAIMER_INK = rgb(
+  parseInt(OUTPUT_DISCLAIMER_GRAY.slice(1, 3), 16) / 255,
+  parseInt(OUTPUT_DISCLAIMER_GRAY.slice(3, 5), 16) / 255,
+  parseInt(OUTPUT_DISCLAIMER_GRAY.slice(5, 7), 16) / 255
+);
 const BRAND = rgb(0.102, 0.337, 1);
 const LINE = rgb(0.816, 0.843, 0.89);
 const TINT = rgb(0.906, 0.933, 1);
@@ -262,6 +267,7 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
       return;
     }
     if (block.type === "paragraph") {
+      if (isOutputDisclaimer(plainInline(block.text), report.locale)) return;
       const lines = wrap(block.text, fonts, 11, current.page.getWidth() - MARGIN * 2);
       drawLines(lines, 11, false, 0, blockDir(block.text, report.locale) === "rtl");
       gap();
@@ -323,7 +329,7 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     noteLines.forEach((line, lineIndex) => {
       const width = lineWidth(line, fonts, 8, false);
       const x = rtlDoc ? sheet.width - MARGIN - width : MARGIN;
-      drawLogicalLine(sheet.page, line, x, lineY - 12 - lineIndex * 10, fonts, 8, false, MUTED);
+      drawLogicalLine(sheet.page, line, x, lineY - 12 - lineIndex * 10, fonts, 8, false, DISCLAIMER_INK);
     });
     const logoX = rtlDoc ? sheet.width - MARGIN - icon : MARGIN;
     sheet.page.drawImage(logo, { x: logoX, y: 16, width: icon, height: icon });

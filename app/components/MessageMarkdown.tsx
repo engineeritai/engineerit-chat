@@ -51,14 +51,22 @@ export default function MessageMarkdown({
   locale,
   labels,
   fileBase,
+  endDisclaimer = true,
 }: {
   markdown: string;
   dir: "ltr" | "rtl";
   locale: "en" | "ar";
   labels: MessageLabels;
   fileBase?: string;
+  /** Chat take-off and BOQ replies end with one muted line. Share pages use the footer instead. */
+  endDisclaimer?: boolean;
 }) {
   const blocks = parseMessage(markdown);
+  const showEndNote =
+    endDisclaimer &&
+    blocks.some(
+      (block) => block.type === "table" || (block.type === "paragraph" && isOutputDisclaimer(block.text, locale))
+    );
   const diagramLabels = {
     copy: labels.diagramCopy,
     png: labels.diagramPng,
@@ -78,8 +86,7 @@ export default function MessageMarkdown({
           );
         }
         if (block.type === "paragraph") {
-          const previous = blocks[index - 1];
-          if (previous?.type === "table" && isOutputDisclaimer(block.text, locale)) return null;
+          if (isOutputDisclaimer(block.text, locale)) return null;
           const sources = /^\*\*(Sources|المصادر)\*\*$/.test(block.text.trim());
           return (
             <p key={index} className={sources ? "msg-sources" : undefined}>
@@ -92,15 +99,7 @@ export default function MessageMarkdown({
         }
         if (block.type === "table") {
           return (
-            <div key={index}>
-              <ChatTable headers={block.headers} rows={block.rows} dir={dir} locale={locale} labels={labels} fileBase={fileBase} />
-              <p className="output-disclaimer">
-                {outputDisclaimerBody(locale)}{" "}
-                <a href={OUTPUT_POLICY_URL[locale]} target="_blank" rel="noreferrer">
-                  {OUTPUT_POLICY_URL[locale]}
-                </a>
-              </p>
-            </div>
+            <ChatTable key={index} headers={block.headers} rows={block.rows} dir={dir} locale={locale} labels={labels} fileBase={fileBase} />
           );
         }
         if (block.type === "chart") {
@@ -115,6 +114,14 @@ export default function MessageMarkdown({
           </pre>
         );
       })}
+      {showEndNote ? (
+        <p className="output-disclaimer">
+          {outputDisclaimerBody(locale)}{" "}
+          <a href={OUTPUT_POLICY_URL[locale]} target="_blank" rel="noreferrer">
+            {OUTPUT_POLICY_URL[locale]}
+          </a>
+        </p>
+      ) : null}
     </>
   );
 }

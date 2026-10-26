@@ -13,6 +13,9 @@ export const OUTPUT_POLICY_URL: Record<UiLocale, string> = {
   ar: "https://engineerit.ai/legal/terms?lang=ar",
 };
 
+/** Footer and chat-end colour only. Brand, stamps, and subtitles stay darker. */
+export const OUTPUT_DISCLAIMER_GRAY = "#9CA3AF";
+
 export function outputDisclaimerBody(locale: UiLocale): string {
   if (locale === "ar") {
     return "مخرجات الذكاء الاصطناعي مسودات فقط وقد تكون خاطئة. أنت مسؤول عن التحقق منها. engineerit.ai غير مسؤول عن القرارات المبنية على مخرجاته.";

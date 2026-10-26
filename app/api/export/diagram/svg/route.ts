@@ -1,6 +1,6 @@
 // app/api/export/diagram/svg/route.ts
 import { NextResponse } from "next/server";
-import { outputDisclaimer } from "@/lib/outputDisclaimer";
+import { outputDisclaimer, OUTPUT_DISCLAIMER_GRAY } from "@/lib/outputDisclaimer";
 import type { UiLocale } from "@/lib/replyLanguage";
 
 export const runtime = "nodejs";
@@ -97,7 +97,7 @@ function textToSvg(text: string, title: string, locale: UiLocale = "en") {
       .card { fill: #ffffff; stroke: #e5e7eb; stroke-width: 1.5; }
       .title { font-family: system-ui, -apple-system, Segoe UI, sans-serif; font-size: 16px; font-weight: 700; fill: #111827; }
       .brand { font-family: system-ui, -apple-system, Segoe UI, sans-serif; font-size: 12px; fill: #2563eb; }
-      .disclaimer { font-family: system-ui, -apple-system, "Noto Naskh Arabic", "Segoe UI", sans-serif; font-size: 12px; fill: #64748b; }
+      .disclaimer { font-family: system-ui, -apple-system, "Noto Naskh Arabic", "Segoe UI", sans-serif; font-size: 11px; fill: ${OUTPUT_DISCLAIMER_GRAY}; }
       text { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: ${fontSize}px; fill: #111827; }
     </style>
   </defs>

@@ -22,7 +22,7 @@ export default function ShareView({ share }: { share: ShareRecord }) {
       <main className="conversation share-body">
         <article className="message-bubble">
           <div className="msg-content" dir={dir}>
-            <MessageMarkdown markdown={share.markdown} dir={dir} locale={share.locale} labels={labels[share.locale]} />
+            <MessageMarkdown markdown={share.markdown} dir={dir} locale={share.locale} labels={labels[share.locale]} endDisclaimer={false} />
           </div>
         </article>
       </main>

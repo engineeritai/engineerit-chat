@@ -1,7 +1,7 @@
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
-import { outputDisclaimer } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 // pptxgenjs ships a CommonJS build whose default import is unreliable under Next.
@@ -64,8 +64,8 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       h: 0.46,
       fontFace: rtl ? "Arial" : face,
       lang: rtl ? "ar-SA" : "en-US",
-      fontSize: 9,
-      color: "64748B",
+      fontSize: 8,
+      color: OUTPUT_DISCLAIMER_GRAY.slice(1),
       align: rtl ? "right" : "left",
       valign: "top",
       rtlMode: rtl,
@@ -235,6 +235,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       continue;
     }
     if (block.type === "paragraph") {
+      if (isOutputDisclaimer(plainInline(block.text), report.locale)) continue;
       body.push(plainInline(block.text));
       body.push("");
       continue;

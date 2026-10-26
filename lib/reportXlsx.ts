@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { plainInline } from "@/lib/messageDocument";
-import { outputDisclaimer } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY } from "@/lib/outputDisclaimer";
 import type { PreparedReport } from "@/lib/reportModel";
 
 function styleHeader(cell: ExcelJS.Cell, rtl: boolean) {
@@ -62,10 +62,10 @@ function addTableSheet(book: ExcelJS.Workbook, name: string, title: string, stam
   sheet.mergeCells(noteRow, 1, noteRow, span);
   const note = sheet.getCell(noteRow, 1);
   note.value = outputDisclaimer(rtl ? "ar" : "en");
-  note.font = { name: rtl ? "Arial" : "Calibri", size: 9, italic: true, color: { argb: "FF64748B" } };
+  note.font = { name: rtl ? "Arial" : "Calibri", size: 8, italic: true, color: { argb: `FF${OUTPUT_DISCLAIMER_GRAY.slice(1)}` } };
   note.alignment = { horizontal: rtl ? "right" : "left", vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
-  sheet.getRow(noteRow).height = 36;
-  const footer = `&L${outputDisclaimer(rtl ? "ar" : "en").replace(/&/g, "&&")}`;
+  sheet.getRow(noteRow).height = 28;
+  const footer = `&L&8&K${OUTPUT_DISCLAIMER_GRAY.slice(1)}${outputDisclaimer(rtl ? "ar" : "en").replace(/&/g, "&&")}`;
   sheet.headerFooter.oddFooter = footer;
   sheet.headerFooter.evenFooter = footer;
   fitColumns(sheet);
@@ -90,6 +90,7 @@ export async function buildReportXlsx(report: PreparedReport): Promise<Uint8Arra
             items.flatMap((item) => [[`${"  ".repeat(depth)}${item.text}`], ...flat(item.children, depth + 1)]);
           return flat(block.items);
         }
+        if (block.type === "paragraph" && isOutputDisclaimer(plainInline(block.text), rtl ? "ar" : "en")) return [];
         if (block.type === "heading" || block.type === "paragraph") return [[block.text]];
         return [];
       });

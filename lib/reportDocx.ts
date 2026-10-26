@@ -21,7 +21,7 @@ import {
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
-import { outputDisclaimer } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 const border = { style: BorderStyle.SINGLE, size: 4, color: "D0D7E2" };
@@ -202,7 +202,7 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
     bidirectional: rtl,
     alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
     spacing: { before: 0, after: 60 },
-    children: noteRuns.map((run) => textRun(run.text, { rtl: run.rtl, size: 14, color: "64748B" })),
+    children: noteRuns.map((run) => textRun(run.text, { rtl: run.rtl, size: 14, color: OUTPUT_DISCLAIMER_GRAY.slice(1) })),
   });
   return new Footer({
     children: [
@@ -313,6 +313,7 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       return;
     }
     if (block.type === "paragraph") {
+      if (isOutputDisclaimer(plainInline(block.text), report.locale)) return;
       useBucket(false);
       current.children.push(paragraph(block.text, blockDir(block.text, report.locale) === "rtl"));
       return;

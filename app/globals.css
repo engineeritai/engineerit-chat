@@ -3547,18 +3547,20 @@ button.advisor-card-link {
   position: relative;
   max-width: 100%;
   min-width: 0;
-  margin: 12px 0 0;
+  margin: 12px 0;
 }
 
 .output-disclaimer {
-  margin: 6px 0 12px;
-  font-size: 12px;
+  margin: 8px 0 0;
+  font-size: 11px;
   line-height: 1.45;
-  color: #64748b;
+  color: #9CA3AF;
 }
 
 .output-disclaimer a {
-  color: #1a56ff;
+  color: #9CA3AF;
+  font-size: 11px;
+  text-decoration: underline;
 }
 
 .chat-table-tools,
