@@ -4,7 +4,7 @@ import ChatTable from "@/app/components/ChatTable";
 import MermaidFigure from "@/app/components/MermaidFigure";
 import ScheduleFigure from "@/app/components/ScheduleFigure";
 import { parseMessage, tokenizeInline, type Inline, type ListItem } from "@/lib/messageDocument";
-import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 
 export type MessageLabels = {
   copyTable: string;
@@ -25,6 +25,17 @@ function ListView({ ordered, items }: { ordered: boolean; items: ListItem[] }) {
         </li>
       ))}
     </Tag>
+  );
+}
+
+function DisclaimerLine({ locale }: { locale: "en" | "ar" }) {
+  return (
+    <p className="output-disclaimer">
+      {outputDisclaimerBody(locale)}{" "}
+      <a href={OUTPUT_POLICY_URL[locale]} target="_blank" rel="noreferrer">
+        {OUTPUT_POLICY_LABEL}
+      </a>
+    </p>
   );
 }
 
@@ -58,15 +69,12 @@ export default function MessageMarkdown({
   locale: "en" | "ar";
   labels: MessageLabels;
   fileBase?: string;
-  /** Chat take-off and BOQ replies end with one muted line. Share pages use the footer instead. */
+  /** One muted line under a take-off or BOQ table. Share pages use the footer instead. */
   endDisclaimer?: boolean;
 }) {
   const blocks = parseMessage(markdown);
-  const showEndNote =
-    endDisclaimer &&
-    blocks.some(
-      (block) => block.type === "table" || (block.type === "paragraph" && isOutputDisclaimer(block.text, locale))
-    );
+  const lastTable = blocks.reduce((found, block, index) => (block.type === "table" ? index : found), -1);
+  const hasDisclaimer = blocks.some((block) => block.type === "paragraph" && isOutputDisclaimer(block.text, locale));
   const diagramLabels = {
     copy: labels.diagramCopy,
     png: labels.diagramPng,
@@ -86,7 +94,7 @@ export default function MessageMarkdown({
           );
         }
         if (block.type === "paragraph") {
-          if (isOutputDisclaimer(block.text, locale)) return null;
+          if (isOutputDisclaimer(block.text, locale)) return endDisclaimer ? <DisclaimerLine key={index} locale={locale} /> : null;
           const sources = /^\*\*(Sources|المصادر)\*\*$/.test(block.text.trim());
           return (
             <p key={index} className={sources ? "msg-sources" : undefined}>
@@ -98,8 +106,12 @@ export default function MessageMarkdown({
           return <ListView key={index} ordered={block.ordered} items={block.items} />;
         }
         if (block.type === "table") {
+          const note = endDisclaimer && !hasDisclaimer && index === lastTable ? <DisclaimerLine locale={locale} /> : null;
           return (
-            <ChatTable key={index} headers={block.headers} rows={block.rows} dir={dir} locale={locale} labels={labels} fileBase={fileBase} />
+            <div key={index}>
+              <ChatTable headers={block.headers} rows={block.rows} dir={dir} locale={locale} labels={labels} fileBase={fileBase} />
+              {note}
+            </div>
           );
         }
         if (block.type === "chart") {
@@ -114,14 +126,6 @@ export default function MessageMarkdown({
           </pre>
         );
       })}
-      {showEndNote ? (
-        <p className="output-disclaimer">
-          {outputDisclaimerBody(locale)}{" "}
-          <a href={OUTPUT_POLICY_URL[locale]} target="_blank" rel="noreferrer">
-            {OUTPUT_POLICY_URL[locale]}
-          </a>
-        </p>
-      ) : null}
     </>
   );
 }

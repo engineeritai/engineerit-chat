@@ -1,6 +1,6 @@
 // app/api/export/diagram/svg/route.ts
 import { NextResponse } from "next/server";
-import { outputDisclaimer, OUTPUT_DISCLAIMER_GRAY } from "@/lib/outputDisclaimer";
+import { outputDisclaimer, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import type { UiLocale } from "@/lib/replyLanguage";
 
 export const runtime = "nodejs";
@@ -85,7 +85,8 @@ function textToSvg(text: string, title: string, locale: UiLocale = "en") {
   const noticeBlock = notice
     .map((line, index) => {
       const y = height - paddingY - (notice.length - 1 - index) * 16;
-      return `<text class="disclaimer" x="${noticeX}" y="${y}" text-anchor="${anchor}">${escapeXml(line)}</text>`;
+      const body = `<text class="disclaimer" x="${noticeX}" y="${y}" text-anchor="${anchor}">${escapeXml(line)}</text>`;
+      return line.includes("http") ? `<a href="${escapeXml(OUTPUT_POLICY_URL[locale])}">${body}</a>` : body;
     })
     .join("\n");
 

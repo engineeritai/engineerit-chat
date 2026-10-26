@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
 import { NextResponse } from "next/server";
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { PDFDocument, PDFName, PDFString, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { containsArabic, visualTokens } from "@/lib/arabicShape";
 import { OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_URL, outputDisclaimerBody } from "@/lib/outputDisclaimer";
 import type { UiLocale } from "@/lib/replyLanguage";
@@ -148,13 +148,27 @@ export async function POST(req: Request) {
       const bodyLines = footerLines.slice(0, -1);
       const url = footerLines[footerLines.length - 1] || "";
       drawNotice(page, noticeFont, bodyLines, pageW, margin);
+      const urlY = margin + 28 - bodyLines.length * 11;
       page.drawText(url, {
         x: margin,
-        y: margin + 28 - bodyLines.length * 11,
+        y: urlY,
         size: 8,
         font: fontUI,
         color: disclaimerInk(),
       });
+      const urlWidth = fontUI.widthOfTextAtSize(url, 8);
+      const link = page.doc.context.register(
+        page.doc.context.obj({
+          Type: "Annot",
+          Subtype: "Link",
+          Rect: [margin, urlY - 2, margin + urlWidth, urlY + 10],
+          Border: [0, 0, 0],
+          A: { Type: "Action", S: "URI", URI: PDFString.of(url) },
+        })
+      );
+      const annots = page.node.lookup(PDFName.of("Annots"));
+      if (annots) (annots as unknown as { push: (item: unknown) => void }).push(link);
+      else page.node.set(PDFName.of("Annots"), page.doc.context.obj([link]));
       page.drawText(`Page ${pageNo}`, {
         x: pageW - margin - 60,
         y: margin - 10,

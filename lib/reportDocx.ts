@@ -15,13 +15,15 @@ import {
   TableRow,
   TableLayoutType,
   TextRun,
+  UnderlineType,
   VerticalAlign,
   WidthType,
+  ExternalHyperlink,
 } from "docx";
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
-import { isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 const border = { style: BorderStyle.SINGLE, size: 4, color: "D0D7E2" };
@@ -32,7 +34,7 @@ function runFont(rtl: boolean) {
   return { ascii: name, hAnsi: name, cs: name, eastAsia: name };
 }
 
-function textRun(value: string, opts: { bold?: boolean; size?: number; color?: string; rtl: boolean }) {
+function textRun(value: string, opts: { bold?: boolean; size?: number; color?: string; rtl: boolean; underline?: boolean }) {
   const size = opts.size ?? 22;
   return new TextRun({
     text: value || " ",
@@ -43,6 +45,7 @@ function textRun(value: string, opts: { bold?: boolean; size?: number; color?: s
     font: runFont(opts.rtl),
     rightToLeft: opts.rtl,
     color: opts.color,
+    underline: opts.underline ? { type: UnderlineType.SINGLE, color: opts.color } : undefined,
     language: opts.rtl ? { value: "ar-SA", bidirectional: "ar-SA" } : { value: "en-US" },
   });
 }
@@ -197,12 +200,27 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
     ],
   });
   const rule = { style: BorderStyle.SINGLE, size: 6, color: "D0D7E2", space: 1 };
-  const noteRuns = directionalRuns(outputDisclaimer(report.locale));
+  const gray = OUTPUT_DISCLAIMER_GRAY.slice(1);
+  const noteRuns = directionalRuns(outputDisclaimerBody(report.locale));
+  const link = new ExternalHyperlink({
+    link: OUTPUT_POLICY_URL[report.locale],
+    children: [
+      textRun(OUTPUT_POLICY_LABEL, {
+        rtl: false,
+        size: 14,
+        color: gray,
+        underline: true,
+      }),
+    ],
+  });
   const note = new Paragraph({
     bidirectional: rtl,
     alignment: rtl ? AlignmentType.RIGHT : AlignmentType.LEFT,
     spacing: { before: 0, after: 60 },
-    children: noteRuns.map((run) => textRun(run.text, { rtl: run.rtl, size: 14, color: OUTPUT_DISCLAIMER_GRAY.slice(1) })),
+    children: [
+      ...noteRuns.map((run) => textRun(`${run.text} `, { rtl: run.rtl, size: 14, color: gray })),
+      link,
+    ],
   });
   return new Footer({
     children: [

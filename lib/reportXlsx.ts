@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { plainInline } from "@/lib/messageDocument";
-import { isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, outputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import type { PreparedReport } from "@/lib/reportModel";
 
 function styleHeader(cell: ExcelJS.Cell, rtl: boolean) {
@@ -61,8 +61,12 @@ function addTableSheet(book: ExcelJS.Workbook, name: string, title: string, stam
   const noteRow = 6 + rows.length;
   sheet.mergeCells(noteRow, 1, noteRow, span);
   const note = sheet.getCell(noteRow, 1);
-  note.value = outputDisclaimer(rtl ? "ar" : "en");
-  note.font = { name: rtl ? "Arial" : "Calibri", size: 8, italic: true, color: { argb: `FF${OUTPUT_DISCLAIMER_GRAY.slice(1)}` } };
+  const locale = rtl ? "ar" : "en";
+  note.value = {
+    text: `${outputDisclaimerBody(locale)} ${OUTPUT_POLICY_LABEL}`,
+    hyperlink: OUTPUT_POLICY_URL[locale],
+  };
+  note.font = { name: rtl ? "Arial" : "Calibri", size: 8, color: { argb: `FF${OUTPUT_DISCLAIMER_GRAY.slice(1)}` }, underline: true };
   note.alignment = { horizontal: rtl ? "right" : "left", vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
   sheet.getRow(noteRow).height = 28;
   const footer = `&L&8&K${OUTPUT_DISCLAIMER_GRAY.slice(1)}${outputDisclaimer(rtl ? "ar" : "en").replace(/&/g, "&&")}`;

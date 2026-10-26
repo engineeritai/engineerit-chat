@@ -1,33 +1,39 @@
 import type { UiLocale } from "@/lib/replyLanguage";
 
 /**
- * Short notice derived from the live user policy at /legal/terms.
- * Section 1: outputs are drafts and must be verified.
- * Section 2 and the signup line: engineerit.ai is not responsible for
- * decisions based on its outputs.
- * The policy does not say "AI can make mistakes" or mention losses.
- * "can be wrong" / "قد تكون خاطئة" is the plain reading of those clauses.
+ * One-line notice. The live policy is /legal/terms (there is no /terms page).
+ * The sentence is the owner's short form. Arabic is the same words without
+ * vowel marks, matching the rest of the product.
  */
 export const OUTPUT_POLICY_URL: Record<UiLocale, string> = {
   en: "https://engineerit.ai/legal/terms",
   ar: "https://engineerit.ai/legal/terms?lang=ar",
 };
 
-/** Footer and chat-end colour only. Brand, stamps, and subtitles stay darker. */
+/** Visible label. The href is OUTPUT_POLICY_URL. */
+export const OUTPUT_POLICY_LABEL = "engineerit.ai/legal/terms";
+
+/** Footer and chat-line colour only. Brand, stamps, and subtitles stay darker. */
 export const OUTPUT_DISCLAIMER_GRAY = "#9CA3AF";
 
 export function outputDisclaimerBody(locale: UiLocale): string {
   if (locale === "ar") {
-    return "مخرجات الذكاء الاصطناعي مسودات فقط وقد تكون خاطئة. أنت مسؤول عن التحقق منها. engineerit.ai غير مسؤول عن القرارات المبنية على مخرجاته.";
+    return "مولد بالذكاء الاصطناعي وقد يحتوي على أخطاء. يرجى التحقق قبل الاستخدام. راجع";
   }
-  return "AI outputs are drafts only and can be wrong. You are responsible for verifying them. engineerit.ai is not responsible for decisions based on its outputs.";
+  return "AI-generated, may contain errors. Please verify before use. See";
 }
 
+/** Plain one-liner. The https URL is in the text so channels without hyperlinks stay clickable. */
 export function outputDisclaimer(locale: UiLocale): string {
   return `${outputDisclaimerBody(locale)} ${OUTPUT_POLICY_URL[locale]}`;
 }
 
 export function isOutputDisclaimer(text: string, locale: UiLocale): boolean {
   const plain = text.replace(/\s+/g, " ").trim();
-  return plain === outputDisclaimer(locale) || plain === outputDisclaimerBody(locale);
+  const body = outputDisclaimerBody(locale);
+  return (
+    plain === outputDisclaimer(locale) ||
+    plain === `${body} ${OUTPUT_POLICY_LABEL}` ||
+    plain === body
+  );
 }

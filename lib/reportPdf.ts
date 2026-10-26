@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
+import { PDFDocument, PDFName, PDFString, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import { containsArabic, visualTokens } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
-import { isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 const PORTRAIT = { w: 595.28, h: 841.89 };
@@ -32,6 +32,48 @@ function tokenFont(token: string, fonts: Fonts, bold: boolean): PDFFont {
 
 function lineWidth(text: string, fonts: Fonts, size: number, bold: boolean): number {
   return visualTokens(text).reduce((sum, token) => sum + tokenFont(token, fonts, bold).widthOfTextAtSize(token, size), 0);
+}
+
+function addUriLink(page: PDFPage, x: number, y: number, width: number, height: number, url: string) {
+  const context = page.doc.context;
+  const annot = context.obj({
+    Type: "Annot",
+    Subtype: "Link",
+    Rect: [x, y, x + width, y + height],
+    Border: [0, 0, 0],
+    A: { Type: "Action", S: "URI", URI: PDFString.of(url) },
+  });
+  const ref = context.register(annot);
+  const existing = page.node.lookup(PDFName.of("Annots"));
+  if (existing) {
+    const list = existing as unknown as { push: (item: unknown) => void };
+    list.push(ref);
+    return;
+  }
+  page.node.set(PDFName.of("Annots"), context.obj([ref]));
+}
+
+function linkUrlInLine(page: PDFPage, line: string, x: number, y: number, fonts: Fonts, size: number, url: string) {
+  let cursor = x;
+  for (const token of visualTokens(line)) {
+    const font = tokenFont(token, fonts, false);
+    const width = font.widthOfTextAtSize(token, size);
+    const at = token.indexOf(url);
+    if (at >= 0) {
+      const before = token.slice(0, at);
+      const beforeW = before ? font.widthOfTextAtSize(before, size) : 0;
+      const urlW = font.widthOfTextAtSize(url, size);
+      const linkX = cursor + beforeW;
+      addUriLink(page, linkX, y - 2, urlW, size + 4, url);
+      page.drawLine({
+        start: { x: linkX, y: y - 1.2 },
+        end: { x: linkX + urlW, y: y - 1.2 },
+        thickness: 0.4,
+        color: DISCLAIMER_INK,
+      });
+    }
+    cursor += width;
+  }
 }
 
 function drawLogicalLine(
@@ -310,7 +352,8 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
   }
 
   const total = sheets.length;
-  const disclaimer = outputDisclaimer(report.locale);
+    const disclaimer = outputDisclaimer(report.locale);
+    const policyUrl = OUTPUT_POLICY_URL[report.locale];
   sheets.forEach((sheet, index) => {
     const pageLabel = report.locale === "ar" ? `صفحة ${index + 1} من ${total}` : `Page ${index + 1} of ${total}`;
     const pageW = lineWidth(pageLabel, fonts, 9, false);
@@ -329,7 +372,9 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     noteLines.forEach((line, lineIndex) => {
       const width = lineWidth(line, fonts, 8, false);
       const x = rtlDoc ? sheet.width - MARGIN - width : MARGIN;
-      drawLogicalLine(sheet.page, line, x, lineY - 12 - lineIndex * 10, fonts, 8, false, DISCLAIMER_INK);
+      const y = lineY - 12 - lineIndex * 10;
+      drawLogicalLine(sheet.page, line, x, y, fonts, 8, false, DISCLAIMER_INK);
+      linkUrlInLine(sheet.page, line, x, y, fonts, 8, policyUrl);
     });
     const logoX = rtlDoc ? sheet.width - MARGIN - icon : MARGIN;
     sheet.page.drawImage(logo, { x: logoX, y: 16, width: icon, height: icon });

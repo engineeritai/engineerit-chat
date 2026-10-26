@@ -1,7 +1,7 @@
 import { flowSvg } from "@/lib/flowSvg";
 import { riyadhStamp } from "@/lib/ksaTime";
 import { parseMessage, plainInline, tokenizeInline, type Block, type ListItem } from "@/lib/messageDocument";
-import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { renderChartSvg } from "@/lib/scheduleSvg";
 
 export function shareDescription(markdown: string): string {
@@ -159,7 +159,7 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
   </article>
 </main>
 <footer>
-  <p class="output-disclaimer">${esc(outputDisclaimerBody(args.locale))} <a href="${esc(OUTPUT_POLICY_URL[args.locale])}">${esc(OUTPUT_POLICY_URL[args.locale])}</a></p>
+  <p class="output-disclaimer">${esc(outputDisclaimerBody(args.locale))} <a href="${esc(OUTPUT_POLICY_URL[args.locale])}">${esc(OUTPUT_POLICY_LABEL)}</a></p>
   <div class="footer-meta">
     <span><img src="https://engineerit.ai/icon-192.png" alt=""/> engineer it · engineerit.ai</span>
     <span>${esc(stamp)}</span>

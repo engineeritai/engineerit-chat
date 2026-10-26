@@ -1,7 +1,7 @@
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
-import { isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY } from "@/lib/outputDisclaimer";
+import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 // pptxgenjs ships a CommonJS build whose default import is unreliable under Next.
@@ -10,7 +10,7 @@ const PptxGenJS = require("pptxgenjs");
 
 type Slide = {
   addImage: (opts: Record<string, unknown>) => void;
-  addText: (text: string, opts: Record<string, unknown>) => void;
+  addText: (text: unknown, opts: Record<string, unknown>) => void;
   addTable: (rows: unknown[], opts: Record<string, unknown>) => void;
   addShape: (shape: string, opts: Record<string, unknown>) => void;
 };
@@ -57,19 +57,36 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
   const footer = (slide: Slide, page: number, total: number) => {
     const icon = 0.24;
     const label = rtl ? `شريحة ${page} من ${total}` : `Slide ${page} of ${total}`;
-    slide.addText(outputDisclaimer(report.locale), {
-      x: 0.38,
-      y: 6.55,
-      w: W - 0.76,
-      h: 0.46,
-      fontFace: rtl ? "Arial" : face,
-      lang: rtl ? "ar-SA" : "en-US",
-      fontSize: 8,
-      color: OUTPUT_DISCLAIMER_GRAY.slice(1),
-      align: rtl ? "right" : "left",
-      valign: "top",
-      rtlMode: rtl,
-    });
+    const gray = OUTPUT_DISCLAIMER_GRAY.slice(1);
+    slide.addText(
+      [
+        {
+          text: `${outputDisclaimerBody(report.locale)} `,
+          options: { color: gray },
+        },
+        {
+          text: OUTPUT_POLICY_LABEL,
+          options: {
+            color: gray,
+            underline: { style: "sng", color: gray },
+            hyperlink: { url: OUTPUT_POLICY_URL[report.locale] },
+          },
+        },
+      ],
+      {
+        x: 0.38,
+        y: 6.55,
+        w: W - 0.76,
+        h: 0.46,
+        fontFace: rtl ? "Arial" : face,
+        lang: rtl ? "ar-SA" : "en-US",
+        fontSize: 8,
+        color: gray,
+        align: rtl ? "right" : "left",
+        valign: "top",
+        rtlMode: rtl,
+      }
+    );
     if (rtl) {
       slide.addImage({ data: logoData(report), x: W - 0.38 - icon, y: 7.1, w: icon, h: icon });
       slide.addText(REPORT_FOOTER_LINE, {

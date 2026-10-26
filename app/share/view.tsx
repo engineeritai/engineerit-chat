@@ -2,7 +2,7 @@
 
 import MessageMarkdown from "@/app/components/MessageMarkdown";
 import { riyadhStamp } from "@/lib/ksaTime";
-import { outputDisclaimerBody, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { outputDisclaimerBody, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import type { ShareRecord } from "@/lib/shareStore";
 
 const labels = {
@@ -30,7 +30,7 @@ export default function ShareView({ share }: { share: ShareRecord }) {
         <p className="output-disclaimer">
           {outputDisclaimerBody(share.locale)}{" "}
           <a href={OUTPUT_POLICY_URL[share.locale]} target="_blank" rel="noreferrer">
-            {OUTPUT_POLICY_URL[share.locale]}
+            {OUTPUT_POLICY_LABEL}
           </a>
         </p>
         <div className="share-footer-meta">

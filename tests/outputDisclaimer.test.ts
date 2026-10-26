@@ -60,28 +60,32 @@ async function zipText(bytes: Uint8Array): Promise<string> {
   return parts.join("\n");
 }
 
-test("the disclaimer follows the user policy in both languages", () => {
-  assert.match(outputDisclaimer("en"), /drafts only and can be wrong/);
-  assert.match(outputDisclaimer("en"), /not responsible for decisions based on its outputs/);
-  assert.match(outputDisclaimer("en"), new RegExp(OUTPUT_POLICY_URL.en.replace(/[.]/g, "\\.")));
-  assert.match(outputDisclaimer("ar"), /مسودات فقط وقد تكون خاطئة/);
-  assert.match(outputDisclaimer("ar"), /غير مسؤول عن القرارات المبنية على مخرجاته/);
-  assert.match(outputDisclaimer("ar"), /lang=ar/);
+test("the disclaimer is one line pointing at the terms page", () => {
+  assert.equal(
+    outputDisclaimer("en"),
+    "AI-generated, may contain errors. Please verify before use. See https://engineerit.ai/legal/terms"
+  );
+  assert.equal(
+    outputDisclaimer("ar"),
+    "مولد بالذكاء الاصطناعي وقد يحتوي على أخطاء. يرجى التحقق قبل الاستخدام. راجع https://engineerit.ai/legal/terms?lang=ar"
+  );
+  assert.equal(outputDisclaimer("en").split("\n").length, 1);
   assert.equal(/[\u064B-\u0652]/.test(outputDisclaimer("ar")), false);
   assert.equal(outputDisclaimerBody("en").includes("http"), false);
+  assert.equal(OUTPUT_POLICY_URL.en, "https://engineerit.ai/legal/terms");
   assert.equal(OUTPUT_DISCLAIMER_GRAY, "#9CA3AF");
 });
 
 test("pdf, word, powerpoint, excel, html, and chat export carry the disclaimer on every page", async () => {
   for (const locale of ["en", "ar"] as const) {
-    const phrase = locale === "ar" ? "مسودات فقط" : "drafts only";
+    const phrase = locale === "ar" ? "قد يحتوي على أخطاء" : "may contain errors";
     const report = await prepareReport({ title: "Slab note", markdown: MARKDOWN, locale });
     const pdf = await buildReportPdf(report);
     const doc = await PDFDocument.load(pdf);
     for (let page = 1; page <= doc.getPageCount(); page += 1) {
       const text = pdfText(pdf, page);
       assert.match(text, /engineerit\.ai\/legal\/terms/, `${locale} pdf page ${page}`);
-      if (locale === "en") assert.match(text, /drafts only/, `${locale} pdf page ${page}`);
+      if (locale === "en") assert.match(text, /may contain errors/, `${locale} pdf page ${page}`);
     }
     const word = await zipText(await buildReportDocx(report));
     const footers = word.split("word/footer").length;
@@ -90,13 +94,15 @@ test("pdf, word, powerpoint, excel, html, and chat export carry the disclaimer o
     assert.match(word, /legal\/terms/);
     assert.match(word, /9CA3AF/);
     assert.match(word, /64748B/);
+    assert.match(word, /hyperlink/);
     const deck = await zipText(await buildReportPptx(report));
     const slides = deck.match(/ppt\/slides\/slide\d+\.xml/g) ?? [];
     assert.ok(slides.length >= 2);
-    const slideFiles = [...deck.matchAll(/<a:t[^>]*>([^<]*drafts only[^<]*|[^<]*مسودات فقط[^<]*)<\/a:t>/g)];
+    const slideFiles = [...deck.matchAll(/<a:t[^>]*>([^<]*may contain errors[^<]*|[^<]*قد يحتوي على أخطاء[^<]*)<\/a:t>/g)];
     assert.ok(slideFiles.length >= slides.length || deck.split(phrase).length - 1 >= slides.length, `${locale} slides`);
     assert.match(deck, new RegExp(phrase));
     assert.match(deck, /9CA3AF/);
+    assert.match(deck, /hlinkClick|hyperlink/);
     const book = await zipText(await buildReportXlsx(report));
     assert.match(book, new RegExp(phrase));
     assert.match(book, /oddFooter/);
@@ -128,11 +134,9 @@ test("take-off tables, whatsapp shares, and diagram downloads include the same l
     const tableAt = reply.indexOf("| --- |");
     const noteAt = reply.indexOf(outputDisclaimer(locale));
     const assumptions = reply.indexOf(locale === "ar" ? "## الافتراضات" : "## Assumptions");
-    const checks = reply.indexOf(locale === "ar" ? "## ما يراجعه المساح" : "## What the QS should check");
-    assert.ok(tableAt > 0 && assumptions > tableAt && checks > assumptions && noteAt > checks);
-    assert.equal(reply.trimEnd().endsWith(outputDisclaimer(locale)), true);
+    assert.ok(tableAt > 0 && noteAt > tableAt && noteAt < assumptions);
     const shared = toWhatsApp("Hello\n\n| Item | Qty |\n| --- | --- |\n| Slab | 1 |", "https://engineerit.ai/share/x", locale);
-    assert.match(shared, new RegExp(locale === "ar" ? "مسودات فقط" : "drafts only"));
+    assert.match(shared, new RegExp(locale === "ar" ? "قد يحتوي على أخطاء" : "may contain errors"));
     const svgRes = await diagramSvg(
       new Request("http://local/svg", {
         method: "POST",
@@ -144,6 +148,7 @@ test("take-off tables, whatsapp shares, and diagram downloads include the same l
     assert.match(svg, /class="disclaimer"/);
     assert.match(svg, /legal\/terms/);
     assert.match(svg, /#9CA3AF/);
+    assert.match(svg, /<a href="https:\/\/engineerit\.ai\/legal\/terms/);
     const pdfRes = await diagramPdf(
       new Request("http://local/pdf", {
         method: "POST",
@@ -165,8 +170,7 @@ test("take-off tables, whatsapp shares, and diagram downloads include the same l
   const chat = readFileSync("app/components/MessageMarkdown.tsx", "utf8");
   assert.match(chat, /className="output-disclaimer"/);
   assert.match(chat, /endDisclaimer/);
-  assert.equal(chat.includes("<ChatTable"), true);
-  assert.ok(chat.indexOf("className=\"output-disclaimer\"") > chat.lastIndexOf("<ChatTable"));
+  assert.match(chat, /<ChatTable[\s\S]*\{note\}/);
   assert.match(readFileSync("app/share/view.tsx", "utf8"), /endDisclaimer=\{false\}/);
   assert.match(readFileSync("app/globals.css", "utf8"), /\.output-disclaimer \{[^}]*#9CA3AF/);
   assert.match(readFileSync("lib/reportPdf.ts", "utf8"), /DISCLAIMER_INK/);
