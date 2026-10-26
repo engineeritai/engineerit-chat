@@ -37,6 +37,12 @@ export function isQuantityTable(headers: string[]): boolean {
   return cells.some((header) => QUANTITY_UNIT.test(header)) && cells.some((header) => QUANTITY_AMOUNT.test(header));
 }
 
+/** Unit and quantity columns are centred. Other take-off columns keep their own alignment. */
+export function isCenteredBoqColumn(header: string): boolean {
+  const name = header.replace(/\s+/g, " ").trim();
+  return QUANTITY_UNIT.test(name) || QUANTITY_AMOUNT.test(name);
+}
+
 export function isOutputDisclaimer(text: string, locale: UiLocale): boolean {
   const plain = text.replace(/\s+/g, " ").trim();
   const body = outputDisclaimerBody(locale);

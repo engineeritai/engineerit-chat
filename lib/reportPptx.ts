@@ -1,7 +1,7 @@
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
-import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 // pptxgenjs ships a CommonJS build whose default import is unreliable under Next.
@@ -360,13 +360,14 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       const headerCells = order.map((index) => sourceHeaders[index]);
       const bodyRows = sourceRows.map((row) => order.map((index) => row[index] ?? ""));
       const workingSource = sourceHeaders.findIndex((header) => isWorkingHeader(header));
-      const cell = (text: string, header: boolean, fill: string, formula: boolean) => ({
+      const centered = sourceHeaders.map((header) => isCenteredBoqColumn(header));
+      const cell = (text: string, header: boolean, fill: string, formula: boolean, center: boolean) => ({
         text,
         options: {
           fill: { color: fill },
           color: header ? "1E3A8A" : "0F172A",
           bold: header,
-          align: tableRtl ? "right" : "left",
+          align: center ? "center" : tableRtl ? "right" : "left",
           rtlMode: formula ? false : tableRtl,
         },
       });
@@ -403,10 +404,16 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
         }
         if (end === cursor && cursor < bodyRows.length) end = cursor + 1;
         const rows = [
-          headerCells.map((text) => cell(text, true, "E7EEFF", false)),
+          headerCells.map((text, displayIndex) => cell(text, true, "E7EEFF", false, centered[order[displayIndex]])),
           ...bodyRows.slice(cursor, end).map((row, index) =>
             row.map((text, displayIndex) =>
-              cell(text, false, (cursor + index) % 2 ? "F8FAFC" : "FFFFFF", tableRtl && order[displayIndex] === workingSource)
+              cell(
+                text,
+                false,
+                (cursor + index) % 2 ? "F8FAFC" : "FFFFFF",
+                tableRtl && order[displayIndex] === workingSource,
+                centered[order[displayIndex]]
+              )
             )
           ),
         ];

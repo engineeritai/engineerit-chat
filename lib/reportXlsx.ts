@@ -1,12 +1,17 @@
 import ExcelJS from "exceljs";
 import { plainInline } from "@/lib/messageDocument";
-import { isOutputDisclaimer, outputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import type { PreparedReport } from "@/lib/reportModel";
 
-function styleHeader(cell: ExcelJS.Cell, rtl: boolean) {
+function columnAlign(header: string, rtl: boolean): "center" | "right" | "left" {
+  if (isCenteredBoqColumn(plainInline(header))) return "center";
+  return rtl ? "right" : "left";
+}
+
+function styleHeader(cell: ExcelJS.Cell, rtl: boolean, header: string) {
   cell.font = { name: rtl ? "Arial" : "Calibri", bold: true, color: { argb: "FF1E3A8A" }, size: 12 };
   cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE7EEFF" } };
-  cell.alignment = { horizontal: rtl ? "right" : "left", vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
+  cell.alignment = { horizontal: columnAlign(header, rtl), vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
   cell.border = {
     top: { style: "thin", color: { argb: "FFD0D7E2" } },
     bottom: { style: "thin", color: { argb: "FFD0D7E2" } },
@@ -15,9 +20,9 @@ function styleHeader(cell: ExcelJS.Cell, rtl: boolean) {
   };
 }
 
-function styleBody(cell: ExcelJS.Cell, rtl: boolean, zebra: boolean) {
+function styleBody(cell: ExcelJS.Cell, rtl: boolean, zebra: boolean, header: string) {
   cell.font = { name: rtl ? "Arial" : "Calibri", size: 11, color: { argb: "FF0F172A" } };
-  cell.alignment = { horizontal: rtl ? "right" : "left", vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
+  cell.alignment = { horizontal: columnAlign(header, rtl), vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
   if (zebra) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } };
 }
 
@@ -48,13 +53,13 @@ function addTableSheet(book: ExcelJS.Workbook, name: string, title: string, stam
   headers.forEach((header, index) => {
     const cell = sheet.getCell(4, index + 1);
     cell.value = plainInline(header);
-    styleHeader(cell, rtl);
+    styleHeader(cell, rtl, header);
   });
   rows.forEach((row, rowIndex) => {
-    headers.forEach((_, cellIndex) => {
+    headers.forEach((header, cellIndex) => {
       const cell = sheet.getCell(5 + rowIndex, cellIndex + 1);
       cell.value = plainInline(row[cellIndex] ?? "");
-      styleBody(cell, rtl, rowIndex % 2 === 1);
+      styleBody(cell, rtl, rowIndex % 2 === 1, header);
     });
   });
   sheet.getRow(4).height = 22;

@@ -1,5 +1,6 @@
 "use client";
 
+import { isCenteredBoqColumn } from "@/lib/outputDisclaimer";
 import { copyTextPayload, dataUrlToBlob, deliverBlob } from "@/lib/saveFile";
 
 function esc(value: string) {
@@ -147,8 +148,9 @@ export function tableMatrix(table: HTMLTableElement): { headers: string[]; rows:
 
 export async function copyTable(headers: string[], rows: string[][], dir: "ltr" | "rtl"): Promise<boolean> {
   const tsv = [headers.join("\t"), ...rows.map((row) => row.join("\t"))].join("\n");
-  const html = `<table dir="${esc(dir)}"><thead><tr>${headers.map((cell) => `<th>${esc(cell)}</th>`).join("")}</tr></thead><tbody>${rows
-    .map((row) => `<tr>${row.map((cell) => `<td>${esc(cell)}</td>`).join("")}</tr>`)
+  const align = (header: string) => (isCenteredBoqColumn(header) ? ' style="text-align:center"' : "");
+  const html = `<table dir="${esc(dir)}"><thead><tr>${headers.map((cell) => `<th${align(cell)}>${esc(cell)}</th>`).join("")}</tr></thead><tbody>${rows
+    .map((row) => `<tr>${row.map((cell, index) => `<td${align(headers[index] || "")}>${esc(cell)}</td>`).join("")}</tr>`)
     .join("")}</tbody></table>`;
   return copyTextPayload(html, tsv);
 }

@@ -25,7 +25,7 @@ import {
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
 import { pngSize } from "@/lib/rasterSvg";
-import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 const border = { style: BorderStyle.SINGLE, size: 4, color: "D0D7E2" };
@@ -279,7 +279,8 @@ function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape:
   const total = landscape ? 13900 : 9026;
   const columnWidths = headers.map(() => Math.floor(total / headers.length));
   const workingIndex = headers.findIndex((header) => isWorkingHeader(header));
-  const cell = (value: string, header: boolean, zebra: boolean, formula: boolean) =>
+  const centered = headers.map((header) => isCenteredBoqColumn(plainInline(header)));
+  const cell = (value: string, header: boolean, zebra: boolean, formula: boolean, center: boolean) =>
     new TableCell({
       borders,
       width: { size: columnWidths[0], type: WidthType.DXA },
@@ -289,7 +290,7 @@ function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape:
       children: [
         formula
           ? formulaParagraph(value)
-          : paragraph(value, rtl, rtl ? AlignmentType.START : AlignmentType.LEFT, {
+          : paragraph(value, rtl, center ? AlignmentType.CENTER : rtl ? AlignmentType.START : AlignmentType.LEFT, {
               bold: header,
               size: 18,
               color: header ? "1E3A8A" : "0F172A",
@@ -306,14 +307,14 @@ function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape:
       new TableRow({
         tableHeader: true,
         cantSplit: true,
-        children: headers.map((header) => cell(header, true, false, false)),
+        children: headers.map((header, cellIndex) => cell(header, true, false, false, centered[cellIndex])),
       }),
       ...rows.map(
         (row, index) =>
           new TableRow({
             cantSplit: true,
             children: headers.map((_, cellIndex) =>
-              cell(row[cellIndex] ?? "", false, index % 2 === 1, rtl && cellIndex === workingIndex)
+              cell(row[cellIndex] ?? "", false, index % 2 === 1, rtl && cellIndex === workingIndex, centered[cellIndex])
             ),
           })
       ),

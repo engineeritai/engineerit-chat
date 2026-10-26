@@ -1,7 +1,7 @@
 import { flowSvg } from "@/lib/flowSvg";
 import { riyadhStamp } from "@/lib/ksaTime";
 import { parseMessage, plainInline, tokenizeInline, type Block, type ListItem } from "@/lib/messageDocument";
-import { isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { renderChartSvg } from "@/lib/scheduleSvg";
 import { blockDirection, hasArabicContent, isolatePieces, shareDir, shareLanguage } from "@/lib/shareDirection";
 
@@ -78,9 +78,17 @@ function blocksHtml(blocks: Block[], dir: "ltr" | "rtl", locale: "en" | "ar"): s
         const tableText = [...block.headers, ...block.rows.flat()].join("\n");
         const tableDir = hasArabicContent(tableText) ? "rtl" : dir;
         const isolate = tableDir === "rtl";
-        const head = block.headers.map((cell) => `<th>${inlineHtml(cell, isolate)}</th>`).join("");
+        const measure = block.headers.map((cell) => isCenteredBoqColumn(plainInline(cell)));
+        const head = block.headers
+          .map((cell, index) => `<th${measure[index] ? ' class="measure"' : ""}>${inlineHtml(cell, isolate)}</th>`)
+          .join("");
         const body = block.rows
-          .map((row) => `<tr>${block.headers.map((_, cell) => `<td>${inlineHtml(row[cell] ?? "", isolate)}</td>`).join("")}</tr>`)
+          .map(
+            (row) =>
+              `<tr>${block.headers
+                .map((_, cell) => `<td${measure[cell] ? ' class="measure"' : ""}>${inlineHtml(row[cell] ?? "", isolate)}</td>`)
+                .join("")}</tr>`
+          )
           .join("");
         return `<div class="table-scroll" dir="${tableDir}"><table dir="${tableDir}"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
       }
@@ -148,6 +156,7 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
   .table-scroll { max-width: 100%; overflow-x: auto; overflow-y: hidden; border: 1px solid #d0d7e2; border-radius: 12px; }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1px solid #d0d7e2; padding: 8px 10px; text-align: start; white-space: normal; overflow-wrap: anywhere; vertical-align: top; min-width: 7em; }
+  th.measure, td.measure { text-align: center; }
   ol { list-style: decimal; counter-reset: msg-item; }
   ol > li { counter-increment: msg-item; }
   ol > li::marker { content: counter(msg-item) ". "; }

@@ -6,6 +6,8 @@ import { copyTable } from "@/app/components/copyRich";
 import { downloadName, shortTopic } from "@/lib/exportName";
 import { riyadhStamp } from "@/lib/ksaTime";
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
+import { plainInline } from "@/lib/messageDocument";
+import { isCenteredBoqColumn } from "@/lib/outputDisclaimer";
 import { isolatePieces } from "@/lib/shareDirection";
 import { showToast } from "@/lib/toast";
 
@@ -125,7 +127,7 @@ export default function ChatTable({
           <thead>
             <tr>
               {headers.map((header, index) => (
-                <th key={`${header}-${index}`}>
+                <th key={`${header}-${index}`} className={isCenteredBoqColumn(plainInline(header)) ? "is-measure" : undefined}>
                   <span className="chat-table-text">
                     <CellText value={header} rtl={dir === "rtl"} />
                   </span>
@@ -150,7 +152,7 @@ export default function ChatTable({
           <thead>
             <tr>
               {headers.map((header, index) => (
-                <th key={`${header}-${index}`}>
+                <th key={`${header}-${index}`} className={isCenteredBoqColumn(plainInline(header)) ? "is-measure" : undefined}>
                   <span className="chat-table-text">
                     <CellText value={header} rtl={dir === "rtl"} />
                   </span>
@@ -161,8 +163,8 @@ export default function ChatTable({
           <tbody>
             {rows.map((row, rowIndex) => (
               <tr key={rowIndex}>
-                {headers.map((_, cellIndex) => (
-                  <td key={cellIndex}>
+                {headers.map((header, cellIndex) => (
+                  <td key={cellIndex} className={isCenteredBoqColumn(plainInline(header)) ? "is-measure" : undefined}>
                     <span className="chat-table-text">
                       <CellText value={row[cellIndex] ?? ""} rtl={dir === "rtl"} />
                     </span>

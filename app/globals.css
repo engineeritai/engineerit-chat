@@ -3595,6 +3595,12 @@ button.advisor-card-link {
   table-layout: fixed;
 }
 
+.chat-table-pin th.is-measure,
+.chat-table-scroll th.is-measure,
+.chat-table-scroll td.is-measure {
+  text-align: center;
+}
+
 .chat-table-pin th,
 .chat-table-scroll th,
 .chat-table-scroll td {

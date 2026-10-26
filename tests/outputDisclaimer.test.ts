@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import ExcelJS from "exceljs";
 import JSZip from "jszip";
 import { PDFDocument } from "pdf-lib";
 import { POST as diagramPdf } from "../app/api/export/diagram/pdf/route";
@@ -449,6 +450,69 @@ test("arabic working formulas keep source order", async () => {
     const isolated = `<bdi dir="ltr">${formula}</bdi>`;
     assert.ok(html.includes(isolated), formula);
     assert.ok(page.includes(isolated), formula);
+  }
+  assert.match(html, /<th class="measure">الوحدة<\/th>/);
+  assert.match(html, /<th class="measure">الكمية<\/th>/);
+  assert.match(html, /<th>البند<\/th>/);
+  assert.match(page, /class="is-measure"/);
+  assert.match(page, />الوحدة</);
+});
+
+test("unit and quantity columns are centred in English and Arabic", async () => {
+  for (const locale of ["en", "ar"] as const) {
+    const parsed = parseDrawingText(S101);
+    const markdown = renderTakeoff(locale, parsed.reading, calculateTakeoff(parsed.reading), "pdf-text");
+    const report = await prepareReport({
+      title: locale === "ar" ? "حصر كميات أولي" : "First-pass quantity take-off",
+      markdown,
+      locale,
+      now: new Date("2026-10-26T12:00:00Z"),
+    });
+    const unit = locale === "ar" ? "الوحدة" : "Unit";
+    const qty = locale === "ar" ? "الكمية" : "Quantity";
+    const item = locale === "ar" ? "البند" : "Item";
+    const working = locale === "ar" ? "طريقة الحساب" : "Working";
+
+    const word = await JSZip.loadAsync(await buildReportDocx(report));
+    const documentXml = await word.file("word/document.xml")!.async("string");
+    assert.match(xmlParagraph(documentXml, `>${unit}<`, "<w:p"), /w:val="center"/, unit);
+    assert.match(xmlParagraph(documentXml, `>${qty}<`, "<w:p"), /w:val="center"/, qty);
+    assert.doesNotMatch(xmlParagraph(documentXml, `>${item}<`, "<w:p"), /w:val="center"/, item);
+    assert.doesNotMatch(xmlParagraph(documentXml, `>${working}<`, "<w:p"), /w:val="center"/, working);
+
+    const slides = await slideXml(await buildReportPptx(report));
+    const slide = slides.find((part) => part.includes(`>${unit}<`));
+    assert.ok(slide, unit);
+    assert.match(xmlParagraph(slide, `>${unit}<`, "<a:p"), /algn="ctr"/);
+    assert.match(xmlParagraph(slide, `>${qty}<`, "<a:p"), /algn="ctr"/);
+    assert.doesNotMatch(xmlParagraph(slide, `>${working}<`, "<a:p"), /algn="ctr"/);
+
+    const book = new ExcelJS.Workbook();
+    await book.xlsx.load(Buffer.from(await buildReportXlsx(report)));
+    const sheet = book.worksheets[0];
+    const headerRow = sheet.getRow(4);
+    const headers: { text: string; align?: string }[] = [];
+    headerRow.eachCell((cell) => {
+      headers.push({ text: String(cell.value ?? ""), align: cell.alignment?.horizontal });
+    });
+    assert.equal(headers.find((header) => header.text === unit)?.align, "center");
+    assert.equal(headers.find((header) => header.text === qty)?.align, "center");
+    assert.notEqual(headers.find((header) => header.text === item)?.align, "center");
+    assert.notEqual(headers.find((header) => header.text === working)?.align, "center");
+    const unitCol = headers.findIndex((header) => header.text === unit) + 1;
+    const qtyCol = headers.findIndex((header) => header.text === qty) + 1;
+    const itemCol = headers.findIndex((header) => header.text === item) + 1;
+    const body = sheet.getRow(5);
+    assert.equal(body.getCell(unitCol).alignment?.horizontal, "center");
+    assert.equal(body.getCell(qtyCol).alignment?.horizontal, "center");
+    assert.notEqual(body.getCell(itemCol).alignment?.horizontal, "center");
+
+    const html = buildShareHtml({ title: report.title, markdown, locale });
+    assert.match(html, new RegExp(`<th class="measure">${unit}</th>`));
+    assert.match(html, new RegExp(`<th class="measure">${qty}</th>`));
+    assert.match(html, new RegExp(`<th>${item}</th>`));
+    assert.match(html, /<td class="measure">/);
+    assert.match(html, /th\.measure, td\.measure \{ text-align: center; \}/);
   }
 });
 

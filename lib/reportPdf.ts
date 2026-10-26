@@ -4,7 +4,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, PDFName, PDFString, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import { containsArabic, visualTokens } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
-import { isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 const PORTRAIT = { w: 595.28, h: 841.89 };
@@ -238,6 +238,7 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     const pageW = landscape ? LANDSCAPE.w : PORTRAIT.w;
     const usable = pageW - MARGIN * 2;
     const widths = sample.map((width) => (width / natural) * usable);
+    const centered = headers.map((header) => isCenteredBoqColumn(plainInline(header)));
     const tableRtl = rtlDoc || headers.some((header) => containsArabic(header));
     if (landscape !== (current.page.getWidth() > current.page.getHeight())) newContentPage(landscape);
 
@@ -269,7 +270,12 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
         cellLines.forEach((line, lineIndex) => {
           const size = header ? 9 : 8;
           const width = lineWidth(line, fonts, size, header);
-          const textX = tableRtl ? colX + widths[index] - 5 - width : colX + 5;
+          const pad = 5;
+          const textX = centered[index]
+            ? colX + pad + Math.max(0, (widths[index] - pad * 2 - width) / 2)
+            : tableRtl
+              ? colX + widths[index] - pad - width
+              : colX + pad;
           drawLogicalLine(current.page, line, textX, top - 12 - lineIndex * (header ? 12 : 11), fonts, size, header, INK);
         });
       });
