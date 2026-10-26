@@ -1,6 +1,6 @@
 import { getAccessToken } from "@/lib/accessToken";
 
-/** Session token for an export request. Missing token means the server treats the caller as unlimited. */
+/** Session token for an export request. A signed-in trial is capped only when this is sent. */
 export async function exportRequestHeaders(locale?: string): Promise<Record<string, string>> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (locale === "en" || locale === "ar") headers["x-locale"] = locale;
@@ -16,6 +16,7 @@ export async function exportDeniedError(res: Response, fallback: string): Promis
     error.code = "export_limit";
     return error;
   }
+  if (res.status === 401 && typeof data?.error === "string" && data.error) return new Error(data.error);
   return new Error(fallback);
 }
 

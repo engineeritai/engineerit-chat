@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { contentDisposition } from "@/lib/exportName";
-import { exportLocale, guardExport } from "@/lib/exportQuotaGate";
+import { checkExportQuota, exportLocale } from "@/lib/exportQuota";
 import { buildReportPptx } from "@/lib/reportPptx";
 import { prepareReport } from "@/lib/reportModel";
 
@@ -8,7 +8,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  let release = async () => {};
   try {
     const body = (await req.json()) as {
       title?: string;
@@ -21,9 +20,8 @@ export async function POST(req: Request) {
     };
     const markdown = (body.content ?? body.text ?? "").toString();
     if (!markdown.trim()) return NextResponse.json({ error: "Missing content." }, { status: 400 });
-    const gate = await guardExport(req, exportLocale(req, body.locale));
-    if (!gate.ok) return gate.response;
-    release = gate.release;
+    const denied = await checkExportQuota(req, exportLocale(req, body.locale));
+    if (denied) return denied;
     const report = await prepareReport({
       title: body.title,
       subtitle: body.subtitle,
@@ -41,7 +39,6 @@ export async function POST(req: Request) {
       },
     });
   } catch (err) {
-    await release();
     console.error("PPTX export error:", err);
     return NextResponse.json({ error: "Failed to generate PPTX." }, { status: 500 });
   }

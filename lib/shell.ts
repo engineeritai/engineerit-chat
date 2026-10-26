@@ -1,5 +1,5 @@
 import type { EngineerToolId } from "@/lib/engineerTools";
-import { EXPORT_LIMIT_COPY } from "@/lib/exportQuota";
+import { EXPORT_LIMIT_COPY } from "@/lib/exportLimitCopy";
 import type { Locale } from "@/lib/i18n";
 
 export type ShellCopy = {

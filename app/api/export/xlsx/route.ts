@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { contentDisposition, shortTopic } from "@/lib/exportName";
-import { exportLocale, guardExport } from "@/lib/exportQuotaGate";
+import { checkExportQuota, exportLocale } from "@/lib/exportQuota";
 import { riyadhStamp } from "@/lib/ksaTime";
 import { prepareReport } from "@/lib/reportModel";
 import { buildReportXlsx, buildTableXlsx } from "@/lib/reportXlsx";
@@ -9,7 +9,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  let release = async () => {};
   try {
     const body = (await req.json()) as {
       title?: string;
@@ -22,9 +21,8 @@ export async function POST(req: Request) {
       filename?: string;
     };
     const locale = body.locale === "ar" ? "ar" : "en";
-    const gate = await guardExport(req, exportLocale(req, locale));
-    if (!gate.ok) return gate.response;
-    release = gate.release;
+    const denied = await checkExportQuota(req, exportLocale(req, locale));
+    if (denied) return denied;
     const bytes =
       body.headers && body.rows
         ? await buildTableXlsx({
@@ -51,7 +49,6 @@ export async function POST(req: Request) {
       },
     });
   } catch (err) {
-    await release();
     console.error("XLSX export error:", err);
     return NextResponse.json({ error: "Failed to generate Excel." }, { status: 500 });
   }

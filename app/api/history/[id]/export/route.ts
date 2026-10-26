@@ -4,7 +4,7 @@ import { historyCode, isUuid, requireHistoryUser } from "@/lib/historyAccess";
 import { canExportChatHistory } from "@/lib/historyRetention";
 import { getVisibleConversation, listMessages, summaryFor } from "@/lib/historyDb";
 import { buildChatDocx, buildChatPdf, exportFilename } from "@/lib/chatExport";
-import { exportLocale, guardExport } from "@/lib/exportQuotaGate";
+import { checkExportQuota, exportLocale } from "@/lib/exportQuota";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,18 +34,12 @@ export async function GET(request: Request, context: RouteContext) {
     if (!row || !summary) return historyCode(404, "not_found");
     const messages = await listMessages(row.id);
     const locale = localeFrom(request);
-    const quota = await guardExport(request, exportLocale(request, locale));
-    if (!quota.ok) return quota.response;
-    let bytes: Uint8Array;
-    try {
-      bytes =
-        format === "pdf"
-          ? await buildChatPdf({ title: summary.title, messages, locale })
-          : await buildChatDocx({ title: summary.title, messages, locale });
-    } catch (err) {
-      await quota.release();
-      throw err;
-    }
+    const denied = await checkExportQuota(request, exportLocale(request, locale));
+    if (denied) return denied;
+    const bytes =
+      format === "pdf"
+        ? await buildChatPdf({ title: summary.title, messages, locale })
+        : await buildChatDocx({ title: summary.title, messages, locale });
     const body = new Uint8Array(bytes);
     return new NextResponse(body, {
       status: 200,
