@@ -20,24 +20,23 @@ test("iOS and Xiaomi save through the share sheet, other browsers download", () 
   assert.equal(unreliableDownload(samsung), false);
 });
 
-test("viewer keeps chart text near 14px and never upscales past 2x", () => {
+test("viewer fits a wide chart to the screen width and never upscales past 2x", () => {
   const wide = viewerScale({ w: 1168, h: 84, font: 13 }, { w: 390, h: 700 }, false);
-  assert.ok(Math.abs(wide.scale - 14 / 13) < 0.001);
+  assert.ok(Math.abs(wide.scale - 390 / 1168) < 0.001);
   assert.ok(wide.scale <= 2);
-  assert.ok(wide.scale * 13 >= 12 && wide.scale * 13 <= 16);
-  assert.equal(wide.x, 0);
-  assert.equal(wide.panX, true);
+  assert.equal(wide.panX, false);
+  assert.ok(Math.abs(wide.x) < 0.5);
   assert.ok(wide.y > 0);
-  assert.ok(84 * wide.scale < 700);
+  assert.ok(1168 * wide.scale <= 390 + 0.5);
 
   const rtl = viewerScale({ w: 1168, h: 84, font: 13 }, { w: 390, h: 700 }, true);
-  assert.ok(Math.abs(rtl.x - (390 - 1168 * rtl.scale)) < 0.01);
-  assert.ok(rtl.x < 0);
-  assert.equal(rtl.panX, true);
+  assert.equal(rtl.panX, false);
+  assert.ok(Math.abs(rtl.x) < 0.5);
 
   const landscape = viewerScale({ w: 1168, h: 84, font: 13 }, { w: 844, h: 320 }, false);
-  assert.ok(Math.abs(landscape.scale - 14 / 13) < 0.001);
-  assert.equal(landscape.x, 0);
+  assert.ok(Math.abs(landscape.scale - 844 / 1168) < 0.001);
+  assert.equal(landscape.panX, false);
+  assert.ok(Math.abs(landscape.x) < 0.5);
   assert.ok(landscape.y > 0);
 
   const contained = viewerScale({ w: 400, h: 200, font: 13 }, { w: 1440, h: 800 }, false);

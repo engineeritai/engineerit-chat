@@ -24,7 +24,7 @@ import { renderTakeoff } from "../lib/takeoff/render";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ShareView from "../app/share/view";
-import { buildHtmlDocument } from "../lib/chatActions";
+import { buildHtmlDocument, iosPrintHost, printChannel, printDocumentHtml } from "../lib/chatActions";
 import { visualTokens } from "../lib/arabicShape";
 import { RLM } from "../lib/shareDirection";
 import type { ShareRecord } from "../lib/shareStore";
@@ -566,6 +566,11 @@ test("an Arabic answer shared from an English interface stays right to left", ()
   assert.match(page, /<bdi dir="ltr">PDF<\/bdi>/);
   assert.match(page, /<bdi dir="ltr">60\.016<\/bdi>/);
 
+  assert.match(page, /class="share-footer-policy"[^>]*dir="rtl"/);
+  assert.match(page, /مُولَّد بالذكاء الاصطناعي، <a href="https:\/\/engineerit\.ai\/legal\/terms">تُطبَّق سياسة الاستخدام<\/a>/);
+  assert.doesNotMatch(page, /قد يحتوي على أخطاء/);
+  assert.match(page, /engineer it · engineerit\.ai/);
+
   const shared = toWhatsApp(ARABIC_SHARE, "https://engineerit.ai/share/sharearabic1", "en");
   assert.equal(shared.startsWith(RLM), true);
   assert.match(shared, new RegExp(`${RLM}قرئت`));
@@ -573,4 +578,40 @@ test("an Arabic answer shared from an English interface stays right to left", ()
   const english = toWhatsApp("# Note\n\nHello\n\n- One", "https://engineerit.ai/share/note", "en");
   assert.equal(english.includes(RLM), false);
   assert.match(english, /may contain errors/);
+  assert.doesNotMatch(english, /User Policy Applied/);
+});
+
+test("the English share page footer links only the policy words", () => {
+  const share: ShareRecord = {
+    id: "shareenglish1",
+    title: "Factory roadmap",
+    markdown: "# Factory roadmap\n\nProject initiation through construction.",
+    locale: "en",
+    description: "Factory roadmap",
+    createdAt: "2026-10-26T22:57:00.000Z",
+  };
+  const page = renderToStaticMarkup(createElement(ShareView, { share }));
+  assert.match(page, /dir="ltr"/);
+  assert.match(page, /class="share-footer-policy"[^>]*dir="ltr"/);
+  assert.match(page, /AI-generated, <a href="https:\/\/engineerit\.ai\/legal\/terms">User Policy Applied<\/a>/);
+  assert.doesNotMatch(page, /may contain errors/);
+  assert.match(page, /engineer it · engineerit\.ai/);
+  const shared = toWhatsApp(share.markdown, "https://engineerit.ai/share/shareenglish1", "en");
+  assert.match(shared, /AI-generated, may contain errors\. Please verify before use\. See https:\/\/engineerit\.ai\/legal\/terms/);
+});
+
+test("iPhone print uses a new tab and a blocked popup falls back to the share sheet", () => {
+  assert.equal(iosPrintHost("Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15"), true);
+  assert.equal(iosPrintHost("Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X)"), true);
+  assert.equal(iosPrintHost("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "MacIntel", 5), true);
+  assert.equal(iosPrintHost("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36"), false);
+  assert.equal(printChannel({ ios: false, opened: false }), "iframe");
+  assert.equal(printChannel({ ios: true, opened: true }), "tab");
+  assert.equal(printChannel({ ios: true, opened: false }), "share");
+  const doc = printDocumentHtml("<html><body dir=\"rtl\"><p>ملاحظة</p></body></html>", "طباعة");
+  assert.match(doc, /<body dir="rtl">/);
+  assert.match(doc, /onclick="window\.print\(\)"/);
+  assert.match(doc, />طباعة</);
+  assert.match(doc, /@media print\{\.print-call\{display:none!important\}\}/);
+  assert.match(doc, /window\.print\(\)/);
 });

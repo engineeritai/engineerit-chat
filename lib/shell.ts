@@ -127,6 +127,19 @@ export type ShellCopy = {
     print: string;
     whatsapp: string;
     closeShare: string;
+    viewerOpen: string;
+    viewerDownload: string;
+    viewerPdf: string;
+    viewerWord: string;
+    viewerPowerPoint: string;
+    viewerExcel: string;
+    viewerCopied: string;
+    viewerCopyLink: string;
+    viewerLinkedIn: string;
+    viewerEmail: string;
+    viewerReport: string;
+    viewerPdfPreview: string;
+    viewerPreparing: string;
     searchHistory: string;
     rename: string;
     pin: string;
@@ -626,6 +639,19 @@ const en: ShellCopy = {
     print: "Print",
     whatsapp: "WhatsApp",
     closeShare: "Close",
+    viewerOpen: "View",
+    viewerDownload: "Download",
+    viewerPdf: "PDF",
+    viewerWord: "Word",
+    viewerPowerPoint: "PowerPoint",
+    viewerExcel: "Excel",
+    viewerCopied: "Copied",
+    viewerCopyLink: "Copy link",
+    viewerLinkedIn: "LinkedIn",
+    viewerEmail: "Email",
+    viewerReport: "Report",
+    viewerPdfPreview: "PDF preview",
+    viewerPreparing: "Preparing the PDF…",
     searchHistory: "Search history",
     rename: "Rename",
     pin: "Pin",
@@ -1140,6 +1166,19 @@ const ar: ShellCopy = {
     print: "طباعة",
     whatsapp: "واتساب",
     closeShare: "إغلاق",
+    viewerOpen: "عرض",
+    viewerDownload: "تنزيل",
+    viewerPdf: "بي دي إف",
+    viewerWord: "وورد",
+    viewerPowerPoint: "باوربوينت",
+    viewerExcel: "إكسل",
+    viewerCopied: "تم النسخ",
+    viewerCopyLink: "نسخ الرابط",
+    viewerLinkedIn: "لينكدإن",
+    viewerEmail: "بريد",
+    viewerReport: "التقرير",
+    viewerPdfPreview: "معاينة بي دي إف",
+    viewerPreparing: "جار تجهيز بي دي إف…",
     searchHistory: "بحث في السجل",
     rename: "إعادة تسمية",
     pin: "تثبيت",

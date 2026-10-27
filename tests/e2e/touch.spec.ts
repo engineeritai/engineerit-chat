@@ -117,8 +117,15 @@ test("android touch targets, drawers, composer, and chart scroll", async ({ page
     return { scale, text: scale * fontSize };
   });
   expect(readable.scale).toBeLessThanOrEqual(2.01);
-  expect(readable.text).toBeGreaterThanOrEqual(12);
   expect(readable.text).toBeLessThanOrEqual(16.05);
+  const fitted = await page.locator(".chart-viewer-stage").evaluate((stage) => {
+    const canvas = stage.querySelector(".chart-viewer-canvas");
+    if (!canvas) return false;
+    const stageBox = stage.getBoundingClientRect();
+    const canvasBox = canvas.getBoundingClientRect();
+    return canvasBox.width <= stageBox.width + 2;
+  });
+  expect(fitted).toBe(true);
   await page.locator(".chart-viewer-backdrop").click({ position: { x: 12, y: 12 } });
   await expect(viewer).toBeHidden();
 

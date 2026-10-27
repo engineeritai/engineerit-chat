@@ -2,7 +2,6 @@
 
 import MessageMarkdown from "@/app/components/MessageMarkdown";
 import { riyadhStamp } from "@/lib/ksaTime";
-import { outputDisclaimerBody, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { shareDir, shareLanguage } from "@/lib/shareDirection";
 import type { ShareRecord } from "@/lib/shareStore";
 
@@ -29,10 +28,10 @@ export default function ShareView({ share }: { share: ShareRecord }) {
         </article>
       </main>
       <footer className="share-footer" dir={dir} lang={lang}>
-        <p className="output-disclaimer" dir={dir}>
-          {outputDisclaimerBody(lang)}{" "}
-          <a href={OUTPUT_POLICY_URL[lang]} target="_blank" rel="noreferrer">
-            <bdi dir="ltr">{OUTPUT_POLICY_LABEL}</bdi>
+        <p className="share-footer-policy" dir={dir}>
+          {lang === "ar" ? "مُولَّد بالذكاء الاصطناعي، " : "AI-generated, "}
+          <a href="https://engineerit.ai/legal/terms">
+            {lang === "ar" ? "تُطبَّق سياسة الاستخدام" : "User Policy Applied"}
           </a>
         </p>
         <div className="share-footer-meta">
