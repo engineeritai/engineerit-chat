@@ -3696,10 +3696,15 @@ label,
   cursor: pointer;
 }
 
-.chart-action svg {
+.chart-action svg,
+.msg-action-btn svg {
   width: 16px;
   height: 16px;
   flex: 0 0 16px;
+}
+
+.msg-actions {
+  padding-inline: 0;
 }
 
 .mkt-chat .main:not(.is-start) .conversation,
@@ -3804,19 +3809,28 @@ label,
 
 .msg-share-sheet {
   width: 100%;
-  max-height: min(70dvh, 420px);
+  max-height: min(70dvh, 520px);
   overflow: auto;
   margin: 0;
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
-  border-radius: 16px 16px 0 0;
+  border-radius: 20px 20px 0 0;
   background: #fff;
   color: #111418;
   box-shadow: 0 -12px 32px rgba(17, 20, 24, 0.18);
 }
 
+.msg-share-handle {
+  width: 36px;
+  height: 4px;
+  margin: 6px auto 10px;
+  border-radius: 999px;
+  background: #d0d5dd;
+}
+
 .msg-share-item {
   display: flex;
   align-items: center;
+  gap: 12px;
   width: 100%;
   min-height: 48px;
   margin: 0;
@@ -3833,6 +3847,12 @@ label,
   cursor: pointer;
 }
 
+.msg-share-item svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
 .msg-share-item:active,
 .msg-share-item:focus-visible {
   background: #f2f4f8;
@@ -3842,6 +3862,10 @@ label,
   .msg-share-backdrop {
     align-items: center;
     padding: 24px;
+  }
+
+  .msg-share-handle {
+    display: none;
   }
 
   .msg-share-sheet {
@@ -4086,6 +4110,8 @@ label,
 
 .report-viewer-disclaimer a {
   color: #9ca3af;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .report-viewer-frame {

@@ -2,11 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { downloadName } from "@/lib/exportName";
+import { PAGE_DISCLAIMER_HREF, PAGE_DISCLAIMER_LEAD, PAGE_DISCLAIMER_LINK } from "@/lib/outputDisclaimer";
 import {
   DISCLAIMER_GRAY,
-  POLICY_LABEL,
-  POLICY_URL,
-  disclaimerBody,
   intentLinks,
   messageShareUrl,
   nextTrapIndex,
@@ -295,10 +293,8 @@ export default function ReportViewer({
       {tab === "html" ? (
         <footer className="report-viewer-disclaimer" dir={dir} style={{ color: DISCLAIMER_GRAY }}>
           <p>
-            {disclaimerBody(locale)}{" "}
-            <a href={POLICY_URL[locale]} style={{ color: DISCLAIMER_GRAY }}>
-              <bdi dir="ltr">{POLICY_LABEL}</bdi>
-            </a>
+            {PAGE_DISCLAIMER_LEAD[locale]}
+            <a href={PAGE_DISCLAIMER_HREF}>{PAGE_DISCLAIMER_LINK[locale]}</a>
           </p>
         </footer>
       ) : null}

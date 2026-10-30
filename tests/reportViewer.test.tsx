@@ -8,7 +8,6 @@ import { exportCapabilities } from "../lib/advisors";
 import {
   DISCLAIMER_GRAY,
   RLM,
-  disclaimerBody,
   intentLinks,
   isMeasureColumn,
   isReportContent,
@@ -142,18 +141,44 @@ test("the report HTML is right to left, centres unit and quantity, and carries t
   assert.match(arabic, /class="measure" style="text-align:center"[^>]*>[\s\S]*الوحدة/);
   assert.match(arabic, /class="measure" style="text-align:center"[^>]*>[\s\S]*الكمية/);
   assert.doesNotMatch(reportFragmentHtml(AR_BOQ, "ar"), /class="measure"[^>]*>[\s\S]*الوصف/);
-  assert.match(arabic, new RegExp(disclaimerBody("ar").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(arabic, /مُولَّد بالذكاء الاصطناعي، <a href="https:\/\/engineerit\.ai\/legal\/terms">تُطبَّق سياسة الاستخدام<\/a>/);
+  assert.doesNotMatch(arabic, /قد يحتوي على أخطاء/);
   assert.match(arabic, new RegExp(`color:${DISCLAIMER_GRAY}`, "i"));
-  assert.match(arabic, /https:\/\/engineerit\.ai\/legal\/terms\?lang=ar/);
+  assert.match(arabic, /font-size:12px/);
 
   const english = reportDocumentHtml({ title: "Footing take-off", markdown: EN_BOQ, locale: "en", now: new Date("2026-10-26T12:00:00Z") });
   assert.match(english, /dir="ltr"/);
   assert.match(english, /th\.measure, td\.measure \{ text-align: center; \}/);
   assert.match(english, /class="measure" style="text-align:center"[^>]*>Unit/);
   assert.match(english, /class="measure" style="text-align:center"[^>]*>Quantity/);
-  assert.match(english, new RegExp(disclaimerBody("en").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(english, /AI-generated, <a href="https:\/\/engineerit\.ai\/legal\/terms">User Policy Applied<\/a>/);
+  assert.doesNotMatch(english, /may contain errors/);
   assert.equal(isMeasureColumn("Working"), false);
   assert.equal(isMeasureColumn("طريقة الحساب"), false);
+});
+
+test("message Share opens the app sheet and does not call the system share", () => {
+  const page = readFileSync("app/chat/page.tsx", "utf8");
+  const advisor = readFileSync("app/components/AdvisorChat.tsx", "utf8");
+  for (const source of [page, advisor]) {
+    const start = source.indexOf('className="msg-actions"');
+    const menu = source.indexOf("<MessageShareMenu", start);
+    const closeAt = source.indexOf('icon: "close"', menu);
+    assert.ok(start > 0 && menu > start && closeAt > menu);
+    const row = source.slice(start, menu);
+    const block = source.slice(menu, closeAt + 'icon: "close"'.length);
+    assert.doesNotMatch(row, /publishAndShare|navigator\.share|📋|🔗/);
+    assert.match(row, /ShareGlyph name="share"/);
+    assert.match(row, /setOpenShareFor/);
+    const order = ["copy", "share", "html", "print", "whatsapp", "close"].map((icon) => block.indexOf(`icon: "${icon}"`));
+    assert.ok(order.every((index) => index > 0));
+    assert.deepEqual(order, [...order].sort((a, b) => a - b));
+    assert.match(block, /publishAndShare/);
+  }
+  assert.match(readFileSync("app/components/MessageShareMenu.tsx", "utf8"), /msg-share-handle/);
+  assert.match(readFileSync("app/share/[id]/page.tsx", "utf8"), /force-dynamic/);
+  assert.match(readFileSync("app/s/[id]/page.tsx", "utf8"), /force-dynamic/);
+  assert.doesNotMatch(readFileSync("app/share/[id]/page.tsx", "utf8") + readFileSync("app/s/[id]/page.tsx", "utf8"), /revalidate/);
 });
 
 test("the viewer flag defaults on and off restores direct export", () => {
@@ -233,7 +258,8 @@ test("opening the viewer renders the share page and does not export", () => {
   assert.match(html, />PowerPoint</);
   assert.match(html, />Excel</);
   assert.match(html, /report-viewer-disclaimer/);
-  assert.match(html, /مولد بالذكاء الاصطناعي/);
+  assert.match(html, /تُطبَّق سياسة الاستخدام/);
+  assert.doesNotMatch(html, /قد يحتوي على أخطاء/);
   assert.match(html, /جدول الكميات/);
   assert.match(html, /text-align:center/);
   assert.doesNotMatch(html, /<iframe/);

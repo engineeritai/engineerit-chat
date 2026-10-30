@@ -8,7 +8,7 @@ import { DaySeparator, MessageTime, useMessageTimeZone } from "@/app/components/
 import { formatDaySeparator } from "@/lib/messageTime";
 import { applyComposerHeight, resetComposerHeight } from "@/lib/fitComposer";
 import MessageMarkdown from "@/app/components/MessageMarkdown";
-import MessageShareMenu from "@/app/components/MessageShareMenu";
+import MessageShareMenu, { ShareGlyph } from "@/app/components/MessageShareMenu";
 import { collectDiagramPngs, copyRichElement } from "@/app/components/copyRich";
 import { saveWasToasted } from "@/lib/saveFile";
 import { showToast } from "@/lib/toast";
@@ -554,33 +554,14 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                       <button
                         type="button"
                         className="msg-action-btn"
-                        onClick={async () => {
-                          const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
-                          if (!root) showToast(s.chat.copyFailed, "err");
-                          else await copyRichElement(root, message.content);
-                        }}
+                        onClick={() => setOpenShareFor((prev) => (prev === message.id ? null : message.id))}
+                        aria-label={s.chat.share}
+                        title={s.chat.share}
+                        aria-expanded={openShareFor === message.id}
+                        aria-haspopup="menu"
                       >
-                        📋 Copy
-                      </button>
-                      <button
-                        type="button"
-                        className="msg-action-btn"
-                        onClick={async () => {
-                          const { url, shared } = await publishAndShare({ title: topic, markdown: message.content, locale });
-                          if (!url) {
-                            showToast(s.chat.shareFailed, "err");
-                            return;
-                          }
-                          if (shared) return;
-                          try {
-                            await navigator.clipboard.writeText(url);
-                          } catch {
-                            /* the menu still offers WhatsApp */
-                          }
-                          setOpenShareFor((prev) => (prev === message.id ? null : message.id));
-                        }}
-                      >
-                        🔗 Share
+                        <ShareGlyph name="share" />
+                        <span>{s.chat.share}</span>
                       </button>
                       {exports.pdf && (
                         <button
@@ -644,9 +625,40 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                     label={s.chat.share}
                     onClose={() => setOpenShareFor(null)}
                     actions={[
-                      { label: s.chat.saveHtml, onSelect: () => saveHtml(message.content, topic, locale) },
-                      { label: s.chat.print, onSelect: () => printHtml(message.content, topic, locale) },
                       {
+                        icon: "copy",
+                        label: s.chat.copy,
+                        onSelect: () => {
+                          void (async () => {
+                            const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
+                            if (!root) showToast(s.chat.copyFailed, "err");
+                            else await copyRichElement(root, message.content);
+                          })();
+                        },
+                      },
+                      {
+                        icon: "share",
+                        label: s.chat.share,
+                        onSelect: () => {
+                          void (async () => {
+                            const { url, shared } = await publishAndShare({ title: topic, markdown: message.content, locale });
+                            if (!url) {
+                              showToast(s.chat.shareFailed, "err");
+                              return;
+                            }
+                            if (shared) return;
+                            try {
+                              await navigator.clipboard.writeText(url);
+                            } catch {
+                              /* this browser has no share sheet and blocked the clipboard */
+                            }
+                          })();
+                        },
+                      },
+                      { icon: "html", label: s.chat.saveHtml, onSelect: () => saveHtml(message.content, topic, locale) },
+                      { icon: "print", label: s.chat.print, onSelect: () => printHtml(message.content, topic, locale) },
+                      {
+                        icon: "whatsapp",
                         label: s.chat.whatsapp,
                         onSelect: () => {
                           void (async () => {
@@ -659,7 +671,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                           })();
                         },
                       },
-                      { label: `✕ ${s.chat.closeShare}`, onSelect: () => setOpenShareFor(null) },
+                      { icon: "close", label: s.chat.closeShare, onSelect: () => setOpenShareFor(null) },
                     ]}
                   />
                 </div>

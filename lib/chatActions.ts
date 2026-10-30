@@ -67,24 +67,114 @@ function escapePrint(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-/** Print-ready copy of the share HTML, with a visible Print control hidden on paper. */
-export function printDocumentHtml(html: string, printLabel: string): string {
-  const bar = `<div class="print-call" style="position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;gap:8px;padding:8px 12px;background:#fff;border-bottom:1px solid #e5e7eb"><button type="button" onclick="window.print()" style="min-height:44px;padding:0 16px;border:0;border-radius:999px;background:#111418;color:#fff;font:inherit;font-weight:650">${escapePrint(printLabel)}</button></div><style>@media print{.print-call{display:none!important}}</style><script>window.addEventListener("load",function(){setTimeout(function(){try{window.print()}catch(e){}},60)});</script>`;
-  if (/<body[^>]*>/i.test(html)) return html.replace(/<body([^>]*)>/i, `<body$1>${bar}`);
-  return bar + html;
+export type PrintPageCopy = {
+  print: string;
+  back: string;
+  share: string;
+  backToChat: string;
+  title: string;
+  chatUrl: string;
+  shareText: string;
+  markdown: string;
+  locale: "en" | "ar";
+  filename: string;
+};
+
+export function printPageCopy(args: {
+  locale: "en" | "ar";
+  title: string;
+  chatUrl: string;
+  shareText: string;
+  markdown: string;
+}): PrintPageCopy {
+  const arabic = args.locale === "ar";
+  return {
+    print: arabic ? "طباعة" : "Print",
+    back: arabic ? "رجوع" : "Back",
+    share: arabic ? "مشاركة" : "Share",
+    backToChat: arabic ? "العودة إلى المحادثة" : "Back to chat",
+    title: args.title,
+    chatUrl: args.chatUrl || "/chat",
+    shareText: args.shareText,
+    markdown: args.markdown,
+    locale: args.locale,
+    filename: downloadName(args.title, "pdf"),
+  };
 }
 
-function openPrintTab(html: string, printLabel: string): boolean {
+/** Home-screen apps ignore window.print(). A thrown print does too. Both share the PDF. */
+export function printNeedsPdfShare(args: { standalone: boolean; threw: boolean }): boolean {
+  return args.standalone || args.threw;
+}
+
+const PRINT_CHROME = `<style>
+.print-call{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;gap:8px;box-sizing:border-box;min-height:calc(60px + env(safe-area-inset-top,0px));padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:#fff;border-bottom:1px solid #e5e7eb;pointer-events:auto}
+.print-back,.print-go,.print-actions button{position:relative;z-index:1001;min-width:44px;min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer;font:inherit;font-weight:650}
+.print-go{margin-inline-start:auto;padding:0 16px;border:0;border-radius:999px;background:#111418;color:#fff}
+.print-back{padding:0 12px;border:0;border-radius:999px;background:transparent;color:#111418}
+body{padding-top:calc(60px + env(safe-area-inset-top,0px))}
+.print-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.print-actions button{padding:0 14px;border:1px solid #e5e7eb;border-radius:999px;background:#fff;color:#111418}
+@media print{.print-call,.print-actions{display:none!important}body{padding-top:0!important}}
+</style>`;
+
+function printScript(copy: PrintPageCopy): string {
+  const payload = JSON.stringify({
+    title: copy.title,
+    chatUrl: copy.chatUrl,
+    shareText: copy.shareText,
+    markdown: copy.markdown,
+    locale: copy.locale,
+    filename: copy.filename,
+  })
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+  // Assembled so the source never contains a raw script end tag. Next inlines this module into HTML.
+  const end = "<" + "/script>";
+  return `<script>
+var cfg = ${payload};
+var pdfFile = null;
+function eitHome(){return window.navigator.standalone===true||(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);}
+function eitPrimePdf(){if(pdfFile)return;fetch("/api/export/pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:cfg.title,content:cfg.markdown,locale:cfg.locale})}).then(function(res){return res.ok?res.blob():null;}).then(function(blob){if(!blob)return;pdfFile=new File([blob],cfg.filename,{type:"application/pdf"});}).catch(function(){});}
+function eitPrint(){var home=eitHome();var threw=false;try{window.print();}catch(err){threw=true;}if((home||threw)&&pdfFile&&navigator.share){navigator.share({files:[pdfFile],title:cfg.title}).catch(function(){});return;}if(home||threw)eitPrimePdf();}
+function eitShare(){if(navigator.share){navigator.share({title:cfg.title,text:cfg.shareText}).catch(function(){});return;}window.open("https://wa.me/?text="+encodeURIComponent(cfg.shareText),"_blank","noopener,noreferrer");}
+function eitBack(){window.close();setTimeout(function(){if(!window.closed)location.href=cfg.chatUrl;},200);}
+if(eitHome())eitPrimePdf();
+${end}`;
+}
+
+/**
+ * Print-ready copy of the share HTML.
+ * Print runs only from the button tap (window.print() is the first call).
+ * A home-screen app, where print is blocked, shares the PDF instead.
+ */
+export function printDocumentHtml(html: string, copy: PrintPageCopy): string {
+  const bar = `<div class="print-call"><button type="button" class="print-back" onclick="eitBack()">${escapePrint(copy.back)}</button><button type="button" class="print-go" onclick="eitPrint()">${escapePrint(copy.print)}</button></div>`;
+  const actions = `<div class="print-actions"><button type="button" onclick="eitPrint()">${escapePrint(copy.print)}</button><button type="button" onclick="eitShare()">${escapePrint(copy.share)}</button><button type="button" onclick="eitBack()">${escapePrint(copy.backToChat)}</button></div>`;
+  const viewport = '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>';
+  let out = html.replace(/<meta name="viewport"[^>]*>/i, viewport);
+  if (!/viewport-fit=cover/i.test(out)) {
+    out = /<head[^>]*>/i.test(out) ? out.replace(/<head([^>]*)>/i, `<head$1>${viewport}`) : viewport + out;
+  }
+  out = /<head[^>]*>/i.test(out) ? out.replace(/<head([^>]*)>/i, `<head$1>${PRINT_CHROME}`) : PRINT_CHROME + out;
+  const top = `${bar}${printScript(copy)}`;
+  out = /<body[^>]*>/i.test(out) ? out.replace(/<body([^>]*)>/i, `<body$1>${top}`) : top + out;
+  if (/<\/main>/i.test(out)) return out.replace(/<\/main>/i, `</main>${actions}`);
+  if (/<footer[\s>]/i.test(out)) return out.replace(/<footer/i, `${actions}<footer`);
+  return out + actions;
+}
+
+function openPrintTab(html: string, copy: PrintPageCopy): boolean {
   const tab = window.open("", "_blank");
   if (!tab) return false;
   tab.document.open();
-  tab.document.write(printDocumentHtml(html, printLabel));
+  tab.document.write(printDocumentHtml(html, copy));
   tab.document.close();
   try {
     tab.focus();
-    tab.print();
   } catch {
-    /* the document script calls print again after load */
+    /* the tab is already in front */
   }
   return true;
 }
@@ -122,20 +212,28 @@ function printInFrame(html: string) {
 }
 
 export function printHtml(aiText: string, title = "Report", locale?: string) {
-  const html = buildHtmlDocument(aiText, title, locale);
-  const printLabel = locale === "ar" || isArabicText(aiText) ? "طباعة" : "Print";
+  const lang = locale === "ar" || isArabicText(aiText) ? "ar" : "en";
+  const html = buildHtmlDocument(aiText, title, lang);
+  const chatUrl = typeof location !== "undefined" && location.href ? location.href : "/chat";
+  const copy = printPageCopy({
+    locale: lang,
+    title,
+    chatUrl,
+    shareText: clipSharedText(toWhatsApp(aiText, undefined, lang)),
+    markdown: aiText,
+  });
   const ios =
     typeof navigator !== "undefined" &&
     iosPrintHost(navigator.userAgent || "", navigator.platform || "", navigator.maxTouchPoints || 0);
   if (ios) {
-    const opened = openPrintTab(html, printLabel);
+    const opened = openPrintTab(html, copy);
     if (printChannel({ ios: true, opened }) === "share") {
       const { blob, file } = htmlFileFromText(aiText, title, locale);
       void deliverBlob(blob, file.name);
     }
     return;
   }
-  if (!printInFrame(html)) openPrintTab(html, printLabel);
+  if (!printInFrame(html)) openPrintTab(html, copy);
 }
 
 export async function exportPdf(

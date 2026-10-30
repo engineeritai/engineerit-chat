@@ -11,7 +11,7 @@ import Link from "next/link";
 import MessageMarkdown from "../components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "../components/copyRich";
 import { printHtml, publishAndShare, publishShare, shareToWhatsApp } from "@/lib/chatActions";
-import MessageShareMenu from "../components/MessageShareMenu";
+import MessageShareMenu, { ShareGlyph } from "../components/MessageShareMenu";
 import ReportViewer from "../components/ReportViewer";
 import { isViewerContent, reportLocale, reportViewerEnabled, viewerDownloads } from "@/lib/reportViewer";
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
@@ -1229,45 +1229,21 @@ export default function Page() {
                                       })
                                     }
                                   >
-                                    {s.chat.viewerOpen}
+                                    <ShareGlyph name="view" />
+                                    <span>{s.chat.viewerOpen}</span>
                                   </button>
                                 ) : null}
                                 <button
                                   type="button"
                                   className="msg-action-btn"
-                                  onClick={async () => {
-                                    const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
-                                    if (!root) showToast(s.chat.copyFailed, "err");
-                                    else await copyRichElement(root, m.content);
-                                  }}
-                                  aria-label={s.chat.copy}
-                                  title={s.chat.copy}
-                                >
-                                  📋 {s.chat.copy}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  className="msg-action-btn"
-                                  onClick={async () => {
-                                    const title = topic;
-                                    const { url, shared } = await publishAndShare({ title, markdown: m.content, locale });
-                                    if (!url) {
-                                      showToast(s.chat.shareFailed, "err");
-                                      return;
-                                    }
-                                    if (shared) return;
-                                    try {
-                                      await navigator.clipboard.writeText(clipSharedText(toWhatsApp(m.content, url, locale)));
-                                    } catch {
-                                      /* the menu still offers WhatsApp */
-                                    }
-                                    setOpenShareFor((prev) => (prev === m.id ? null : m.id));
-                                  }}
+                                  onClick={() => setOpenShareFor((prev) => (prev === m.id ? null : m.id))}
                                   aria-label={s.chat.share}
                                   title={s.chat.share}
+                                  aria-expanded={openShareFor === m.id}
+                                  aria-haspopup="menu"
                                 >
-                                  🔗 {s.chat.share}
+                                  <ShareGlyph name="share" />
+                                  <span>{s.chat.share}</span>
                                 </button>
 
                                 {/* ✅ Professional + Consultant */}
@@ -1373,9 +1349,40 @@ export default function Page() {
                               label={s.chat.share}
                               onClose={() => setOpenShareFor(null)}
                               actions={[
-                                { label: s.chat.saveHtml, onSelect: () => saveHtml(m.content, topic, locale) },
-                                { label: s.chat.print, onSelect: () => printHtml(m.content, topic, locale) },
                                 {
+                                  icon: "copy",
+                                  label: s.chat.copy,
+                                  onSelect: () => {
+                                    void (async () => {
+                                      const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
+                                      if (!root) showToast(s.chat.copyFailed, "err");
+                                      else await copyRichElement(root, m.content);
+                                    })();
+                                  },
+                                },
+                                {
+                                  icon: "share",
+                                  label: s.chat.share,
+                                  onSelect: () => {
+                                    void (async () => {
+                                      const { url, shared } = await publishAndShare({ title: topic, markdown: m.content, locale });
+                                      if (!url) {
+                                        showToast(s.chat.shareFailed, "err");
+                                        return;
+                                      }
+                                      if (shared) return;
+                                      try {
+                                        await navigator.clipboard.writeText(clipSharedText(toWhatsApp(m.content, url, locale)));
+                                      } catch {
+                                        /* this browser has no share sheet and blocked the clipboard */
+                                      }
+                                    })();
+                                  },
+                                },
+                                { icon: "html", label: s.chat.saveHtml, onSelect: () => saveHtml(m.content, topic, locale) },
+                                { icon: "print", label: s.chat.print, onSelect: () => printHtml(m.content, topic, locale) },
+                                {
+                                  icon: "whatsapp",
                                   label: s.chat.whatsapp,
                                   onSelect: () => {
                                     void (async () => {
@@ -1388,7 +1395,7 @@ export default function Page() {
                                     })();
                                   },
                                 },
-                                { label: `✕ ${s.chat.closeShare}`, onSelect: () => setOpenShareFor(null) },
+                                { icon: "close", label: s.chat.closeShare, onSelect: () => setOpenShareFor(null) },
                               ]}
                             />
                           </>

@@ -1,7 +1,7 @@
 import { flowSvg } from "@/lib/flowSvg";
 import { riyadhStamp } from "@/lib/ksaTime";
 import { parseMessage, plainInline, tokenizeInline, type Block, type ListItem } from "@/lib/messageDocument";
-import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { isCenteredBoqColumn, isOutputDisclaimer, OUTPUT_DISCLAIMER_GRAY, pageDisclaimerHtml } from "@/lib/outputDisclaimer";
 import { renderChartSvg } from "@/lib/scheduleSvg";
 import { blockDirection, hasArabicContent, isolatePieces, shareDir, shareLanguage } from "@/lib/shareDirection";
 
@@ -143,12 +143,12 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
   * { box-sizing: border-box; }
   body { margin: 0; font-family: "Noto Naskh Arabic", "IBM Plex Sans Arabic", "Noto Sans Arabic", Inter, "Segoe UI", sans-serif; color: #0f172a; background: #f5f7fb; text-align: start; }
   bdi { unicode-bidi: isolate; }
-  header, footer { display: flex; align-items: center; gap: 12px; padding: 16px 22px; background: #fff; }
-  header { border-bottom: 3px solid #1a56ff; direction: ltr; }
+  header, footer { background: #fff; }
+  header { display: flex; align-items: center; gap: 12px; padding: 16px 22px; border-bottom: 3px solid #1a56ff; direction: ltr; }
   header h1 { margin: 0; font-size: 22px; font-weight: 700; }
   [dir="rtl"] header h1 { margin-inline-start: auto; text-align: right; }
-  header img, footer img { width: 28px; height: 28px; }
-  main { max-width: 980px; margin: 0 auto; padding: 22px 16px 48px; }
+  header img { width: 28px; height: 28px; }
+  main { max-width: 980px; margin: 0 auto; padding: 22px 16px 8px; }
   article { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 18px 16px; min-width: 0; }
   h2 { font-size: 18px; color: #1a56ff; }
   h3 { font-size: 16px; }
@@ -171,11 +171,15 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
   li { margin: 3px 0; }
   li ul, li ol { margin: 4px 0; }
   strong { font-weight: 700; }
-  footer { border-top: 1px solid #e5e7eb; color: #64748b; font-size: 13px; display: block; }
-  .footer-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .output-disclaimer { margin: 0 0 8px; font-size: 11px; line-height: 1.45; color: ${OUTPUT_DISCLAIMER_GRAY}; }
-  .output-disclaimer a { color: ${OUTPUT_DISCLAIMER_GRAY}; text-decoration: underline; }
-  @media (max-width: 640px) { header h1 { font-size: 18px; } main { padding: 12px; } }
+  footer { border-top: 1px solid #e5e7eb; color: #64748b; font-size: 13px; display: block; padding: 0; }
+  .footer-inner { max-width: 980px; margin: 0 auto; box-sizing: border-box; padding: 12px calc(16px + 16px) calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .footer-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; flex-wrap: nowrap; font-size: 12px; }
+  .footer-brand { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+  .footer-brand img { width: 16px; height: 16px; align-self: center; }
+  .footer-stamp { flex: 0 0 auto; white-space: nowrap; }
+  .output-disclaimer { margin: 0 0 8px; font-size: 12px; line-height: 1.35; color: ${OUTPUT_DISCLAIMER_GRAY}; white-space: nowrap; }
+  .output-disclaimer a { color: ${OUTPUT_DISCLAIMER_GRAY}; text-decoration: underline; text-underline-offset: 2px; }
+  @media (max-width: 640px) { header h1 { font-size: 18px; } main { padding: 12px 16px 8px; } }
   @media print {
     body { background: #fff; }
     header, footer { position: fixed; left: 0; right: 0; background: #fff; }
@@ -197,11 +201,13 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
     ${blocksHtml(blocks, dir, lang)}
   </article>
 </main>
-<footer>
-  <p class="output-disclaimer" dir="${dir}">${isolatedHtml(outputDisclaimerBody(lang))} <a href="${esc(OUTPUT_POLICY_URL[lang])}"><bdi dir="ltr">${esc(OUTPUT_POLICY_LABEL)}</bdi></a></p>
-  <div class="footer-meta">
-    <span><img src="https://engineerit.ai/icon-192.png" alt=""/> engineer it · engineerit.ai</span>
-    <span>${esc(stamp)}</span>
+<footer dir="${dir}">
+  <div class="footer-inner">
+    <p class="output-disclaimer" dir="${dir}">${pageDisclaimerHtml(lang)}</p>
+    <div class="footer-meta">
+      <span class="footer-brand"><img src="https://engineerit.ai/icon-192.png" alt="eit" width="16" height="16"/> <span>engineer it · engineerit.ai</span></span>
+      <span class="footer-stamp">${esc(stamp)}</span>
+    </div>
   </div>
 </footer>
 </body>

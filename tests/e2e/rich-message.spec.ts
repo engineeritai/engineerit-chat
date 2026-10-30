@@ -145,7 +145,8 @@ test("copy keeps a table and a chart image on the clipboard", async ({ page, con
   expect(tableHtml).toContain("<table");
   expect(tableHtml).toContain('dir="ltr"');
 
-  await page.locator(".msg-actions").getByRole("button", { name: "Copy" }).click();
+  await page.locator(".msg-actions").getByRole("button", { name: "Share" }).click();
+  await page.getByRole("menuitem", { name: "Copy" }).click();
   const readHtml = readClip;
   let rich = "";
   await expect.poll(async () => {
@@ -163,7 +164,8 @@ test("copy keeps a table and a chart image on the clipboard", async ({ page, con
     }
   });
   await openFixture(page, "ar");
-  await page.locator(".msg-actions").getByRole("button", { name: "نسخ" }).click();
+  await page.locator(".msg-actions").getByRole("button", { name: "مشاركة" }).click();
+  await page.getByRole("menuitem", { name: "نسخ" }).click();
   const readArabic = readClip;
   let arabic = "";
   await expect.poll(async () => {
