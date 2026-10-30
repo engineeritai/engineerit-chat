@@ -4,6 +4,9 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ReportViewer from "../app/components/ReportViewer";
+import MessageShareMenu from "../app/components/MessageShareMenu";
+import { shareSheetLabels } from "../lib/chatActions";
+import { buildShareHtml } from "../lib/shareDocument";
 import { exportCapabilities } from "../lib/advisors";
 import {
   DISCLAIMER_GRAY,
@@ -155,6 +158,51 @@ test("the report HTML is right to left, centres unit and quantity, and carries t
   assert.doesNotMatch(english, /may contain errors/);
   assert.equal(isMeasureColumn("Working"), false);
   assert.equal(isMeasureColumn("طريقة الحساب"), false);
+});
+
+test("an Arabic answer uses Arabic sheet labels even when the interface is English", () => {
+  const arabic = "يمكن استخدام نظم المعلومات الجغرافية مع أوتوكاد لتخطيط شبكات المياه.";
+  const sheet = shareSheetLabels(arabic, "en");
+  assert.equal(sheet.lang, "ar");
+  assert.equal(sheet.dir, "rtl");
+  assert.deepEqual(
+    [sheet.copy, sheet.share, sheet.saveHtml, sheet.print, sheet.whatsapp, sheet.close],
+    ["نسخ", "مشاركة", "حفظ HTML", "طباعة", "واتساب", "إغلاق"]
+  );
+  const english = shareSheetLabels("The footing is 500 mm deep.", "en");
+  assert.equal(english.lang, "en");
+  assert.equal(english.dir, "ltr");
+  assert.equal(english.copy, "Copy");
+  assert.equal(english.saveHtml, "Save HTML");
+  const fallback = shareSheetLabels("The footing is 500 mm deep.", "ar");
+  assert.equal(fallback.lang, "ar");
+  assert.equal(fallback.dir, "rtl");
+  assert.equal(fallback.close, "إغلاق");
+
+  const html = renderToStaticMarkup(
+    <MessageShareMenu
+      open
+      dir={sheet.dir}
+      label={sheet.share}
+      onClose={() => undefined}
+      actions={[
+        { icon: "copy", label: sheet.copy, onSelect: () => undefined },
+        { icon: "share", label: sheet.share, onSelect: () => undefined },
+        { icon: "html", label: sheet.saveHtml, onSelect: () => undefined },
+        { icon: "print", label: sheet.print, onSelect: () => undefined },
+        { icon: "whatsapp", label: sheet.whatsapp, onSelect: () => undefined },
+        { icon: "close", label: sheet.close, onSelect: () => undefined },
+      ]}
+    />
+  );
+  assert.match(html, /dir="rtl"/);
+  assert.match(html, /حفظ HTML/);
+  assert.doesNotMatch(html, />Copy</);
+  const footer = buildShareHtml({ title: "شبكات المياه", markdown: arabic, locale: "en" });
+  assert.match(footer, /تُطبَّق سياسة الاستخدام/);
+  assert.doesNotMatch(footer.slice(footer.indexOf("<footer")), /may contain errors/);
+  assert.match(readFileSync("app/chat/page.tsx", "utf8"), /shareSheetLabels\(m\.content, locale\)/);
+  assert.match(readFileSync("app/chat/page.tsx", "utf8"), /locale=\{shareSheetLabels\(reportViewer\.markdown, locale\)\.lang\}/);
 });
 
 test("message Share opens the app sheet and does not call the system share", () => {
