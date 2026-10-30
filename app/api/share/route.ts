@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { topicFrom } from "@/lib/messageDocument";
+import { shareRecordTitle } from "@/lib/messageDocument";
 import { createShare } from "@/lib/shareStore";
 import { publicShareUrl } from "@/lib/shareUrl";
 
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     if (!markdown.trim()) return NextResponse.json({ error: "Missing content." }, { status: 400 });
     const locale = body.locale === "ar" || /[\u0600-\u06FF]/.test(markdown) ? "ar" : "en";
     const record = await createShare({
-      title: topicFrom(markdown, body.title, locale),
+      title: shareRecordTitle(body.title, markdown, locale),
       markdown,
       locale,
     });

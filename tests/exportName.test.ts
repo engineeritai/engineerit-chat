@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { contentDisposition, coverSubtitle, downloadName, REPORT_LABEL, shortTopic } from "../lib/exportName";
-import { asciiToMermaid, parseMessage, topicFrom } from "../lib/messageDocument";
+import { answerTitle, asciiToMermaid, nearestUserPrompt, parseMessage, shareRecordTitle, topicFrom } from "../lib/messageDocument";
 import { buildShareHtml } from "../lib/shareDocument";
 import { toWhatsApp } from "../lib/whatsappText";
 
@@ -88,6 +88,52 @@ test("html export renders the urea note instead of a markdown dump", () => {
   assert.doesNotMatch(html, /<pre>[^<]*###/);
   assert.doesNotMatch(html, /Ammonia Plant\s+\|/);
   assert.equal(html.includes("```"), false);
+});
+
+test("each answer is titled from its own heading, then its question, then the chat", () => {
+  const water = "## **Water distribution network**\n\nGIS and AutoCAD share one model.\n\n```mermaid\nflowchart LR\nA-->B\n```";
+  assert.equal(
+    answerTitle({ markdown: water, prompt: "Explain GIS for water", chatTitle: "Factory roadmap" }),
+    "Water distribution network"
+  );
+  assert.equal(
+    answerTitle({
+      markdown: "### Only a small heading\n\nNo section title here.",
+      prompt: "How do I **size** a feed pump for the boiler house?",
+      chatTitle: "Factory roadmap",
+    }),
+    "How do I size a feed pump for the boiler house?"
+  );
+  assert.equal(
+    answerTitle({ markdown: "A short note with no heading.", chatTitle: "Factory roadmap" }),
+    "Factory roadmap"
+  );
+  assert.equal(
+    answerTitle({ markdown: "A short note.", chatTitle: "New chat", locale: "en" }),
+    "Report · Engineered with engineer it"
+  );
+  const long = `## ${"North water main ".repeat(8)}`;
+  const clipped = answerTitle({ markdown: long, chatTitle: "Factory roadmap" });
+  assert.ok(clipped.length <= 70);
+  assert.equal(clipped.endsWith(" "), false);
+  assert.match(clipped, /North water main/);
+  assert.equal(clipped.includes("Factory"), false);
+  const arabic = "## شبكات توزيع المياه\n\nتستخدم نظم المعلومات الجغرافية مع أوتوكاد.";
+  assert.equal(answerTitle({ markdown: arabic, chatTitle: "Factory roadmap", locale: "en" }), "شبكات توزيع المياه");
+  const messages = [
+    { role: "user", content: "Create a factory roadmap" },
+    { role: "assistant", content: "## Factory roadmap" },
+    { role: "user", content: "Now explain the water network" },
+    { role: "assistant", content: water },
+  ];
+  assert.equal(nearestUserPrompt(messages, 3), "Now explain the water network");
+  assert.equal(nearestUserPrompt(messages, 1), "Create a factory roadmap");
+  assert.equal(shareRecordTitle("Water distribution network", water, "en"), "Water distribution network");
+  assert.equal(shareRecordTitle("New chat", water, "en"), "Water distribution network");
+  const shared = toWhatsApp(water, "https://engineerit.ai/share/water");
+  assert.match(shared, /\*Water distribution network\*/);
+  assert.match(shared, /https:\/\/engineerit\.ai\/share\/water/);
+  assert.match(shared, /may contain errors/);
 });
 
 test("whatsapp share drops markdown fences and keeps the link", () => {

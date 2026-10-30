@@ -300,6 +300,76 @@ export function ganttAppendix(blocks: Block[], locale: UiLocale): { headers: str
   return { headers, rows };
 }
 
+const GENERIC_TITLE = new Set([
+  "",
+  "engineer it",
+  "engineerit.ai",
+  "new chat",
+  "محادثة جديدة",
+  "engineering report",
+  "تقرير هندسي",
+  REPORT_LABEL.en.toLowerCase(),
+  REPORT_LABEL.ar.toLowerCase(),
+]);
+
+function cleanTitle(value: string | undefined): string {
+  return plainInline(value || "")
+    .replace(/[#>*_~`]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Keep a title on one line, cutting at a word when it runs past the limit. */
+export function clipTitle(value: string, limit = 70): string {
+  const text = value.replace(/\s+/g, " ").trim();
+  if (text.length <= limit) return text;
+  const slice = text.slice(0, limit);
+  const space = slice.lastIndexOf(" ");
+  return (space >= 24 ? slice.slice(0, space) : slice).trim().replace(/[.,:;،؛–—-]+$/u, "").trim();
+}
+
+function usableTitle(value: string): boolean {
+  const text = value.replace(/\s+/g, " ").trim();
+  return text.length >= 2 && !GENERIC_TITLE.has(text.toLowerCase());
+}
+
+function firstSectionHeading(markdown: string): string {
+  for (const block of parseMessage(markdown || "")) {
+    if (block.type === "heading" && block.level <= 2) return cleanTitle(block.text);
+  }
+  return "";
+}
+
+/** The user question immediately before this answer. */
+export function nearestUserPrompt(messages: { role: string; content: string }[], index: number): string | undefined {
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const text = messages[i]?.content?.trim();
+    if (messages[i]?.role === "user" && text) return messages[i].content;
+  }
+  return undefined;
+}
+
+/**
+ * Title for this answer only. Heading first, then the question that prompted it,
+ * then the chat title. Arabic text stays Arabic.
+ */
+export function answerTitle(args: { markdown: string; prompt?: string; chatTitle?: string; locale?: UiLocale }): string {
+  const heading = firstSectionHeading(args.markdown);
+  if (usableTitle(heading)) return clipTitle(heading);
+  const prompt = cleanTitle(args.prompt);
+  if (usableTitle(prompt)) return clipTitle(prompt);
+  const chat = cleanTitle(args.chatTitle);
+  if (usableTitle(chat)) return clipTitle(chat);
+  return REPORT_LABEL[ARABIC.test(args.markdown) || args.locale === "ar" ? "ar" : "en"];
+}
+
+/** Store the title the client already derived. A generic chat title falls through to the answer. */
+export function shareRecordTitle(provided: string | undefined, markdown: string, locale: UiLocale): string {
+  const given = clipTitle(cleanTitle(provided));
+  if (usableTitle(given)) return given;
+  return answerTitle({ markdown, locale });
+}
+
 export function exportMeta(markdown: string, requested: string | undefined, locale: UiLocale, prompt?: string) {
   const heading = markdown.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim();
   const source = pickTopicSource(requested, prompt, heading);
