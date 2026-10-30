@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { contentDisposition, coverSubtitle, downloadName, REPORT_LABEL, shortTopic } from "../lib/exportName";
-import { answerTitle, asciiToMermaid, nearestUserPrompt, parseMessage, shareRecordTitle, topicFrom } from "../lib/messageDocument";
+import { answerTitle, asciiToMermaid, nearestUserPrompt, parseMessage, plainTopic, shareRecordTitle, topicFrom } from "../lib/messageDocument";
 import { buildShareHtml } from "../lib/shareDocument";
 import { toWhatsApp } from "../lib/whatsappText";
 
@@ -134,6 +134,36 @@ test("each answer is titled from its own heading, then its question, then the ch
   assert.match(shared, /\*Water distribution network\*/);
   assert.match(shared, /https:\/\/engineerit\.ai\/share\/water/);
   assert.match(shared, /may contain errors/);
+});
+
+test("request verbs drop out of titles and noun headings stay as written", () => {
+  assert.equal(plainTopic("Create Turnaround package for CDU plant"), "Turnaround Package for CDU Plant");
+  assert.equal(plainTopic("please create a turnaround package for the CDU plant"), "Turnaround Package for the CDU Plant");
+  assert.equal(plainTopic("Can you prepare the isolation plan?"), "Isolation Plan");
+  assert.equal(plainTopic("Could you give me a pump datasheet"), "Pump Datasheet");
+  assert.equal(plainTopic("I need the feed pump curve"), "Feed Pump Curve");
+  assert.equal(plainTopic("Help me calculate the nozzle load"), "Nozzle Load");
+  assert.equal(plainTopic("Water distribution network"), "Water distribution network");
+  assert.equal(plainTopic("Factory roadmap"), "Factory roadmap");
+  assert.equal(plainTopic("The water distribution network"), "The water distribution network");
+  assert.equal(plainTopic("How do I size a feed pump for the boiler house?"), "How do I size a feed pump for the boiler house?");
+  const long = plainTopic(`Create ${"north water main ".repeat(8)}`);
+  assert.ok(long.length <= 60);
+  assert.match(long, /North Water Main/);
+  assert.equal(plainTopic("اعمل حصر الكميات للوحدة", "ar"), "حصر الكميات للوحدة");
+  assert.equal(plainTopic("أنشئ جدول الإيقاف الشامل", "ar"), "جدول الإيقاف الشامل");
+  assert.equal(plainTopic("انشئ مخطط التدفق", "ar"), "مخطط التدفق");
+  assert.equal(plainTopic("من فضلك اكتب تقرير الفحص", "ar"), "تقرير الفحص");
+  assert.equal(plainTopic("لو سمحت جهز خطة العزل", "ar"), "خطة العزل");
+  assert.equal(plainTopic("أريد أعد دراسة المضخة", "ar"), "دراسة المضخة");
+  assert.equal(plainTopic("ممكن اشرح شبكة المياه", "ar"), "شبكة المياه");
+  assert.equal(plainTopic("احسب حمل الفوهة", "ar"), "حمل الفوهة");
+  assert.equal(plainTopic("شبكات توزيع المياه", "ar"), "شبكات توزيع المياه");
+  assert.equal(
+    answerTitle({ markdown: "No heading here.", prompt: "Create Turnaround package for CDU plant", chatTitle: "New chat" }),
+    "Turnaround Package for CDU Plant"
+  );
+  assert.equal(shareRecordTitle("Create Turnaround package for CDU plant", "No heading here.", "en"), "Turnaround Package for CDU Plant");
 });
 
 test("whatsapp share drops markdown fences and keeps the link", () => {

@@ -1,7 +1,9 @@
 import ExcelJS from "exceljs";
 import { plainInline } from "@/lib/messageDocument";
 import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
-import type { PreparedReport } from "@/lib/reportModel";
+import type { PreparedReport, ReportImage } from "@/lib/reportModel";
+import { pngSize, svgToPng } from "@/lib/rasterSvg";
+import { ganttFitBands } from "@/lib/scheduleSvg";
 
 function columnAlign(header: string, rtl: boolean): "center" | "right" | "left" {
   if (isCenteredBoqColumn(plainInline(header))) return "center";
@@ -78,10 +80,56 @@ function addTableSheet(book: ExcelJS.Workbook, name: string, title: string, stam
   sheet.headerFooter.oddFooter = footer;
   sheet.headerFooter.evenFooter = footer;
   fitColumns(sheet);
+  fitSheetPage(sheet);
   sheet.autoFilter = {
     from: { row: 4, column: 1 },
     to: { row: Math.max(4, 4 + rows.length), column: span },
   };
+}
+
+function fitSheetPage(sheet: ExcelJS.Worksheet) {
+  sheet.pageSetup = {
+    paperSize: 9,
+    orientation: "portrait",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    horizontalCentered: true,
+    margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 },
+  };
+}
+
+/** One picture per chart band, sized to a portrait sheet (A4 and Letter). */
+function chartPictures(report: PreparedReport): ReportImage[] {
+  const pictures: ReportImage[] = [];
+  const rtl = report.locale === "ar";
+  for (const block of report.blocks) {
+    if (block.type === "chart" && block.model.kind === "gantt") {
+      for (const svg of ganttFitBands(block.model, rtl)) {
+        const png = svgToPng(svg, 1400);
+        const size = pngSize(png);
+        pictures.push({ png, width: size.width, height: size.height });
+      }
+      continue;
+    }
+    if (block.type === "chart" || block.type === "diagram") {
+      const image = report.images.get(block.index);
+      if (image) pictures.push(image);
+    }
+  }
+  return pictures;
+}
+
+function sheetExtent(image: ReportImage) {
+  const maxW = 680;
+  const maxH = 900;
+  let width = maxW;
+  let height = Math.max(80, Math.round(image.height * (width / Math.max(1, image.width))));
+  if (height > maxH) {
+    height = maxH;
+    width = Math.max(80, Math.round(image.width * (height / Math.max(1, image.height))));
+  }
+  return { width, height };
 }
 
 export async function buildReportXlsx(report: PreparedReport): Promise<Uint8Array> {
@@ -118,6 +166,18 @@ export async function buildReportXlsx(report: PreparedReport): Promise<Uint8Arra
       const name = index === 0 ? (rtl ? "تقرير" : "Report") : rtl ? `جدول ${index + 1}` : `Table ${index + 1}`;
       addTableSheet(book, name, report.title, report.stamp, block.headers, block.rows, rtl);
     });
+  }
+  const pictures = chartPictures(report);
+  if (pictures.length) {
+    const charts = book.addWorksheet(rtl ? "مخططات" : "Charts", { views: [{ rightToLeft: rtl, showGridLines: false, zoomScale: 100 }] });
+    fitSheetPage(charts);
+    let row = 0;
+    for (const image of pictures) {
+      const id = book.addImage({ base64: Buffer.from(image.png).toString("base64"), extension: "png" });
+      const { width, height } = sheetExtent(image);
+      charts.addImage(id, { tl: { col: 0, row }, ext: { width, height } });
+      row += Math.ceil(height / 18) + 2;
+    }
   }
   const buffer = await book.xlsx.writeBuffer();
   return new Uint8Array(buffer as ArrayBuffer);

@@ -6,9 +6,13 @@ import { containsArabic, visualTokens } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
 import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimer, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
+import { pngSize, svgToPng } from "@/lib/rasterSvg";
+import { ganttFitBands } from "@/lib/scheduleSvg";
 
-const PORTRAIT = { w: 595.28, h: 841.89 };
-const LANDSCAPE = { w: 841.89, h: 595.28 };
+function pageBox(page: "a4" | "letter") {
+  if (page === "letter") return { portrait: { w: 612, h: 792 }, landscape: { w: 792, h: 612 } };
+  return { portrait: { w: 595.28, h: 841.89 }, landscape: { w: 841.89, h: 595.28 } };
+}
 const MARGIN = 46;
 const INK = rgb(0.059, 0.09, 0.16);
 const MUTED = rgb(0.39, 0.45, 0.55);
@@ -129,7 +133,8 @@ function wrap(text: string, fonts: Fonts, size: number, maxWidth: number, bold =
   return lines.length ? lines : [""];
 }
 
-export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array> {
+export async function buildReportPdf(report: PreparedReport, page: "a4" | "letter" = "a4"): Promise<Uint8Array> {
+  const { portrait: PORTRAIT, landscape: LANDSCAPE } = pageBox(page);
   const pdf = await PDFDocument.create();
   pdf.setTitle(report.title);
   pdf.setSubject(report.subtitle);
@@ -309,19 +314,30 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
     gap();
   };
 
-  const drawImage = async (image: ReportImage, caption: string) => {
-    newContentPage(true);
+  const drawImage = async (image: ReportImage, caption: string, heading?: { text: string; level: number }) => {
     const png: PDFImage = await pdf.embedPng(image.png);
     const maxW = current.page.getWidth() - MARGIN * 2;
-    const maxH = current.page.getHeight() - 130;
-    const scale = Math.min(maxW / image.width, maxH / image.height);
-    const w = image.width * scale;
-    const h = image.height * scale;
-    const x = (current.page.getWidth() - w) / 2;
+    const maxH = current.page.getHeight() - 180;
+    const widthScale = maxW / image.width;
+    let w = maxW;
+    let h = image.height * widthScale;
+    if (h > maxH) {
+      const fit = Math.min(widthScale, maxH / image.height);
+      w = image.width * fit;
+      h = image.height * fit;
+    }
+    const headingSize = heading ? (heading.level <= 2 ? 15 : 13) : 0;
+    const headingLines = heading ? wrap(heading.text, fonts, headingSize, maxW, true) : [];
+    const headingH = headingLines.length * (headingSize + 4) + 8;
+    if (y - headingH - h < 90) newContentPage(false);
+    if (headingLines.length) drawLines(headingLines, headingSize, true, 0, blockDir(heading!.text, report.locale) === "rtl");
+    const x = MARGIN + Math.max(0, (maxW - w) / 2);
     current.page.drawImage(png, { x, y: y - h, width: w, height: h });
-    y -= h + 16;
-    const lines = wrap(caption, fonts, 10, maxW);
-    drawLines(lines, 10, false, 0, blockDir(caption, report.locale) === "rtl");
+    y -= h + 10;
+    if (caption.trim()) {
+      const lines = wrap(caption, fonts, 10, maxW);
+      drawLines(lines, 10, false, 0, blockDir(caption, report.locale) === "rtl");
+    }
     gap();
   };
 
@@ -360,8 +376,9 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
 
   for (let index = 0; index < report.blocks.length; index += 1) {
     const block = report.blocks[index];
-    if (block.type === "heading" && nextBlock(index + 1)?.type === "table") continue;
-    const heading = block.type === "table" ? previousHeading(index) : undefined;
+    const upcoming = nextBlock(index + 1)?.type;
+    if (block.type === "heading" && (upcoming === "table" || upcoming === "chart" || upcoming === "diagram")) continue;
+    const heading = block.type === "table" || block.type === "chart" || block.type === "diagram" ? previousHeading(index) : undefined;
     await paintBlock(block, heading);
   }
 
@@ -408,14 +425,22 @@ export async function buildReportPdf(report: PreparedReport): Promise<Uint8Array
       return;
     }
     if (block.type === "chart") {
+      if (block.model.kind === "gantt") {
+        const bands = ganttFitBands(block.model, rtlDoc);
+        for (let band = 0; band < bands.length; band += 1) {
+          const png = svgToPng(bands[band], 1400);
+          const size = pngSize(png);
+          await drawImage({ png, width: size.width, height: size.height }, band === 0 ? block.model.title : "", band === 0 ? heading : undefined);
+        }
+        return;
+      }
       const image = report.images.get(block.index);
-      const caption = block.model.title;
-      if (image) await drawImage(image, caption);
+      if (image) await drawImage(image, block.model.title, heading);
       return;
     }
     if (block.type === "diagram") {
       const image = report.images.get(block.index);
-      if (image) await drawImage(image, report.locale === "ar" ? "مخطط" : "Diagram");
+      if (image) await drawImage(image, report.locale === "ar" ? "مخطط" : "Diagram", heading);
       return;
     }
     if (block.type === "code") {

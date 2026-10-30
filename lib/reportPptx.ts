@@ -1,6 +1,7 @@
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline } from "@/lib/messageDocument";
-import { pngSize } from "@/lib/rasterSvg";
+import { pngSize, svgToPng } from "@/lib/rasterSvg";
+import { ganttFitBands } from "@/lib/scheduleSvg";
 import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
@@ -334,17 +335,50 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       continue;
     }
     if (block.type === "chart" || block.type === "diagram") {
-      flushBody();
-      const image = report.images.get(block.index);
-      if (!image) continue;
+      const pending = body.join("\n").trim();
+      const shortLead = pending.length > 0 && pending.length <= 180;
+      if (pending && !shortLead) flushBody();
+      else body = [];
       const caption = block.type === "chart" ? block.model.title : rtl ? "مخطط" : "Diagram";
-      const slide = contentSlide(caption);
-      const maxW = W - 1.1;
-      const maxH = 5.5;
-      const scale = Math.min(maxW / image.width, maxH / image.height);
-      const w = image.width * scale;
-      const h = image.height * scale;
-      slide.addImage({ data: pngData(image), x: (W - w) / 2, y: 0.8, w, h });
+      const pictures: ReportImage[] =
+        block.type === "chart" && block.model.kind === "gantt"
+          ? ganttFitBands(block.model, rtl).map((svg) => {
+              const png = svgToPng(svg, 1400);
+              const size = pngSize(png);
+              return { png, width: size.width, height: size.height };
+            })
+          : report.images.get(block.index)
+            ? [report.images.get(block.index)!]
+            : [];
+      if (!pictures.length) {
+        if (shortLead) body.push(pending);
+        continue;
+      }
+      const maxW = W - 0.8;
+      pictures.forEach((image, band) => {
+        const slide = contentSlide(band === 0 ? bodyTitle || caption : caption);
+        const lead = band === 0 && shortLead;
+        const top = lead ? 1.15 : 0.78;
+        const maxH = H - top - 0.55;
+        if (lead) {
+          slide.addText(pending, {
+            x: 0.5,
+            y: 0.68,
+            w: W - 1,
+            h: 0.4,
+            fontFace: face,
+            lang,
+            fontSize: 14,
+            color: "0F172A",
+            align: rtl ? "right" : "left",
+            rtlMode: rtl || blockDir(pending, report.locale) === "rtl",
+          });
+        }
+        const scale = Math.min(maxW / image.width, maxH / image.height);
+        const w = image.width * scale;
+        const h = image.height * scale;
+        slide.addImage({ data: pngData(image), x: Math.max(0.3, (W - w) / 2), y: top, w, h });
+      });
       continue;
     }
     if (block.type === "table") {

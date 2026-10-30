@@ -91,7 +91,7 @@ export function ganttRows(model: GanttModel): { kind: "group" | "task"; label: s
   return rows;
 }
 
-function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme): string {
+function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme, fit = false, from = 0, to = Number.POSITIVE_INFINITY, labels = true): string {
   const colors = palette[theme];
   const pad = 12;
   const dayMs = 86_400_000;
@@ -101,18 +101,22 @@ function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme): string {
   const max = Math.max(...ends) + 2 * dayMs;
   const span = Math.max(max - min, dayMs);
   const spanDays = Math.max(1, Math.round(span / dayMs));
-  const axisW = Math.max(280, spanDays * 22);
-  const width = pad * 2 + axisW;
-  const axisX = pad;
+  const labelW = fit ? 300 : 0;
+  const axisW = fit ? 680 : Math.max(280, spanDays * 22);
+  const width = fit ? labelW + 16 + axisW : pad * 2 + axisW;
+  const axisX = fit ? (rtl ? pad : labelW + 16) : pad;
   const xOf = (ms: number) => {
     const t = (ms - min) / span;
     return rtl ? axisX + axisW - t * axisW : axisX + t * axisW;
   };
-  const rows = ganttRows(model);
+  const allRows = ganttRows(model);
+  const rows = allRows.slice(from, to);
   const headerH = GANTT_HEADER;
   const rowH = GANTT_ROW;
   const height = headerH + rows.length * rowH;
-  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg data-chart="gantt" data-font="12" style="width:${width}px;max-width:none;height:${height}px" `)];
+  const fitted = `data-chart="gantt" data-fit="1" data-font="12" style="display:block;width:100%;max-width:100%;height:auto"`;
+  const scrolling = `data-chart="gantt" data-font="12" style="width:${width}px;max-width:none;height:${height}px"`;
+  const parts = [svgOpen(width, height, theme).replace("<svg ", `<svg ${fit ? fitted : scrolling} `)];
   parts.push(`<defs><marker id="gantt-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="${colors.muted}"/></marker></defs>`);
 
   let cursor = min;
@@ -131,7 +135,7 @@ function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme): string {
 
   const todayMs = parseIso(model.today);
   const bars = new Map<string, { x1: number; x2: number; y: number }>();
-  let taskCursor = 0;
+  let taskCursor = allRows.slice(0, from).filter((row) => row.kind === "task").length;
   rows.forEach((row, index) => {
     const y = headerH + index * rowH;
     if (row.kind === "group") {
@@ -182,8 +186,58 @@ function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme): string {
     parts.push(`<line data-kind="today" x1="${x.toFixed(1)}" y1="4" x2="${x.toFixed(1)}" y2="${height - 2}" stroke="${colors.ink}" stroke-width="1.5" stroke-dasharray="4 4"/>`);
     parts.push(text(x, 14, rtl ? "اليوم" : "Today", { size: 12, fill: colors.ink, weight: 700, anchor: "middle" }));
   }
+  if (fit && labels) {
+    rows.forEach((row, index) => {
+      const y = headerH + index * rowH + 22;
+      const label = clip(row.label, 28);
+      const weight = row.kind === "group" ? 700 : 500;
+      if (rtl) parts.push(text(width - 8, y, label, { size: 12, anchor: "end", fill: colors.ink, weight, rtl: true }));
+      else parts.push(text(8, y, label, { size: 12, anchor: "start", fill: colors.ink, weight }));
+    });
+  }
   parts.push("</svg>");
   return parts.join("");
+}
+
+/** Export bands: labels included, each band short enough for an A4/Letter portrait page. */
+export function ganttFitBands(model: GanttModel, rtl: boolean, per = 14): string[] {
+  const count = ganttRows(model).length;
+  if (count <= per) return [ganttSvg(model, rtl, "light", true)];
+  const bands: string[] = [];
+  for (let start = 0; start < count; start += per) bands.push(ganttSvg(model, rtl, "light", true, start, start + per));
+  return bands;
+}
+
+export function asExportSvg(svg: string): string {
+  return svg
+    .replace(/\swidth="[\d.]+"/, ' width="100%"')
+    .replace(/\sheight="[\d.]+"/, "")
+    .replace(/style="[^"]*"/, 'style="display:block;width:100%;max-width:100%;height:auto"');
+}
+
+/** HTML export: bars scale in the SVG, task names sit in HTML so Arabic is not clipped. */
+function ganttHtmlBands(model: GanttModel, rtl: boolean): string[] {
+  const rows = ganttRows(model);
+  const per = 14;
+  const bands: string[] = [];
+  for (let start = 0; start < rows.length; start += per) {
+    const slice = rows.slice(start, start + per);
+    const svg = ganttSvg(model, rtl, "light", true, start, start + per, false);
+    const names = [
+      `<div class="gantt-fit-head"></div>`,
+      ...slice.map((row) => `<div class="gantt-fit-name${row.kind === "group" ? " is-group" : ""}">${esc(row.label)}</div>`),
+    ].join("");
+    const tracks = `${GANTT_HEADER}fr repeat(${slice.length}, ${GANTT_ROW}fr)`;
+    bands.push(
+      `<div class="gantt-fit" dir="${rtl ? "rtl" : "ltr"}">${svg}<div class="gantt-fit-names" style="grid-template-rows:${tracks}">${names}</div></div>`
+    );
+  }
+  return bands.length ? bands : [ganttSvg(model, rtl, "light", true, 0, 0, false)];
+}
+
+export function renderFittedChartParts(model: ChartModel, dir: "ltr" | "rtl"): string[] {
+  if (model.kind === "gantt") return ganttHtmlBands(model, dir === "rtl");
+  return [asExportSvg(renderChartSvg(model, dir, "light"))];
 }
 
 function timelineSvg(model: TimelineModel, rtl: boolean, theme: ChartTheme): string {
