@@ -242,9 +242,11 @@ test("the viewer flag defaults on and off restores direct export", () => {
   assert.match(page, /if \(viewerOn && isViewerContent\(content\)\)/);
   assert.match(page, /viewerOn && isViewerContent\(m\.content\)/);
   assert.match(page, /viewerOn && reportViewer/);
-  assert.match(page, /await exportPdf\(m\.content, \{ title: meta\.source \|\| topic, subtitle: meta\.subtitle, locale, diagrams \}\)/);
-  assert.match(page, /await exportWordDocx\(m\.content, \{ title: meta\.source \|\| topic, subtitle: meta\.subtitle, locale, diagrams \}\)/);
-  assert.match(page, /await exportPptx\(m\.content, \{ title: meta\.source \|\| topic, subtitle: meta\.subtitle, locale, diagrams \}\)/);
+  assert.match(page, /await exportPdf\(m\.content, \{ title: answerHeading, subtitle: meta\.subtitle, locale, diagrams \}\)/);
+  assert.match(page, /await exportWordDocx\(m\.content, \{ title: answerHeading, subtitle: meta\.subtitle, locale, diagrams \}\)/);
+  assert.match(page, /await exportPptx\(m\.content, \{ title: answerHeading, subtitle: meta\.subtitle, locale, diagrams \}\)/);
+  assert.match(page, /publishAndShare\(\{ title: answerHeading/);
+  assert.match(page, /printHtml\(m\.content, answerHeading, locale\)/);
 });
 
 test("the viewer adds no Supabase client usage", () => {

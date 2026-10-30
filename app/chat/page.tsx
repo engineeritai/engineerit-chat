@@ -19,7 +19,7 @@ import { showToast } from "@/lib/toast";
 import { markRtlPlain } from "@/lib/shareDirection";
 import { clipSharedText, toWhatsApp } from "@/lib/whatsappText";
 import { downloadName } from "@/lib/exportName";
-import { exportMeta } from "@/lib/messageDocument";
+import { answerTitle, exportMeta, nearestUserPrompt } from "@/lib/messageDocument";
 import { buildShareHtml } from "@/lib/shareDocument";
 import { actionItemsAr, actionItemsEn, chartCaseAr, chartCaseEn, sampleAr, sampleEn } from "@/lib/richSamples";
 import MarketingShell from "../components/marketing/MarketingShell";
@@ -451,8 +451,19 @@ export default function Page() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const kind = params.get("fixture");
-    const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "actions-en", "actions-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar", "boq-en", "boq-ar", "roadmap-en", "roadmap-ar"]);
+    const kinds = new Set(["en", "ar", "charts-en", "charts-ar", "actions-en", "actions-ar", "scurve-en", "scurve-ar", "flow-en", "flow-ar", "gate-en", "gate-ar", "gantt-en", "gantt-ar", "boq-en", "boq-ar", "roadmap-en", "roadmap-ar", "topics-en"]);
     if (!kind || !kinds.has(kind)) return;
+    if (kind === "topics-en") {
+      const factory = "## Factory roadmap\n\nThe plant is built in five stages.\n\n```mermaid\nflowchart LR\nA[Start]-->B[Launch]\n```";
+      const water = "## Water distribution network\n\nGIS and AutoCAD share one model.\n\n```mermaid\nflowchart LR\nG[GIS]-->C[AutoCAD]\n```";
+      setFixture([
+        { id: "topic-user-1", role: "user", content: "Create a roadmap for an automotive supply parts factory", attachments: [], createdAt: isoOnDay(-1, 16, 20) },
+        { id: "topic-ai-1", role: "assistant", content: factory, attachments: [], createdAt: isoOnDay(-1, 16, 32) },
+        { id: "topic-user-2", role: "user", content: "Now explain GIS and AutoCAD for a water distribution network", attachments: [], createdAt: isoOnDay(0, 16, 20) },
+        { id: "topic-ai-2", role: "assistant", content: water, attachments: [], createdAt: isoOnDay(0, 16, 32) },
+      ]);
+      return;
+    }
     if (kind === "boq-en" || kind === "boq-ar") {
       const ar = kind === "boq-ar";
       const content = ar ? BOQ_FIXTURE_AR : BOQ_FIXTURE_EN;
@@ -618,8 +629,12 @@ export default function Page() {
     if (params.get("shareMenu") === "1") setOpenShareFor(message.id);
     if (params.get("viewer") === "1" && viewerOn && isViewerContent(message.content)) {
       const lang = reportLocale(message.content, locale);
-      const meta = exportMeta(message.content, undefined, lang);
-      setReportViewer({ id: message.id, title: meta.title, markdown: message.content, locale: lang });
+      const meta = answerTitle({
+        markdown: message.content,
+        prompt: nearestUserPrompt(fixture, fixture.length - 1),
+        locale: lang,
+      });
+      setReportViewer({ id: message.id, title: meta, markdown: message.content, locale: lang });
     }
   }, [fixture, locale, viewerOn]);
 
@@ -880,10 +895,10 @@ export default function Page() {
       history.appendLocal(assistantMessage);
       if (viewerOn && isViewerContent(content)) {
         const lang = reportLocale(content, locale);
-        const meta = exportMeta(content, thread?.title, lang, userText);
+        const meta = answerTitle({ markdown: content, prompt: userText, chatTitle: thread?.title, locale: lang });
         setReportViewer({
           id: assistantMessage.id,
-          title: meta.title,
+          title: meta,
           markdown: content,
           locale: lang,
         });
@@ -1095,9 +1110,15 @@ export default function Page() {
                 m.content,
                 thread?.title,
                 locale,
-                messages.find((item) => item.role === "user")?.content
+                nearestUserPrompt(messages, index)
               );
               const topic = meta.title;
+              const answerHeading = answerTitle({
+                markdown: m.content,
+                prompt: nearestUserPrompt(messages, index),
+                chatTitle: thread?.title,
+                locale,
+              });
 
               return (
                 <div key={m.id}>
@@ -1224,7 +1245,7 @@ export default function Page() {
                                     onClick={() =>
                                       setReportViewer({
                                         id: m.id,
-                                        title: meta.source || topic,
+                                        title: answerHeading,
                                         markdown: m.content,
                                         locale: reportLocale(m.content, locale),
                                       })
@@ -1256,7 +1277,7 @@ export default function Page() {
                                       if (viewerOn) {
                                         setReportViewer({
                                           id: m.id,
-                                          title: meta.source || topic,
+                                          title: answerHeading,
                                           markdown: m.content,
                                           locale: reportLocale(m.content, locale),
                                         });
@@ -1266,7 +1287,7 @@ export default function Page() {
                                         try {
                                           const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
                                           const diagrams = root ? await collectDiagramPngs(root) : [];
-                                          await exportPdf(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
+                                          await exportPdf(m.content, { title: answerHeading, subtitle: meta.subtitle, locale, diagrams });
                                         } catch (e) {
                                           console.error(e);
                                           if (!saveWasToasted(e)) showToast(s.chat.pdfFailed, "err");
@@ -1289,7 +1310,7 @@ export default function Page() {
                                         if (viewerOn) {
                                           setReportViewer({
                                             id: m.id,
-                                            title: meta.source || topic,
+                                            title: answerHeading,
                                             markdown: m.content,
                                             locale: reportLocale(m.content, locale),
                                           });
@@ -1299,7 +1320,7 @@ export default function Page() {
                                           try {
                                             const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
                                             const diagrams = root ? await collectDiagramPngs(root) : [];
-                                            await exportWordDocx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
+                                            await exportWordDocx(m.content, { title: answerHeading, subtitle: meta.subtitle, locale, diagrams });
                                           } catch (e) {
                                             console.error(e);
                                             if (!saveWasToasted(e)) showToast(s.chat.wordFailed, "err");
@@ -1318,7 +1339,7 @@ export default function Page() {
                                         if (viewerOn) {
                                           setReportViewer({
                                             id: m.id,
-                                            title: meta.source || topic,
+                                            title: answerHeading,
                                             markdown: m.content,
                                             locale: reportLocale(m.content, locale),
                                           });
@@ -1328,7 +1349,7 @@ export default function Page() {
                                           try {
                                             const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
                                             const diagrams = root ? await collectDiagramPngs(root) : [];
-                                            await exportPptx(m.content, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
+                                            await exportPptx(m.content, { title: answerHeading, subtitle: meta.subtitle, locale, diagrams });
                                           } catch (e) {
                                             console.error(e);
                                             if (!saveWasToasted(e)) showToast(s.chat.pptFailed, "err");
@@ -1366,7 +1387,7 @@ export default function Page() {
                                   label: sheet.share,
                                   onSelect: () => {
                                     void (async () => {
-                                      const { url, shared } = await publishAndShare({ title: topic, markdown: m.content, locale });
+                                      const { url, shared } = await publishAndShare({ title: answerHeading, markdown: m.content, locale });
                                       if (!url) {
                                         showToast(s.chat.shareFailed, "err");
                                         return;
@@ -1380,14 +1401,14 @@ export default function Page() {
                                     })();
                                   },
                                 },
-                                { icon: "html", label: sheet.saveHtml, onSelect: () => saveHtml(m.content, topic, locale) },
-                                { icon: "print", label: sheet.print, onSelect: () => printHtml(m.content, topic, locale) },
+                                { icon: "html", label: sheet.saveHtml, onSelect: () => saveHtml(m.content, answerHeading, locale) },
+                                { icon: "print", label: sheet.print, onSelect: () => printHtml(m.content, answerHeading, locale) },
                                 {
                                   icon: "whatsapp",
                                   label: sheet.whatsapp,
                                   onSelect: () => {
                                     void (async () => {
-                                      const url = await publishShare({ title: topic, markdown: m.content, locale });
+                                      const url = await publishShare({ title: answerHeading, markdown: m.content, locale });
                                       if (!url) {
                                         showToast(s.chat.shareFailed, "err");
                                         return;

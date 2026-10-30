@@ -12,7 +12,7 @@ import MessageShareMenu, { ShareGlyph } from "@/app/components/MessageShareMenu"
 import { collectDiagramPngs, copyRichElement } from "@/app/components/copyRich";
 import { saveWasToasted } from "@/lib/saveFile";
 import { showToast } from "@/lib/toast";
-import { exportMeta } from "@/lib/messageDocument";
+import { answerTitle, exportMeta, nearestUserPrompt } from "@/lib/messageDocument";
 import {
   exportCapabilities,
   getAdvisor,
@@ -507,8 +507,13 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
             const previousDay = previous
               ? formatDaySeparator(previous.createdAt, locale, new Date(), timeZone)
               : null;
-            const meta = exportMeta(message.content, undefined, locale, messages.find((item) => item.role === "user")?.content);
+            const meta = exportMeta(message.content, undefined, locale, nearestUserPrompt(messages, index));
             const topic = meta.title;
+            const answerHeading = answerTitle({
+              markdown: message.content,
+              prompt: nearestUserPrompt(messages, index),
+              locale,
+            });
             return (
               <div key={message.id}>
                 {dayLabel && dayLabel !== previousDay ? <DaySeparator label={dayLabel} /> : null}
@@ -573,7 +578,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                             try {
                               const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
                               const diagrams = root ? await collectDiagramPngs(root) : [];
-                              await exportPdf(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
+                              await exportPdf(message.content, answerHeading, { title: answerHeading, subtitle: meta.subtitle, locale, diagrams });
                             } catch (err) {
                               console.error(err);
                               if (!saveWasToasted(err)) showToast(s.chat.pdfFailed, "err");
@@ -592,7 +597,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                               try {
                                 const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
                                 const diagrams = root ? await collectDiagramPngs(root) : [];
-                                await exportWordDocx(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
+                                await exportWordDocx(message.content, answerHeading, { title: answerHeading, subtitle: meta.subtitle, locale, diagrams });
                               } catch (err) {
                                 console.error(err);
                                 if (!saveWasToasted(err)) showToast(s.chat.wordFailed, "err");
@@ -608,7 +613,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                               try {
                                 const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
                                 const diagrams = root ? await collectDiagramPngs(root) : [];
-                                await exportPptx(message.content, meta.source || topic, { title: meta.source || topic, subtitle: meta.subtitle, locale, diagrams });
+                                await exportPptx(message.content, answerHeading, { title: answerHeading, subtitle: meta.subtitle, locale, diagrams });
                               } catch (err) {
                                 console.error(err);
                                 if (!saveWasToasted(err)) showToast(s.chat.pptFailed, "err");
@@ -643,7 +648,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                         label: sheet.share,
                         onSelect: () => {
                           void (async () => {
-                            const { url, shared } = await publishAndShare({ title: topic, markdown: message.content, locale });
+                            const { url, shared } = await publishAndShare({ title: answerHeading, markdown: message.content, locale });
                             if (!url) {
                               showToast(s.chat.shareFailed, "err");
                               return;
@@ -657,14 +662,14 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                           })();
                         },
                       },
-                      { icon: "html", label: sheet.saveHtml, onSelect: () => saveHtml(message.content, topic, locale) },
-                      { icon: "print", label: sheet.print, onSelect: () => printHtml(message.content, topic, locale) },
+                      { icon: "html", label: sheet.saveHtml, onSelect: () => saveHtml(message.content, answerHeading, locale) },
+                      { icon: "print", label: sheet.print, onSelect: () => printHtml(message.content, answerHeading, locale) },
                       {
                         icon: "whatsapp",
                         label: sheet.whatsapp,
                         onSelect: () => {
                           void (async () => {
-                            const url = await publishShare({ title: topic, markdown: message.content, locale });
+                            const url = await publishShare({ title: answerHeading, markdown: message.content, locale });
                             if (!url) {
                               showToast(s.chat.shareFailed, "err");
                               return;
