@@ -8,6 +8,24 @@ export function isArabicText(text: string) {
   return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text);
 }
 
+/**
+ * Sheet, print chrome, and viewer buttons follow the answer, the same Arabic-script
+ * check the message bubble uses for dir. An answer with no Arabic script uses the UI language.
+ */
+export function answerSheetLocale(markdown: string, uiLocale: "en" | "ar"): "en" | "ar" {
+  if (isArabicText(markdown || "")) return "ar";
+  return uiLocale === "ar" ? "ar" : "en";
+}
+
+export function shareSheetLabels(markdown: string, uiLocale: "en" | "ar") {
+  const lang = answerSheetLocale(markdown, uiLocale);
+  const labels =
+    lang === "ar"
+      ? { copy: "نسخ", share: "مشاركة", saveHtml: "حفظ HTML", print: "طباعة", whatsapp: "واتساب", close: "إغلاق" }
+      : { copy: "Copy", share: "Share", saveHtml: "Save HTML", print: "Print", whatsapp: "WhatsApp", close: "Close" };
+  return { lang, dir: lang === "ar" ? ("rtl" as const) : ("ltr" as const), ...labels };
+}
+
 export function buildHtmlDocument(aiText: string, title = "Report", locale?: string) {
   const lang = locale === "ar" || isArabicText(aiText) ? "ar" : "en";
   return buildShareHtml({ title, markdown: aiText, locale: lang });
@@ -212,7 +230,7 @@ function printInFrame(html: string) {
 }
 
 export function printHtml(aiText: string, title = "Report", locale?: string) {
-  const lang = locale === "ar" || isArabicText(aiText) ? "ar" : "en";
+  const lang = answerSheetLocale(aiText, locale === "ar" ? "ar" : "en");
   const html = buildHtmlDocument(aiText, title, lang);
   const chatUrl = typeof location !== "undefined" && location.href ? location.href : "/chat";
   const copy = printPageCopy({

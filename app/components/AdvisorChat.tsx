@@ -35,6 +35,7 @@ import {
   publishAndShare,
   publishShare,
   saveHtml,
+  shareSheetLabels,
   setLocalCount,
   shareToWhatsApp,
   todayUTCKey,
@@ -500,6 +501,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
         ) : (
           messages.map((message, index) => {
             const rtl = isArabicText(message.content);
+            const sheet = shareSheetLabels(message.content, locale);
             const dayLabel = formatDaySeparator(message.createdAt, locale, new Date(), timeZone);
             const previous = messages[index - 1];
             const previousDay = previous
@@ -621,13 +623,13 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                   )}
                   <MessageShareMenu
                     open={openShareFor === message.id}
-                    dir={rtl ? "rtl" : "ltr"}
-                    label={s.chat.share}
+                    dir={sheet.dir}
+                    label={sheet.share}
                     onClose={() => setOpenShareFor(null)}
                     actions={[
                       {
                         icon: "copy",
-                        label: s.chat.copy,
+                        label: sheet.copy,
                         onSelect: () => {
                           void (async () => {
                             const root = document.querySelector<HTMLElement>(`[data-message-id="${message.id}"]`);
@@ -638,7 +640,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                       },
                       {
                         icon: "share",
-                        label: s.chat.share,
+                        label: sheet.share,
                         onSelect: () => {
                           void (async () => {
                             const { url, shared } = await publishAndShare({ title: topic, markdown: message.content, locale });
@@ -655,11 +657,11 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                           })();
                         },
                       },
-                      { icon: "html", label: s.chat.saveHtml, onSelect: () => saveHtml(message.content, topic, locale) },
-                      { icon: "print", label: s.chat.print, onSelect: () => printHtml(message.content, topic, locale) },
+                      { icon: "html", label: sheet.saveHtml, onSelect: () => saveHtml(message.content, topic, locale) },
+                      { icon: "print", label: sheet.print, onSelect: () => printHtml(message.content, topic, locale) },
                       {
                         icon: "whatsapp",
-                        label: s.chat.whatsapp,
+                        label: sheet.whatsapp,
                         onSelect: () => {
                           void (async () => {
                             const url = await publishShare({ title: topic, markdown: message.content, locale });
@@ -671,7 +673,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                           })();
                         },
                       },
-                      { icon: "close", label: s.chat.closeShare, onSelect: () => setOpenShareFor(null) },
+                      { icon: "close", label: sheet.close, onSelect: () => setOpenShareFor(null) },
                     ]}
                   />
                 </div>

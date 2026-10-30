@@ -10,7 +10,7 @@ import React, {
 import Link from "next/link";
 import MessageMarkdown from "../components/MessageMarkdown";
 import { collectDiagramPngs, copyRichElement } from "../components/copyRich";
-import { printHtml, publishAndShare, publishShare, shareToWhatsApp } from "@/lib/chatActions";
+import { printHtml, publishAndShare, publishShare, shareSheetLabels, shareToWhatsApp } from "@/lib/chatActions";
 import MessageShareMenu, { ShareGlyph } from "../components/MessageShareMenu";
 import ReportViewer from "../components/ReportViewer";
 import { isViewerContent, reportLocale, reportViewerEnabled, viewerDownloads } from "@/lib/reportViewer";
@@ -1084,6 +1084,7 @@ export default function Page() {
           )}
             {messages.map((m, index) => {
               const rtl = isArabicText(m.content);
+              const sheet = shareSheetLabels(m.content, locale);
               const dayLabel = formatDaySeparator(m.createdAt, locale, new Date(), timeZone);
               const previous = messages[index - 1];
               const previousDay = previous
@@ -1345,13 +1346,13 @@ export default function Page() {
 
                             <MessageShareMenu
                               open={openShareFor === m.id}
-                              dir={rtl ? "rtl" : "ltr"}
-                              label={s.chat.share}
+                              dir={sheet.dir}
+                              label={sheet.share}
                               onClose={() => setOpenShareFor(null)}
                               actions={[
                                 {
                                   icon: "copy",
-                                  label: s.chat.copy,
+                                  label: sheet.copy,
                                   onSelect: () => {
                                     void (async () => {
                                       const root = document.querySelector<HTMLElement>(`[data-message-id="${m.id}"]`);
@@ -1362,7 +1363,7 @@ export default function Page() {
                                 },
                                 {
                                   icon: "share",
-                                  label: s.chat.share,
+                                  label: sheet.share,
                                   onSelect: () => {
                                     void (async () => {
                                       const { url, shared } = await publishAndShare({ title: topic, markdown: m.content, locale });
@@ -1379,11 +1380,11 @@ export default function Page() {
                                     })();
                                   },
                                 },
-                                { icon: "html", label: s.chat.saveHtml, onSelect: () => saveHtml(m.content, topic, locale) },
-                                { icon: "print", label: s.chat.print, onSelect: () => printHtml(m.content, topic, locale) },
+                                { icon: "html", label: sheet.saveHtml, onSelect: () => saveHtml(m.content, topic, locale) },
+                                { icon: "print", label: sheet.print, onSelect: () => printHtml(m.content, topic, locale) },
                                 {
                                   icon: "whatsapp",
-                                  label: s.chat.whatsapp,
+                                  label: sheet.whatsapp,
                                   onSelect: () => {
                                     void (async () => {
                                       const url = await publishShare({ title: topic, markdown: m.content, locale });
@@ -1395,7 +1396,7 @@ export default function Page() {
                                     })();
                                   },
                                 },
-                                { icon: "close", label: s.chat.closeShare, onSelect: () => setOpenShareFor(null) },
+                                { icon: "close", label: sheet.close, onSelect: () => setOpenShareFor(null) },
                               ]}
                             />
                           </>
@@ -1780,10 +1781,10 @@ export default function Page() {
         <ReportViewer
           title={reportViewer.title}
           markdown={reportViewer.markdown}
-          locale={reportViewer.locale}
+          locale={shareSheetLabels(reportViewer.markdown, locale).lang}
           labels={{
-            close: s.chat.close,
-            share: s.chat.share,
+            close: shareSheetLabels(reportViewer.markdown, locale).close,
+            share: shareSheetLabels(reportViewer.markdown, locale).share,
             download: s.chat.viewerDownload,
             pdf: s.chat.viewerPdf,
             word: s.chat.viewerWord,
@@ -1793,7 +1794,7 @@ export default function Page() {
             copyLink: s.chat.viewerCopyLink,
             linkedIn: s.chat.viewerLinkedIn,
             email: s.chat.viewerEmail,
-            whatsapp: s.chat.whatsapp,
+            whatsapp: shareSheetLabels(reportViewer.markdown, locale).whatsapp,
             report: s.chat.viewerReport,
             pdfPreview: s.chat.viewerPdfPreview,
             preparing: s.chat.viewerPreparing,

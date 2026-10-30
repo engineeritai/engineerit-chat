@@ -70,6 +70,7 @@ export default function MessageShareMenu({
             key={action.icon}
             type="button"
             role="menuitem"
+            dir={dir}
             className="msg-share-item"
             onClick={() => {
               action.onSelect();
