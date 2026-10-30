@@ -69,22 +69,33 @@ test("gantt, s-curve, diagram, and table stay in their own frames", async ({ pag
     await openChat(page, shot.path);
     const target = await stable(page, shot.target, shot.name.startsWith("gantt") ? "last" : "first");
     if (shot.name.startsWith("gantt")) {
-      const natural = await page.locator(".gantt-scroll svg").first().evaluate((el) => {
-        const name = el.closest(".gantt-board")?.querySelector(".gantt-name");
-        const port = el.closest(".gantt-scroll");
-        const bar = port?.querySelector("[data-kind='bar']");
+      const natural = await page.locator(".gantt-board svg").first().evaluate((el) => {
+        const board = el.closest(".gantt-board");
+        const name = board?.querySelector(".gantt-name, .gantt-fit-name");
+        const fitted = el.getAttribute("data-fit") === "1";
+        const port = el.closest(".gantt-scroll, .gantt-fit");
+        const bar = el.querySelector("[data-kind='bar']");
         const portBox = port?.getBoundingClientRect();
         const barBox = bar?.getBoundingClientRect();
         return {
+          fitted,
           attr: Number(el.getAttribute("width")),
           box: el.getBoundingClientRect().width,
+          port: portBox?.width || 0,
           font: name ? getComputedStyle(name).fontSize : "",
-          barVisible: Boolean(portBox && barBox && barBox.right > portBox.left + 8 && barBox.left < portBox.right - 8),
+          label: (name?.textContent || "").trim(),
+          barVisible: Boolean(portBox && barBox && barBox.right > portBox.left + 4 && barBox.left < portBox.right - 4),
         };
       });
-      expect(natural.font).toBe("12px");
-      expect(Math.abs(natural.box - natural.attr)).toBeLessThan(2);
+      expect(natural.label.length).toBeGreaterThan(0);
       expect(natural.barVisible).toBe(true);
+      if (natural.fitted) {
+        expect(natural.box).toBeLessThanOrEqual(natural.port + 2);
+        expect(natural.box).toBeGreaterThan(120);
+      } else {
+        expect(natural.font).toBe("12px");
+        expect(Math.abs(natural.box - natural.attr)).toBeLessThan(2);
+      }
     }
     if (shot.name.startsWith("diagram")) {
       const drawn = await page.locator(".diagram-frame svg").first().evaluate((el) => ({
@@ -105,10 +116,9 @@ test("gantt, s-curve, diagram, and table stay in their own frames", async ({ pag
   if (info.project.name === "phone-390") {
     await openChat(page, "/chat?lang=en&fixture=gantt-en&planPreview=consultant");
     const bubble = await stable(page, ".message-assistant .message-bubble", "last");
-    await page.locator(".gantt-scroll").first().evaluate((el) => {
-      el.scrollLeft += 140;
-    });
-    await expect(bubble).toHaveScreenshot("gantt-en-scrolled.png");
+    const fitted = await page.locator(".gantt-fit").count();
+    expect(fitted).toBeGreaterThan(0);
+    await expect(bubble).toHaveScreenshot("gantt-en-fit.png");
   }
 });
 
@@ -206,7 +216,7 @@ async function assertViewerFit(page: Page) {
     const svg = canvas.querySelector("svg");
     const font = Number(svg?.getAttribute("data-font") || svg?.querySelector("text")?.getAttribute("font-size") || 13);
     const rtl = viewer.getAttribute("dir") === "rtl";
-    const nodes = [...canvas.querySelectorAll("svg text, .gantt-name, .gantt-legend li")].filter((node) => (node.textContent || "").trim());
+    const nodes = [...canvas.querySelectorAll("svg text, .gantt-name, .gantt-fit-name, .gantt-legend li")].filter((node) => (node.textContent || "").trim());
     const boxes = nodes.map((node) => {
       const rect = node.getBoundingClientRect();
       const fully =

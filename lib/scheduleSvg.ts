@@ -216,13 +216,13 @@ export function asExportSvg(svg: string): string {
 }
 
 /** HTML export: bars scale in the SVG, task names sit in HTML so Arabic is not clipped. */
-function ganttHtmlBands(model: GanttModel, rtl: boolean): string[] {
+function ganttHtmlBands(model: GanttModel, rtl: boolean, theme: ChartTheme = "light"): string[] {
   const rows = ganttRows(model);
   const per = 14;
   const bands: string[] = [];
   for (let start = 0; start < rows.length; start += per) {
     const slice = rows.slice(start, start + per);
-    const svg = ganttSvg(model, rtl, "light", true, start, start + per, false);
+    const svg = ganttSvg(model, rtl, theme, true, start, start + per, false);
     const names = [
       `<div class="gantt-fit-head"></div>`,
       ...slice.map((row) => `<div class="gantt-fit-name${row.kind === "group" ? " is-group" : ""}">${esc(row.label)}</div>`),
@@ -235,9 +235,9 @@ function ganttHtmlBands(model: GanttModel, rtl: boolean): string[] {
   return bands.length ? bands : [ganttSvg(model, rtl, "light", true, 0, 0, false)];
 }
 
-export function renderFittedChartParts(model: ChartModel, dir: "ltr" | "rtl"): string[] {
-  if (model.kind === "gantt") return ganttHtmlBands(model, dir === "rtl");
-  return [asExportSvg(renderChartSvg(model, dir, "light"))];
+export function renderFittedChartParts(model: ChartModel, dir: "ltr" | "rtl", theme: ChartTheme = "light"): string[] {
+  if (model.kind === "gantt") return ganttHtmlBands(model, dir === "rtl", theme);
+  return [asExportSvg(renderChartSvg(model, dir, theme))];
 }
 
 function timelineSvg(model: TimelineModel, rtl: boolean, theme: ChartTheme): string {

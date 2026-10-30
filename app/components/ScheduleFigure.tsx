@@ -6,7 +6,7 @@ import ChartViewer from "@/app/components/ChartViewer";
 import { svgElementToPng } from "@/app/components/copyRich";
 import { bindVerticalPass } from "@/app/components/verticalPass";
 import type { ChartModel } from "@/lib/scheduleModel";
-import { GANTT_HEADER, GANTT_ROW, ganttRows, renderChartSvg, type ChartTheme } from "@/lib/scheduleSvg";
+import { GANTT_HEADER, GANTT_ROW, ganttRows, renderChartSvg, renderFittedChartParts, type ChartTheme } from "@/lib/scheduleSvg";
 import { copyImageBlob, dataUrlToBlob, deliverBlob } from "@/lib/saveFile";
 
 type Labels = { copy: string; png: string; svg: string; enlarge: string; close: string };
@@ -25,9 +25,11 @@ export default function ScheduleFigure({
   const frameRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const visualRef = useRef<HTMLDivElement>(null);
+  const figureRef = useRef<HTMLElement>(null);
   const [theme, setTheme] = useState<ChartTheme>("light");
   const [width, setWidth] = useState(420);
   const [open, setOpen] = useState(false);
+  const [compact, setCompact] = useState(false);
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => setTheme(media.matches ? "dark" : "light");
@@ -53,14 +55,26 @@ export default function ScheduleFigure({
   const filename = model.title.replace(/[^\w\u0600-\u06FF.-]+/g, "-").slice(0, 40) || "chart";
   const gantt = model.kind === "gantt" ? model : null;
   useLayoutEffect(() => {
-    if (!gantt) return;
+    const node = figureRef.current;
+    if (!node || !gantt) return;
+    const apply = () => {
+      const next = node.clientWidth;
+      setCompact(next > 0 && next < 560);
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [gantt]);
+  useLayoutEffect(() => {
+    if (!gantt || compact) return;
     const port = scrollRef.current;
     if (!port) return;
     const bar = port.querySelector("[data-kind='bar'], [data-kind='milestone']");
     if (!bar) return;
     const delta = bar.getBoundingClientRect().left - port.getBoundingClientRect().left - 12;
     if (Math.abs(delta) > 1) port.scrollLeft += delta;
-  }, [svg, gantt, dir]);
+  }, [svg, gantt, dir, compact]);
   useEffect(() => {
     const node = gantt ? scrollRef.current : frameRef.current;
     if (!node) return;
@@ -81,8 +95,10 @@ export default function ScheduleFigure({
       ];
   const chartSvg = () => (visualRef.current || frameRef.current)?.querySelector("svg") || null;
 
-  return (
-    <figure className="schedule-figure" data-diagram-index={index} dir={dir}>
+    const fitted = gantt && compact ? renderFittedChartParts(model, dir, theme).join("") : "";
+
+    return (
+    <figure className="schedule-figure" data-diagram-index={index} dir={dir} ref={figureRef}>
       <figcaption>{model.title}</figcaption>
       {gantt ? (
         <div className="gantt-board" ref={visualRef}>
@@ -94,6 +110,9 @@ export default function ScheduleFigure({
               </li>
             ))}
           </ul>
+          {fitted ? (
+            <div className="gantt-fit-live" dangerouslySetInnerHTML={{ __html: fitted }} />
+          ) : (
           <div className="gantt-board-body">
             <div className="gantt-names">
               <div className="gantt-names-head" style={{ height: GANTT_HEADER }} />
@@ -110,6 +129,7 @@ export default function ScheduleFigure({
             </div>
             <div className="gantt-scroll" ref={scrollRef} dangerouslySetInnerHTML={{ __html: svg }} />
           </div>
+          )}
         </div>
       ) : (
         <div
