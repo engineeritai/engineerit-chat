@@ -4107,6 +4107,45 @@ label,
   font-weight: 700;
 }
 
+.gantt-fit {
+  position: relative;
+  max-width: 100%;
+}
+
+.gantt-fit-names {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30.12%;
+  display: grid;
+}
+
+.gantt-fit[dir="ltr"] .gantt-fit-names {
+  left: 0;
+}
+
+.gantt-fit[dir="rtl"] .gantt-fit-names {
+  right: 0;
+}
+
+.gantt-fit-name,
+.gantt-fit-head {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  padding-inline: 8px;
+  font-size: clamp(9px, 1.5vw, 13px);
+  line-height: 1.1;
+  color: inherit;
+}
+
+.gantt-fit-name.is-group {
+  font-weight: 700;
+}
+
 .report-viewer-doc .report-table {
   overflow-x: auto;
   margin: 0 0 16px;
