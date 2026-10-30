@@ -24,7 +24,8 @@ import {
 } from "docx";
 import { directionalRuns } from "@/lib/arabicShape";
 import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
-import { pngSize } from "@/lib/rasterSvg";
+import { pngSize, svgToPng } from "@/lib/rasterSvg";
+import { ganttFitBands } from "@/lib/scheduleSvg";
 import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
@@ -73,12 +74,14 @@ function paragraph(
     color?: string;
     spacing?: { before?: number; after?: number };
     heading?: (typeof HeadingLevel)[keyof typeof HeadingLevel];
+    keepNext?: boolean;
   }
 ) {
   const runs = directionalRuns(plainInline(value));
   const paragraphRtl = rtl || runs.some((run) => run.rtl);
   return new Paragraph({
     heading: opts?.heading,
+    keepNext: opts?.keepNext,
     bidirectional: paragraphRtl,
     alignment: align ?? (paragraphRtl ? AlignmentType.START : AlignmentType.LEFT),
     spacing: opts?.spacing ?? { after: 80 },
@@ -93,8 +96,13 @@ function paragraph(
   });
 }
 
-function imageRun(image: ReportImage, width: number) {
-  const height = Math.max(48, Math.round(image.height * (width / image.width)));
+function imageRun(image: ReportImage, maxWidth: number, maxHeight = 900) {
+  let width = maxWidth;
+  let height = Math.max(48, Math.round(image.height * (width / Math.max(1, image.width))));
+  if (height > maxHeight) {
+    height = maxHeight;
+    width = Math.max(48, Math.round(image.width * (height / Math.max(1, image.height))));
+  }
   return new ImageRun({
     type: "png",
     data: image.png,
@@ -422,19 +430,21 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
     current.landscape = landscape;
   };
 
-  const pushBlock = (block: Block) => {
+  const pushBlock = (block: Block, next?: Block) => {
     if (block.type === "heading") {
       useBucket(false);
       const rtl = blockDir(block.text, report.locale) === "rtl";
       const headings = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6];
       const heading = headings[block.level - 1] || HeadingLevel.HEADING_3;
       const size = block.level === 1 ? 32 : block.level === 2 ? 28 : block.level === 3 ? 24 : 22;
+      const keepNext = next?.type === "chart" || next?.type === "diagram" || next?.type === "table";
       current.children.push(paragraph(block.text, rtl, rtl ? AlignmentType.START : AlignmentType.LEFT, {
         bold: true,
         size,
         color: "1A56FF",
         spacing: { before: 280, after: 80 },
         heading,
+        keepNext,
       }));
       return;
     }
@@ -470,16 +480,28 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       return;
     }
     if (block.type === "chart" || block.type === "diagram") {
-      const image = report.images.get(block.index);
-      if (!image) return;
-      useBucket(true);
       const caption = block.type === "chart" ? block.model.title : report.locale === "ar" ? "مخطط" : "Diagram";
-      current.children.push(new Paragraph({ bidirectional: rtlDoc, alignment: AlignmentType.CENTER, spacing: { before: 200, after: 80 }, children: [imageRun(image, 900)] }));
+      const chartPx = Math.floor(contentDxa(false) / 1440 * 96);
+      const pictures: ReportImage[] =
+        block.type === "chart" && block.model.kind === "gantt"
+          ? ganttFitBands(block.model, rtlDoc).map((svg) => {
+              const png = svgToPng(svg, 1400);
+              const size = pngSize(png);
+              return { png, width: size.width, height: size.height };
+            })
+          : report.images.get(block.index)
+            ? [report.images.get(block.index)!]
+            : [];
+      if (!pictures.length) return;
+      useBucket(false);
+      for (const image of pictures) {
+        current.children.push(new Paragraph({ bidirectional: rtlDoc, alignment: AlignmentType.CENTER, spacing: { before: 160, after: 60 }, children: [imageRun(image, chartPx)] }));
+      }
       current.children.push(paragraph(caption, blockDir(caption, report.locale) === "rtl", AlignmentType.CENTER));
     }
   };
 
-  for (const block of report.blocks) pushBlock(block);
+  for (let index = 0; index < report.blocks.length; index += 1) pushBlock(report.blocks[index], report.blocks[index + 1]);
   if (current.children.length) buckets.push(current);
 
   const doc = new Document({

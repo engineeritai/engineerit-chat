@@ -2,9 +2,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { riyadhIsoDate, riyadhStamp, type UiLocale } from "@/lib/ksaTime";
 import { coverSubtitle, pickTopicSource, REPORT_LABEL, shortTopic } from "@/lib/exportName";
-import { appendixHeading, ganttAppendix, parseMessage, type Block } from "@/lib/messageDocument";
+import { appendixHeading, ganttAppendix, parseMessage, plainTopic, type Block } from "@/lib/messageDocument";
+import { flowSvg } from "@/lib/flowSvg";
 import { pngSize, svgToPng } from "@/lib/rasterSvg";
-import { renderChartSvg } from "@/lib/scheduleSvg";
+import { asExportSvg, ganttFitBands, renderChartSvg } from "@/lib/scheduleSvg";
 
 export type ReportImage = {
   png: Uint8Array;
@@ -68,11 +69,21 @@ export async function prepareReport(input: ReportRequest): Promise<PreparedRepor
     blocks.push({ type: "table", headers: appendix.headers, rows: appendix.rows });
   }
   const images = new Map<number, ReportImage>();
+  const dir = locale === "ar" ? "rtl" : "ltr";
   for (const block of blocks) {
-    if (block.type !== "chart") continue;
-    const svg = renderChartSvg(block.model, locale === "ar" ? "rtl" : "ltr", "light");
-    const png = svgToPng(svg);
+    if (block.type === "chart") {
+      const svg = block.model.kind === "gantt" ? ganttFitBands(block.model, dir === "rtl", 10000)[0] : asExportSvg(renderChartSvg(block.model, dir, "light"));
+      const png = svgToPng(svg);
+      const size = pngSize(png);
+      images.set(block.index, { png, width: size.width, height: size.height });
+      continue;
+    }
+    if (block.type !== "diagram") continue;
+    const svg = flowSvg(block.source, dir);
+    if (!svg) continue;
+    const png = svgToPng(asExportSvg(svg));
     const size = pngSize(png);
+    if (!size.width || !size.height) continue;
     images.set(block.index, { png, width: size.width, height: size.height });
   }
   for (const diagram of input.diagrams ?? []) {
@@ -84,7 +95,8 @@ export async function prepareReport(input: ReportRequest): Promise<PreparedRepor
     images.set(diagram.index, { png, width: size.width, height: size.height });
   }
   const heading = input.markdown.match(/^#{1,6}\s+(.+)$/m)?.[1];
-  const raw = pickTopicSource(input.title, input.prompt, heading);
+  const picked = pickTopicSource(input.title, input.prompt, heading);
+  const raw = plainTopic(picked, locale) || picked;
   return {
     title: shortTopic(raw, REPORT_LABEL[locale]),
     subtitle: (input.subtitle || coverSubtitle(raw, locale)).slice(0, 160),

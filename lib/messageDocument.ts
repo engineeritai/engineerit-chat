@@ -328,6 +328,61 @@ export function clipTitle(value: string, limit = 70): string {
   return (space >= 24 ? slice.slice(0, space) : slice).trim().replace(/[.,:;،؛–—-]+$/u, "").trim();
 }
 
+const EN_FILLER = /^(please|can you|could you|would you|i need|i want|i'd like|help me|give me)\b[:,\s]*/i;
+const EN_VERB = /^(create|make|prepare|generate|write|draft|develop|build|design|provide|show|list|explain|describe|calculate)\b[:,\s]*/i;
+const EN_ARTICLE = /^(a|an|the)\b\s+/i;
+const AR_FILLER = /^(من فضلك|لو سمحت|ممكن|أريد|اعطني|أعطني)\s+/;
+const AR_VERB = /^(اعمل|أنشئ|انشئ|اكتب|حضر|جهز|أعد|اعد|اشرح|احسب)\s+/;
+const SMALL_WORD = new Set(["a", "an", "the", "of", "and", "or", "for", "in", "on", "to", "with", "by", "from"]);
+
+function stripEnglishLead(text: string): string {
+  let rest = text.trim();
+  let removed = false;
+  for (let i = 0; i < 6; i += 1) {
+    const afterVerb = rest.replace(EN_FILLER, "").replace(EN_VERB, "").trim();
+    if (afterVerb === rest) break;
+    removed = true;
+    rest = afterVerb.replace(EN_ARTICLE, "").trim();
+  }
+  if (!removed) return text.trim();
+  return rest.replace(/[?.!]+$/g, "").trim();
+}
+
+function stripArabicLead(text: string): string {
+  let rest = text.trim();
+  let removed = false;
+  for (let i = 0; i < 4; i += 1) {
+    const next = rest.replace(AR_FILLER, "").replace(AR_VERB, "").trim();
+    if (next === rest) break;
+    removed = true;
+    rest = next;
+  }
+  if (!removed) return text.trim();
+  return rest.replace(/[؟?.!]+$/g, "").trim();
+}
+
+function titleCaseEn(text: string): string {
+  return text
+    .split(/\s+/)
+    .map((word, index) => {
+      if (/[A-Z]{2,}/.test(word)) return word;
+      const lower = word.toLowerCase();
+      if (index > 0 && SMALL_WORD.has(lower)) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(" ");
+}
+
+/** Drop a leading request verb. Nouns stay as written. English questions become title case, capped at 60 characters. */
+export function plainTopic(value: string, locale: "en" | "ar" = "en"): string {
+  const cleaned = cleanTitle(value);
+  const arabic = ARABIC.test(cleaned) || (locale === "ar" && !/[A-Za-z]/.test(cleaned));
+  const stripped = arabic ? stripArabicLead(cleaned) : stripEnglishLead(cleaned);
+  if (!stripped) return "";
+  if (stripped.toLowerCase() === cleaned.toLowerCase()) return clipTitle(cleaned, 70);
+  return clipTitle(arabic ? stripped : titleCaseEn(stripped), 60);
+}
+
 function usableTitle(value: string): boolean {
   const text = value.replace(/\s+/g, " ").trim();
   return text.length >= 2 && !GENERIC_TITLE.has(text.toLowerCase());
@@ -354,25 +409,26 @@ export function nearestUserPrompt(messages: { role: string; content: string }[],
  * then the chat title. Arabic text stays Arabic.
  */
 export function answerTitle(args: { markdown: string; prompt?: string; chatTitle?: string; locale?: UiLocale }): string {
-  const heading = firstSectionHeading(args.markdown);
-  if (usableTitle(heading)) return clipTitle(heading);
-  const prompt = cleanTitle(args.prompt);
-  if (usableTitle(prompt)) return clipTitle(prompt);
-  const chat = cleanTitle(args.chatTitle);
-  if (usableTitle(chat)) return clipTitle(chat);
-  return REPORT_LABEL[ARABIC.test(args.markdown) || args.locale === "ar" ? "ar" : "en"];
+  const locale = args.locale === "ar" || ARABIC.test(args.markdown) ? "ar" : "en";
+  const heading = plainTopic(firstSectionHeading(args.markdown), locale);
+  if (usableTitle(heading)) return heading;
+  const prompt = plainTopic(args.prompt || "", locale);
+  if (usableTitle(prompt)) return prompt;
+  const chat = plainTopic(args.chatTitle || "", locale);
+  if (usableTitle(chat)) return chat;
+  return REPORT_LABEL[locale];
 }
 
 /** Store the title the client already derived. A generic chat title falls through to the answer. */
 export function shareRecordTitle(provided: string | undefined, markdown: string, locale: UiLocale): string {
-  const given = clipTitle(cleanTitle(provided));
+  const given = plainTopic(provided || "", locale);
   if (usableTitle(given)) return given;
   return answerTitle({ markdown, locale });
 }
 
 export function exportMeta(markdown: string, requested: string | undefined, locale: UiLocale, prompt?: string) {
   const heading = markdown.match(/^#{1,6}\s+(.+)$/m)?.[1]?.trim();
-  const source = pickTopicSource(requested, prompt, heading);
+  const source = plainTopic(pickTopicSource(requested, prompt, heading), locale) || pickTopicSource(requested, prompt, heading);
   const fallback = REPORT_LABEL[locale];
   return {
     source,

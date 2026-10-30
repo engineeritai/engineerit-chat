@@ -2,7 +2,7 @@ import { flowSvg } from "@/lib/flowSvg";
 import { riyadhStamp } from "@/lib/ksaTime";
 import { parseMessage, plainInline, tokenizeInline, type Block, type ListItem } from "@/lib/messageDocument";
 import { isCenteredBoqColumn, isOutputDisclaimer, OUTPUT_DISCLAIMER_GRAY, pageDisclaimerHtml } from "@/lib/outputDisclaimer";
-import { renderChartSvg } from "@/lib/scheduleSvg";
+import { asExportSvg, renderFittedChartParts } from "@/lib/scheduleSvg";
 import { blockDirection, hasArabicContent, isolatePieces, shareDir, shareLanguage } from "@/lib/shareDirection";
 
 export function shareDescription(markdown: string): string {
@@ -93,12 +93,12 @@ function blocksHtml(blocks: Block[], dir: "ltr" | "rtl", locale: "en" | "ar"): s
         return `<div class="table-scroll" dir="${tableDir}"><table dir="${tableDir}"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
       }
       if (block.type === "chart") {
-        const svg = renderChartSvg(block.model, dir, "light");
-        return `<figure class="chart"><figcaption>${esc(block.model.title)}</figcaption>${svg}</figure>`;
+        const parts = renderFittedChartParts(block.model, dir).map((svg) => `<div class="chart-band">${svg}</div>`).join("");
+        return `<figure class="chart"><figcaption>${esc(block.model.title)}</figcaption>${parts}</figure>`;
       }
       if (block.type === "diagram") {
         const svg = flowSvg(block.source, dir);
-        return svg ? `<figure class="chart">${svg}</figure>` : `<pre class="diagram">${esc(block.source)}</pre>`;
+        return svg ? `<figure class="chart">${asExportSvg(svg)}</figure>` : `<pre class="diagram">${esc(block.source)}</pre>`;
       }
       return `<pre dir="ltr">${esc(block.text)}</pre>`;
     })
@@ -164,8 +164,15 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
   th { background: #e7eeff; color: #1e3a8a; position: sticky; top: 0; }
   th:first-child, td:first-child { position: sticky; inset-inline-start: 0; background: inherit; }
   tbody tr:nth-child(even) td { background: #f8fafc; }
-  figure { margin: 16px 0; }
-  figure svg { width: 100%; height: auto; }
+  figure, .chart-band { margin: 16px 0; max-width: 100%; }
+  figure svg, .chart-band svg { display: block; width: 100%; max-width: 100%; height: auto; }
+  .gantt-fit { position: relative; max-width: 100%; }
+  .gantt-fit-names { position: absolute; top: 0; bottom: 0; width: 30.12%; display: grid; }
+  .gantt-fit[dir="ltr"] .gantt-fit-names { left: 0; }
+  .gantt-fit[dir="rtl"] .gantt-fit-names { right: 0; }
+  .gantt-fit-name, .gantt-fit-head { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; padding-inline: 8px; font-size: clamp(9px, 1.5vw, 13px); line-height: 1.1; color: #0f172a; }
+  .gantt-fit-name.is-group { font-weight: 700; }
+  .chart-band { break-inside: avoid; page-break-inside: avoid; }
   figcaption { font-size: 13px; color: #64748b; margin-bottom: 6px; }
   ul, ol { margin: 8px 0 12px; padding-left: 0; padding-right: 0; padding-inline-start: 1.3em; text-align: start; }
   li { margin: 3px 0; }
@@ -187,7 +194,13 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
     footer { bottom: 0; }
     main { padding-top: 78px; padding-bottom: 108px; }
     article { border: 0; }
-    h1, h2, h3, h4, figure, table { break-inside: avoid; }
+    h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; break-inside: avoid; }
+    figure, .chart-band { break-before: avoid; page-break-before: avoid; max-width: 100%; }
+    figure svg, .chart-band svg { width: 100% !important; max-width: 100% !important; height: auto !important; }
+    .chart-band { break-inside: avoid; page-break-inside: avoid; }
+    .table-scroll { overflow: visible; max-width: 100%; }
+    table { width: 100%; table-layout: fixed; }
+    th, td { min-width: 0; overflow-wrap: anywhere; }
   }
 </style>
 </head>

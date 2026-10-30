@@ -4068,6 +4068,45 @@ label,
   height: auto;
 }
 
+.report-viewer-doc .gantt-fit {
+  position: relative;
+  max-width: 100%;
+}
+
+.report-viewer-doc .gantt-fit-names {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30.12%;
+  display: grid;
+}
+
+.report-viewer-doc .gantt-fit[dir="ltr"] .gantt-fit-names {
+  left: 0;
+}
+
+.report-viewer-doc .gantt-fit[dir="rtl"] .gantt-fit-names {
+  right: 0;
+}
+
+.report-viewer-doc .gantt-fit-name,
+.report-viewer-doc .gantt-fit-head {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  padding-inline: 8px;
+  font-size: clamp(9px, 1.5vw, 13px);
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.report-viewer-doc .gantt-fit-name.is-group {
+  font-weight: 700;
+}
+
 .report-viewer-doc .report-table {
   overflow-x: auto;
   margin: 0 0 16px;
@@ -4155,5 +4194,62 @@ label,
 
   .report-viewer-open .main {
     margin-inline-end: 0;
+  }
+}
+
+@media print {
+  .report-viewer,
+  .report-viewer-body,
+  .report-viewer-doc,
+  .report-viewer-frame {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    position: static !important;
+  }
+
+  .report-viewer-doc .report-chart,
+  .report-viewer-doc .report-table,
+  .report-viewer-doc .chart-band {
+    overflow: visible !important;
+    max-width: 100%;
+  }
+
+  .report-viewer-doc svg,
+  .report-viewer-doc .chart-band svg {
+    display: block;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  .report-viewer-doc h1,
+  .report-viewer-doc h2,
+  .report-viewer-doc h3,
+  .report-viewer-doc h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .report-viewer-doc figure,
+  .report-viewer-doc .chart-band {
+    break-before: avoid;
+    page-break-before: avoid;
+  }
+
+  .report-viewer-doc .chart-band {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-viewer-doc table {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .report-viewer-doc th,
+  .report-viewer-doc td {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 }

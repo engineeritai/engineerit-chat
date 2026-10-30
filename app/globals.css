@@ -2131,6 +2131,63 @@ a.auth-follow {
     page-break-inside: avoid;
     break-inside: avoid;
   }
+
+  .gantt-board,
+  .gantt-scroll,
+  .diagram-frame,
+  .table-scroll,
+  .report-chart,
+  .report-table {
+    overflow: visible !important;
+    max-width: 100% !important;
+  }
+
+  .gantt-scroll svg,
+  .diagram-frame svg,
+  .report-chart svg,
+  figure svg {
+    display: block;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  .message-bubble h1,
+  .message-bubble h2,
+  .message-bubble h3,
+  .report-viewer-doc h1,
+  .report-viewer-doc h2,
+  .report-viewer-doc h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  figure,
+  .report-chart,
+  .chart-band {
+    break-before: avoid;
+    page-break-before: avoid;
+    max-width: 100%;
+  }
+
+  .chart-band {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-viewer-doc table,
+  .message-bubble table {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .report-viewer-doc th,
+  .report-viewer-doc td,
+  .message-bubble th,
+  .message-bubble td {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
 }
 /* ============================
    Register button color fix

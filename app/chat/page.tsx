@@ -19,7 +19,7 @@ import { showToast } from "@/lib/toast";
 import { markRtlPlain } from "@/lib/shareDirection";
 import { clipSharedText, toWhatsApp } from "@/lib/whatsappText";
 import { downloadName } from "@/lib/exportName";
-import { answerTitle, exportMeta, nearestUserPrompt } from "@/lib/messageDocument";
+import { answerTitle, exportMeta, nearestUserPrompt, plainTopic } from "@/lib/messageDocument";
 import { buildShareHtml } from "@/lib/shareDocument";
 import { actionItemsAr, actionItemsEn, chartCaseAr, chartCaseEn, sampleAr, sampleEn } from "@/lib/richSamples";
 import MarketingShell from "../components/marketing/MarketingShell";
@@ -882,7 +882,7 @@ export default function Page() {
         size: item.file?.size ?? item.size,
       })),
     };
-    history.appendLocal(userMessage, userText);
+    history.appendLocal(userMessage, plainTopic(userText, locale));
     const savedUser = history.persistMessages([userMessage]);
 
     const pushAssistant = async (content: string) => {

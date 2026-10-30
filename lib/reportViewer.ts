@@ -10,7 +10,7 @@ import {
   OUTPUT_POLICY_LABEL,
   OUTPUT_POLICY_URL,
 } from "@/lib/outputDisclaimer";
-import { renderChartSvg } from "@/lib/scheduleSvg";
+import { asExportSvg, renderFittedChartParts } from "@/lib/scheduleSvg";
 import { blockDirection, hasArabicContent, isolatePieces, RLM, shareDir, shareLanguage } from "@/lib/shareDirection";
 
 /**
@@ -241,11 +241,12 @@ export function reportFragmentHtml(markdown: string, locale: "en" | "ar"): strin
         return `<div class="report-table" dir="${tableDir}"><table dir="${tableDir}"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
       }
       if (block.type === "chart") {
-        return `<figure class="report-chart"><figcaption>${esc(block.model.title)}</figcaption>${renderChartSvg(block.model, dir, "light")}</figure>`;
+        const parts = renderFittedChartParts(block.model, dir).map((svg) => `<div class="chart-band">${svg}</div>`).join("");
+        return `<figure class="report-chart"><figcaption>${esc(block.model.title)}</figcaption>${parts}</figure>`;
       }
       if (block.type === "diagram") {
         const svg = flowSvg(block.source, dir);
-        return svg ? `<figure class="report-chart">${svg}</figure>` : `<pre>${esc(block.source)}</pre>`;
+        return svg ? `<figure class="report-chart">${asExportSvg(svg)}</figure>` : `<pre>${esc(block.source)}</pre>`;
       }
       return `<pre dir="ltr">${esc(block.text)}</pre>`;
     })
@@ -263,6 +264,23 @@ const REPORT_STYLE = `
   th.measure, td.measure { text-align: center; }
   .report-disclaimer, .report-disclaimer a { color: ${DISCLAIMER_GRAY}; font-size: 12px; }
   .report-table { overflow-x: auto; }
+  figure, .chart-band { max-width: 100%; }
+  figure svg, .chart-band svg { display: block; width: 100%; max-width: 100%; height: auto; }
+  .gantt-fit { position: relative; max-width: 100%; }
+  .gantt-fit-names { position: absolute; top: 0; bottom: 0; width: 30.12%; display: grid; }
+  .gantt-fit[dir="ltr"] .gantt-fit-names { left: 0; }
+  .gantt-fit[dir="rtl"] .gantt-fit-names { right: 0; }
+  .gantt-fit-name, .gantt-fit-head { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; padding-inline: 8px; font-size: clamp(9px, 1.5vw, 13px); line-height: 1.1; color: #0f172a; }
+  .gantt-fit-name.is-group { font-weight: 700; }
+  @media print {
+    h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; break-inside: avoid; }
+    figure, .chart-band { break-before: avoid; page-break-before: avoid; max-width: 100%; }
+    figure svg, .chart-band svg { width: 100% !important; max-width: 100% !important; height: auto !important; }
+    .chart-band { break-inside: avoid; page-break-inside: avoid; }
+    .report-table { overflow: visible; max-width: 100%; }
+    table { width: 100%; table-layout: fixed; }
+    th, td { min-width: 0; overflow-wrap: anywhere; }
+  }
 `;
 
 /** Standalone HTML file for the share sheet. Built in the browser from the message. */
