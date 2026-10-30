@@ -130,6 +130,8 @@ function printScript(copy: PrintPageCopy): string {
     .replace(/</g, "\\u003c")
     .replace(/\u2028/g, "\\u2028")
     .replace(/\u2029/g, "\\u2029");
+  // Assembled so the source never contains a raw script end tag. Next inlines this module into HTML.
+  const end = "<" + "/script>";
   return `<script>
 var cfg = ${payload};
 var pdfFile = null;
@@ -139,7 +141,7 @@ function eitPrint(){var home=eitHome();var threw=false;try{window.print();}catch
 function eitShare(){if(navigator.share){navigator.share({title:cfg.title,text:cfg.shareText}).catch(function(){});return;}window.open("https://wa.me/?text="+encodeURIComponent(cfg.shareText),"_blank","noopener,noreferrer");}
 function eitBack(){window.close();setTimeout(function(){if(!window.closed)location.href=cfg.chatUrl;},200);}
 if(eitHome())eitPrimePdf();
-</script>`;
+${end}`;
 }
 
 /**

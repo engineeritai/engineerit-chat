@@ -652,6 +652,8 @@ test("iPhone print uses a new tab and a blocked popup falls back to the share sh
   assert.match(doc, /class="print-actions"/);
   assert.match(doc, />العودة إلى المحادثة</);
   assert.match(doc, /function eitPrint\(\)\{var home=eitHome\(\);var threw=false;try\{window\.print\(\);\}catch\(err\)\{threw=true;\}/);
+  assert.match(doc, /<\/script>/);
+  assert.doesNotMatch(readFileSync("lib/chatActions.ts", "utf8"), /<\/script>/);
   assert.doesNotMatch(doc, /setTimeout\(function\(\)\{try\{window\.print/);
   assert.match(doc, /navigator\.share\(\{files:\[pdfFile\],title:cfg\.title\}\)/);
   assert.match(doc, /@media print\{\.print-call,\.print-actions\{display:none!important\}/);
