@@ -13,8 +13,30 @@ export const OUTPUT_POLICY_URL: Record<UiLocale, string> = {
 /** Visible label. The href is OUTPUT_POLICY_URL. */
 export const OUTPUT_POLICY_LABEL = "engineerit.ai/legal/terms";
 
+/**
+ * Short page-footer line. The lead is plain; only the policy words are a link.
+ * WhatsApp and the document exports keep the longer sentence in outputDisclaimer.
+ */
+export const PAGE_DISCLAIMER_HREF = "https://engineerit.ai/legal/terms";
+
+export const PAGE_DISCLAIMER_LEAD: Record<UiLocale, string> = {
+  en: "AI-generated, ",
+  ar: "مُولَّد بالذكاء الاصطناعي، ",
+};
+
+export const PAGE_DISCLAIMER_LINK: Record<UiLocale, string> = {
+  en: "User Policy Applied",
+  ar: "تُطبَّق سياسة الاستخدام",
+};
+
 /** Footer and chat-line colour only. Brand, stamps, and subtitles stay darker. */
 export const OUTPUT_DISCLAIMER_GRAY = "#9CA3AF";
+
+export function pageDisclaimerHtml(locale: UiLocale): string {
+  const lead = PAGE_DISCLAIMER_LEAD[locale].replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const link = PAGE_DISCLAIMER_LINK[locale].replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  return `${lead}<a href="${PAGE_DISCLAIMER_HREF}">${link}</a>`;
+}
 
 export function outputDisclaimerBody(locale: UiLocale): string {
   if (locale === "ar") {
@@ -45,10 +67,9 @@ export function isCenteredBoqColumn(header: string): boolean {
 
 export function isOutputDisclaimer(text: string, locale: UiLocale): boolean {
   const plain = text.replace(/\s+/g, " ").trim();
-  const body = outputDisclaimerBody(locale);
-  return (
-    plain === outputDisclaimer(locale) ||
-    plain === `${body} ${OUTPUT_POLICY_LABEL}` ||
-    plain === body
-  );
+  const locales: UiLocale[] = [locale, locale === "ar" ? "en" : "ar"];
+  return locales.some((item) => {
+    const body = outputDisclaimerBody(item);
+    return plain === outputDisclaimer(item) || plain === `${body} ${OUTPUT_POLICY_LABEL}` || plain === body || plain.startsWith(`${body} `);
+  });
 }

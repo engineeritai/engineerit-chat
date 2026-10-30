@@ -2,6 +2,7 @@
 
 import MessageMarkdown from "@/app/components/MessageMarkdown";
 import { riyadhStamp } from "@/lib/ksaTime";
+import { PAGE_DISCLAIMER_HREF, PAGE_DISCLAIMER_LEAD, PAGE_DISCLAIMER_LINK } from "@/lib/outputDisclaimer";
 import { shareDir, shareLanguage } from "@/lib/shareDirection";
 import type { ShareRecord } from "@/lib/shareStore";
 
@@ -29,16 +30,15 @@ export default function ShareView({ share }: { share: ShareRecord }) {
       </main>
       <footer className="share-footer" dir={dir} lang={lang}>
         <p className="share-footer-policy" dir={dir}>
-          {lang === "ar" ? "مُولَّد بالذكاء الاصطناعي، " : "AI-generated, "}
-          <a href="https://engineerit.ai/legal/terms">
-            {lang === "ar" ? "تُطبَّق سياسة الاستخدام" : "User Policy Applied"}
-          </a>
+          {PAGE_DISCLAIMER_LEAD[lang]}
+          <a href={PAGE_DISCLAIMER_HREF}>{PAGE_DISCLAIMER_LINK[lang]}</a>
         </p>
         <div className="share-footer-meta">
-          <span>
-            <img src="/icon-192.png" alt="" width={16} height={16} /> engineer it · engineerit.ai
+          <span className="share-footer-brand">
+            <img src="/icon-192.png" alt="" width={16} height={16} />
+            <span>engineer it · engineerit.ai</span>
           </span>
-          <span>{stamp}</span>
+          <span className="share-footer-stamp">{stamp}</span>
         </div>
       </footer>
     </div>

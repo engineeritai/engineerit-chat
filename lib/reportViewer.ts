@@ -5,6 +5,7 @@ import {
   isCenteredBoqColumn,
   isOutputDisclaimer,
   outputDisclaimerBody,
+  pageDisclaimerHtml,
   OUTPUT_DISCLAIMER_GRAY,
   OUTPUT_POLICY_LABEL,
   OUTPUT_POLICY_URL,
@@ -212,7 +213,7 @@ function taggedCell(tag: "th" | "td", header: string, value: string, rtlDoc: boo
 
 export function disclaimerHtml(locale: "en" | "ar"): string {
   const dir = locale === "ar" ? "rtl" : "ltr";
-  return `<footer class="report-disclaimer" dir="${dir}" style="color:${DISCLAIMER_GRAY}"><p>${esc(disclaimerBody(locale))} <a href="${POLICY_URL[locale]}" style="color:${DISCLAIMER_GRAY}"><bdi dir="ltr">${POLICY_LABEL}</bdi></a></p></footer>`;
+  return `<footer class="report-disclaimer" dir="${dir}" style="color:${DISCLAIMER_GRAY};font-size:12px"><p>${pageDisclaimerHtml(locale)}</p></footer>`;
 }
 
 /** Report body rendered in the panel. No network and no share-page record. */

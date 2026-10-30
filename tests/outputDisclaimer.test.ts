@@ -24,7 +24,7 @@ import { renderTakeoff } from "../lib/takeoff/render";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ShareView from "../app/share/view";
-import { buildHtmlDocument, iosPrintHost, printChannel, printDocumentHtml } from "../lib/chatActions";
+import { buildHtmlDocument, iosPrintHost, printChannel, printDocumentHtml, printNeedsPdfShare, printPageCopy } from "../lib/chatActions";
 import { visualTokens } from "../lib/arabicShape";
 import { RLM } from "../lib/shareDirection";
 import type { ShareRecord } from "../lib/shareStore";
@@ -121,12 +121,21 @@ test("pdf, word, powerpoint, excel, html, and chat export carry the disclaimer o
     assert.match(table, new RegExp(phrase));
     assert.match(table, /legal\/terms/);
     const html = buildShareHtml({ title: "Slab note", markdown: MARKDOWN, locale });
-    assert.match(html, new RegExp(phrase));
-    assert.match(html, /<footer>/);
-    assert.match(html, new RegExp(`href="${OUTPUT_POLICY_URL[locale].replace(/[?]/g, "\\?")}"`));
+    const footer = html.slice(html.indexOf("<footer"));
+    const shortLine =
+      locale === "ar"
+        ? /مُولَّد بالذكاء الاصطناعي، <a href="https:\/\/engineerit\.ai\/legal\/terms">تُطبَّق سياسة الاستخدام<\/a>/
+        : /AI-generated, <a href="https:\/\/engineerit\.ai\/legal\/terms">User Policy Applied<\/a>/;
+    assert.match(footer, shortLine);
+    assert.doesNotMatch(footer, /may contain errors|قد يحتوي على أخطاء/);
+    assert.match(footer, /class="footer-brand"/);
+    assert.match(footer, /engineer it · engineerit\.ai/);
+    assert.match(html, /align-items: baseline/);
+    assert.match(html, /padding: 12px calc\(16px \+ 16px\)/);
+    assert.match(html, /font-size: 12px/);
     const article = html.slice(html.indexOf("<article"), html.indexOf("</article>"));
     assert.equal(article.includes("output-disclaimer"), false);
-    assert.match(html.slice(html.indexOf("<footer>")), /class="output-disclaimer"/);
+    assert.match(footer, /class="output-disclaimer"/);
     assert.match(html, /color: #9CA3AF/);
     const chatPdf = await buildChatPdf({ title: "Chat", messages, locale });
     assert.match(pdfText(chatPdf), /engineerit\.ai\/legal\/terms/);
@@ -542,7 +551,10 @@ test("an Arabic answer shared from an English interface stays right to left", ()
   assert.match(html, /<table dir="rtl">/);
   assert.match(html, /property="og:locale" content="ar_SA"/);
   assert.match(html, /@media print/);
-  assert.match(html, /قد يحتوي على أخطاء/);
+  assert.match(html, /تُطبَّق سياسة الاستخدام/);
+  assert.doesNotMatch(html, /قد يحتوي على أخطاء/);
+  assert.match(html, /class="footer-brand"/);
+  assert.match(html, /align-items: baseline/);
 
   const printed = buildHtmlDocument(ARABIC_SHARE, "حصر كميات", "en");
   assert.match(printed, /<body dir="rtl" lang="ar">/);
@@ -598,6 +610,15 @@ test("the English share page footer links only the policy words", () => {
   assert.match(page, /engineer it · engineerit\.ai/);
   const shared = toWhatsApp(share.markdown, "https://engineerit.ai/share/shareenglish1", "en");
   assert.match(shared, /AI-generated, may contain errors\. Please verify before use\. See https:\/\/engineerit\.ai\/legal\/terms/);
+  const noisy = renderToStaticMarkup(
+    createElement(ShareView, {
+      share: { ...share, markdown: `${share.markdown}\n\n${outputDisclaimer("en")}` },
+    })
+  );
+  assert.doesNotMatch(noisy, /may contain errors/);
+  assert.match(noisy, /User Policy Applied/);
+  assert.match(noisy, /class="share-footer-brand"/);
+  assert.match(readFileSync("app/globals.css", "utf8"), /\.share-footer-meta \{[^}]*align-items: baseline/);
 });
 
 test("iPhone print uses a new tab and a blocked popup falls back to the share sheet", () => {
@@ -608,10 +629,39 @@ test("iPhone print uses a new tab and a blocked popup falls back to the share sh
   assert.equal(printChannel({ ios: false, opened: false }), "iframe");
   assert.equal(printChannel({ ios: true, opened: true }), "tab");
   assert.equal(printChannel({ ios: true, opened: false }), "share");
-  const doc = printDocumentHtml("<html><body dir=\"rtl\"><p>ملاحظة</p></body></html>", "طباعة");
+  assert.equal(printNeedsPdfShare({ standalone: true, threw: false }), true);
+  assert.equal(printNeedsPdfShare({ standalone: false, threw: true }), true);
+  assert.equal(printNeedsPdfShare({ standalone: false, threw: false }), false);
+  const arabic = printPageCopy({
+    locale: "ar",
+    title: "خارطة",
+    chatUrl: "https://engineerit.ai/chat?lang=ar",
+    shareText: "نص",
+    markdown: "ملاحظة",
+  });
+  const doc = printDocumentHtml("<html><head></head><body dir=\"rtl\"><main><p>ملاحظة</p></main></body></html>", arabic);
   assert.match(doc, /<body dir="rtl">/);
-  assert.match(doc, /onclick="window\.print\(\)"/);
-  assert.match(doc, />طباعة</);
-  assert.match(doc, /@media print\{\.print-call\{display:none!important\}\}/);
-  assert.match(doc, /window\.print\(\)/);
+  assert.match(doc, /viewport-fit=cover/);
+  assert.match(doc, /env\(safe-area-inset-top,0px\)/);
+  assert.match(doc, /z-index:1000/);
+  assert.match(doc, /z-index:1001/);
+  assert.match(doc, /min-height:44px/);
+  assert.match(doc, /class="print-back"/);
+  assert.match(doc, />رجوع</);
+  assert.match(doc, /class="print-go"[^>]*>طباعة</);
+  assert.match(doc, /class="print-actions"/);
+  assert.match(doc, />العودة إلى المحادثة</);
+  assert.match(doc, /function eitPrint\(\)\{var home=eitHome\(\);var threw=false;try\{window\.print\(\);\}catch\(err\)\{threw=true;\}/);
+  assert.doesNotMatch(doc, /setTimeout\(function\(\)\{try\{window\.print/);
+  assert.match(doc, /navigator\.share\(\{files:\[pdfFile\],title:cfg\.title\}\)/);
+  assert.match(doc, /@media print\{\.print-call,\.print-actions\{display:none!important\}/);
+  assert.match(doc, /https:\/\/engineerit\.ai\/chat\?lang=ar/);
+  const english = printDocumentHtml(
+    "<html><body><main><p>Note</p></main></body></html>",
+    printPageCopy({ locale: "en", title: "Roadmap", chatUrl: "/chat", shareText: "Note", markdown: "Note" })
+  );
+  assert.match(english, />Back</);
+  assert.match(english, />Print</);
+  assert.match(english, />Share</);
+  assert.match(english, />Back to chat</);
 });
