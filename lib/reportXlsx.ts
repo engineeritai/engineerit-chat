@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { plainInline } from "@/lib/messageDocument";
 import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
+import { BRAND_HEX, INK_HEX, LINE_HEX, MUTED_HEX, REPORT_FOOTER_LINE, WHITE_HEX } from "@/lib/reportBrand";
 import type { PreparedReport, ReportImage } from "@/lib/reportModel";
 import { pngSize, svgToPng } from "@/lib/rasterSvg";
 import { ganttFitBands } from "@/lib/scheduleSvg";
@@ -11,21 +12,21 @@ function columnAlign(header: string, rtl: boolean): "center" | "right" | "left" 
 }
 
 function styleHeader(cell: ExcelJS.Cell, rtl: boolean, header: string) {
-  cell.font = { name: rtl ? "Arial" : "Calibri", bold: true, color: { argb: "FF1E3A8A" }, size: 12 };
-  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE7EEFF" } };
+  cell.font = { name: rtl ? "Arial" : "Calibri", bold: true, color: { argb: `FF${WHITE_HEX}` }, size: 12 };
+  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: `FF${BRAND_HEX}` } };
   cell.alignment = { horizontal: columnAlign(header, rtl), vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
   cell.border = {
-    top: { style: "thin", color: { argb: "FFD0D7E2" } },
-    bottom: { style: "thin", color: { argb: "FFD0D7E2" } },
-    left: { style: "thin", color: { argb: "FFD0D7E2" } },
-    right: { style: "thin", color: { argb: "FFD0D7E2" } },
+    top: { style: "thin", color: { argb: `FF${LINE_HEX}` } },
+    bottom: { style: "thin", color: { argb: `FF${LINE_HEX}` } },
+    left: { style: "thin", color: { argb: `FF${LINE_HEX}` } },
+    right: { style: "thin", color: { argb: `FF${LINE_HEX}` } },
   };
 }
 
 function styleBody(cell: ExcelJS.Cell, rtl: boolean, zebra: boolean, header: string) {
-  cell.font = { name: rtl ? "Arial" : "Calibri", size: 11, color: { argb: "FF0F172A" } };
+  cell.font = { name: rtl ? "Arial" : "Calibri", size: 11, color: { argb: `FF${INK_HEX}` } };
   cell.alignment = { horizontal: columnAlign(header, rtl), vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
-  if (zebra) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } };
+  if (zebra) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFFFF" } };
 }
 
 function fitColumns(sheet: ExcelJS.Worksheet) {
@@ -46,11 +47,11 @@ function addTableSheet(book: ExcelJS.Workbook, name: string, title: string, stam
   const span = Math.max(headers.length, 1);
   sheet.mergeCells(1, 1, 1, span);
   sheet.getCell(1, 1).value = title;
-  sheet.getCell(1, 1).font = { name: rtl ? "Arial" : "Calibri", size: 18, bold: true, color: { argb: "FF1A56FF" } };
+  sheet.getCell(1, 1).font = { name: rtl ? "Arial" : "Calibri", size: 18, bold: true, color: { argb: `FF${BRAND_HEX}` } };
   sheet.getCell(1, 1).alignment = { horizontal: rtl ? "right" : "left", readingOrder: rtl ? "rtl" : "ltr" };
   sheet.mergeCells(2, 1, 2, span);
   sheet.getCell(2, 1).value = stamp;
-  sheet.getCell(2, 1).font = { name: rtl ? "Arial" : "Calibri", size: 11, color: { argb: "FF64748B" } };
+  sheet.getCell(2, 1).font = { name: rtl ? "Arial" : "Calibri", size: 11, color: { argb: `FF${MUTED_HEX}` } };
   sheet.getCell(2, 1).alignment = { horizontal: rtl ? "right" : "left", readingOrder: rtl ? "rtl" : "ltr" };
   headers.forEach((header, index) => {
     const cell = sheet.getCell(4, index + 1);
@@ -76,9 +77,15 @@ function addTableSheet(book: ExcelJS.Workbook, name: string, title: string, stam
   note.font = { name: rtl ? "Arial" : "Calibri", size: 8, color: { argb: `FF${OUTPUT_DISCLAIMER_GRAY.slice(1)}` }, underline: true };
   note.alignment = { horizontal: rtl ? "right" : "left", vertical: "middle", wrapText: true, readingOrder: rtl ? "rtl" : "ltr" };
   sheet.getRow(noteRow).height = 28;
-  const footer = `&${rtl ? "R" : "L"}&8&K${OUTPUT_DISCLAIMER_GRAY.slice(1)}${outputDisclaimer(rtl ? "ar" : "en").replace(/&/g, "&&")}`;
+  const edge = rtl ? "R" : "L";
+  const far = rtl ? "L" : "R";
+  const pages = rtl ? "صفحة &P من &N" : "Page &P of &N";
+  const footer = `&${edge}&8&K${OUTPUT_DISCLAIMER_GRAY.slice(1)}${outputDisclaimer(rtl ? "ar" : "en").replace(/&/g, "&&")}\n&K${INK_HEX}${REPORT_FOOTER_LINE.replace(/&/g, "&&")}&${far}&8&K${INK_HEX}${pages}`;
   sheet.headerFooter.oddFooter = footer;
   sheet.headerFooter.evenFooter = footer;
+  const running = `&${far}&8&K${MUTED_HEX}${title.replace(/&/g, "&&")}`;
+  sheet.headerFooter.oddHeader = running;
+  sheet.headerFooter.evenHeader = running;
   fitColumns(sheet);
   fitSheetPage(sheet);
   sheet.autoFilter = {

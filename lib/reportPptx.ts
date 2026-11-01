@@ -3,7 +3,8 @@ import { blockDir, plainInline } from "@/lib/messageDocument";
 import { pngSize, svgToPng } from "@/lib/rasterSvg";
 import { ganttFitBands } from "@/lib/scheduleSvg";
 import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
-import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
+import { BRAND_HEX, COVER_MAIL, COVER_SITE, INK_HEX, LINE_HEX, MUTED_HEX, REPORT_FOOTER_LINE, WHITE_HEX, WORDMARK_WIDTH_PT } from "@/lib/reportBrand";
+import { type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
 // pptxgenjs ships a CommonJS build whose default import is unreliable under Next.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -92,6 +93,14 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
   };
 
   const footer = (slide: Slide, page: number, total: number) => {
+    slide.addShape(pptx.ShapeType.rect, {
+      x: 0.38,
+      y: 7.02,
+      w: W - 0.76,
+      h: 0.01,
+      fill: { color: LINE_HEX },
+      line: { color: LINE_HEX },
+    });
     const icon = 0.24;
     const label = rtl ? `شريحة ${page} من ${total}` : `Slide ${page} of ${total}`;
     const gray = OUTPUT_DISCLAIMER_GRAY.slice(1);
@@ -145,7 +154,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
         fontFace: "Calibri",
         lang: "en-US",
         fontSize: 12,
-        color: "64748B",
+        color: INK_HEX,
         align: "right",
         rtlMode: false,
       });
@@ -156,7 +165,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
         h: 0.28,
         fontFace: face, lang,
         fontSize: 12,
-        color: "64748B",
+        color: INK_HEX,
         align: "left",
         rtlMode: true,
       });
@@ -170,7 +179,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       h: 0.28,
       fontFace: face, lang,
       fontSize: 12,
-      color: "64748B",
+      color: INK_HEX,
       align: "left",
     });
     slide.addText(label, {
@@ -180,82 +189,136 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
       h: 0.28,
       fontFace: face, lang,
       fontSize: 12,
-      color: "64748B",
+      color: INK_HEX,
       align: "right",
     });
   };
 
   const cover = add();
-  const mark = wordmarkSize(report, 400 / 72);
-  cover.addImage({ data: wordmarkData(report), x: (W - mark.w) / 2, y: 0.82, w: mark.w, h: mark.h });
+  cover.addShape(pptx.ShapeType.rect, {
+    x: 0,
+    y: 0,
+    w: W,
+    h: 0.22,
+    fill: { color: BRAND_HEX },
+    line: { color: BRAND_HEX },
+  });
+  const mark = wordmarkSize(report, WORDMARK_WIDTH_PT / 72);
+  cover.addImage({ data: wordmarkData(report), x: (W - mark.w) / 2, y: 1.35, w: mark.w, h: mark.h });
+  cover.addShape(pptx.ShapeType.rect, {
+    x: (W - 1.55) / 2,
+    y: 1.35 + mark.h + 0.28,
+    w: 1.55,
+    h: 0.035,
+    fill: { color: BRAND_HEX },
+    line: { color: BRAND_HEX },
+  });
+  const titleTop = 1.35 + mark.h + 0.48;
   cover.addText(report.title, {
     x: 0.8,
-    y: 2.3,
+    y: titleTop,
     w: W - 1.6,
-    h: 1.4,
+    h: 0.9,
     fontFace: face, lang,
-    fontSize: 36,
+    fontSize: 32,
     bold: true,
-    color: "0F172A",
+    color: INK_HEX,
     align: "center",
     rtlMode: blockDir(report.title, report.locale) === "rtl",
   });
-  const subtitleRtl = directionalRuns(report.subtitle).some((run) => run.rtl);
-  cover.addText(report.subtitle, {
+  let coverY = titleTop + 0.95;
+  if (report.subtitle.trim()) {
+    const subtitleRtl = directionalRuns(report.subtitle).some((run) => run.rtl);
+    cover.addText(report.subtitle, {
+      x: 1.2,
+      y: coverY,
+      w: W - 2.4,
+      h: 0.36,
+      fontFace: subtitleRtl ? "Arial" : face,
+      lang: subtitleRtl ? "ar-SA" : "en-US",
+      fontSize: 16,
+      color: MUTED_HEX,
+      align: "center",
+      rtlMode: subtitleRtl,
+    });
+    coverY += 0.4;
+  }
+  cover.addText(report.coverDate, {
     x: 1.2,
-    y: 3.8,
+    y: coverY + 0.08,
     w: W - 2.4,
-    h: 0.4,
-    fontFace: subtitleRtl ? "Arial" : face,
-    lang: subtitleRtl ? "ar-SA" : "en-US",
-    fontSize: 16,
-    color: "64748B",
-    align: "center",
-    rtlMode: subtitleRtl,
-  });
-  cover.addShape(pptx.ShapeType.rect, {
-    x: (W - 2.2) / 2,
-    y: 4.4,
-    w: 2.2,
-    h: 0.06,
-    fill: { color: "1A56FF" },
-    line: { color: "1A56FF" },
-  });
-  cover.addText(report.stamp, {
-    x: 1.2,
-    y: 4.6,
-    w: W - 2.4,
-    h: 0.35,
+    h: 0.34,
     fontFace: face, lang,
-    fontSize: 14,
-    color: "1A56FF",
+    fontSize: 16,
+    bold: true,
+    color: INK_HEX,
     align: "center",
     rtlMode: rtl,
+  });
+  cover.addText(report.coverZone, {
+    x: 1.2,
+    y: coverY + 0.42,
+    w: W - 2.4,
+    h: 0.3,
+    fontFace: face, lang,
+    fontSize: 12,
+    color: MUTED_HEX,
+    align: "center",
+    rtlMode: rtl,
+  });
+  cover.addText(COVER_SITE, {
+    x: 1.2,
+    y: 5.85,
+    w: W - 2.4,
+    h: 0.28,
+    fontFace: "Calibri",
+    lang: "en-US",
+    fontSize: 14,
+    bold: true,
+    color: BRAND_HEX,
+    align: "center",
+  });
+  cover.addText(COVER_MAIL, {
+    x: 1.2,
+    y: 6.14,
+    w: W - 2.4,
+    h: 0.24,
+    fontFace: "Calibri",
+    lang: "en-US",
+    fontSize: 12,
+    color: MUTED_HEX,
+    align: "center",
   });
 
   const contentSlide = (title: string) => {
     const slide = add();
-    const icon = 0.28;
-    slide.addShape(pptx.ShapeType.rect, {
-      x: 0,
-      y: 0,
-      w: W,
-      h: 0.08,
-      fill: { color: "1A56FF" },
-      line: { color: "1A56FF" },
+    const icon = 0.26;
+    const startX = 0.42;
+    slide.addImage({ data: logoData(report), x: rtl ? W - startX - icon : startX, y: 0.16, w: icon, h: icon });
+    const docRtl = rtl || blockDir(report.title, report.locale) === "rtl";
+    slide.addText(report.title, {
+      x: rtl ? startX : startX + icon + 0.1,
+      y: 0.12,
+      w: W - startX * 2 - icon - 0.1,
+      h: 0.28,
+      fontFace: face,
+      lang,
+      fontSize: 12,
+      color: MUTED_HEX,
+      align: rtl ? "left" : "right",
+      rtlMode: docRtl,
     });
-    slide.addImage({ data: logoData(report), x: 0.42, y: 0.26, w: icon, h: icon });
     const titleRtl = rtl || blockDir(title, report.locale) === "rtl";
     slide.addText(title, {
-      x: 0.42 + icon + 0.12,
-      y: 0.2,
-      w: W - 0.84 - icon - 0.12,
-      h: 0.42,
+      x: startX,
+      y: 0.42,
+      w: W - startX * 2,
+      h: 0.38,
       fontFace: face, lang,
       fontSize: 20,
       bold: true,
-      color: "0F172A",
-      align: "right",
+      color: BRAND_HEX,
+      align: titleRtl ? "right" : "left",
       rtlMode: titleRtl,
     });
     return slide;
@@ -399,7 +462,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
         text,
         options: {
           fill: { color: fill },
-          color: header ? "1E3A8A" : "0F172A",
+          color: header ? WHITE_HEX : INK_HEX,
           bold: header,
           align: center ? "center" : tableRtl ? "right" : "left",
           rtlMode: formula ? false : tableRtl,
@@ -438,13 +501,13 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
         }
         if (end === cursor && cursor < bodyRows.length) end = cursor + 1;
         const rows = [
-          headerCells.map((text, displayIndex) => cell(text, true, "E7EEFF", false, centered[order[displayIndex]])),
-          ...bodyRows.slice(cursor, end).map((row, index) =>
+          headerCells.map((text, displayIndex) => cell(text, true, BRAND_HEX, false, centered[order[displayIndex]])),
+          ...bodyRows.slice(cursor, end).map((row) =>
             row.map((text, displayIndex) =>
               cell(
                 text,
                 false,
-                (cursor + index) % 2 ? "F8FAFC" : "FFFFFF",
+                WHITE_HEX,
                 tableRtl && order[displayIndex] === workingSource,
                 centered[order[displayIndex]]
               )
@@ -457,10 +520,10 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
           w: tableW,
           colW,
           border: [
-            { pt: 0.5, color: "D0D7E2" },
-            { pt: 0.5, color: "D0D7E2" },
-            { pt: 0.5, color: "D0D7E2" },
-            { pt: 0.5, color: "D0D7E2" },
+            { pt: 0.5, color: LINE_HEX },
+            { pt: 0.5, color: LINE_HEX },
+            { pt: 0.5, color: LINE_HEX },
+            { pt: 0.5, color: LINE_HEX },
           ],
           fontFace: face, lang,
           fontSize,

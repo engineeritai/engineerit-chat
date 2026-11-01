@@ -4052,6 +4052,76 @@ label,
   line-height: 1.35;
 }
 
+.report-viewer-doc h2,
+.report-viewer-doc h3,
+.report-viewer-doc h4 {
+  color: #0d60e4;
+}
+
+.report-viewer-doc .cover {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 72vh;
+  margin: -16px -18px 18px;
+  background: #fff;
+}
+
+.report-viewer-doc .cover-bar {
+  height: 12px;
+  background: #0d60e4;
+}
+
+.report-viewer-doc .cover-body {
+  padding: 28px 18px 8px;
+  text-align: center;
+}
+
+.report-viewer-doc .cover-mark {
+  width: min(280px, 78%);
+  height: auto;
+}
+
+.report-viewer-doc .cover-rule {
+  width: 96px;
+  height: 2px;
+  margin: 16px auto 18px;
+  background: #0d60e4;
+}
+
+.report-viewer-doc .cover-title {
+  margin: 0;
+  color: #14213d;
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 700;
+  text-align: center;
+}
+
+.report-viewer-doc .cover-date {
+  margin: 14px 0 0;
+  color: #14213d;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.report-viewer-doc .cover-zone,
+.report-viewer-doc .cover-mail {
+  margin: 4px 0 0;
+  color: #5b6475;
+  font-size: 12px;
+}
+
+.report-viewer-doc .cover-contact {
+  padding: 12px 18px 20px;
+  text-align: center;
+}
+
+.report-viewer-doc .cover-site {
+  color: #0d60e4;
+  font-weight: 700;
+}
+
 .report-viewer-doc p {
   margin: 0 0 12px;
 }
@@ -4154,19 +4224,23 @@ label,
 .report-viewer-doc table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   background: #fff;
 }
 
 .report-viewer-doc th,
 .report-viewer-doc td {
   padding: 8px 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #d9e2f2;
   text-align: start;
   vertical-align: top;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .report-viewer-doc th {
-  background: #e7eeff;
+  background: #0d60e4;
+  color: #fff;
 }
 
 .report-viewer-doc th.measure,
@@ -4197,6 +4271,21 @@ label,
   text-underline-offset: 2px;
 }
 
+.report-viewer-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: #14213d;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.report-viewer-brand img {
+  width: 16px;
+  height: 16px;
+}
+
 .report-viewer-frame {
   flex: 1 1 auto;
   width: 100%;
@@ -4219,6 +4308,26 @@ label,
 
   .report-viewer-disclaimer {
     display: block;
+  }
+}
+
+@media (max-width: 560px) {
+  .report-viewer-doc .cover-title {
+    font-size: 22px;
+  }
+
+  .report-viewer-doc .report-table {
+    overflow: visible;
+  }
+
+  .report-viewer-doc table {
+    table-layout: fixed;
+  }
+
+  .report-viewer-doc th,
+  .report-viewer-doc td {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 }
 
