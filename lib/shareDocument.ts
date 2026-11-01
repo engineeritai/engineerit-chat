@@ -1,7 +1,8 @@
 import { flowSvg } from "@/lib/flowSvg";
-import { riyadhStamp } from "@/lib/ksaTime";
+import { riyadhCoverDate } from "@/lib/ksaTime";
 import { parseMessage, plainInline, tokenizeInline, type Block, type ListItem } from "@/lib/messageDocument";
 import { isCenteredBoqColumn, isOutputDisclaimer, OUTPUT_DISCLAIMER_GRAY, pageDisclaimerHtml } from "@/lib/outputDisclaimer";
+import { coverHtml, coverZone, ICON_URL, REPORT_FOOTER_LINE } from "@/lib/reportBrand";
 import { asExportSvg, renderFittedChartParts } from "@/lib/scheduleSvg";
 import { blockDirection, hasArabicContent, isolatePieces, shareDir, shareLanguage } from "@/lib/shareDirection";
 
@@ -115,7 +116,7 @@ export function buildShareHtml(args: {
 }): string {
   const lang = shareLanguage(args.markdown, args.locale);
   const dir = shareDir(args.markdown, args.locale);
-  const stamp = riyadhStamp(args.now ?? new Date(), lang);
+  const now = args.now ?? new Date();
   const description = shareDescription(args.markdown);
   const blocks = parseMessage(args.markdown);
   const image = args.origin && args.id ? `${args.origin}/share/${args.id}/og` : `${args.origin || ""}/og.png`;
@@ -141,29 +142,43 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: "Noto Naskh Arabic", "IBM Plex Sans Arabic", "Noto Sans Arabic", Inter, "Segoe UI", sans-serif; color: #0f172a; background: #f5f7fb; text-align: start; }
+  body { margin: 0; display: flex; flex-direction: column; font-family: "Noto Naskh Arabic", "IBM Plex Sans Arabic", "Noto Sans Arabic", Inter, "Segoe UI", sans-serif; color: #14213D; background: #fff; text-align: start; }
+  .cover { order: 1; }
+  main { order: 2; }
+  footer { order: 3; }
   bdi { unicode-bidi: isolate; }
-  header, footer { background: #fff; }
-  header { display: flex; align-items: center; gap: 12px; padding: 16px 22px; border-bottom: 3px solid #1a56ff; direction: ltr; }
-  header h1 { margin: 0; font-size: 22px; font-weight: 700; }
-  [dir="rtl"] header h1 { margin-inline-start: auto; text-align: right; }
-  header img { width: 28px; height: 28px; }
-  main { max-width: 980px; margin: 0 auto; padding: 22px 16px 8px; }
-  article { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 18px 16px; min-width: 0; }
-  h2 { font-size: 18px; color: #1a56ff; }
-  h3 { font-size: 16px; }
+  .runhead { display: none; }
+  .runhead img { width: 16px; height: 16px; }
+  .runhead-title { font-size: 12px; color: #5B6475; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cover { page: cover; position: relative; display: flex; flex-direction: column; min-height: 100vh; background: #fff; break-after: page; page-break-after: always; }
+  main { page: content; }
+  .cover-bar { height: 17px; background: #0D60E4; }
+  .cover-body { margin: auto 0; padding: 48px 28px 12px; text-align: center; }
+  .cover-mark { width: min(340px, 78%); height: auto; }
+  .cover-rule { width: 112px; height: 2px; margin: 22px auto 26px; background: #0D60E4; }
+  .cover-title { margin: 0; color: #14213D; font-size: 32px; line-height: 1.25; font-weight: 700; text-align: center; }
+  .cover-sub { margin: 12px 0 0; color: #5B6475; font-size: 16px; text-align: center; }
+  .cover-date { margin: 22px 0 0; color: #14213D; font-size: 15px; font-weight: 700; text-align: center; }
+  .cover-zone { margin: 4px 0 0; color: #5B6475; font-size: 12px; text-align: center; }
+  .cover-contact { padding: 0 24px 40px; text-align: center; }
+  .cover-site { color: #0D60E4; font-weight: 700; font-size: 15px; text-align: center; }
+  .cover-mail { color: #5B6475; font-size: 12px; margin-top: 2px; text-align: center; }
+  main { max-width: 980px; margin: 0 auto; padding: 8px 16px 8px; }
+  article { background: #fff; padding: 18px 16px; min-width: 0; }
+  article h1, article h2, article h3, article h4 { color: #0D60E4; }
+  h2 { font-size: 22px; }
+  h3 { font-size: 18px; }
   p, li, h1, h2, h3 { line-height: 1.6; text-align: start; }
-  .table-scroll { max-width: 100%; overflow-x: auto; overflow-y: hidden; border: 1px solid #d0d7e2; border-radius: 12px; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #d0d7e2; padding: 8px 10px; text-align: start; white-space: normal; overflow-wrap: anywhere; vertical-align: top; min-width: 7em; }
+  .table-scroll { max-width: 100%; overflow: visible; border: 1px solid #D9E2F2; border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+  th, td { border: 1px solid #D9E2F2; padding: 8px 10px; text-align: start; white-space: normal; overflow-wrap: anywhere; vertical-align: top; min-width: 0; }
   th.measure, td.measure { text-align: center; }
   ol { list-style: decimal; counter-reset: msg-item; }
   ol > li { counter-increment: msg-item; }
   ol > li::marker { content: counter(msg-item) ". "; }
   ul { list-style: disc; }
-  th { background: #e7eeff; color: #1e3a8a; position: sticky; top: 0; }
-  th:first-child, td:first-child { position: sticky; inset-inline-start: 0; background: inherit; }
-  tbody tr:nth-child(even) td { background: #f8fafc; }
+  th { background: #0D60E4; color: #fff; }
+  td { background: #fff; }
   figure, .chart-band { margin: 16px 0; max-width: 100%; }
   figure svg, .chart-band svg { display: block; width: 100%; max-width: 100%; height: auto; }
   .gantt-fit { position: relative; max-width: 100%; }
@@ -178,51 +193,81 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
   li { margin: 3px 0; }
   li ul, li ol { margin: 4px 0; }
   strong { font-weight: 700; }
-  footer { border-top: 1px solid #e5e7eb; color: #64748b; font-size: 13px; display: block; padding: 0; }
+  footer { border-top: 1px solid #D9E2F2; color: #14213D; font-size: 13px; display: block; padding: 0; background: #fff; }
   .footer-inner { max-width: 980px; margin: 0 auto; box-sizing: border-box; padding: 12px calc(16px + 16px) calc(20px + env(safe-area-inset-bottom, 0px)); }
-  .footer-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; flex-wrap: nowrap; font-size: 12px; }
+  .footer-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; flex-wrap: nowrap; font-size: 12px; color: #14213D; }
   .footer-brand { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+  [dir="rtl"] .footer-brand { flex-direction: row-reverse; }
   .footer-brand img { width: 16px; height: 16px; align-self: center; }
-  .footer-stamp { flex: 0 0 auto; white-space: nowrap; }
+  .page-of { display: none; }
+  @page cover { margin: 0; }
+  @page content {
+    margin: 16mm 14mm 20mm;
+    ${lang === "ar"
+      ? `@top-left { content: "${args.title.replace(/["\\\n\r]/g, " ").replace(/\s+/g, " ").trim()}"; font-size: 10pt; color: #5B6475; font-family: "Noto Naskh Arabic", sans-serif; }
+         @bottom-right { content: "مُولَّد بالذكاء الاصطناعي، تُطبَّق سياسة الاستخدام\\A engineerit.ai · support@engineerit.ai"; white-space: pre; font-size: 8pt; color: #14213D; font-family: "Noto Naskh Arabic", sans-serif; }
+         @bottom-left { content: "صفحة " counter(page) " من " counter(pages); font-size: 9pt; color: #14213D; font-family: "Noto Naskh Arabic", sans-serif; }`
+      : `@top-right { content: "${args.title.replace(/["\\\n\r]/g, " ").replace(/\s+/g, " ").trim()}"; font-size: 10pt; color: #5B6475; font-family: Inter, sans-serif; }
+         @bottom-left { content: "AI-generated, User Policy Applied\\A engineerit.ai · support@engineerit.ai"; white-space: pre; font-size: 8pt; color: #14213D; font-family: Inter, sans-serif; }
+         @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9pt; color: #14213D; font-family: Inter, sans-serif; }`}
+  }
   .output-disclaimer { margin: 0 0 8px; font-size: 12px; line-height: 1.35; color: ${OUTPUT_DISCLAIMER_GRAY}; white-space: nowrap; }
   .output-disclaimer a { color: ${OUTPUT_DISCLAIMER_GRAY}; text-decoration: underline; text-underline-offset: 2px; }
-  @media (max-width: 640px) { header h1 { font-size: 18px; } main { padding: 12px 16px 8px; } }
+  @media (max-width: 560px) {
+    .cover-title { font-size: 22px; }
+    .cover-body { padding: 36px 16px 8px; }
+    main { padding: 8px 12px; }
+    .table-scroll { overflow: visible; }
+    table { table-layout: fixed; }
+    th, td { min-width: 0; overflow-wrap: anywhere; font-size: 12px; padding: 6px; }
+    .output-disclaimer { white-space: normal; }
+  }
   @media print {
     body { background: #fff; }
-    header, footer { position: fixed; left: 0; right: 0; background: #fff; }
-    header { top: 0; }
-    footer { bottom: 0; }
-    main { padding-top: 78px; padding-bottom: 108px; }
+    .runhead, footer { position: fixed; left: 0; right: 0; background: #fff; }
+    .runhead { display: flex; top: 6mm; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16mm; }
+    .runhead-title { display: none; }
+    footer { display: none; }
+    .cover { z-index: 5; background: #fff; }
+    main { padding-top: 56px; padding-bottom: 108px; }
     article { border: 0; }
     h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; break-inside: avoid; }
     figure, .chart-band { break-before: avoid; page-break-before: avoid; max-width: 100%; }
     figure svg, .chart-band svg { width: 100% !important; max-width: 100% !important; height: auto !important; }
     .chart-band { break-inside: avoid; page-break-inside: avoid; }
-    .table-scroll { overflow: visible; max-width: 100%; }
-    table { width: 100%; table-layout: fixed; }
-    th, td { min-width: 0; overflow-wrap: anywhere; }
+    main, article, .table-scroll, figure, .chart-band { width: 100%; max-width: 100%; }
+    .table-scroll { overflow: hidden; }
+    table { width: 100% !important; max-width: 100% !important; table-layout: fixed; }
+    th, td { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
   }
 </style>
 </head>
 <body dir="${dir}" lang="${lang}">
-<header>
-  <img src="https://engineerit.ai/icon-192.png" alt="eit"/>
-  <h1 dir="${blockDirection(args.title)}">${isolatedHtml(args.title)}</h1>
+<header class="runhead" dir="${dir}">
+  <img src="${ICON_URL}" alt="eit"/>
+  <div class="runhead-title" dir="${blockDirection(args.title)}">${isolatedHtml(args.title)}</div>
 </header>
+<footer class="runfoot" dir="${dir}">
+  <div class="footer-inner">
+    <p class="output-disclaimer" dir="${dir}">${pageDisclaimerHtml(lang)}</p>
+    <div class="footer-meta">
+      <span class="footer-brand"><img src="${ICON_URL}" alt="eit" width="16" height="16"/> <span dir="ltr">${REPORT_FOOTER_LINE}</span></span>
+      <span class="page-of"></span>
+    </div>
+  </div>
+</footer>
+${coverHtml({
+  title: args.title,
+  date: riyadhCoverDate(now, lang),
+  zone: coverZone(lang),
+  locale: lang,
+  absolute: true,
+})}
 <main>
   <article dir="${dir}" lang="${lang}">
     ${blocksHtml(blocks, dir, lang)}
   </article>
 </main>
-<footer dir="${dir}">
-  <div class="footer-inner">
-    <p class="output-disclaimer" dir="${dir}">${pageDisclaimerHtml(lang)}</p>
-    <div class="footer-meta">
-      <span class="footer-brand"><img src="https://engineerit.ai/icon-192.png" alt="eit" width="16" height="16"/> <span>engineer it · engineerit.ai</span></span>
-      <span class="footer-stamp">${esc(stamp)}</span>
-    </div>
-  </div>
-</footer>
 </body>
 </html>`;
 }

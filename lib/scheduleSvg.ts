@@ -184,7 +184,9 @@ function ganttSvg(model: GanttModel, rtl: boolean, theme: ChartTheme, fit = fals
   if (todayMs != null && todayMs >= min && todayMs <= max) {
     const x = xOf(todayMs);
     parts.push(`<line data-kind="today" x1="${x.toFixed(1)}" y1="4" x2="${x.toFixed(1)}" y2="${height - 2}" stroke="${colors.ink}" stroke-width="1.5" stroke-dasharray="4 4"/>`);
-    parts.push(text(x, 14, rtl ? "اليوم" : "Today", { size: 12, fill: colors.ink, weight: 700, anchor: "middle" }));
+    const todayLabel = rtl ? "اليوم" : "Today";
+    const todayX = Math.min(width - 8, Math.max(8, rtl ? x - 6 : x + 6));
+    parts.push(text(todayX, 28, todayLabel, { size: 11, fill: colors.ink, weight: 700, anchor: rtl ? "end" : "start" }));
   }
   if (fit && labels) {
     rows.forEach((row, index) => {

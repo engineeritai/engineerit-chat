@@ -1,7 +1,10 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { riyadhIsoDate, riyadhStamp, type UiLocale } from "@/lib/ksaTime";
+import { riyadhCoverDate, riyadhIsoDate, riyadhStamp, type UiLocale } from "@/lib/ksaTime";
 import { coverSubtitle, pickTopicSource, REPORT_LABEL, shortTopic } from "@/lib/exportName";
+import { coverZone, REPORT_FOOTER_LINE } from "@/lib/reportBrand";
+
+export { REPORT_FOOTER_LINE };
 import { appendixHeading, ganttAppendix, parseMessage, plainTopic, type Block } from "@/lib/messageDocument";
 import { flowSvg } from "@/lib/flowSvg";
 import { pngSize, svgToPng } from "@/lib/rasterSvg";
@@ -18,6 +21,10 @@ export type PreparedReport = {
   subtitle: string;
   locale: UiLocale;
   stamp: string;
+  /** Full cover date, such as "Sunday, 1 November 2026". */
+  coverDate: string;
+  /** Time-zone line under the cover date. */
+  coverZone: string;
   blocks: Block[];
   images: Map<number, ReportImage>;
   /** Small eit mark for header and footer corners. */
@@ -25,8 +32,6 @@ export type PreparedReport = {
   /** Official cover wordmark. Drawn as-is; do not recolor or stretch. */
   wordmark: Uint8Array;
 };
-
-export const REPORT_FOOTER_LINE = "engineerit.ai · support@engineerit.ai";
 
 export type ReportRequest = {
   title?: string;
@@ -102,6 +107,8 @@ export async function prepareReport(input: ReportRequest): Promise<PreparedRepor
     subtitle: (input.subtitle || coverSubtitle(raw, locale)).slice(0, 160),
     locale,
     stamp: riyadhStamp(now, locale),
+    coverDate: riyadhCoverDate(now, locale),
+    coverZone: coverZone(locale),
     blocks,
     images,
     logo: await loadLogo(),

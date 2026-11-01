@@ -101,7 +101,7 @@ test("pdf, word, powerpoint, excel, html, and chat export carry the disclaimer o
     assert.match(word, new RegExp(phrase));
     assert.match(word, /legal\/terms/);
     assert.match(word, /9CA3AF/);
-    assert.match(word, /64748B/);
+    assert.match(word, /14213D/);
     assert.match(word, /hyperlink/);
     const deck = await zipText(await buildReportPptx(report));
     const slides = deck.match(/ppt\/slides\/slide\d+\.xml/g) ?? [];
@@ -129,7 +129,8 @@ test("pdf, word, powerpoint, excel, html, and chat export carry the disclaimer o
     assert.match(footer, shortLine);
     assert.doesNotMatch(footer, /may contain errors|قد يحتوي على أخطاء/);
     assert.match(footer, /class="footer-brand"/);
-    assert.match(footer, /engineer it · engineerit\.ai/);
+    assert.match(footer, /engineerit\.ai · support@engineerit\.ai/);
+    assert.doesNotMatch(html, /Engineered with engineer it|بإعداد engineer it/);
     assert.match(html, /align-items: baseline/);
     assert.match(html, /padding: 12px calc\(16px \+ 16px\)/);
     assert.match(html, /font-size: 12px/);
@@ -363,7 +364,9 @@ test("arabic exports are right to left", async () => {
   assert.match(word, /w:cs="Arial"/);
   const documentXml = wordParts.find((part) => part.startsWith("word/document.xml")) ?? "";
   assert.match(documentXml, /<w:sectPr\b[^>]*>[\s\S]*<w:bidi\/><\/w:sectPr>/);
-  const tableHeaders = documentXml.slice(documentXml.indexOf("<w:tbl>"), documentXml.indexOf("</w:tbl>"));
+  const itemAt = documentXml.indexOf("البند");
+  const tableStart = documentXml.lastIndexOf("<w:tbl>", itemAt);
+  const tableHeaders = documentXml.slice(tableStart, documentXml.indexOf("</w:tbl>", itemAt));
   assert.ok(tableHeaders.indexOf("البند") < tableHeaders.indexOf("طريقة الحساب"), "columns stay in logical order");
   assert.match(tableHeaders, /<w:bidiVisual\/>/);
   const pdfRun = documentXml.slice(Math.max(0, documentXml.indexOf(">PDF<") - 400), documentXml.indexOf(">PDF<"));

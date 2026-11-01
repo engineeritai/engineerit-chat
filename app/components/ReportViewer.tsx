@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { downloadName } from "@/lib/exportName";
 import { PAGE_DISCLAIMER_HREF, PAGE_DISCLAIMER_LEAD, PAGE_DISCLAIMER_LINK } from "@/lib/outputDisclaimer";
+import { REPORT_FOOTER_LINE } from "@/lib/reportBrand";
 import {
   DISCLAIMER_GRAY,
   intentLinks,
@@ -84,7 +85,7 @@ export default function ReportViewer({
   const dir = locale === "ar" ? "rtl" : "ltr";
   const knownUrl = messageShareUrl(markdown);
   const links = intentLinks(title, locale, knownUrl);
-  const fragment = reportFragmentHtml(markdown, locale);
+  const fragment = reportFragmentHtml(markdown, locale, title);
 
   useEffect(() => {
     restoreRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -296,6 +297,10 @@ export default function ReportViewer({
             {PAGE_DISCLAIMER_LEAD[locale]}
             <a href={PAGE_DISCLAIMER_HREF}>{PAGE_DISCLAIMER_LINK[locale]}</a>
           </p>
+          <div className="report-viewer-brand">
+            <img src="/icon-192.png" alt="eit" width={16} height={16} />
+            <span>{REPORT_FOOTER_LINE}</span>
+          </div>
         </footer>
       ) : null}
     </div>

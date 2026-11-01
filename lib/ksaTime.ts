@@ -34,3 +34,15 @@ export function riyadhStamp(now = new Date(), locale: UiLocale = "en"): string {
   if (locale === "ar") return `${day} ${month} ${year}، ${clock} بتوقيت السعودية`;
   return `${day} ${month} ${year}, ${clock} KSA`;
 }
+
+/** Cover date, such as "Sunday, 1 November 2026". Digits stay Western in Arabic. */
+export function riyadhCoverDate(now = new Date(), locale: UiLocale = "en"): string {
+  const formatted = new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-nu-latn" : "en-GB", {
+    timeZone: ZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(now);
+  return formatted.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+}

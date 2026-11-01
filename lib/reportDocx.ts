@@ -6,6 +6,7 @@ import {
   Footer,
   Header,
   HeadingLevel,
+  HeightRule,
   ImageRun,
   LevelFormat,
   Packer,
@@ -27,9 +28,12 @@ import { blockDir, plainInline, type Block } from "@/lib/messageDocument";
 import { pngSize, svgToPng } from "@/lib/rasterSvg";
 import { ganttFitBands } from "@/lib/scheduleSvg";
 import { isCenteredBoqColumn, isOutputDisclaimer, outputDisclaimerBody, OUTPUT_DISCLAIMER_GRAY, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
-import { REPORT_FOOTER_LINE, type PreparedReport, type ReportImage } from "@/lib/reportModel";
+import { BRAND_HEX, COVER_MAIL, COVER_SITE, INK_HEX, LINE_HEX, MUTED_HEX, REPORT_FOOTER_LINE, WHITE_HEX, WORDMARK_WIDTH_PT } from "@/lib/reportBrand";
+import { type PreparedReport, type ReportImage } from "@/lib/reportModel";
 
-const border = { style: BorderStyle.SINGLE, size: 4, color: "D0D7E2" };
+const border = { style: BorderStyle.SINGLE, size: 4, color: LINE_HEX };
+const SIDE = 1020;
+const COVER_BAR_DXA = 17 * 20;
 const borders = { top: border, bottom: border, left: border, right: border };
 
 function runFont(rtl: boolean) {
@@ -60,7 +64,7 @@ function subtitleParagraph(value: string) {
     bidirectional: rtl,
     alignment: AlignmentType.CENTER,
     spacing: { after: 80 },
-    children: runs.map((run) => textRun(run.text, { rtl: run.rtl, size: 22 })),
+    children: runs.map((run) => textRun(run.text, { rtl: run.rtl, size: 22, color: MUTED_HEX })),
   });
 }
 
@@ -122,9 +126,9 @@ const clearBorders = {
 };
 
 function contentDxa(landscape: boolean) {
-  // docx default page is A4 (11906 x 16838 DXA) and sections use 720 DXA side margins.
+  // A4 is 11906 x 16838 DXA. Side margins match the 51pt report margin.
   const page = landscape ? 16838 : 11906;
-  return page - 720 - 720;
+  return page - SIDE - SIDE;
 }
 
 function eitRun(logo: Uint8Array, px: number) {
@@ -179,12 +183,14 @@ function makeHeader(title: string, rtl: boolean, logo: Uint8Array, landscape: bo
   const heading = new Paragraph({
     bidirectional: rtl || titleRuns.some((run) => run.rtl),
     spacing: { before: 0, after: 0 },
-    alignment: rtl ? AlignmentType.START : AlignmentType.RIGHT,
-    children: titleRuns.map((run) => textRun(run.text, { bold: true, size: 20, rtl: run.rtl, color: "0F172A" })),
+    alignment: rtl ? AlignmentType.LEFT : AlignmentType.RIGHT,
+    children: titleRuns.map((run) => textRun(run.text, { bold: false, size: 18, rtl: run.rtl, color: MUTED_HEX })),
   });
-  const rule = { style: BorderStyle.SINGLE, size: 12, color: "1A56FF", space: 1 };
+  const rule = { style: BorderStyle.NONE, size: 0, color: "auto", space: 0 };
+  const columns = rtl ? [titleCol, iconCol] : [iconCol, titleCol];
+  const cells = rtl ? [heading, icon] : [icon, heading];
   return new Header({
-    children: [chromeTable(total, [iconCol, titleCol], "bottom", rule, [icon, heading])],
+    children: [chromeTable(total, columns, "bottom", rule, cells)],
   });
 }
 
@@ -199,7 +205,7 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
   const brand = new Paragraph({
     spacing: { before: 0, after: 0 },
     alignment: AlignmentType.LEFT,
-    children: [eitRun(report.logo, 14), textRun(`  ${REPORT_FOOTER_LINE}`, { size: 16, rtl: false, color: "64748B" })],
+    children: [eitRun(report.logo, 14), textRun(`  ${REPORT_FOOTER_LINE}`, { size: 16, rtl: false, color: INK_HEX })],
   });
   const pageNumber = (which: (typeof PageNumber)[keyof typeof PageNumber]) =>
     new TextRun({
@@ -207,7 +213,7 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
       font: runFont(false),
       size: 16,
       sizeComplexScript: 16,
-      color: "64748B",
+      color: INK_HEX,
       rightToLeft: false,
       language: { value: "en-US" },
     });
@@ -217,9 +223,9 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
     alignment: rtl ? AlignmentType.START : AlignmentType.RIGHT,
     children: rtl
       ? [
-          textRun("صفحة ", { size: 16, rtl: true, color: "64748B" }),
+          textRun("صفحة ", { size: 16, rtl: true, color: INK_HEX }),
           pageNumber(PageNumber.CURRENT),
-          textRun(" من ", { size: 16, rtl: true, color: "64748B" }),
+          textRun(" من ", { size: 16, rtl: true, color: INK_HEX }),
           pageNumber(PageNumber.TOTAL_PAGES),
         ]
       : [
@@ -228,11 +234,11 @@ function makeFooter(report: PreparedReport, landscape: boolean) {
             font: runFont(false),
             size: 16,
             sizeComplexScript: 16,
-            color: "64748B",
+            color: INK_HEX,
           }),
         ],
   });
-  const rule = { style: BorderStyle.SINGLE, size: 6, color: "D0D7E2", space: 1 };
+  const rule = { style: BorderStyle.SINGLE, size: 6, color: LINE_HEX, space: 1 };
   const gray = OUTPUT_DISCLAIMER_GRAY.slice(1);
   const noteRuns = directionalRuns(outputDisclaimerBody(report.locale));
   const link = new ExternalHyperlink({
@@ -277,7 +283,7 @@ function formulaParagraph(value: string) {
       textRun(plainInline(value), {
         rtl: false,
         size: 18,
-        color: "0F172A",
+        color: INK_HEX,
       }),
     ],
   });
@@ -292,7 +298,7 @@ function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape:
     new TableCell({
       borders,
       width: { size: columnWidths[0], type: WidthType.DXA },
-      shading: { fill: header ? "E7EEFF" : zebra ? "F8FAFC" : "FFFFFF" },
+      shading: { fill: header ? BRAND_HEX : zebra ? "FFFFFF" : "FFFFFF" },
       margins: { top: 60, bottom: 60, left: 80, right: 80 },
       verticalAlign: VerticalAlign.CENTER,
       children: [
@@ -301,7 +307,7 @@ function tableFrom(headers: string[], rows: string[][], rtl: boolean, landscape:
           : paragraph(value, rtl, center ? AlignmentType.CENTER : rtl ? AlignmentType.START : AlignmentType.LEFT, {
               bold: header,
               size: 18,
-              color: header ? "1E3A8A" : "0F172A",
+              color: header ? WHITE_HEX : INK_HEX,
               spacing: { before: 0, after: 0 },
             }),
       ],
@@ -395,29 +401,96 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
   const rtlDoc = report.locale === "ar";
   const buckets: Bucket[] = [];
   const mark = pngSize(report.wordmark);
-  const markW = (400 * 96) / 72;
+  const markW = (WORDMARK_WIDTH_PT * 96) / 72;
   const markH = markW * (mark.height / mark.width);
+  const pageWide = 11906;
+  const coverBar = new Table({
+    width: { size: pageWide, type: WidthType.DXA },
+    columnWidths: [pageWide],
+    indent: { size: -SIDE, type: WidthType.DXA },
+    layout: TableLayoutType.FIXED,
+    borders: clearBorders,
+    rows: [
+      new TableRow({
+        cantSplit: true,
+        height: { value: COVER_BAR_DXA, rule: HeightRule.EXACT },
+        children: [
+          new TableCell({
+            borders: clearBorders,
+            width: { size: pageWide, type: WidthType.DXA },
+            shading: { fill: BRAND_HEX },
+            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+            children: [new Paragraph({ spacing: { before: 0, after: 0 } })],
+          }),
+        ],
+      }),
+    ],
+  });
+  const coverRule = new Table({
+    width: { size: 2240, type: WidthType.DXA },
+    columnWidths: [2240],
+    alignment: AlignmentType.CENTER,
+    layout: TableLayoutType.FIXED,
+    borders: clearBorders,
+    rows: [
+      new TableRow({
+        cantSplit: true,
+        height: { value: 60, rule: HeightRule.EXACT },
+        children: [
+          new TableCell({
+            borders: { ...clearBorders, bottom: { style: BorderStyle.SINGLE, size: 16, color: BRAND_HEX } },
+            width: { size: 2240, type: WidthType.DXA },
+            children: [new Paragraph({ spacing: { before: 0, after: 0 } })],
+          }),
+        ],
+      }),
+    ],
+  });
   const cover: Child[] = [
+    coverBar,
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 720, after: 200 },
+      spacing: { before: 2800, after: 200 },
       children: [
         new ImageRun({
           type: "png",
           data: report.wordmark,
           transformation: { width: markW, height: markH },
-          altText: { title: "engineer it", description: "engineer it", name: "engineerit-wordmark" },
+          altText: { title: "engineerit", description: "engineerit", name: "engineerit-wordmark" },
         }),
       ],
     }),
+    coverRule,
     paragraph(report.title, blockDir(report.title, report.locale) === "rtl", AlignmentType.CENTER, {
       bold: true,
-      size: 56,
-      spacing: { before: 400, after: 160 },
+      size: 52,
+      color: INK_HEX,
+      spacing: { before: 360, after: 120 },
       heading: HeadingLevel.TITLE,
     }),
-    subtitleParagraph(report.subtitle),
-    paragraph(report.stamp, rtlDoc, AlignmentType.CENTER),
+    ...(report.subtitle.trim() ? [subtitleParagraph(report.subtitle)] : []),
+    paragraph(report.coverDate, rtlDoc, AlignmentType.CENTER, {
+      bold: true,
+      size: 26,
+      color: INK_HEX,
+      spacing: { before: 280, after: 40 },
+    }),
+    paragraph(report.coverZone, rtlDoc, AlignmentType.CENTER, {
+      size: 20,
+      color: MUTED_HEX,
+      spacing: { before: 0, after: 200 },
+    }),
+    paragraph(COVER_SITE, false, AlignmentType.CENTER, {
+      bold: true,
+      size: 26,
+      color: BRAND_HEX,
+      spacing: { before: 1600, after: 40 },
+    }),
+    paragraph(COVER_MAIL, false, AlignmentType.CENTER, {
+      size: 20,
+      color: MUTED_HEX,
+      spacing: { before: 0, after: 80 },
+    }),
   ];
   buckets.push({ landscape: false, cover: true, children: cover });
 
@@ -441,7 +514,7 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       current.children.push(paragraph(block.text, rtl, rtl ? AlignmentType.START : AlignmentType.LEFT, {
         bold: true,
         size,
-        color: "1A56FF",
+        color: BRAND_HEX,
         spacing: { before: 280, after: 80 },
         heading,
         keepNext,
@@ -533,7 +606,14 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
           size: {
             orientation: bucket.landscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
           },
-          margin: { top: 900, bottom: 1500, left: 720, right: 720, header: 400, footer: 280 },
+          margin: {
+            top: bucket.cover ? 0 : 1000,
+            bottom: 1500,
+            left: SIDE,
+            right: SIDE,
+            header: 360,
+            footer: 280,
+          },
         },
       },
       headers: bucket.cover ? undefined : { default: makeHeader(report.title, rtlDoc, report.logo, bucket.landscape) },

@@ -80,8 +80,8 @@ from PIL import Image
 page, ref, crop = sys.argv[1:]
 im = Image.open(page).convert("L")
 w, h = im.size
-# Cover title baseline is 230pt from the top. At 144 dpi that is 460px.
-band = im.crop((40, 400, w - 40, 520))
+# Cover title sits under the wordmark and the short rule, about 360pt from the top.
+band = im.crop((40, 680, w - 40, 820))
 ink = band.point(lambda p: 0 if p < 180 else 255)
 bbox = ink.point(lambda p: 0 if p < 128 else 255).getbbox()
 # getbbox on inverted-looking image: dark pixels are 0, so invert first

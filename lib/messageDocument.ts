@@ -310,6 +310,8 @@ const GENERIC_TITLE = new Set([
   "تقرير هندسي",
   REPORT_LABEL.en.toLowerCase(),
   REPORT_LABEL.ar.toLowerCase(),
+  "report · engineered with engineer it",
+  "تقرير · بإعداد engineer it",
 ]);
 
 function cleanTitle(value: string | undefined): string {

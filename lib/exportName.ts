@@ -1,7 +1,7 @@
-/** Neutral cover line. "engineer it" stays lowercase Latin in both languages. */
+/** Fallback title when an answer has no heading and no question. A noun, not a credit. */
 export const REPORT_LABEL = {
-  en: "Report · Engineered with engineer it",
-  ar: "تقرير · بإعداد engineer it",
+  en: "Report",
+  ar: "تقرير",
 } as const;
 
 const GENERIC = new Set([
@@ -13,6 +13,8 @@ const GENERIC = new Set([
   "محادثة جديدة",
   "engineering report",
   "تقرير هندسي",
+  "report · engineered with engineer it",
+  "تقرير · بإعداد engineer it",
   REPORT_LABEL.en.toLowerCase(),
   REPORT_LABEL.ar.toLowerCase(),
 ]);
@@ -69,12 +71,14 @@ export function shortTopic(source: string | undefined, fallback = ""): string {
   return topic || fallback;
 }
 
-/** Cover line for the clause that was left out of the short title. */
-export function coverSubtitle(source: string | undefined, locale: "en" | "ar"): string {
+/**
+ * Cover line for the clause that was left out of the short title.
+ * No credit line when the topic has no aside.
+ */
+export function coverSubtitle(source: string | undefined, _locale: "en" | "ar"): string {
   const text = clean(source);
   const extra = text && !GENERIC.has(text.toLowerCase()) ? splitAside(text).extra : "";
-  if (extra) return extra.slice(0, 160);
-  return REPORT_LABEL[locale];
+  return extra.slice(0, 160);
 }
 
 export function pickTopicSource(requested: string | undefined, prompt: string | undefined, heading: string | undefined): string {
