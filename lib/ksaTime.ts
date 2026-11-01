@@ -35,14 +35,31 @@ export function riyadhStamp(now = new Date(), locale: UiLocale = "en"): string {
   return `${day} ${month} ${year}, ${clock} KSA`;
 }
 
-/** Cover date, such as "Sunday, 1 November 2026". Digits stay Western in Arabic. */
-export function riyadhCoverDate(now = new Date(), locale: UiLocale = "en"): string {
-  const formatted = new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-nu-latn" : "en-GB", {
-    timeZone: ZONE,
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(now);
-  return formatted.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+function tidy(value: string): string {
+  return value.replace(/[\u202f\u00a0]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** Cover date in `timeZone`, such as "Sunday, 1 November 2026". No zone name. */
+export function formatCoverDate(now: Date, locale: UiLocale, timeZone: string): string {
+  return tidy(
+    new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-nu-latn" : "en-GB", {
+      timeZone,
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(now)
+  );
+}
+
+/** Cover clock in `timeZone`, such as "14:32". No zone name or offset. */
+export function formatCoverTime(now: Date, locale: UiLocale, timeZone: string): string {
+  return tidy(
+    new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-nu-latn" : "en-GB", {
+      timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(now)
+  );
 }

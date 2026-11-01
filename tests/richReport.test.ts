@@ -222,10 +222,47 @@ test("exports build pdf, docx, pptx, and xlsx in english and arabic", async () =
   }
 });
 
+test("cover clock uses the reader's zone and names no zone", async () => {
+  const instant = new Date("2026-10-16T23:34:00Z");
+  const english = await prepareReport({
+    title: "Feed pump installation",
+    markdown: "A note.",
+    locale: "en",
+    now: instant,
+    timeZone: "America/New_York",
+  });
+  assert.equal(english.coverDate, "Friday, 16 October 2026");
+  assert.equal(english.coverTime, "19:34");
+  assert.equal(english.stamp, "Friday, 16 October 2026, 19:34");
+  assert.doesNotMatch(`${english.coverDate} ${english.coverTime}`, /Saudi|KSA|GMT|UTC|Riyadh|بتوقيت/);
+  const arabic = await prepareReport({
+    title: "تركيب مضخة التغذية",
+    markdown: "ملاحظة",
+    locale: "ar",
+    now: instant,
+    timeZone: "America/New_York",
+  });
+  assert.equal(arabic.coverTime, "19:34");
+  assert.match(arabic.coverDate, /16/);
+  assert.match(arabic.coverDate, /2026/);
+  assert.doesNotMatch(`${arabic.coverDate} ${arabic.coverTime} ${arabic.stamp}`, /السعود|KSA|GMT|UTC|Riyadh|بتوقيت/);
+  const html = buildShareHtml({
+    title: english.title,
+    markdown: "A note.",
+    locale: "en",
+    now: instant,
+    timeZone: "America/New_York",
+  });
+  assert.match(html, /Friday, 16 October 2026/);
+  assert.match(html, /19:34/);
+  assert.doesNotMatch(html, /Saudi Arabia|KSA|GMT|UTC\+3|Asia\/Riyadh/);
+});
+
 test("covers omit the engineered-by credit and keep the date line", async () => {
   const report = await prepareReport({ title: "تركيب مضخة التغذية", markdown: sampleAr, locale: "ar", now });
   assert.equal(report.subtitle, "");
-  assert.match(report.coverZone, /KSA/);
+  assert.match(report.coverTime, /^\d{2}:\d{2}$/);
+  assert.doesNotMatch(report.coverTime, /KSA|Saudi|GMT|UTC|Riyadh|بتوقيت/);
   assert.match(report.coverDate, /2026/);
   const pdfPath = path.join(tmpdir(), "engineerit-ar-cover.pdf");
   await writeFile(pdfPath, await buildReportPdf(report));
@@ -239,7 +276,8 @@ test("covers omit the engineered-by credit and keep the date line", async () => 
   await writeFile(enPath, await buildReportPdf(en));
   const english = execFileSync("pdftotext", ["-layout", "-f", "1", "-l", "1", enPath, "-"], { encoding: "utf8" });
   assert.equal(english.includes("Engineered with engineer it"), false);
-  assert.match(english, /Saudi Arabia time/);
+  assert.match(english, /\d{2}:\d{2}/);
+  assert.doesNotMatch(english, /Saudi Arabia|KSA|GMT|UTC\+3|Asia\/Riyadh/);
   assert.match(english, /Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday/);
   assert.equal(english.includes("Engineering report"), false);
 });

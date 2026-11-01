@@ -219,7 +219,7 @@ export async function buildReportPdf(report: PreparedReport, page: "a4" | "lette
   }
   y -= 14;
   y = centerLine(cover.page, cover.size.w, report.coverDate, y, 13, true, INK);
-  centerLine(cover.page, cover.size.w, report.coverZone, y, 10, false, MUTED);
+  centerLine(cover.page, cover.size.w, report.coverTime, y, 12, false, MUTED);
   centerLine(cover.page, cover.size.w, COVER_SITE, 86, 13, true, BRAND);
   centerLine(cover.page, cover.size.w, COVER_MAIL, 66, 10, false, MUTED);
   const coverNote = outputDisclaimer(report.locale);

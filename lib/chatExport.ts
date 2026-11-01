@@ -18,20 +18,22 @@ function transcript(messages: StoredMessage[], locale: Locale) {
     .join("\n\n");
 }
 
-export async function buildChatPdf(args: { title: string; messages: StoredMessage[]; locale: Locale }): Promise<Uint8Array> {
+export async function buildChatPdf(args: { title: string; messages: StoredMessage[]; locale: Locale; timeZone?: string }): Promise<Uint8Array> {
   const report = await prepareReport({
     title: args.title,
     markdown: transcript(args.messages, args.locale),
     locale: args.locale,
+    timeZone: args.timeZone,
   });
   return buildReportPdf(report);
 }
 
-export async function buildChatDocx(args: { title: string; messages: StoredMessage[]; locale: Locale }): Promise<Uint8Array> {
+export async function buildChatDocx(args: { title: string; messages: StoredMessage[]; locale: Locale; timeZone?: string }): Promise<Uint8Array> {
   const report = await prepareReport({
     title: args.title,
     markdown: transcript(args.messages, args.locale),
     locale: args.locale,
+    timeZone: args.timeZone,
   });
   return buildReportDocx(report);
 }

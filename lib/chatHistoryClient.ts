@@ -127,7 +127,16 @@ export async function saveHistoryMessages(
 }
 
 export async function downloadHistoryExport(locale: Locale, id: string, format: "pdf" | "docx") {
-  const res = await fetch(`/api/history/${id}/export?format=${format}&locale=${locale}`, {
+  const timeZone = encodeURIComponent(
+    (() => {
+      try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+      } catch {
+        return "";
+      }
+    })()
+  );
+  const res = await fetch(`/api/history/${id}/export?format=${format}&locale=${locale}&timeZone=${timeZone}`, {
     headers: await authHeaders(locale),
   });
   if (!res.ok) return { ok: false as const, code: await readCode(res) };

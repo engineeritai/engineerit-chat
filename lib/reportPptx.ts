@@ -255,7 +255,7 @@ export async function buildReportPptx(report: PreparedReport): Promise<Uint8Arra
     align: "center",
     rtlMode: rtl,
   });
-  cover.addText(report.coverZone, {
+  cover.addText(report.coverTime, {
     x: 1.2,
     y: coverY + 0.42,
     w: W - 2.4,

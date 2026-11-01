@@ -33,10 +33,11 @@ export async function GET(request: Request, context: RouteContext) {
     if (!row || !summary) return historyCode(404, "not_found");
     const messages = await listMessages(row.id);
     const locale = localeFrom(request);
+    const timeZone = new URL(request.url).searchParams.get("timeZone") || undefined;
     const bytes =
       format === "pdf"
-        ? await buildChatPdf({ title: summary.title, messages, locale })
-        : await buildChatDocx({ title: summary.title, messages, locale });
+        ? await buildChatPdf({ title: summary.title, messages, locale, timeZone })
+        : await buildChatDocx({ title: summary.title, messages, locale, timeZone });
     const body = new Uint8Array(bytes);
     return new NextResponse(body, {
       status: 200,

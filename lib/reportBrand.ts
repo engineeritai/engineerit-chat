@@ -1,5 +1,3 @@
-import type { UiLocale } from "@/lib/ksaTime";
-
 /** Colours sampled from the weekly assurance report the cover follows. */
 export const BRAND_HEX = "0D60E4";
 export const INK_HEX = "14213D";
@@ -20,12 +18,7 @@ export const COVER_MAIL = "support@engineerit.ai";
 export const WORDMARK_URL = "https://engineerit.ai/brand/engineerit-wordmark.png";
 export const ICON_URL = "https://engineerit.ai/icon-192.png";
 
-export function coverZone(locale: UiLocale): string {
-  if (locale === "ar") return "توقيت السعودية (KSA، Asia/Riyadh، UTC+3)";
-  return "Saudi Arabia time (KSA, Asia/Riyadh, UTC+3)";
-}
-
-export function pageLabel(page: number, total: number, locale: UiLocale): string {
+export function pageLabel(page: number, total: number, locale: "en" | "ar"): string {
   return locale === "ar" ? `صفحة ${page} من ${total}` : `Page ${page} of ${total}`;
 }
 
@@ -42,7 +35,7 @@ export function coverHtml(args: {
   title: string;
   subtitle?: string;
   date: string;
-  zone: string;
+  time: string;
   locale: "en" | "ar";
   absolute?: boolean;
 }): string {
@@ -57,7 +50,7 @@ export function coverHtml(args: {
     <h1 class="cover-title" dir="auto">${esc(args.title)}</h1>
     ${subtitle ? `<p class="cover-sub" dir="auto">${esc(subtitle)}</p>` : ""}
     <p class="cover-date">${esc(args.date)}</p>
-    <p class="cover-zone">${esc(args.zone)}</p>
+    <p class="cover-time">${esc(args.time)}</p>
   </div>
   <div class="cover-contact">
     <div class="cover-site">${COVER_SITE}</div>
