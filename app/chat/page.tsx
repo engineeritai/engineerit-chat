@@ -144,6 +144,7 @@ async function exportPdf(
       filename: extra?.title || "Report",
       locale: extra?.locale,
       diagrams: extra?.diagrams,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }),
   });
 
@@ -161,6 +162,7 @@ async function exportXlsx(aiText: string, extra?: { title?: string; locale?: str
       title: extra?.title || "Report",
       content: aiText,
       locale: extra?.locale,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -173,7 +175,7 @@ async function exportWordDocx(aiText: string, extra?: { title?: string; subtitle
   const res = await fetch("/api/export/docx", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: aiText, title: extra?.title, subtitle: extra?.subtitle, locale: extra?.locale, diagrams: extra?.diagrams }),
+    body: JSON.stringify({ text: aiText, title: extra?.title, subtitle: extra?.subtitle, locale: extra?.locale, diagrams: extra?.diagrams, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();
@@ -184,7 +186,7 @@ async function exportPptx(aiText: string, extra?: { title?: string; subtitle?: s
   const res = await fetch("/api/export/pptx", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: aiText, title: extra?.title, subtitle: extra?.subtitle, locale: extra?.locale, diagrams: extra?.diagrams }),
+    body: JSON.stringify({ text: aiText, title: extra?.title, subtitle: extra?.subtitle, locale: extra?.locale, diagrams: extra?.diagrams, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
   });
   if (!res.ok) throw new Error(await res.text());
   const blob = await res.blob();

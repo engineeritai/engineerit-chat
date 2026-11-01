@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { riyadhCoverDate, riyadhIsoDate, riyadhStamp, type UiLocale } from "@/lib/ksaTime";
+import { formatCoverDate, formatCoverTime, riyadhIsoDate, type UiLocale } from "@/lib/ksaTime";
 import { coverSubtitle, pickTopicSource, REPORT_LABEL, shortTopic } from "@/lib/exportName";
-import { coverZone, REPORT_FOOTER_LINE } from "@/lib/reportBrand";
+import { resolveMessageTimeZone } from "@/lib/messageTime";
+import { REPORT_FOOTER_LINE } from "@/lib/reportBrand";
 
 export { REPORT_FOOTER_LINE };
 import { appendixHeading, ganttAppendix, parseMessage, plainTopic, type Block } from "@/lib/messageDocument";
@@ -21,10 +22,10 @@ export type PreparedReport = {
   subtitle: string;
   locale: UiLocale;
   stamp: string;
-  /** Full cover date, such as "Sunday, 1 November 2026". */
+  /** Full cover date in the reader's time zone, such as "Sunday, 1 November 2026". */
   coverDate: string;
-  /** Time-zone line under the cover date. */
-  coverZone: string;
+  /** Clock time in the reader's time zone, such as "14:32". No zone name. */
+  coverTime: string;
   blocks: Block[];
   images: Map<number, ReportImage>;
   /** Small eit mark for header and footer corners. */
@@ -40,8 +41,23 @@ export type ReportRequest = {
   markdown: string;
   locale?: string;
   now?: Date;
+  /** IANA zone from the browser. Omitted uses the device zone. */
+  timeZone?: string;
   diagrams?: { index: number; pngBase64: string }[];
 };
+
+function reportTimeZone(value: string | undefined): string {
+  const candidate = (value || "").trim();
+  if (candidate) {
+    try {
+      Intl.DateTimeFormat("en-GB", { timeZone: candidate });
+      return candidate;
+    } catch {
+      /* ignore an unknown zone */
+    }
+  }
+  return resolveMessageTimeZone();
+}
 
 function localeOf(value: string | undefined, markdown: string): UiLocale {
   if (value === "ar" || value === "en") return value;
@@ -102,13 +118,16 @@ export async function prepareReport(input: ReportRequest): Promise<PreparedRepor
   const heading = input.markdown.match(/^#{1,6}\s+(.+)$/m)?.[1];
   const picked = pickTopicSource(input.title, input.prompt, heading);
   const raw = plainTopic(picked, locale) || picked;
+  const zone = reportTimeZone(input.timeZone);
+  const coverDate = formatCoverDate(now, locale, zone);
+  const coverTime = formatCoverTime(now, locale, zone);
   return {
     title: shortTopic(raw, REPORT_LABEL[locale]),
     subtitle: (input.subtitle || coverSubtitle(raw, locale)).slice(0, 160),
     locale,
-    stamp: riyadhStamp(now, locale),
-    coverDate: riyadhCoverDate(now, locale),
-    coverZone: coverZone(locale),
+    stamp: `${coverDate}, ${coverTime}`,
+    coverDate,
+    coverTime,
     blocks,
     images,
     logo: await loadLogo(),

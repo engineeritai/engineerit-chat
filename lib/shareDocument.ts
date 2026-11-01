@@ -1,8 +1,9 @@
 import { flowSvg } from "@/lib/flowSvg";
-import { riyadhCoverDate } from "@/lib/ksaTime";
+import { formatCoverDate, formatCoverTime } from "@/lib/ksaTime";
+import { resolveMessageTimeZone } from "@/lib/messageTime";
 import { parseMessage, plainInline, tokenizeInline, type Block, type ListItem } from "@/lib/messageDocument";
 import { isCenteredBoqColumn, isOutputDisclaimer, OUTPUT_DISCLAIMER_GRAY, pageDisclaimerHtml } from "@/lib/outputDisclaimer";
-import { coverHtml, coverZone, ICON_URL, REPORT_FOOTER_LINE } from "@/lib/reportBrand";
+import { coverHtml, ICON_URL, REPORT_FOOTER_LINE } from "@/lib/reportBrand";
 import { asExportSvg, renderFittedChartParts } from "@/lib/scheduleSvg";
 import { blockDirection, hasArabicContent, isolatePieces, shareDir, shareLanguage } from "@/lib/shareDirection";
 
@@ -113,10 +114,12 @@ export function buildShareHtml(args: {
   origin?: string;
   id?: string;
   now?: Date;
+  timeZone?: string;
 }): string {
   const lang = shareLanguage(args.markdown, args.locale);
   const dir = shareDir(args.markdown, args.locale);
   const now = args.now ?? new Date();
+  const zone = resolveMessageTimeZone(args.timeZone);
   const description = shareDescription(args.markdown);
   const blocks = parseMessage(args.markdown);
   const image = args.origin && args.id ? `${args.origin}/share/${args.id}/og` : `${args.origin || ""}/og.png`;
@@ -159,7 +162,7 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
   .cover-title { margin: 0; color: #14213D; font-size: 32px; line-height: 1.25; font-weight: 700; text-align: center; }
   .cover-sub { margin: 12px 0 0; color: #5B6475; font-size: 16px; text-align: center; }
   .cover-date { margin: 22px 0 0; color: #14213D; font-size: 15px; font-weight: 700; text-align: center; }
-  .cover-zone { margin: 4px 0 0; color: #5B6475; font-size: 12px; text-align: center; }
+  .cover-time { margin: 4px 0 0; color: #5B6475; font-size: 13px; text-align: center; }
   .cover-contact { padding: 0 24px 40px; text-align: center; }
   .cover-site { color: #0D60E4; font-weight: 700; font-size: 15px; text-align: center; }
   .cover-mail { color: #5B6475; font-size: 12px; margin-top: 2px; text-align: center; }
@@ -258,8 +261,8 @@ ${pageUrl ? `<meta property="og:url" content="${esc(pageUrl)}"/>` : ""}
 </footer>
 ${coverHtml({
   title: args.title,
-  date: riyadhCoverDate(now, lang),
-  zone: coverZone(lang),
+  date: formatCoverDate(now, lang, zone),
+  time: formatCoverTime(now, lang, zone),
   locale: lang,
   absolute: true,
 })}

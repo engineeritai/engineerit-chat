@@ -16,6 +16,7 @@ export async function POST(req: Request) {
       filename?: string;
       locale?: string;
       diagrams?: { index: number; pngBase64: string }[];
+      timeZone?: string;
     };
     const markdown = (body.content ?? body.text ?? "").toString();
     if (!markdown.trim()) return NextResponse.json({ error: "Missing content." }, { status: 400 });
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
       markdown,
       locale: body.locale,
       diagrams: body.diagrams,
+      timeZone: body.timeZone,
     });
     const bytes = await buildReportDocx(report);
     return new NextResponse(Buffer.from(bytes), {

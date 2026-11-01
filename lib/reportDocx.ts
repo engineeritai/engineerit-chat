@@ -475,7 +475,7 @@ export async function buildReportDocx(report: PreparedReport): Promise<Uint8Arra
       color: INK_HEX,
       spacing: { before: 280, after: 40 },
     }),
-    paragraph(report.coverZone, rtlDoc, AlignmentType.CENTER, {
+    paragraph(report.coverTime, rtlDoc, AlignmentType.CENTER, {
       size: 20,
       color: MUTED_HEX,
       spacing: { before: 0, after: 200 },

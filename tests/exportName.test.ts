@@ -85,7 +85,8 @@ test("html export renders the urea note instead of a markdown dump", () => {
   assert.match(html, /<ul[\s>]/);
   assert.match(html, /<svg/);
   assert.match(html, /engineerit\.ai/);
-  assert.match(html, /KSA/);
+  assert.match(html, /\d{2}:\d{2}/);
+  assert.doesNotMatch(html, /KSA|Saudi Arabia|GMT|UTC\+3|Asia\/Riyadh|بتوقيت/);
   assert.doesNotMatch(html, /<pre>[^<]*###/);
   assert.doesNotMatch(html, /Ammonia Plant\s+\|/);
   assert.equal(html.includes("```"), false);

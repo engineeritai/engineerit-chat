@@ -1,6 +1,7 @@
 import { flowSvg } from "@/lib/flowSvg";
-import { riyadhCoverDate } from "@/lib/ksaTime";
-import { coverHtml, coverZone, ICON_URL, REPORT_FOOTER_LINE } from "@/lib/reportBrand";
+import { formatCoverDate, formatCoverTime } from "@/lib/ksaTime";
+import { resolveMessageTimeZone } from "@/lib/messageTime";
+import { coverHtml, ICON_URL, REPORT_FOOTER_LINE } from "@/lib/reportBrand";
 import { parseMessage, plainInline, tokenizeInline, type ListItem } from "@/lib/messageDocument";
 import {
   isCenteredBoqColumn,
@@ -218,7 +219,14 @@ export function disclaimerHtml(locale: "en" | "ar"): string {
 }
 
 /** Report body rendered in the panel. No network and no share-page record. */
-export function reportFragmentHtml(markdown: string, locale: "en" | "ar", title = "", now = new Date(), absolute = false): string {
+export function reportFragmentHtml(
+  markdown: string,
+  locale: "en" | "ar",
+  title = "",
+  now = new Date(),
+  absolute = false,
+  timeZone?: string
+): string {
   const dir = shareDir(markdown, locale);
   const blocks = parseMessage(markdown || "")
     .map((block) => {
@@ -254,10 +262,11 @@ export function reportFragmentHtml(markdown: string, locale: "en" | "ar", title 
     .join("\n");
   const heading = (markdown || "").match(/^#{1,6}\s+(.+)$/m)?.[1]?.replace(/[*_`]/g, "").trim() || "";
   const coverTitle = title.trim() || heading || (locale === "ar" ? "تقرير" : "Report");
+  const zone = resolveMessageTimeZone(timeZone);
   return `${coverHtml({
     title: coverTitle,
-    date: riyadhCoverDate(now, locale),
-    zone: coverZone(locale),
+    date: formatCoverDate(now, locale, zone),
+    time: formatCoverTime(now, locale, zone),
     locale,
     absolute,
   })}\n${blocks}`;
@@ -268,7 +277,7 @@ const REPORT_STYLE = `
   main { max-width: 980px; margin: 0 auto; padding: 8px 16px 32px; }
   h1, h2, h3 { line-height: 1.35; }
   article h1, h2, h3, h4, main h1, main h2, main h3, main h4 { color: #0D60E4; }
-  .cover-title, .cover-date, .cover-zone, .cover-sub, .cover-site, .cover-mail { text-align: center; }
+  .cover-title, .cover-date, .cover-time, .cover-sub, .cover-site, .cover-mail { text-align: center; }
   .cover { position: relative; display: flex; flex-direction: column; min-height: 100vh; background: #fff; break-after: page; page-break-after: always; }
   .cover-bar { height: 17px; background: #0D60E4; }
   .cover-body { margin: auto 0; padding: 48px 28px 12px; text-align: center; }
@@ -276,7 +285,7 @@ const REPORT_STYLE = `
   .cover-rule { width: 112px; height: 2px; margin: 22px auto 26px; background: #0D60E4; }
   .cover-title { margin: 0; color: #14213D; font-size: 32px; line-height: 1.25; font-weight: 700; }
   .cover-date { margin: 22px 0 0; color: #14213D; font-size: 15px; font-weight: 700; }
-  .cover-zone { margin: 4px 0 0; color: #5B6475; font-size: 12px; }
+  .cover-time { margin: 4px 0 0; color: #5B6475; font-size: 13px; }
   .cover-contact { padding: 0 24px 40px; text-align: center; }
   .cover-site { color: #0D60E4; font-weight: 700; font-size: 15px; }
   .cover-mail { color: #5B6475; font-size: 12px; margin-top: 2px; }
@@ -313,7 +322,7 @@ const REPORT_STYLE = `
 `;
 
 /** Standalone HTML file for the share sheet. Built in the browser from the message. */
-export function reportDocumentHtml(args: { title: string; markdown: string; locale: "en" | "ar"; now?: Date }): string {
+export function reportDocumentHtml(args: { title: string; markdown: string; locale: "en" | "ar"; now?: Date; timeZone?: string }): string {
   const lang = shareLanguage(args.markdown, args.locale);
   const dir = shareDir(args.markdown, args.locale);
   return `<!doctype html>
@@ -326,7 +335,7 @@ export function reportDocumentHtml(args: { title: string; markdown: string; loca
 </head>
 <body>
 <main dir="${dir}">
-${reportFragmentHtml(args.markdown, lang, args.title, args.now ?? new Date(), true)}
+${reportFragmentHtml(args.markdown, lang, args.title, args.now ?? new Date(), true, args.timeZone)}
 ${disclaimerHtml(lang)}
 </main>
 </body>

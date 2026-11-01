@@ -154,7 +154,8 @@ function printScript(copy: PrintPageCopy): string {
 var cfg = ${payload};
 var pdfFile = null;
 function eitHome(){return window.navigator.standalone===true||(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);}
-function eitPrimePdf(){if(pdfFile)return;fetch("/api/export/pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:cfg.title,content:cfg.markdown,locale:cfg.locale})}).then(function(res){return res.ok?res.blob():null;}).then(function(blob){if(!blob)return;pdfFile=new File([blob],cfg.filename,{type:"application/pdf"});}).catch(function(){});}
+function eitZone(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone||"";}catch(err){return "";}}
+function eitPrimePdf(){if(pdfFile)return;fetch("/api/export/pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:cfg.title,content:cfg.markdown,locale:cfg.locale,timeZone:eitZone()})}).then(function(res){return res.ok?res.blob():null;}).then(function(blob){if(!blob)return;pdfFile=new File([blob],cfg.filename,{type:"application/pdf"});}).catch(function(){});}
 function eitPrint(){var home=eitHome();var threw=false;try{window.print();}catch(err){threw=true;}if((home||threw)&&pdfFile&&navigator.share){navigator.share({files:[pdfFile],title:cfg.title}).catch(function(){});return;}if(home||threw)eitPrimePdf();}
 function eitShare(){if(navigator.share){navigator.share({title:cfg.title,text:cfg.shareText}).catch(function(){});return;}window.open("https://wa.me/?text="+encodeURIComponent(cfg.shareText),"_blank","noopener,noreferrer");}
 function eitBack(){window.close();setTimeout(function(){if(!window.closed)location.href=cfg.chatUrl;},200);}
@@ -269,6 +270,7 @@ export async function exportPdf(
       filename,
       locale: options?.locale,
       diagrams: options?.diagrams,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }),
   });
 
@@ -332,6 +334,7 @@ export async function exportWordDocx(
       filename,
       locale: options?.locale,
       diagrams: options?.diagrams,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -354,6 +357,7 @@ export async function exportPptx(
       filename,
       locale: options?.locale,
       diagrams: options?.diagrams,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }),
   });
   if (!res.ok) throw new Error(await res.text());

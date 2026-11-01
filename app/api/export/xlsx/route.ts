@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { contentDisposition, shortTopic } from "@/lib/exportName";
-import { riyadhStamp } from "@/lib/ksaTime";
+import { formatCoverDate, formatCoverTime } from "@/lib/ksaTime";
+import { resolveMessageTimeZone } from "@/lib/messageTime";
 import { prepareReport } from "@/lib/reportModel";
 import { buildReportXlsx, buildTableXlsx } from "@/lib/reportXlsx";
 
@@ -18,13 +19,16 @@ export async function POST(req: Request) {
       rows?: string[][];
       stamp?: string;
       filename?: string;
+      timeZone?: string;
     };
     const locale = body.locale === "ar" ? "ar" : "en";
     const bytes =
       body.headers && body.rows
         ? await buildTableXlsx({
             title: body.title || (locale === "ar" ? "جدول" : "Table"),
-            stamp: body.stamp || riyadhStamp(new Date(), locale),
+            stamp:
+              body.stamp ||
+              `${formatCoverDate(new Date(), locale, resolveMessageTimeZone(body.timeZone))}, ${formatCoverTime(new Date(), locale, resolveMessageTimeZone(body.timeZone))}`,
             locale,
             headers: body.headers,
             rows: body.rows,
@@ -34,6 +38,7 @@ export async function POST(req: Request) {
               title: body.title,
               markdown: (body.content ?? body.text ?? "").toString(),
               locale,
+              timeZone: body.timeZone,
             })
           );
     const topic = shortTopic(body.title, locale === "ar" ? "جدول" : "Table");

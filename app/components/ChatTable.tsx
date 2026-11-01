@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bindVerticalPass } from "@/app/components/verticalPass";
 import { copyTable } from "@/app/components/copyRich";
 import { downloadName, shortTopic } from "@/lib/exportName";
-import { riyadhStamp } from "@/lib/ksaTime";
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
 import { plainInline } from "@/lib/messageDocument";
 import { isCenteredBoqColumn } from "@/lib/outputDisclaimer";
@@ -90,7 +89,7 @@ export default function ChatTable({
         locale,
         headers,
         rows,
-        stamp: riyadhStamp(new Date(), locale),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       }),
     });
     if (!res.ok) throw new Error(await res.text());
