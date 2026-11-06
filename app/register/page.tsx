@@ -9,8 +9,9 @@ import TurnstileField from "@/app/components/TurnstileField";
 import { requestAuthEmail } from "@/lib/authEmailClient";
 import { CHECKOUT_CONTINUE_PATH, readPendingCheckout } from "@/lib/checkoutClient";
 import { registrationMessage, validateRegistration, type RegistrationCode } from "@/lib/registerAccount";
+import { shouldTrackSubmittedSignup } from "@/lib/acquisition";
 import { safeNextPath } from "@/lib/safeNext";
-import { trackProduct } from "@/lib/attribution";
+import { readAcquisitionPayload, trackOnce } from "@/lib/attribution";
 import { useMessages } from "@/lib/useMessages";
 
 export default function RegisterPage() {
@@ -72,6 +73,7 @@ export default function RegisterPage() {
         fullName,
         captchaToken,
         accepted: true,
+        acquisition: readAcquisitionPayload(),
         ...(pending ? { pending } : {}),
       });
 
@@ -81,7 +83,9 @@ export default function RegisterPage() {
         return;
       }
 
-      trackProduct("register_completed");
+      if (shouldTrackSubmittedSignup(data.needsConfirmation)) {
+        trackOnce("register_completed", "register_completed");
+      }
 
       // The profile row is created on the first signed-in request by POST /api/profile/ensure.
 
