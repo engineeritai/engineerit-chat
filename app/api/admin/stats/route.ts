@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminEmail } from "@/lib/admin";
-import { countByPlan, foldSignups, riyadhWindows, sumSar } from "@/lib/adminStats";
+import { countByPlan, foldConfirmedSignups, foldSignups, riyadhWindows, signupObservation, sumSar } from "@/lib/adminStats";
 import { feedbackTableMissing, summarizePlatformFeedback } from "@/lib/platformFeedback";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
 
@@ -11,14 +11,17 @@ const USER_PAGE_CAP = 20;
 const ROW_PAGE = 1000;
 const ROW_CAP = 20000;
 
-async function signupStamps(admin: ReturnType<typeof getSupabaseAdmin>) {
-  const stamps: string[] = [];
+async function signupRows(admin: ReturnType<typeof getSupabaseAdmin>) {
+  const rows: NonNullable<ReturnType<typeof signupObservation>>[] = [];
   for (let page = 1; page <= USER_PAGE_CAP; page += 1) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage: USER_PAGE });
     if (error) throw new Error(error.message);
     const users = data.users;
-    for (const user of users) stamps.push(user.created_at);
-    if (users.length < USER_PAGE) return stamps;
+    for (const user of users) {
+      const row = signupObservation(user);
+      if (row) rows.push(row);
+    }
+    if (users.length < USER_PAGE) return rows;
   }
   throw new Error("Signup count stopped after 20,000 accounts and would be incomplete.");
 }
@@ -105,8 +108,8 @@ export async function GET(req: Request) {
   try {
     const admin = getSupabaseAdmin();
     const { todayStart, weekStart } = riyadhWindows(new Date());
-    const [stamps, chatsToday, chats7, plans, payments] = await Promise.all([
-      signupStamps(admin),
+    const [rows, chatsToday, chats7, plans, payments] = await Promise.all([
+      signupRows(admin),
       countRows(admin, "conversations", todayStart.toISOString()),
       countRows(admin, "conversations", weekStart.toISOString()),
       activePlans(admin),
@@ -118,10 +121,11 @@ export async function GET(req: Request) {
     } catch (err) {
       if (!feedbackTableMissing(err)) throw err;
     }
-    const signups = foldSignups(stamps, todayStart.getTime(), weekStart.getTime());
+    const signups = foldSignups(rows.map((row) => row.createdAt), todayStart.getTime(), weekStart.getTime());
     return NextResponse.json({
       timezone: "Asia/Riyadh",
       signups,
+      attribution: foldConfirmedSignups(rows, todayStart.getTime(), weekStart.getTime()),
       chats: { today: chatsToday, days7: chats7 },
       subscriptions: countByPlan(plans),
       payments7d: {

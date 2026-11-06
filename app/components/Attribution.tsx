@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { captureAttribution } from "@/lib/attribution";
+import { captureAttribution, trackCampaignVisit } from "@/lib/attribution";
 
-/** Keep LinkedIn (and other) campaign tags for this browser tab. No cookie is set. */
+/** Keep a whitelisted source for 30 days in local storage. No cookie is set. */
 export default function Attribution() {
   useEffect(() => {
-    captureAttribution();
+    const captured = captureAttribution();
+    if (captured.emitVisit) trackCampaignVisit(captured.acquisition);
   }, []);
   return null;
 }

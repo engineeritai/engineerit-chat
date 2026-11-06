@@ -15,9 +15,30 @@ type Suggestion = {
   createdAt: string;
 };
 
+type SourceCounts = {
+  linkedin: number;
+  x: number;
+  email: number;
+  unknown: number;
+  not_recorded: number;
+};
+
+type AttributionStats = {
+  confirmedToday: number;
+  confirmed7: number;
+  unconfirmed7: number;
+  excludedTest: number;
+  today: SourceCounts;
+  days7: SourceCounts;
+  methods?: { utm: number; referrer: number; none: number; not_recorded: number };
+  visits: null;
+  conversion: null;
+};
+
 type Stats = {
   timezone: string;
   signups: { today: number; days7: number };
+  attribution?: AttributionStats | null;
   chats: { today: number; days7: number };
   subscriptions: PlanCount[];
   payments7d: { count: number; amountSar: number; byPlan: PlanCount[] };
@@ -68,7 +89,7 @@ export default function AdminStatsPage() {
         <div className="page-wrap">
           <h1 className="page-title">Traffic and usage</h1>
           <p className="page-subtitle">
-            Counts from Supabase, in Arabia time. Page views and the LinkedIn campaign live in Vercel Analytics.
+            Account counts from Supabase, in Arabia time. Visit totals are not stored here.
           </p>
           {error ? <p style={{ color: "#b91c1c", fontSize: 14 }}>{error}</p> : null}
           {!error && !stats ? <p className="page-subtitle">Loading…</p> : null}
@@ -76,8 +97,9 @@ export default function AdminStatsPage() {
             <>
               <section className="card" style={{ marginBottom: 16 }}>
                 <h2 className="section-heading" style={{ marginTop: 0 }}>New signups</h2>
-                <p style={{ margin: "0 0 8px" }}>Auth accounts created. Today {formatCount(stats.signups.today)}. Last 7 days {formatCount(stats.signups.days7)}.</p>
+                <p style={{ margin: "0 0 8px" }}>Auth accounts created, including addresses that have not confirmed email. Today {formatCount(stats.signups.today)}. Last 7 days {formatCount(stats.signups.days7)}.</p>
               </section>
+              <AttributionSection value={stats.attribution} />
               <section className="card" style={{ marginBottom: 16 }}>
                 <h2 className="section-heading" style={{ marginTop: 0 }}>Chats</h2>
                 <p style={{ margin: "0 0 8px" }}>Saved conversations. Guest chats that were not stored are not included. Today {formatCount(stats.chats.today)}. Last 7 days {formatCount(stats.chats.days7)}.</p>
@@ -106,6 +128,56 @@ export default function AdminStatsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+const SOURCE_ROWS: Array<{ key: keyof SourceCounts; label: string }> = [
+  { key: "linkedin", label: "LinkedIn" },
+  { key: "x", label: "X" },
+  { key: "email", label: "Email" },
+  { key: "unknown", label: "Unknown" },
+  { key: "not_recorded", label: "Not recorded" },
+];
+
+function AttributionSection({ value }: { value: AttributionStats | null | undefined }) {
+  if (!value) {
+    return (
+      <section className="card" style={{ marginBottom: 16 }}>
+        <h2 className="section-heading" style={{ marginTop: 0 }}>Confirmed signups by source</h2>
+        <p style={{ margin: 0 }}>Source counts are not in this response.</p>
+      </section>
+    );
+  }
+  return (
+    <section className="card" style={{ marginBottom: 16 }}>
+      <h2 className="section-heading" style={{ marginTop: 0 }}>Confirmed signups by source</h2>
+      <p style={{ margin: "0 0 8px" }}>
+        Email-confirmed accounts, excluding test addresses. Today {formatCount(value.confirmedToday)}. Last 7 days {formatCount(value.confirmed7)}.
+        Still unconfirmed in the last 7 days: {formatCount(value.unconfirmed7)}. Test addresses excluded from these counts: {formatCount(value.excludedTest)}.
+      </p>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, marginBottom: 8 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>Source</th>
+            <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: "1px solid #e5e7eb" }}>7 days</th>
+          </tr>
+        </thead>
+        <tbody>
+          {SOURCE_ROWS.map((row) => (
+            <tr key={row.key}>
+              <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6" }}>{row.label}</td>
+              <td style={{ padding: "6px 8px", borderBottom: "1px solid #f3f4f6", textAlign: "right" }}>{formatCount(value.days7[row.key])}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p style={{ margin: "8px 0" }}>
+        Saved from a tagged link: {formatCount(value.methods?.utm ?? 0)}. Saved from the referring site: {formatCount(value.methods?.referrer ?? 0)}. No method stored: {formatCount(value.methods?.none ?? 0)}. Method not recorded: {formatCount(value.methods?.not_recorded ?? 0)}.
+      </p>
+      <p style={{ margin: 0, fontSize: 14, color: "#5c6570" }}>
+        LinkedIn, X, and Email are the only named sources. Unknown means this account stored no allowed source. Not recorded means the account has no source field. The rows count email-confirmed accounts. A tagged link is the label saved at registration. A referring site is only the website host, such as LinkedIn or a mailbox. Page views stay in Vercel Web Analytics. This server cannot read that dashboard. Visits: unavailable. Conversion: unavailable.
+      </p>
+    </section>
   );
 }
 

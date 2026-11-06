@@ -1,77 +1,106 @@
 import { track } from "@vercel/analytics";
+import {
+  acquisitionFromMemory,
+  acquisitionPayload,
+  allowAnalytics,
+  eventProperties,
+  memoryFromLegacy,
+  nextAttribution,
+  planConfirmedSignup,
+  rememberSignup,
+  unknownAcquisition,
+  type Acquisition,
+  type AttributionMemory,
+} from "@/lib/acquisition";
 
 const STORAGE_KEY = "engineerit_utm";
 const SEEN_KEY = "engineerit_tracked_events";
+const SIGNUP_SEEN_KEY = "engineerit_signup_tracked";
 
 export type ProductEvent =
   | "chat_started"
   | "register_completed"
   | "checkout_opened"
-  | "payment_succeeded";
+  | "payment_succeeded"
+  | "campaign_visit";
 
-export type Attribution = {
-  utm_source?: string;
-  utm_campaign?: string;
-};
+type TrackSink = (name: ProductEvent, properties: Record<string, string | number | boolean>) => void;
 
-/** Keep campaign tags short and free of control characters or markup. */
-export function cleanUtm(value: string | null | undefined) {
-  if (!value) return "";
-  return value.trim().replace(/[^\w .\-]/g, "").replace(/\s+/g, " ").slice(0, 80);
+function browserAllow() {
+  if (typeof window === "undefined") return false;
+  return allowAnalytics({
+    hostname: window.location.hostname,
+    webdriver: typeof navigator !== "undefined" && navigator.webdriver === true,
+  });
 }
 
-function readStored(): Attribution {
-  if (typeof window === "undefined") return {};
+function readRaw(store: Storage | undefined) {
+  if (!store) return null;
   try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Attribution;
-    const source = cleanUtm(parsed?.utm_source);
-    const campaign = cleanUtm(parsed?.utm_campaign);
-    return {
-      ...(source ? { utm_source: source } : {}),
-      ...(campaign ? { utm_campaign: campaign } : {}),
-    };
+    const raw = store.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as unknown;
   } catch {
-    return {};
+    return null;
   }
 }
 
-/**
- * Remember utm_source and utm_campaign for this tab.
- * Later pages drop the query string; the stored values stay on custom events.
- */
-export function captureAttribution(search?: string): Attribution {
-  const stored = readStored();
-  if (typeof window === "undefined" && search == null) return stored;
-  const params = new URLSearchParams(search ?? (typeof window === "undefined" ? "" : window.location.search));
-  const source = cleanUtm(params.get("utm_source"));
-  const campaign = cleanUtm(params.get("utm_campaign"));
-  if (!source && !campaign) return stored;
-  const next: Attribution = {
-    ...stored,
-    ...(source ? { utm_source: source } : {}),
-    ...(campaign ? { utm_campaign: campaign } : {}),
-  };
+function readMemory(): AttributionMemory | null {
+  if (typeof window === "undefined") return null;
+  const now = Date.now();
+  const local = memoryFromLegacy(readRaw(window.localStorage), now);
+  if (local) return local;
+  return memoryFromLegacy(readRaw(window.sessionStorage), now);
+}
+
+function writeMemory(memory: AttributionMemory | null) {
+  if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    if (!memory) {
+      window.localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(memory));
   } catch {
-    /* The event still includes whatever we could read. */
+    /* The signup request still sends whatever was already read. */
   }
-  return next;
+}
+
+export function currentAcquisition(): Acquisition {
+  const now = Date.now();
+  return acquisitionFromMemory(readMemory(), now) || unknownAcquisition(now);
+}
+
+/** Remember a whitelisted source for this browser. No cookie and no raw query string. */
+export function captureAttribution() {
+  const now = Date.now();
+  const result = nextAttribution({
+    memory: readMemory(),
+    search: typeof window === "undefined" ? "" : window.location.search,
+    referrer: typeof document === "undefined" ? "" : document.referrer,
+    pathname: typeof window === "undefined" ? "/" : window.location.pathname,
+    now,
+  });
+  writeMemory(result.memory);
+  return result;
+}
+
+export function readAcquisitionPayload() {
+  return acquisitionPayload(captureAttribution().acquisition);
 }
 
 export function trackProduct(
   name: ProductEvent,
-  properties?: Record<string, string | number | boolean | null>
+  properties?: Record<string, string | number | boolean | null>,
+  deps?: { allow?: boolean; sink?: TrackSink; acquisition?: Acquisition }
 ) {
-  const utm = captureAttribution();
-  const payload: Record<string, string | number | boolean | null> = { ...utm };
-  for (const [key, value] of Object.entries(properties || {})) {
-    if (value == null || value === "") continue;
-    payload[key] = value;
-  }
-  track(name, payload);
+  const allow = deps?.allow ?? browserAllow();
+  const acquisition = deps?.acquisition || currentAcquisition();
+  const payload = eventProperties(name, acquisition, properties);
+  if (!allow) return payload;
+  const sink = deps?.sink || ((event, extra) => track(event, extra));
+  sink(name, payload);
+  return payload;
 }
 
 /** Fire a page-level event once per tab, so a refresh does not count it again. */
@@ -92,4 +121,49 @@ export function trackOnce(
     }
   }
   trackProduct(name, properties);
+}
+
+export function trackCampaignVisit(acquisition: Acquisition, deps?: { allow?: boolean; sink?: TrackSink }) {
+  if (acquisition.source === "unknown") return;
+  trackProduct("campaign_visit", undefined, { ...deps, acquisition });
+}
+
+function readSignupSeen(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(SIGNUP_SEEN_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is string => typeof item === "string").slice(-20);
+  } catch {
+    return [];
+  }
+}
+
+function writeSignupSeen(seen: string[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SIGNUP_SEEN_KEY, JSON.stringify(seen.slice(-20)));
+  } catch {
+    /* A refresh may send the event again. The admin count does not use this flag. */
+  }
+}
+
+export function trackConfirmedSignup(
+  user: { created_at?: string | null; email_confirmed_at?: string | null; confirmed_at?: string | null; user_metadata?: unknown },
+  deps?: { nowMs?: number; seen?: string[]; allow?: boolean; sink?: TrackSink; local?: Acquisition }
+) {
+  const nowMs = deps?.nowMs ?? Date.now();
+  const seen = deps?.seen ?? readSignupSeen();
+  const local = deps?.local || currentAcquisition();
+  const plan = planConfirmedSignup({ user, nowMs, seen, local });
+  if (!plan.track) return plan;
+  trackProduct("register_completed", undefined, {
+    allow: deps?.allow ?? browserAllow(),
+    sink: deps?.sink,
+    acquisition: plan.acquisition,
+  });
+  const nextSeen = rememberSignup(seen, plan.createdAt);
+  if (!deps?.seen) writeSignupSeen(nextSeen);
+  return { ...plan, seen: nextSeen };
 }
