@@ -175,7 +175,7 @@ function AttributionSection({ value }: { value: AttributionStats | null | undefi
         Saved from a tagged link: {formatCount(value.methods?.utm ?? 0)}. Saved from the referring site: {formatCount(value.methods?.referrer ?? 0)}. No method stored: {formatCount(value.methods?.none ?? 0)}. Method not recorded: {formatCount(value.methods?.not_recorded ?? 0)}.
       </p>
       <p style={{ margin: 0, fontSize: 14, color: "#5c6570" }}>
-        LinkedIn, X, and Email are the only named sources. Unknown means this account stored no allowed source. Not recorded means the account has no source field. The rows count email-confirmed accounts. A tagged link is the label saved at registration. A referring site is only the website host, such as LinkedIn or a mailbox. Page views stay in Vercel Web Analytics. This server cannot read that dashboard. Visits: unavailable. Conversion: unavailable.
+        LinkedIn, X, and Email are the only named sources. Unknown means a source field was stored and it matched none of those names. Not recorded means the account has no source field. The numbers are email-confirmed accounts. Tagged link and referring site split those same accounts by how the label was saved. Visitor totals are not in this database. A campaign visit event is one page load with a source, so it is not a count of people and it is not a conversion denominator. Visits: unavailable. Conversion: unavailable.
       </p>
     </section>
   );

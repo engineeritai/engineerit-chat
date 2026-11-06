@@ -16,6 +16,7 @@ import {
 const STORAGE_KEY = "engineerit_utm";
 const SEEN_KEY = "engineerit_tracked_events";
 const SIGNUP_SEEN_KEY = "engineerit_signup_tracked";
+const CALLBACK_KEY = "engineerit_confirm_callback";
 
 export type ProductEvent =
   | "chat_started"
@@ -123,6 +124,35 @@ export function trackOnce(
   trackProduct(name, properties);
 }
 
+export function markConfirmationCallback(intent: "signup" | "code") {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(CALLBACK_KEY, intent);
+  } catch {
+    /* The confirmation URL can still carry type=signup. */
+  }
+}
+
+export function readConfirmationCallback(): "signup" | "code" | "none" {
+  if (typeof window === "undefined") return "none";
+  try {
+    const raw = window.sessionStorage.getItem(CALLBACK_KEY);
+    if (raw === "signup" || raw === "code") return raw;
+  } catch {
+    /* A missing flag leaves the event unsent. The admin count does not use it. */
+  }
+  return "none";
+}
+
+export function clearConfirmationCallback() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(CALLBACK_KEY);
+  } catch {
+    /* The seen list still blocks a second event in this browser. */
+  }
+}
+
 export function trackCampaignVisit(acquisition: Acquisition, deps?: { allow?: boolean; sink?: TrackSink }) {
   if (acquisition.source === "unknown") return;
   trackProduct("campaign_visit", undefined, { ...deps, acquisition });
@@ -151,19 +181,19 @@ function writeSignupSeen(seen: string[]) {
 
 export function trackConfirmedSignup(
   user: { created_at?: string | null; email_confirmed_at?: string | null; confirmed_at?: string | null; user_metadata?: unknown },
-  deps?: { nowMs?: number; seen?: string[]; allow?: boolean; sink?: TrackSink; local?: Acquisition }
+  deps?: { nowMs?: number; seen?: string[]; allow?: boolean; sink?: TrackSink; local?: Acquisition; intent?: "signup" | "code" | "none" }
 ) {
   const nowMs = deps?.nowMs ?? Date.now();
   const seen = deps?.seen ?? readSignupSeen();
   const local = deps?.local || currentAcquisition();
-  const plan = planConfirmedSignup({ user, nowMs, seen, local });
+  const plan = planConfirmedSignup({ user, nowMs, seen, local, intent: deps?.intent || "none" });
   if (!plan.track) return plan;
+  const nextSeen = rememberSignup(seen, plan.createdAt);
+  if (!deps?.seen) writeSignupSeen(nextSeen);
   trackProduct("register_completed", undefined, {
     allow: deps?.allow ?? browserAllow(),
     sink: deps?.sink,
     acquisition: plan.acquisition,
   });
-  const nextSeen = rememberSignup(seen, plan.createdAt);
-  if (!deps?.seen) writeSignupSeen(nextSeen);
   return { ...plan, seen: nextSeen };
 }

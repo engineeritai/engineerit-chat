@@ -17,6 +17,7 @@ import {
   type Acquisition,
   type AttributionMemory,
 } from "../lib/acquisition";
+import { resolveConfirmationIntent } from "../lib/authCallback";
 import { trackConfirmedSignup, trackProduct } from "../lib/attribution";
 
 const NOW = Date.parse("2026-11-06T12:00:00.000Z");
@@ -119,6 +120,16 @@ describe("acquisition whitelist", () => {
     assert.equal(confirmation.acquisition.campaign, "launch-post");
     assert.equal(confirmation.acquisition.via, "utm");
     assert.equal(confirmation.emitVisit, false);
+    const roundTrip = memoryFromLegacy(JSON.parse(JSON.stringify(first.memory)), NOW + 60_000);
+    const reopened = nextAttribution({
+      memory: roundTrip,
+      search: "",
+      referrer: "https://mail.google.com/mail/u/0/",
+      pathname: "/auth/confirmed",
+      now: NOW + 60_000,
+    });
+    assert.equal(reopened.acquisition.source, "linkedin");
+    assert.equal(reopened.acquisition.campaign, "launch-post");
     assert.equal(JSON.stringify(confirmation.memory).includes("inbox"), false);
     assert.equal(JSON.stringify(confirmation.memory).includes("secret"), false);
 
@@ -246,7 +257,7 @@ describe("successful signup event", () => {
         email: "hidden.person@example.com",
       },
     };
-    const first = trackConfirmedSignup(user, { nowMs: NOW, seen: [], allow: true, sink, local });
+    const first = trackConfirmedSignup(user, { nowMs: NOW, seen: [], allow: true, sink, local, intent: "signup" });
     assert.equal(first.track, true);
     assert.deepEqual(sent, ["register_completed"]);
     const second = trackConfirmedSignup(user, {
@@ -255,24 +266,54 @@ describe("successful signup event", () => {
       allow: true,
       sink,
       local,
+      intent: "signup",
     });
     assert.equal(second.track, false);
     assert.deepEqual(sent, ["register_completed"]);
 
     const login = planConfirmedSignup({
+      user: { created_at: CREATED, email_confirmed_at: CONFIRMED },
+      nowMs: NOW,
+      seen: [],
+      local,
+      intent: "none",
+    });
+    assert.equal(login.track, false);
+    const oldAccount = planConfirmedSignup({
       user: { created_at: "2024-01-01T00:00:00.000Z", email_confirmed_at: "2024-01-01T00:10:00.000Z" },
       nowMs: NOW,
       seen: [],
       local,
+      intent: "signup",
     });
-    assert.equal(login.track, false);
+    assert.equal(oldAccount.track, false);
     const unconfirmed = planConfirmedSignup({
       user: { created_at: CREATED, email_confirmed_at: null, user_metadata: { acq_source: "email" } },
       nowMs: NOW,
       seen: [],
       local,
+      intent: "signup",
     });
     assert.equal(unconfirmed.track, false);
+    const hoursLater = planConfirmedSignup({
+      user: {
+        created_at: "2026-11-06T06:00:00.000Z",
+        email_confirmed_at: "2026-11-06T06:05:00.000Z",
+        user_metadata: { acq_source: "x", acq_via: "utm" },
+      },
+      nowMs: NOW,
+      seen: [],
+      local,
+      intent: "signup",
+    });
+    assert.equal(hoursLater.track, true);
+    if (hoursLater.track) assert.equal(hoursLater.acquisition.source, "x");
+    assert.equal(resolveConfirmationIntent("?type=recovery", "", "signup"), "none");
+    assert.equal(resolveConfirmationIntent("?type=email_change", "", "signup"), "none");
+    assert.equal(resolveConfirmationIntent("?type=email", "", "code"), "none");
+    assert.equal(resolveConfirmationIntent("", "#access_token=a&type=signup", "none"), "signup");
+    assert.equal(resolveConfirmationIntent("", "", "signup"), "signup");
+    assert.equal(resolveConfirmationIntent("?code=abc", "", "none"), "code");
   });
 
   it("uses the account tag on another device and keeps mail out of the event", () => {
@@ -294,11 +335,11 @@ describe("successful signup event", () => {
           expiresAt: NOW + 1000,
         } satisfies Acquisition,
         sink: (name, props) => sent.push({ name, props }),
+        intent: "signup",
       }
     );
-    assert.equal(sent[0]?.props.source, "email");
-    assert.equal(sent[0]?.props.via, "utm");
-    assert.equal(sent[0]?.props.campaign, "november");
+    assert.deepEqual(sent[0]?.props, { source: "email", via: "utm" });
+    assert.equal(JSON.stringify(sent).includes("november"), false);
     assert.equal(JSON.stringify(sent).includes("@"), false);
 
     const blocked: unknown[] = [];
@@ -337,7 +378,9 @@ describe("successful signup event", () => {
     assert.match(register, /readAcquisitionPayload\(\)/);
     assert.doesNotMatch(register, /trackProduct\("register_completed"\)/);
     assert.doesNotMatch(login, /register_completed|trackProduct|trackConfirmedSignup/);
+    assert.match(confirmed, /resolveConfirmationIntent/);
     assert.match(confirmed, /trackConfirmedSignup\(\{/);
+    assert.match(readFileSync("app/components/SignupConfirmForward.tsx", "utf8"), /markConfirmationCallback/);
     assert.doesNotMatch(confirmed.slice(confirmed.indexOf("trackConfirmedSignup")), /email:/);
     assert.match(analytics, /beforeSend/);
     assert.match(analytics, /allowAnalyticsUrl/);

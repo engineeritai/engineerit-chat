@@ -3,7 +3,6 @@
 export const ACQUISITION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 export const VISIT_GAP_MS = 12 * 60 * 60 * 1000;
 export const SIGNUP_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-export const CONFIRM_FRESH_MS = 30 * 60 * 1000;
 
 export const ACQUISITION_SOURCES = ["linkedin", "x", "email", "unknown"] as const;
 export const ACQUISITION_MEDIUMS = ["social", "email", "organic", "referral"] as const;
@@ -268,20 +267,21 @@ export function acquisitionFromMetadata(meta: unknown, now = 0): Acquisition {
 }
 
 export function sourceFromMetadata(meta: unknown): SourceLabel {
-  if (!meta || typeof meta !== "object") return "not_recorded";
+  if (!meta || typeof meta !== "object" || !("acq_source" in (meta as Record<string, unknown>))) return "not_recorded";
   const raw = (meta as Record<string, unknown>).acq_source;
-  if (raw == null || raw === "") return "not_recorded";
-  if (raw === "linkedin" || raw === "x" || raw === "email" || raw === "unknown") return raw;
-  return "not_recorded";
+  if (typeof raw !== "string" || !raw.trim()) return "unknown";
+  const aliased = sourceAlias(raw);
+  if (aliased) return aliased;
+  if (raw.trim().toLowerCase() === "unknown") return "unknown";
+  return "unknown";
 }
 
 export type ViaLabel = "utm" | "referrer" | "none" | "not_recorded";
 
 /** utm is a tagged link. referrer is only the site host. Neither is a visit total. */
 export function viaFromMetadata(meta: unknown): ViaLabel {
-  if (!meta || typeof meta !== "object") return "not_recorded";
+  if (!meta || typeof meta !== "object" || !("acq_via" in (meta as Record<string, unknown>))) return "not_recorded";
   const raw = (meta as Record<string, unknown>).acq_via;
-  if (raw == null || raw === "") return "not_recorded";
   if (raw === "utm" || raw === "referrer" || raw === "none") return raw;
   return "not_recorded";
 }
@@ -294,17 +294,24 @@ export function preferAcquisition(primary: Acquisition, fallback: Acquisition): 
   return primary;
 }
 
-export function isFreshConfirmedSignup(
+/**
+ * A confirmed account from this signup. The page may load long after the
+ * mailbox click; created_at dedupe stops a second event. Login is rejected
+ * by the caller passing intent "none". Accounts older than the cap are not
+ * treated as a new signup.
+ */
+export function isTrackableConfirmation(
   user: { created_at?: string | null; email_confirmed_at?: string | null; confirmed_at?: string | null },
-  nowMs: number
+  nowMs: number,
+  intent: "signup" | "code" | "none"
 ) {
+  if (intent !== "signup" && intent !== "code") return false;
   const created = Date.parse(user.created_at || "");
   const confirmed = Date.parse(user.email_confirmed_at || user.confirmed_at || "");
   if (!Number.isFinite(created) || !Number.isFinite(confirmed)) return false;
   if (created > nowMs + 60_000) return false;
   if (nowMs - created > SIGNUP_MAX_AGE_MS) return false;
   if (confirmed + 60_000 < created) return false;
-  if (nowMs - confirmed > CONFIRM_FRESH_MS) return false;
   if (confirmed - nowMs > 60_000) return false;
   return true;
 }
@@ -331,35 +338,32 @@ export function planConfirmedSignup(args: {
   nowMs: number;
   seen: string[];
   local: Acquisition;
+  intent?: "signup" | "code" | "none";
 }): SignupTrackPlan {
-  if (!isFreshConfirmedSignup(args.user, args.nowMs)) return { track: false };
+  if (!isTrackableConfirmation(args.user, args.nowMs, args.intent || "none")) return { track: false };
   const createdAt = args.user.created_at || "";
   if (!isCreatedStamp(createdAt) || args.seen.includes(createdAt)) return { track: false };
   const stored = acquisitionFromMetadata(args.user.user_metadata, args.nowMs);
   return { track: true, createdAt, acquisition: preferAcquisition(stored, args.local) };
 }
 
-const EVENT_FIELDS = ["source", "via", "medium", "campaign", "plan"] as const;
-
+/**
+ * Vercel Pro custom events keep two properties. Hobby does not collect custom
+ * events at all. source and via are the pair for signup and campaign_visit.
+ * Campaign text stays on the account, not on the event. A campaign_visit is
+ * one tagged page load, not a person and not a conversion denominator.
+ */
 export function eventProperties(name: "register_completed" | "campaign_visit" | "chat_started" | "checkout_opened" | "payment_succeeded", acquisition: Acquisition, extra?: Record<string, string | number | boolean | null>) {
-  const include = name === "register_completed" || name === "campaign_visit" || acquisition.source !== "unknown" || Boolean(acquisition.campaign);
   const payload: Record<string, string | number | boolean> = {};
-  if (include && (name === "register_completed" || acquisition.source !== "unknown" || acquisition.campaign)) {
-    if (name === "register_completed" || acquisition.source !== "unknown") payload.source = acquisition.source;
-    if (name === "register_completed" || acquisition.via !== "none") payload.via = acquisition.via;
-    if (acquisition.medium) payload.medium = acquisition.medium;
-    if (acquisition.campaign) payload.campaign = acquisition.campaign;
+  if (name === "register_completed" || name === "campaign_visit") {
+    if (name === "campaign_visit" && acquisition.source === "unknown") return payload;
+    payload.source = acquisition.source;
+    payload.via = acquisition.via;
+    return payload;
   }
-  for (const [key, value] of Object.entries(extra || {})) {
-    if (!EVENT_FIELDS.includes(key as (typeof EVENT_FIELDS)[number]) || value == null || value === "") continue;
-    if (key === "plan" && typeof value === "string") {
-      const plan = cleanUtm(value);
-      if (plan) payload.plan = plan;
-      continue;
-    }
-    if (typeof value === "number" && Number.isFinite(value)) payload[key] = value;
-    else if (typeof value === "boolean") payload[key] = value;
-  }
+  const plan = typeof extra?.plan === "string" ? cleanUtm(extra.plan) : "";
+  if (plan) payload.plan = plan;
+  if (acquisition.source !== "unknown" && Object.keys(payload).length < 2) payload.source = acquisition.source;
   return payload;
 }
 

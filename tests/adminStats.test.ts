@@ -81,7 +81,13 @@ describe("confirmed signup sources", () => {
       created_at: "2026-11-06T12:00:00.000Z",
       email_confirmed_at: "2026-11-06T12:05:00.000Z",
       email: "safe@example.com",
-      user_metadata: { acq_source: "<script>alert(1)</script>" },
+      user_metadata: { acq_source: "<script>alert(1)</script>", acq_via: "<script>", acq_campaign: "owner@example.com" },
+    });
+    const twitter = signupObservation({
+      created_at: "2026-11-03T10:00:00.000Z",
+      email_confirmed_at: "2026-11-03T10:05:00.000Z",
+      email: "x@example.com",
+      user_metadata: { acq_source: "twitter", acq_via: "utm" },
     });
     const testAccount = signupObservation({
       created_at: "2026-11-06T12:00:00.000Z",
@@ -97,7 +103,11 @@ describe("confirmed signup sources", () => {
     assert.equal(linkedin.source, "linkedin");
     assert.equal(unknown.source, "unknown");
     assert.equal(older.source, "not_recorded");
-    assert.equal(injected.source, "not_recorded");
+    assert.equal(injected.source, "unknown");
+    assert.equal(injected.via, "not_recorded");
+    assert.equal(twitter?.source, "x");
+    assert.equal(twitter?.via, "utm");
+    assert.equal(JSON.stringify(twitter).includes("@"), false);
     assert.equal(testAccount.test, true);
 
     const folded = foldConfirmedSignups(
@@ -111,8 +121,8 @@ describe("confirmed signup sources", () => {
     assert.equal(folded.days7.linkedin, 1);
     assert.equal(folded.days7.x, 0);
     assert.equal(folded.days7.email, 0);
-    assert.equal(folded.days7.unknown, 1);
-    assert.equal(folded.days7.not_recorded, 2);
+    assert.equal(folded.days7.unknown, 2);
+    assert.equal(folded.days7.not_recorded, 1);
     assert.equal(folded.methods.utm, 1);
     assert.equal(folded.methods.referrer, 0);
     assert.equal(folded.methods.none, 1);
