@@ -8,6 +8,7 @@ import { readAnyPendingCheckout } from "@/lib/checkoutClient";
 import { shellCopy } from "@/lib/shell";
 import { safeNextPath } from "@/lib/safeNext";
 import { supabase } from "@/lib/supabaseClient";
+import { confirmLinkStatus, hasAuthLinkError, type ConfirmLinkStatus } from "@/lib/authCallback";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 function storedNext() {
@@ -18,63 +19,122 @@ function storedNext() {
   }
 }
 
+const linkCopy = {
+  en: {
+    working: "Confirming your email…",
+    confirmedTitle: "Email confirmed",
+    confirmedBody: "Your email address is confirmed.",
+    invalidTitle: "This confirmation link did not work",
+    invalidBody: "The link may have expired or already been used. Sign in and send the confirmation email again.",
+    idleTitle: "Confirm your email, then sign in",
+    idleBody: "Use the confirmation link from your email, then sign in.",
+  },
+  ar: {
+    working: "جاري تأكيد البريد…",
+    confirmedTitle: "تم تأكيد البريد",
+    confirmedBody: "تم تأكيد بريدك الإلكتروني.",
+    invalidTitle: "رابط التأكيد لم يعمل",
+    invalidBody: "قد يكون الرابط منتهي الصلاحية أو مستخدما. سجل الدخول وأرسل رسالة التأكيد مرة أخرى.",
+    idleTitle: "أكد بريدك ثم سجل الدخول",
+    idleBody: "استخدم رابط التأكيد من الرسالة، ثم سجل الدخول.",
+  },
+} as const;
+
 export default function EmailConfirmedPage() {
   const router = useRouter();
   const { locale } = useLocale();
   const arabic = locale === "ar";
   const copy = shellCopy[arabic ? "ar" : "en"];
+  const text = linkCopy[arabic ? "ar" : "en"];
   const [loginHref, setLoginHref] = useState("/login");
+  const [status, setStatus] = useState<ConfirmLinkStatus | "pending">("pending");
 
   useEffect(() => {
     let cancel = false;
-    let timer = 0;
     void (async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code") || "";
       const tokenHash = params.get("token_hash") || "";
       const type = (params.get("type") || "") as EmailOtpType;
-      if (code) await supabase.auth.exchangeCodeForSession(code);
-      else if (tokenHash && type) await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+      let failed = hasAuthLinkError(window.location.search, window.location.hash);
+
+      if (code && !failed) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        failed = Boolean(error);
+      } else if (tokenHash && type && !failed) {
+        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+        failed = Boolean(error);
+      }
+
+      if (code || tokenHash || window.location.hash) {
+        window.history.replaceState({}, "", failed ? "/auth/confirmed?error=link" : "/auth/confirmed");
+      }
 
       const pending = await readAnyPendingCheckout();
       const next = safeNextPath(params.get("next") || storedNext(), pending ? "/checkout/continue" : "/profile");
       const href = `/login?next=${encodeURIComponent(next)}`;
-      if (cancel) return;
-      setLoginHref(href);
-
       const { data } = await supabase.auth.getSession();
       if (cancel) return;
-      if (data.session?.access_token) {
-        await fetch("/api/profile/ensure", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
-        }).catch(() => undefined);
-        router.replace(next);
-        return;
-      }
-      timer = window.setTimeout(() => {
-        if (!cancel) router.push(href);
-      }, 2500);
+      setLoginHref(href);
+      const nextStatus = confirmLinkStatus({
+        hasSession: Boolean(data.session?.access_token),
+        failed,
+      });
+      setStatus(nextStatus);
+      if (nextStatus !== "confirmed" || !data.session?.access_token) return;
+      await fetch("/api/profile/ensure", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+      }).catch(() => undefined);
+      if (!cancel) router.replace(next);
     })();
     return () => {
       cancel = true;
-      window.clearTimeout(timer);
     };
   }, [router]);
 
+  const title =
+    status === "confirmed" ? text.confirmedTitle : status === "invalid" ? text.invalidTitle : status === "idle" ? text.idleTitle : text.working;
+  const body =
+    status === "confirmed" ? text.confirmedBody : status === "invalid" ? text.invalidBody : status === "idle" ? text.idleBody : "";
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#020617] px-4" dir={arabic ? "rtl" : "ltr"}>
-      <div className="max-w-md w-full rounded-2xl border border-white/10 bg-black/70 p-8 text-center">
-        <h1 className="text-2xl font-semibold text-white mb-2">
-          {arabic ? "تم تأكيد البريد" : "Email confirmed"}
-        </h1>
-        <p className="text-sm text-gray-300 mb-4">
-          {arabic ? "تم تأكيد بريدك الإلكتروني." : "Your email address is confirmed."}
-        </p>
-        <p className="text-xs text-gray-400 mb-4">{copy.auth.emailConfirmHint}</p>
-        <Link href={loginHref} className="btn auth-follow">
-          {copy.auth.continueSignIn}
-        </Link>
+    <div
+      dir={arabic ? "rtl" : "ltr"}
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#020617",
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 448,
+          width: "100%",
+          borderRadius: 16,
+          border: "1px solid rgba(255,255,255,0.1)",
+          background: "rgba(0,0,0,0.7)",
+          padding: 32,
+          textAlign: "center",
+        }}
+      >
+        <h1 style={{ fontSize: 24, fontWeight: 600, color: "#fff", margin: "0 0 8px" }}>{title}</h1>
+        {body ? (
+          <p style={{ fontSize: 14, color: "#d1d5db", margin: "0 0 16px" }} role="status">
+            {body}
+          </p>
+        ) : null}
+        {status === "confirmed" ? (
+          <p style={{ fontSize: 12, color: "#9ca3af", margin: "0 0 16px" }}>{copy.auth.emailConfirmHint}</p>
+        ) : null}
+        {status === "pending" ? null : (
+          <Link href={loginHref} className="btn auth-follow">
+            {copy.auth.continueSignIn}
+          </Link>
+        )}
       </div>
     </div>
   );
