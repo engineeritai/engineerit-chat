@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import ExcelJS from "exceljs";
 import { contentDisposition, coverSubtitle, downloadName, REPORT_LABEL, shortTopic } from "../lib/exportName";
-import { answerTitle, asciiToMermaid, nearestUserPrompt, parseMessage, plainTopic, shareRecordTitle, topicFrom } from "../lib/messageDocument";
+import { acceptSheetTitle, answerTitle, asciiToMermaid, nearestUserPrompt, parseMessage, plainTopic, shareRecordTitle, tableExportTitle, topicFrom } from "../lib/messageDocument";
+import { buildTableXlsx } from "../lib/reportXlsx";
 import { buildShareHtml } from "../lib/shareDocument";
 import { toWhatsApp } from "../lib/whatsappText";
 
@@ -165,6 +167,123 @@ test("request verbs drop out of titles and noun headings stay as written", () =>
     "Turnaround Package for CDU Plant"
   );
   assert.equal(shareRecordTitle("Create Turnaround package for CDU plant", "No heading here.", "en"), "Turnaround Package for CDU Plant");
+});
+
+test("excel export names the open table, not an earlier chat or a column header", async () => {
+  const qaqc = `## QAQC inspection checklist
+
+| No. | Check |
+| --- | --- |
+| 1 | Cover |
+`;
+  const review = `### Design review comment register
+
+Example 3-storey office.
+
+| No. | Comment | Status |
+| --- | --- | --- |
+| 1 | Stair width | Open |
+
+## QAQC inspection checklist
+
+| No. | Check |
+| --- | --- |
+| 1 | Cover |
+`;
+  const earlierHeaders = ["No.", "Check"];
+  const reviewHeaders = ["No.", "Comment", "Status"];
+  const staleChat = "QAQC Inspection Checklist As a Table";
+
+  const earlier = tableExportTitle({
+    markdown: qaqc,
+    chatTitle: staleChat,
+    prompt: "Make a QAQC inspection checklist as a table",
+    headers: earlierHeaders,
+    locale: "en",
+  });
+  const current = tableExportTitle({
+    markdown: review,
+    tableIndex: 0,
+    chatTitle: staleChat,
+    prompt: "Prepare a design-review comment register for an example 3-storey office",
+    headers: reviewHeaders,
+    locale: "en",
+  });
+  const sameMessageLaterTable = tableExportTitle({
+    markdown: review,
+    tableIndex: 1,
+    chatTitle: staleChat,
+    prompt: "Prepare a design-review comment register for an example 3-storey office",
+    headers: earlierHeaders,
+    locale: "en",
+  });
+  const secondChat = tableExportTitle({
+    markdown: `| No. | Comment |\n| --- | --- |\n| 1 | Stair |\n`,
+    chatTitle: "3-storey office comment register",
+    headers: ["No.", "Comment"],
+    locale: "en",
+  });
+  const noHeading = tableExportTitle({
+    markdown: `| No. | Comment |\n| --- | --- |\n| 1 | Stair |\n`,
+    chatTitle: staleChat,
+    prompt: "Prepare a design-review comment register for an example 3-storey office",
+    headers: ["No.", "Comment"],
+    locale: "en",
+  });
+
+  assert.equal(earlier, "QAQC inspection checklist");
+  assert.equal(current, "Design review comment register");
+  assert.equal(current.includes(staleChat), false);
+  assert.notEqual(current, "No.");
+  assert.equal(sameMessageLaterTable, "QAQC inspection checklist");
+  assert.equal(secondChat, "3-storey office comment register");
+  assert.equal(secondChat.includes("QAQC"), false);
+  assert.equal(noHeading.includes("QAQC"), false);
+  assert.notEqual(noHeading, "No.");
+  assert.match(noHeading, /Comment Register/);
+
+  const earlierFile = downloadName(earlier, "xlsx");
+  const currentFile = downloadName(current, "xlsx");
+  const secondFile = downloadName(secondChat, "xlsx");
+  assert.equal(earlierFile, "QAQC inspection checklist.xlsx");
+  assert.equal(currentFile, "Design review comment register.xlsx");
+  assert.equal(currentFile.includes("QAQC"), false);
+  assert.notEqual(currentFile, earlierFile);
+  assert.match(secondFile, /3-storey Office Comment Register\.xlsx/);
+  assert.equal(secondFile.includes("QAQC"), false);
+  assert.equal(acceptSheetTitle("No.", reviewHeaders, "en"), "Table");
+  assert.equal(acceptSheetTitle(current, reviewHeaders, "en"), current);
+  assert.equal(acceptSheetTitle("No.", ["No.", "الملاحظة"], "ar"), "جدول");
+
+  const reviewBook = new ExcelJS.Workbook();
+  await reviewBook.xlsx.load(
+    Buffer.from(
+      await buildTableXlsx({
+        title: acceptSheetTitle(current, reviewHeaders, "en"),
+        stamp: "11 Nov 2026, 12:00 KSA",
+        locale: "en",
+        headers: reviewHeaders,
+        rows: [["1", "Stair width", "Open"]],
+      })
+    )
+  );
+  assert.equal(reviewBook.worksheets[0].getCell(1, 1).value, "Design review comment register");
+  assert.equal(reviewBook.worksheets[0].getCell(4, 1).value, "No.");
+
+  const earlierBook = new ExcelJS.Workbook();
+  await earlierBook.xlsx.load(
+    Buffer.from(
+      await buildTableXlsx({
+        title: acceptSheetTitle("No.", earlierHeaders, "en"),
+        stamp: "11 Nov 2026, 12:00 KSA",
+        locale: "en",
+        headers: earlierHeaders,
+        rows: [["1", "Cover"]],
+      })
+    )
+  );
+  assert.equal(earlierBook.worksheets[0].getCell(1, 1).value, "Table");
+  assert.notEqual(earlierBook.worksheets[0].getCell(1, 1).value, reviewBook.worksheets[0].getCell(1, 1).value);
 });
 
 test("whatsapp share drops markdown fences and keeps the link", () => {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { contentDisposition, shortTopic } from "@/lib/exportName";
 import { riyadhStamp } from "@/lib/ksaTime";
+import { acceptSheetTitle } from "@/lib/messageDocument";
 import { prepareReport } from "@/lib/reportModel";
 import { buildReportXlsx, buildTableXlsx } from "@/lib/reportXlsx";
 
@@ -20,23 +21,24 @@ export async function POST(req: Request) {
       filename?: string;
     };
     const locale = body.locale === "ar" ? "ar" : "en";
-    const bytes =
-      body.headers && body.rows
-        ? await buildTableXlsx({
-            title: body.title || (locale === "ar" ? "جدول" : "Table"),
-            stamp: body.stamp || riyadhStamp(new Date(), locale),
+    const isTable = Array.isArray(body.headers) && Array.isArray(body.rows);
+    const tableTitle = isTable ? acceptSheetTitle(body.title, body.headers, locale) : "";
+    const bytes = isTable
+      ? await buildTableXlsx({
+          title: tableTitle,
+          stamp: body.stamp || riyadhStamp(new Date(), locale),
+          locale,
+          headers: body.headers ?? [],
+          rows: body.rows ?? [],
+        })
+      : await buildReportXlsx(
+          await prepareReport({
+            title: body.title,
+            markdown: (body.content ?? body.text ?? "").toString(),
             locale,
-            headers: body.headers,
-            rows: body.rows,
           })
-        : await buildReportXlsx(
-            await prepareReport({
-              title: body.title,
-              markdown: (body.content ?? body.text ?? "").toString(),
-              locale,
-            })
-          );
-    const topic = shortTopic(body.title, locale === "ar" ? "جدول" : "Table");
+        );
+    const topic = shortTopic(isTable ? tableTitle : body.title, locale === "ar" ? "جدول" : "Table");
     return new NextResponse(Buffer.from(bytes), {
       status: 200,
       headers: {

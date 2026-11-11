@@ -508,7 +508,6 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
               ? formatDaySeparator(previous.createdAt, locale, new Date(), timeZone)
               : null;
             const meta = exportMeta(message.content, undefined, locale, nearestUserPrompt(messages, index));
-            const topic = meta.title;
             const answerHeading = answerTitle({
               markdown: message.content,
               prompt: nearestUserPrompt(messages, index),
@@ -537,7 +536,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
                       markdown={message.content}
                       dir={rtl ? "rtl" : "ltr"}
                       locale={locale}
-                      fileBase={topic}
+                      prompt={nearestUserPrompt(messages, index)}
                       labels={{
                         copyTable: s.chat.copyTable,
                         exportExcel: s.chat.exportExcel,
