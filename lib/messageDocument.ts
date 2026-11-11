@@ -245,7 +245,7 @@ export function parseMessage(markdown: string, today = riyadhIsoDate()): Block[]
 }
 
 function withDiagramFallback(blocks: Block[], markdown: string): Block[] {
-  let chartIndex = blocks.reduce(
+  const chartIndex = blocks.reduce(
     (max, block) => (block.type === "chart" || block.type === "diagram" ? Math.max(max, block.index + 1) : max),
     0
   );
@@ -390,6 +390,16 @@ function usableTitle(value: string): boolean {
   return text.length >= 2 && !GENERIC_TITLE.has(text.toLowerCase());
 }
 
+function normalizedLabel(value: string): string {
+  return plainInline(value).replace(/\s+/g, " ").trim().replace(/[.?؟]+$/g, "").trim().toLowerCase();
+}
+
+function isColumnHeader(value: string, headers: string[]): boolean {
+  const label = normalizedLabel(value);
+  if (!label) return false;
+  return headers.some((header) => normalizedLabel(header) === label);
+}
+
 function firstSectionHeading(markdown: string): string {
   for (const block of parseMessage(markdown || "")) {
     if (block.type === "heading" && block.level <= 2) return cleanTitle(block.text);
@@ -437,6 +447,58 @@ export function exportMeta(markdown: string, requested: string | undefined, loca
     title: shortTopic(source, fallback),
     subtitle: coverSubtitle(source, locale),
   };
+}
+
+/** Heading immediately above this table. Any level, so a later section is not named from an earlier one. */
+export function headingBeforeTable(markdown: string, tableIndex = 0): string {
+  let heading = "";
+  let seen = 0;
+  for (const block of parseMessage(markdown || "")) {
+    if (block.type === "heading") heading = block.text;
+    if (block.type !== "table") continue;
+    if (seen === tableIndex) return heading;
+    seen += 1;
+  }
+  return "";
+}
+
+/**
+ * Title for one exported table. The heading above that table, then the question
+ * that produced this answer, then this chat's title. A column header is never a title.
+ * Nothing is remembered between calls, so a later chat cannot reuse an earlier title.
+ */
+export function tableExportTitle(args: {
+  markdown?: string;
+  tableIndex?: number;
+  prompt?: string;
+  chatTitle?: string;
+  headers?: string[];
+  locale?: UiLocale;
+}): string {
+  const sample = `${args.markdown || ""}\n${args.prompt || ""}`;
+  const locale: "en" | "ar" = args.locale === "ar" || ARABIC.test(sample) ? "ar" : "en";
+  const headers = args.headers ?? [];
+  const heading = clipTitle(
+    plainInline(headingBeforeTable(args.markdown || "", args.tableIndex ?? 0))
+      .replace(/[#>*_~`]/g, "")
+      .replace(/\s+/g, " ")
+      .trim(),
+    70
+  );
+  const candidates = [heading, plainTopic(args.prompt || "", locale), plainTopic(args.chatTitle || "", locale)];
+  for (const title of candidates) {
+    if (!usableTitle(title) || title.toLowerCase() === "new conversation" || isColumnHeader(title, headers)) continue;
+    return title;
+  }
+  return locale === "ar" ? "جدول" : "Table";
+}
+
+/** Sheet title cell. A column header such as "No." is not a title. */
+export function acceptSheetTitle(title: string | undefined, headers: string[] | undefined, locale: "en" | "ar"): string {
+  const fallback = locale === "ar" ? "جدول" : "Table";
+  const text = plainInline(title || "").replace(/\s+/g, " ").trim();
+  if (text.length < 2 || isColumnHeader(text, headers ?? [])) return fallback;
+  return text;
 }
 
 export function topicFrom(markdown: string, requested: string | undefined, locale: UiLocale, prompt?: string): string {
