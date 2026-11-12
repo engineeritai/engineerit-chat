@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { afterEach, describe, it } from "node:test";
-import { authCallbackKind, shouldForwardSignupConfirm } from "../lib/authCallback";
+import {
+  authCallbackKind,
+  confirmLinkStatus,
+  hasAuthLinkError,
+  shouldForwardSignupConfirm,
+} from "../lib/authCallback";
 import { handleAuthEmail } from "../lib/authEmail";
 import { resetAuthRateLimits } from "../lib/authRateLimit";
 import { newProfileRow, withoutTermsColumns } from "../lib/ensureProfile";
@@ -94,7 +99,19 @@ describe("duplicate email and confirmation links", () => {
     assert.equal(shouldForwardSignupConfirm("/reset-password", "", "#type=signup"), true);
     assert.equal(shouldForwardSignupConfirm("/reset-password", "?type=recovery", ""), false);
     assert.equal(shouldForwardSignupConfirm("/auth/confirmed", "#type=signup", ""), false);
+    assert.equal(shouldForwardSignupConfirm("/", "", "#error=access_denied&error_code=otp_expired"), true);
+    assert.equal(shouldForwardSignupConfirm("/reset-password", "", "#error=access_denied&error_code=otp_expired"), false);
+    assert.equal(shouldForwardSignupConfirm("/pricing", "?payment=failed", ""), false);
+    assert.equal(hasAuthLinkError("?error=link", ""), true);
+    assert.equal(hasAuthLinkError("?error_code=otp_expired", ""), true);
+    assert.equal(hasAuthLinkError("?payment=failed", ""), false);
+    assert.equal(confirmLinkStatus({ hasSession: true, failed: false }), "confirmed");
+    assert.equal(confirmLinkStatus({ hasSession: true, failed: true }), "invalid");
+    assert.equal(confirmLinkStatus({ hasSession: false, failed: true }), "invalid");
+    assert.equal(confirmLinkStatus({ hasSession: false, failed: false }), "idle");
     const forward = readFileSync("app/components/SignupConfirmForward.tsx", "utf8");
+    assert.match(forward, /CONFIRM_ERROR_PATH/);
+    assert.match(readFileSync("app/auth/confirmed/page.tsx", "utf8"), /confirmLinkStatus/);
     assert.match(forward, /\/auth\/confirmed/);
     assert.match(forward, /\/api\/profile\/ensure/);
     const reset = readFileSync("app/reset-password/page.tsx", "utf8");
@@ -115,6 +132,10 @@ describe("duplicate email and confirmation links", () => {
     assert.match(confirmed, /exchangeCodeForSession/);
     assert.match(confirmed, /continueSignIn/);
     assert.match(confirmed, /\/api\/profile\/ensure/);
+    assert.match(confirmed, /nextStatus !== "confirmed"/);
+    assert.match(confirmed, /This confirmation link did not work/);
+    assert.match(confirmed, /رابط التأكيد لم يعمل/);
+    assert.match(confirmed, /status === "confirmed" \? text\.confirmedTitle/);
     assert.match(shellCopy.en.auth.planWaiting, /checkout/i);
     assert.match(shellCopy.ar.auth.planWaiting, /الدفع/);
   });
@@ -222,6 +243,33 @@ describe("profile row on first login", () => {
   });
 });
 
+describe("existing activation reminder", () => {
+  it("keeps the English and Arabic inbox and junk note on the signup success panel", () => {
+    assert.equal(
+      shellCopy.en.auth.createdConfirm,
+      "Account created. We sent a confirmation email. Check your inbox and junk folder, confirm the address, then sign in from the top bar."
+    );
+    assert.equal(
+      shellCopy.ar.auth.createdConfirm,
+      "تم إنشاء الحساب. أرسلنا رسالة تأكيد. راجع الوارد والبريد غير الهام، ثم أكد العنوان وادخل من الشريط العلوي."
+    );
+    assert.match(shellCopy.en.auth.createdConfirm, /inbox/);
+    assert.match(shellCopy.en.auth.createdConfirm, /junk folder/);
+    assert.match(shellCopy.ar.auth.createdConfirm, /الوارد/);
+    assert.match(shellCopy.ar.auth.createdConfirm, /البريد غير الهام/);
+    assert.doesNotMatch(shellCopy.ar.auth.createdConfirm, /[\u064B-\u0652]/);
+    assert.equal(shellCopy.en.auth.emailConfirmTitle, "Email confirmation required");
+    assert.match(shellCopy.en.auth.emailConfirmHint, /Open the link in the email/);
+    assert.match(shellCopy.ar.auth.emailConfirmHint, /افتح الرابط في الرسالة/);
+    const register = readFileSync("app/register/page.tsx", "utf8");
+    assert.match(register, /setSuccessMessage\(s\.auth\.createdConfirm\)/);
+    assert.match(register, /\{s\.auth\.emailConfirmTitle\}/);
+    assert.match(register, /\{successMessage\}/);
+    assert.match(register, /\{s\.auth\.emailConfirmHint\}/);
+    assert.doesNotMatch(register, /activationSpam/);
+  });
+});
+
 describe("confirmation and reset email", () => {
   const previous = {
     MAIL_TRANSPORT: process.env.MAIL_TRANSPORT,
@@ -304,6 +352,15 @@ describe("confirmation and reset email", () => {
     const resetCall = calls.find((call) => call.url.includes("/recover"));
     assert.equal(new URL(signupCall?.url || "https://invalid").searchParams.get("redirect_to"), null);
     assert.equal(JSON.stringify(signupCall?.body || {}).includes("auth/confirmed"), false);
+    assert.equal(JSON.stringify(signupCall?.body || {}).includes("email_confirm"), false);
+    assert.equal(signupCall?.body?.email, "nora.signup@example.com");
+    assert.equal(signupCall?.body?.password, "engineer1");
+    assert.equal(signupCall?.body?.code_challenge ?? null, null);
+    assert.match(signupCall?.url || "", /\/auth\/v1\/signup$/);
+    assert.equal(
+      calls.some((call) => /\/admin\/users|email_confirm=true/.test(`${call.url} ${JSON.stringify(call.body || {})}`)),
+      false
+    );
     assert.equal(new URL(resetCall?.url || "https://invalid").searchParams.get("redirect_to"), "https://engineerit.ai/reset-password");
     const signupData = signupCall?.body?.data as {
       pending_checkout?: { planId?: string };
@@ -314,6 +371,44 @@ describe("confirmation and reset email", () => {
     assert.equal(signupData?.terms_version, TERMS_VERSION);
     assert.match(signupData?.terms_accepted_at || "", /^\d{4}-\d{2}-\d{2}T/);
     assert.equal(calls.some((call) => call.url.includes("moyasar") || call.url.includes("smtp")), false);
+  });
+
+  it("asks Supabase to resend the signup email and keeps the shared hourly limit", async () => {
+    process.env.MAIL_TRANSPORT = "";
+    process.env.VERCEL_ENV = "production";
+    (process.env as Record<string, string>).NODE_ENV = "production";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://auth.example.test";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+    delete process.env.TURNSTILE_SECRET_KEY;
+
+    const calls: { url: string; body: Record<string, unknown> | null }[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const raw = typeof init?.body === "string" ? init.body : "";
+      calls.push({ url, body: raw ? (JSON.parse(raw) as Record<string, unknown>) : null });
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+
+    for (let i = 0; i < 3; i += 1) {
+      const response = await handleAuthEmail(
+        request("/api/auth/resend", { email: "nora.resend@example.com" }),
+        "resend"
+      );
+      assert.equal(response.status, 200);
+      const body = (await response.json()) as { ok?: boolean; sent?: boolean };
+      assert.equal(body.ok, true);
+      assert.equal(body.sent, true);
+    }
+    const blocked = await handleAuthEmail(
+      request("/api/auth/resend", { email: "nora.resend@example.com" }),
+      "resend"
+    );
+    assert.equal(blocked.status, 429);
+    assert.equal(calls.length, 3);
+    assert.equal(calls.every((call) => call.url.includes("/resend")), true);
+    assert.equal(calls.every((call) => call.body?.type === "signup"), true);
+    assert.equal(calls.every((call) => call.body?.email === "nora.resend@example.com"), true);
+    assert.equal(JSON.stringify(calls).includes("email_confirm"), false);
   });
 
   it("returns a duplicate code without sending when the account already exists", async () => {
