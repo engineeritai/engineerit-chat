@@ -23,6 +23,7 @@ async function ocrWithBinary(buffer: Buffer): Promise<string> {
 
 type OcrWorker = {
   recognize: (image: Buffer) => Promise<{ data: { text: string } }>;
+  terminate: () => Promise<unknown>;
 };
 
 let workerPromise: Promise<OcrWorker> | null = null;
@@ -43,6 +44,19 @@ async function ocrWithLibrary(buffer: Buffer): Promise<string> {
   } catch (err) {
     workerPromise = null;
     throw err;
+  }
+}
+
+/** Release the library worker. The binary path does not start one. Recognition is unchanged. */
+export async function closeOcrWorker() {
+  const pending = workerPromise;
+  workerPromise = null;
+  if (!pending) return;
+  try {
+    const worker = await pending;
+    await worker.terminate();
+  } catch {
+    /* A failed start must not keep the test process alive. */
   }
 }
 
