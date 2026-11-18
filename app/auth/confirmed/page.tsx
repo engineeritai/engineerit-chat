@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { readAnyPendingCheckout } from "@/lib/checkoutClient";
 import { shellCopy } from "@/lib/shell";
+import { confirmLinkStatus, hasAuthLinkError, resolveConfirmationIntent, type ConfirmLinkStatus } from "@/lib/authCallback";
+import { clearConfirmationCallback, readConfirmationCallback, trackConfirmedSignup } from "@/lib/attribution";
 import { safeNextPath } from "@/lib/safeNext";
 import { supabase } from "@/lib/supabaseClient";
-import { confirmLinkStatus, hasAuthLinkError, type ConfirmLinkStatus } from "@/lib/authCallback";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 function storedNext() {
@@ -56,6 +57,7 @@ export default function EmailConfirmedPage() {
       const code = params.get("code") || "";
       const tokenHash = params.get("token_hash") || "";
       const type = (params.get("type") || "") as EmailOtpType;
+      const intent = resolveConfirmationIntent(window.location.search, window.location.hash, readConfirmationCallback());
       let failed = hasAuthLinkError(window.location.search, window.location.hash);
 
       if (code && !failed) {
@@ -81,7 +83,23 @@ export default function EmailConfirmedPage() {
         failed,
       });
       setStatus(nextStatus);
-      if (nextStatus !== "confirmed" || !data.session?.access_token) return;
+      if (nextStatus !== "confirmed" || !data.session?.access_token) {
+        if (nextStatus === "invalid") clearConfirmationCallback();
+        return;
+      }
+      const user = data.session.user;
+      try {
+        trackConfirmedSignup({
+          created_at: user.created_at,
+          email_confirmed_at: user.email_confirmed_at,
+          confirmed_at: user.confirmed_at,
+          user_metadata: user.user_metadata,
+        }, { intent });
+      } catch {
+        /* The confirmed-account count does not depend on the analytics event. */
+      } finally {
+        clearConfirmationCallback();
+      }
       await fetch("/api/profile/ensure", {
         method: "POST",
         headers: { Authorization: `Bearer ${data.session.access_token}` },

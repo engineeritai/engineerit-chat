@@ -221,7 +221,7 @@ describe("diagram replies", () => {
     assert.match(svg, /data-chart="gantt"/);
     assert.match(svg, /data-kind="today"/);
     assert.match(svg, /data-kind="dependency"/);
-    assert.match(svg, /font-size="12"/);
+    assert.match(svg, /data-font="12"/);
     assert.match(svg, /style="width:\d+px/);
     assert.doesNotMatch(svg, />Preparation</);
     const firstBar = Number(/data-id="t1"[^>]*\sx="([\d.]+)"/.exec(svg)?.[1]);

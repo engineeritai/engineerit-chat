@@ -1112,7 +1112,6 @@ export default function Page() {
                 locale,
                 nearestUserPrompt(messages, index)
               );
-              const topic = meta.title;
               const answerHeading = answerTitle({
                 markdown: m.content,
                 prompt: nearestUserPrompt(messages, index),
@@ -1144,7 +1143,8 @@ export default function Page() {
                         markdown={m.content}
                         dir={rtl ? "rtl" : "ltr"}
                         locale={locale}
-                        fileBase={topic}
+                        chatTitle={thread?.title}
+                        prompt={nearestUserPrompt(messages, index)}
                         labels={{
                           copyTable: s.chat.copyTable,
                           exportExcel: s.chat.exportExcel,

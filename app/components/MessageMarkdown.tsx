@@ -3,7 +3,7 @@
 import ChatTable from "@/app/components/ChatTable";
 import MermaidFigure from "@/app/components/MermaidFigure";
 import ScheduleFigure from "@/app/components/ScheduleFigure";
-import { parseMessage, tokenizeInline, type Inline, type ListItem } from "@/lib/messageDocument";
+import { parseMessage, tableExportTitle, tokenizeInline, type Inline, type ListItem } from "@/lib/messageDocument";
 import { isOutputDisclaimer, isQuantityTable, outputDisclaimerBody, OUTPUT_POLICY_LABEL, OUTPUT_POLICY_URL } from "@/lib/outputDisclaimer";
 import { blockDirection, hasArabicContent, isolatePieces } from "@/lib/shareDirection";
 
@@ -92,14 +92,18 @@ export default function MessageMarkdown({
   dir,
   locale,
   labels,
-  fileBase,
+  chatTitle,
+  prompt,
   endDisclaimer = true,
 }: {
   markdown: string;
   dir: "ltr" | "rtl";
   locale: "en" | "ar";
   labels: MessageLabels;
-  fileBase?: string;
+  /** This chat only. A heading above the table is preferred. */
+  chatTitle?: string;
+  /** The question that produced this answer. */
+  prompt?: string;
   /** One muted line under a take-off or BOQ table. Share pages use the footer instead. */
   endDisclaimer?: boolean;
 }) {
@@ -116,6 +120,18 @@ export default function MessageMarkdown({
     enlarge: locale === "ar" ? "تكبير" : "Enlarge",
     close: locale === "ar" ? "إغلاق" : "Close",
   };
+  const tableTitleByBlock = blocks.map((block, index, all) => {
+    if (block.type !== "table") return "";
+    const tableIndex = all.slice(0, index).filter((item) => item.type === "table").length;
+    return tableExportTitle({
+      markdown,
+      tableIndex,
+      prompt,
+      chatTitle,
+      headers: block.headers,
+      locale,
+    });
+  });
   return (
     <>
       {blocks.map((block, index) => {
@@ -146,9 +162,10 @@ export default function MessageMarkdown({
           const note = endDisclaimer && !hasDisclaimer && index === lastQuantityTable ? <DisclaimerLine locale={locale} /> : null;
           const tableText = [...block.headers, ...block.rows.flat()].join("\n");
           const tableDir = hasArabicContent(tableText) ? "rtl" : dir;
+          const title = tableTitleByBlock[index];
           return (
             <div key={index}>
-              <ChatTable headers={block.headers} rows={block.rows} dir={tableDir} locale={locale} labels={labels} fileBase={fileBase} />
+              <ChatTable headers={block.headers} rows={block.rows} dir={tableDir} locale={locale} labels={labels} title={title} />
               {note}
             </div>
           );

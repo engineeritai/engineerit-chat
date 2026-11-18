@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { bindVerticalPass } from "@/app/components/verticalPass";
 import { copyTable } from "@/app/components/copyRich";
-import { downloadName, shortTopic } from "@/lib/exportName";
+import { downloadName } from "@/lib/exportName";
 import { riyadhStamp } from "@/lib/ksaTime";
 import { deliverBlob, saveWasToasted } from "@/lib/saveFile";
 import { plainInline } from "@/lib/messageDocument";
@@ -37,14 +37,14 @@ export default function ChatTable({
   dir,
   labels,
   locale,
-  fileBase,
+  title,
 }: {
   headers: string[];
   rows: string[][];
   dir: "ltr" | "rtl";
   labels: Labels;
   locale: "en" | "ar";
-  fileBase?: string;
+  title: string;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinRef = useRef<HTMLTableElement>(null);
@@ -82,11 +82,12 @@ export default function ChatTable({
   }, [sync, headers, rows]);
 
   async function exportExcel() {
+    const exportTitle = title.trim() || (locale === "ar" ? "جدول" : "Table");
     const res = await fetch("/api/export/xlsx", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: headers[0] || "Table",
+        title: exportTitle,
         locale,
         headers,
         rows,
@@ -95,7 +96,7 @@ export default function ChatTable({
     });
     if (!res.ok) throw new Error(await res.text());
     const blob = await res.blob();
-    await deliverBlob(blob, downloadName(shortTopic(fileBase || headers[0], locale === "ar" ? "جدول" : "Table"), "xlsx"));
+    await deliverBlob(blob, downloadName(exportTitle, "xlsx"));
   }
 
   return (

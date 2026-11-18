@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { checkAuthRate, consumeAuthDaily } from "@/lib/authRateLimit";
 import { isProductionMailRuntime, mailDecision } from "@/lib/mailPolicy";
 import { RESET_REDIRECT } from "@/lib/password";
+import { acquisitionMetadata } from "@/lib/acquisition";
 import { classifySignupError, isDuplicateSignup } from "@/lib/registerAccount";
 import { missingTermsColumn, termsMetadata } from "@/lib/termsAcceptance";
 import { isSelfServePlan, normalizeExtraSeats, parseInterval } from "@/lib/plans";
@@ -33,6 +34,7 @@ export async function createAuthLinkWithoutEmail(args: {
   password?: string;
   fullName?: string;
   termsAcceptedAt?: string;
+  acquisition?: unknown;
   env?: NodeJS.ProcessEnv;
 }) {
   const env = args.env || process.env;
@@ -55,6 +57,7 @@ export async function createAuthLinkWithoutEmail(args: {
               data: {
                 ...(args.fullName ? { full_name: args.fullName } : {}),
                 ...(args.termsAcceptedAt ? termsMetadata(args.termsAcceptedAt) : {}),
+                ...acquisitionMetadata(args.acquisition),
               },
             },
           });
@@ -74,6 +77,7 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
     captchaToken?: string;
     accepted?: boolean;
     pending?: { planId?: string; interval?: string; extraSeats?: number } | null;
+    acquisition?: unknown;
   } | null;
   const email = (body?.email || "").trim().toLowerCase();
   const password = body?.password || "";
@@ -109,6 +113,7 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
         password,
         fullName,
         termsAcceptedAt: action === "signup" ? acceptedAt : undefined,
+        acquisition: action === "signup" ? body?.acquisition : undefined,
       });
       console.info("[mail-sink] auth email suppressed", action, email, link.ok ? (link.link ? "link" : "no-link") : link.error);
     } else {
@@ -147,6 +152,7 @@ export async function handleAuthEmail(req: Request, action: AuthEmailAction) {
           ...(fullName ? { full_name: fullName } : {}),
           ...(pending ? { pending_checkout: pending } : {}),
           ...termsMetadata(acceptedAt),
+          ...acquisitionMetadata(body?.acquisition),
         },
       },
     });
