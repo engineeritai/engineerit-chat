@@ -84,7 +84,13 @@ On the first enabled run, with `REMINDER_ENQUEUE` left unset:
 - A pending row from the last 7 days can be sent, at most one email per user per 7 days, and only if that user has not unsubscribed. The exported queue has no such row, so the first run sends nothing.
 - Each message includes an unsubscribe link. One-click unsubscribe writes `email_notification_opt_outs` and is also honored for accounts already in `lifecycle_email_opt_outs`.
 
-`REMINDER_ENQUEUE=on` is a separate switch. It adds at most one row per user for a condition that is true now. It does not create a row for each missed week since March. Leave it unset until the dry-run `wouldEnqueue` count is acceptable. The batch cap still applies (default 40, maximum 200).
+`REMINDER_ENQUEUE=on` is a separate switch, and it stays off until a dry-run has been reviewed. It inserts at most one fresh row per confirmed user for the current week:
+
+- `sub_expiring_3d` when a paid period ends within 3 days
+- `sub_expired_weekly` when a paid period ended within the past 7 days
+- `assistant_weekly_upsell` for a confirmed free Assistant account that is not in either of those windows
+
+It does not create a row for each missed week since March, and it does not queue an unconfirmed address, an opted-out account, or a test address. The same user and kind are not inserted twice in one week (`dedupe_key`). With the flag unset, the first run queues nothing. `?dry=1` reports `wouldEnqueue` and does not insert. The sender in the same cron mails a fresh row only when `REMINDER_EMAILS=on`, still at most one email per user per week. The batch cap still applies (default 40, maximum 200).
 
 `saved_cards`, `billing_subscriptions`, and `renewal_attempts` have RLS enabled and no client policies. Only the service role reads or writes them. Card tokens are never returned to the browser.
 

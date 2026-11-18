@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EnqueueInput, EnqueueSubscription, NewReminder, ReminderRow } from "@/lib/reminderMail";
-import { isReminderKind, normalizeReminderRow } from "@/lib/reminderMail";
+import { isConfirmedAccount, isReminderKind, normalizeReminderRow } from "@/lib/reminderMail";
 import type { ReminderStore } from "@/lib/reminderRun";
 
 const TABLE = "email_notifications";
@@ -82,10 +82,27 @@ export async function loadReminderQueue(admin: SupabaseClient, now: Date) {
   return { rows, recentlySent, optedOut, existingKeys };
 }
 
+async function loadAuthAccounts(admin: SupabaseClient) {
+  const accounts = new Map<string, { email: string | null; confirmed: boolean }>();
+  for (let page = 1; page <= 20; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw new Error(error.message);
+    for (const user of data.users) {
+      accounts.set(user.id, {
+        email: user.email ?? null,
+        confirmed: isConfirmedAccount(user.email_confirmed_at),
+      });
+    }
+    if (data.users.length < 1000) return accounts;
+  }
+  throw new Error("Reminder audience stopped after 20,000 accounts and would be incomplete.");
+}
+
 export async function loadReminderAudience(admin: SupabaseClient): Promise<{
   profiles: EnqueueInput[];
   subscriptions: EnqueueSubscription[];
 }> {
+  const accounts = await loadAuthAccounts(admin);
   const profiles = await eachPage(async (from) => {
     const { data, error } = await admin.from("profiles").select("id, email, subscription_tier").range(from, from + 999);
     return { rows: (data || []) as Record<string, unknown>[], error };
@@ -98,19 +115,29 @@ export async function loadReminderAudience(admin: SupabaseClient): Promise<{
     return { rows: (data || []) as Record<string, unknown>[], error };
   });
   return {
-    profiles: profiles.map((row) => ({
-      id: String(row.id || ""),
-      email: typeof row.email === "string" ? row.email : null,
-      tier: typeof row.subscription_tier === "string" ? row.subscription_tier : null,
-    })),
+    profiles: profiles.map((row) => {
+      const id = String(row.id || "");
+      const account = accounts.get(id);
+      return {
+        id,
+        email: account?.email || (typeof row.email === "string" ? row.email : null),
+        tier: typeof row.subscription_tier === "string" ? row.subscription_tier : null,
+        confirmed: account?.confirmed === true,
+      };
+    }),
     subscriptions: subscriptions
-      .map((row) => ({
-        userId: String(row.user_id || ""),
-        email: typeof row.customer_email === "string" ? row.customer_email : null,
-        status: String(row.status || ""),
-        periodEnd: String(row.current_period_end || ""),
-        locale: localeOf(row.locale),
-      }))
+      .map((row) => {
+        const userId = String(row.user_id || "");
+        const account = accounts.get(userId);
+        return {
+          userId,
+          email: account?.email || (typeof row.customer_email === "string" ? row.customer_email : null),
+          status: String(row.status || ""),
+          periodEnd: String(row.current_period_end || ""),
+          locale: localeOf(row.locale),
+          confirmed: account?.confirmed === true,
+        };
+      })
       .filter((row) => row.userId && row.periodEnd),
   };
 }
