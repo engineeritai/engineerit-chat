@@ -187,6 +187,9 @@ test("register and checkout fit a 375px phone in English and Arabic", async ({ p
 
 test("home, pricing, advisors, and checkout", async ({ page }) => {
   test.setTimeout(180_000);
+  // Checkout prints "renews on <today + 30 days>". Freeze the clock so the
+  // screenshot does not change every month. 16 Oct 2026 renews on 15 Nov 2026.
+  await page.clock.install({ time: new Date("2026-10-16T09:00:00Z") });
   const pages = [
     { name: "home.png", path: "/", marker: "#hero-title" },
     { name: "pricing.png", path: "/pricing", marker: "h1" },
