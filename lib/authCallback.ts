@@ -1,4 +1,5 @@
 export type AuthCallbackKind = "recovery" | "signup" | "none";
+export type ConfirmationIntent = "signup" | "code" | "none";
 
 function paramType(search: string, hash: string) {
   const query = new URLSearchParams(search.replace(/^\?/, ""));
@@ -28,4 +29,26 @@ export function shouldForwardSignupConfirm(pathname: string, search: string, has
   const hashed = new URLSearchParams(hash.replace(/^#/, ""));
   if (query.get("code")) return true;
   return Boolean(hashed.get("access_token"));
+}
+
+/**
+ * A signup event needs the confirmation navigation, not a later login.
+ * type=signup is the email confirmation. A bare code can be the same flow
+ * after the hash is removed. Recovery, invite, magic link, and email change are not new accounts.
+ */
+export function resolveConfirmationIntent(
+  search: string,
+  hash: string,
+  stored: ConfirmationIntent = "none"
+): ConfirmationIntent {
+  const type = paramType(search, hash);
+  if (type === "recovery" || type === "email_change" || type === "magiclink" || type === "invite" || type === "email") {
+    return "none";
+  }
+  if (type === "signup") return "signup";
+  const query = new URLSearchParams(search.replace(/^\?/, ""));
+  const hashed = new URLSearchParams(hash.replace(/^#/, ""));
+  if (query.get("code") || query.get("token_hash") || hashed.get("access_token")) return "code";
+  if (stored === "signup" || stored === "code") return stored;
+  return "none";
 }

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import test from "node:test";
+import test, { after } from "node:test";
+import { closeOcrWorker } from "../lib/takeoff/ocr";
+
+after(() => closeOcrWorker());
 import { calculateTakeoff, workingsMatchQuantities } from "../lib/takeoff/calculate";
 import { extractPdfText } from "../lib/takeoff/pdfText";
 import { parseDrawingText } from "../lib/takeoff/parseText";

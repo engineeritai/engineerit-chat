@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { shouldForwardSignupConfirm } from "@/lib/authCallback";
+import { resolveConfirmationIntent, shouldForwardSignupConfirm } from "@/lib/authCallback";
+import { markConfirmationCallback } from "@/lib/attribution";
 import { supabase } from "@/lib/supabaseClient";
 
 /** Move a Site URL confirmation onto /auth/confirmed without a new Supabase redirect. */
@@ -12,6 +13,8 @@ export default function SignupConfirmForward() {
 
   useEffect(() => {
     if (!shouldForwardSignupConfirm(pathname, window.location.search, window.location.hash)) return;
+    const intent = resolveConfirmationIntent(window.location.search, window.location.hash);
+    if (intent === "signup" || intent === "code") markConfirmationCallback(intent);
     let cancel = false;
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code") || "";

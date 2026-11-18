@@ -313,6 +313,8 @@ describe("confirmation and reset email", () => {
     assert.equal(signupData?.pending_checkout?.planId, "engineer");
     assert.equal(signupData?.terms_version, TERMS_VERSION);
     assert.match(signupData?.terms_accepted_at || "", /^\d{4}-\d{2}-\d{2}T/);
+    assert.equal((signupData as { acq_source?: string } | undefined)?.acq_source, "unknown");
+    assert.equal(JSON.stringify(resetCall?.body || {}).includes("acq_source"), false);
     assert.equal(calls.some((call) => call.url.includes("moyasar") || call.url.includes("smtp")), false);
   });
 
@@ -483,5 +485,58 @@ describe("confirmation and reset email", () => {
     } finally {
       console.warn = originalWarn;
     }
+  });
+
+  it("stores a whitelisted source and drops raw query strings, emails, and markup", async () => {
+    process.env.MAIL_TRANSPORT = "";
+    process.env.VERCEL_ENV = "production";
+    (process.env as Record<string, string>).NODE_ENV = "production";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://auth.example.test";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+    delete process.env.TURNSTILE_SECRET_KEY;
+
+    const calls: { url: string; body: Record<string, unknown> | null }[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const raw = typeof init?.body === "string" ? init.body : "";
+      calls.push({ url, body: raw ? (JSON.parse(raw) as Record<string, unknown>) : null });
+      if (url.includes("/signup")) {
+        return new Response(JSON.stringify({ id: "user-acq", identities: [{ id: "identity-1" }] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ msg: "unexpected" }), { status: 500 });
+    }) as typeof fetch;
+
+    const response = await handleAuthEmail(
+      request("/api/auth/signup", {
+        email: "nora.signup@example.com",
+        password: "engineer1",
+        accepted: true,
+        acquisition: {
+          source: "twitter",
+          medium: "social",
+          campaign: "launch-post",
+          via: "utm",
+          email: "hidden.person@example.com",
+          search: "?utm_source=twitter&email=hidden.person@example.com",
+          utm_source: "<script>alert(1)</script>",
+        },
+      }),
+      "signup"
+    );
+    assert.equal(response.status, 200);
+    const signupCall = calls.find((call) => call.url.includes("/signup"));
+    const data = signupCall?.body?.data as Record<string, unknown> | undefined;
+    assert.equal(data?.acq_source, "x");
+    assert.equal(data?.acq_medium, "social");
+    assert.equal(data?.acq_campaign, "launch-post");
+    assert.equal(data?.acq_via, "utm");
+    const stored = JSON.stringify(data || {});
+    assert.equal(stored.includes("hidden.person"), false);
+    assert.equal(stored.includes("<script>"), false);
+    assert.equal(stored.includes("utm_source="), false);
+    assert.equal(stored.includes("?"), false);
   });
 });

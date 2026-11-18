@@ -5,7 +5,7 @@ import "./design.css";
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
+import ProductAnalytics from "@/app/components/ProductAnalytics";
 import { LocaleProvider } from "@/app/components/LocaleProvider";
 import Attribution from "@/app/components/Attribution";
 import SignupConfirmForward from "@/app/components/SignupConfirmForward";
@@ -130,7 +130,7 @@ export default async function RootLayout({
         <PwaRegister />
         <SignupConfirmForward />
         <Attribution />
-        <Analytics />
+        <ProductAnalytics />
       </body>
     </html>
   );

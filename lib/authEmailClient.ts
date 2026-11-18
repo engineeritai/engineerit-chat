@@ -10,6 +10,7 @@ export async function requestAuthEmail(
     captchaToken?: string;
     accepted?: boolean;
     pending?: { planId: string; interval: string; extraSeats: number };
+    acquisition?: { source: string; via: string; medium?: string; campaign?: string };
   }
 ) {
   const path = action === "reset" ? "recover" : action;

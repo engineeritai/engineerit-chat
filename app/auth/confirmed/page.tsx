@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { readAnyPendingCheckout } from "@/lib/checkoutClient";
 import { shellCopy } from "@/lib/shell";
+import { resolveConfirmationIntent } from "@/lib/authCallback";
 import { safeNextPath } from "@/lib/safeNext";
+import { clearConfirmationCallback, readConfirmationCallback, trackConfirmedSignup } from "@/lib/attribution";
 import { supabase } from "@/lib/supabaseClient";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
@@ -45,6 +47,20 @@ export default function EmailConfirmedPage() {
       const { data } = await supabase.auth.getSession();
       if (cancel) return;
       if (data.session?.access_token) {
+        const user = data.session.user;
+        const intent = resolveConfirmationIntent(window.location.search, window.location.hash, readConfirmationCallback());
+        try {
+          trackConfirmedSignup({
+            created_at: user.created_at,
+            email_confirmed_at: user.email_confirmed_at,
+            confirmed_at: user.confirmed_at,
+            user_metadata: user.user_metadata,
+          }, { intent });
+        } catch {
+          /* The confirmed-account count does not depend on the analytics event. */
+        } finally {
+          clearConfirmationCallback();
+        }
         await fetch("/api/profile/ensure", {
           method: "POST",
           headers: { Authorization: `Bearer ${data.session.access_token}` },
