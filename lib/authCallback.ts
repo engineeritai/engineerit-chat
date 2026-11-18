@@ -1,10 +1,38 @@
 export type AuthCallbackKind = "recovery" | "signup" | "none";
+export type ConfirmLinkStatus = "confirmed" | "invalid" | "idle";
 export type ConfirmationIntent = "signup" | "code" | "none";
 
+export const CONFIRM_ERROR_PATH = "/auth/confirmed?error=link";
+
+function paramsOf(value: string) {
+  return new URLSearchParams(value.replace(/^[?#]/, ""));
+}
+
 function paramType(search: string, hash: string) {
-  const query = new URLSearchParams(search.replace(/^\?/, ""));
-  const hashed = new URLSearchParams(hash.replace(/^#/, ""));
+  const query = paramsOf(search);
+  const hashed = paramsOf(hash);
   return (query.get("type") || hashed.get("type") || "").toLowerCase();
+}
+
+/** Supabase puts an expired or rejected confirmation link in the query or hash. */
+export function hasAuthLinkError(search: string, hash: string) {
+  const query = paramsOf(search);
+  const hashed = paramsOf(hash);
+  if (query.get("error") === "link") return true;
+  return Boolean(
+    query.get("error_code") ||
+      query.get("error_description") ||
+      hashed.get("error") ||
+      hashed.get("error_code") ||
+      hashed.get("error_description")
+  );
+}
+
+/** Failed links stay invalid. A session after a clean landing is the existing success path. */
+export function confirmLinkStatus(args: { hasSession: boolean; failed: boolean }): ConfirmLinkStatus {
+  if (args.failed) return "invalid";
+  if (args.hasSession) return "confirmed";
+  return "idle";
 }
 
 /** Signup confirmation versus password recovery, from the URL Supabase already redirects to. */
@@ -25,10 +53,11 @@ export function shouldForwardSignupConfirm(pathname: string, search: string, has
   if (kind === "recovery") return false;
   if (kind === "signup") return true;
   if (pathname.startsWith("/reset-password")) return false;
-  const query = new URLSearchParams(search.replace(/^\?/, ""));
-  const hashed = new URLSearchParams(hash.replace(/^#/, ""));
+  const query = paramsOf(search);
+  const hashed = paramsOf(hash);
   if (query.get("code")) return true;
-  return Boolean(hashed.get("access_token"));
+  if (hashed.get("access_token")) return true;
+  return hasAuthLinkError(search, hash);
 }
 
 /**
@@ -46,8 +75,8 @@ export function resolveConfirmationIntent(
     return "none";
   }
   if (type === "signup") return "signup";
-  const query = new URLSearchParams(search.replace(/^\?/, ""));
-  const hashed = new URLSearchParams(hash.replace(/^#/, ""));
+  const query = paramsOf(search);
+  const hashed = paramsOf(hash);
   if (query.get("code") || query.get("token_hash") || hashed.get("access_token")) return "code";
   if (stored === "signup" || stored === "code") return stored;
   return "none";

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { resolveConfirmationIntent, shouldForwardSignupConfirm } from "@/lib/authCallback";
+import { CONFIRM_ERROR_PATH, hasAuthLinkError, resolveConfirmationIntent, shouldForwardSignupConfirm } from "@/lib/authCallback";
 import { markConfirmationCallback } from "@/lib/attribution";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -12,12 +12,23 @@ export default function SignupConfirmForward() {
   const pathname = usePathname() || "/";
 
   useEffect(() => {
-    if (!shouldForwardSignupConfirm(pathname, window.location.search, window.location.hash)) return;
-    const intent = resolveConfirmationIntent(window.location.search, window.location.hash);
+    const search = window.location.search;
+    const hash = window.location.hash;
+    if (!shouldForwardSignupConfirm(pathname, search, hash)) return;
+    const intent = resolveConfirmationIntent(search, hash);
     if (intent === "signup" || intent === "code") markConfirmationCallback(intent);
     let cancel = false;
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(search);
     const code = params.get("code") || "";
+
+    const fail = () => {
+      if (!cancel) router.replace(CONFIRM_ERROR_PATH);
+    };
+
+    if (hasAuthLinkError(search, hash) && !code) {
+      fail();
+      return;
+    }
 
     const finish = async (token: string) => {
       await fetch("/api/profile/ensure", {
@@ -37,7 +48,11 @@ export default function SignupConfirmForward() {
         const exchanged = await supabase.auth.exchangeCodeForSession(code).catch(() => ({
           error: { message: "exchange failed" },
         }));
-        if (exchanged.error || cancel) return;
+        if (cancel) return;
+        if (exchanged.error) {
+          fail();
+          return;
+        }
       }
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
