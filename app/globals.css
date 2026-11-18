@@ -1395,6 +1395,20 @@ a.auth-follow {
   padding-inline: 0;
 }
 
+.msg-register {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #4b5563;
+}
+
+.msg-register-link {
+  color: var(--brand-blue);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .msg-action-btn {
   background: none;
   border: none;

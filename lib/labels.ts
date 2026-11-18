@@ -9,6 +9,7 @@ import {
   type Plan,
   type PlanId,
 } from "@/lib/plans";
+import { freeAccountAllowance } from "@/lib/dailyLimits";
 import { displayFeatures } from "@/lib/pricingDisplay";
 import { RIYAL, riyalAmount } from "@/lib/riyal";
 
@@ -59,6 +60,7 @@ const AR_PLANS: Record<
     tagline: "للطلاب والمهندسين المبتدئين.",
     priceMonthly: "مجانا",
     features: [
+      freeAccountAllowance("ar"),
       "محادثة في كل التخصصات",
       "فهم مخططات التدفق والمخططات الأنابيب والأجهزة والمخططات الصندوقية البسيطة",
       "رقمنة بيانات أساسية (جداول ووسوم بسيطة)",
