@@ -24,22 +24,50 @@ export const defaultTitle = "engineer it | Your AI Engineering Assistant";
 export const defaultDescription =
   "engineerit.ai engineers any idea, topic or subject with a structured approach. Attach files, pick a tool, and get structured answers. Your subscription unlocks unlimited chats, engineering tools and AI Advisors.";
 
-export function languageAlternates(path: string) {
-  const canonical = path === "/" ? `${SITE_URL}/` : new URL(path, SITE_URL).toString();
-  const withLang = (lang: Locale) => {
-    const url = new URL(path === "/" ? "/" : path, SITE_URL);
-    url.searchParams.set("lang", lang);
-    return url.toString();
-  };
+/** English canonical is the clean URL. Arabic canonical is that URL with ?lang=ar. */
+export function localizedPageUrl(path: string, locale: Locale = "en") {
+  const url = new URL(path === "/" ? "/" : path, SITE_URL);
+  if (locale === "ar") url.searchParams.set("lang", "ar");
+  const value = url.toString();
+  // Next renders the home canonical without a trailing slash. Keep the sitemap on that URL.
+  if (path === "/" && locale === "en" && value === `${SITE_URL}/`) return SITE_URL;
+  return value;
+}
+
+export function languageAlternates(path: string, locale: Locale = "en") {
+  const english = localizedPageUrl(path, "en");
+  const arabic = localizedPageUrl(path, "ar");
+  const canonical = locale === "ar" ? arabic : english;
   return {
     canonical,
     languages: {
-      en: withLang("en"),
-      ar: withLang("ar"),
-      "x-default": canonical,
+      en: english,
+      ar: arabic,
+      "x-default": english,
     },
   };
 }
+
+/** Public pages that should be discoverable in both languages. Login stays out: it is noindex. */
+export const SITEMAP_PAGES: {
+  path: string;
+  priority: number;
+  changeFrequency: "weekly" | "monthly" | "yearly";
+}[] = [
+  { path: "/", priority: 1, changeFrequency: "weekly" },
+  { path: "/pricing", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/advisors", priority: 0.8, changeFrequency: "weekly" },
+  { path: "/chat", priority: 0.8, changeFrequency: "weekly" },
+  { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/how-it-works", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/guide", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/tools", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/register", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/feedback", priority: 0.4, changeFrequency: "yearly" },
+  { path: "/legal/terms", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/legal/privacy", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/legal/refund", priority: 0.3, changeFrequency: "yearly" },
+];
 
 export function pageMetadata({
   title,
@@ -54,7 +82,7 @@ export function pageMetadata({
   index?: boolean;
   locale?: "en" | "ar";
 }): Metadata {
-  const canonical = new URL(path, SITE_URL).toString();
+  const alternates = languageAlternates(path, locale);
   const fullTitle =
     title.includes("engineer it") || title.includes("engineerit.ai")
       ? title
@@ -63,18 +91,19 @@ export function pageMetadata({
   return {
     title: { absolute: fullTitle },
     description,
-    alternates: languageAlternates(path),
+    alternates,
     robots: index
       ? { index: true, follow: true }
       : { index: false, follow: true },
     openGraph: {
       title: fullTitle,
       description,
-      url: canonical,
+      url: alternates.canonical,
       siteName: SITE_NAME,
       images: [{ url: "/og.png", alt: SITE_NAME }],
       type: "website",
       locale: locale === "ar" ? "ar_SA" : "en_US",
+      alternateLocale: locale === "ar" ? ["en_US"] : ["ar_SA"],
     },
     twitter: {
       card: "summary_large_image",
@@ -142,7 +171,7 @@ export function softwareApplicationJsonLd(locale: Locale = "en") {
     applicationCategory: "BusinessApplication",
     applicationSubCategory: arabic ? "هندسة" : "Engineering",
     operatingSystem: arabic ? "الويب" : "Web",
-    url: `${SITE_URL}/`,
+    url: localizedPageUrl("/", locale),
     image: `${SITE_URL}/og.png`,
     description: metaFor(locale, "/").description,
     inLanguage: arabic ? "ar" : "en",

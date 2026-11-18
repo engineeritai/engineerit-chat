@@ -22,7 +22,7 @@ export const en: MarketingContent = {
   },
   hero: {
     kicker: "Saudi Arabia and the GCC",
-    h1: "engineer it with AI",
+    h1: "AI engineering assistant and advisors for engineers and engineering offices",
     lead:
       "Attach files, pick a tool, get structured answers. Your subscription unlocks unlimited chats, tools and AI Advisors.",
     primaryCta: "Start chatting",

@@ -36,17 +36,7 @@ export default function LandingView() {
       <section className="mkt-hero">
         <div>
           <h1 id="hero-title" className="brand-headline">
-            {locale === "ar" ? (
-              <>
-                <span className="headline-ar">{content.hero.showcase.accent}</span>
-                {content.hero.showcase.after}
-              </>
-            ) : (
-              <span className="headline-en">
-                <img className="headline-wordmark" src="/wordmark.svg" alt="engineer it" width={817} height={176} />
-                <span className="headline-rest">{content.hero.showcase.after}</span>
-              </span>
-            )}
+            {content.hero.h1}
           </h1>
           <p className="mkt-lead">{content.hero.lead}</p>
           <form

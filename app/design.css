@@ -432,7 +432,7 @@ a,
 }
 
 .mkt-account-btn,
-.lang-toggle button {
+.lang-toggle button, .lang-toggle a {
   min-width: 44px;
   min-height: 44px;
 }
@@ -1837,7 +1837,7 @@ svg {
 
 /* Header chrome: fixed slots, regular weight, no plan-name growth. */
 .lang-toggle,
-.lang-toggle button,
+.lang-toggle button, .lang-toggle a,
 .mkt-nav a,
 .mkt-header-link,
 .acct-pill,
@@ -1879,7 +1879,8 @@ svg {
   font-weight: 500;
 }
 
-.mkt-header .lang-toggle button {
+.mkt-header .lang-toggle button,
+.mkt-header .lang-toggle a {
   min-height: 44px;
   padding: 0 2px;
   font-weight: 500;
@@ -2364,7 +2365,8 @@ body.acct-open .mkt-header {
     padding-inline: 2px;
   }
 
-  .mkt-header .lang-toggle button {
+  .mkt-header .lang-toggle button,
+  .mkt-header .lang-toggle a {
     min-width: 0;
     padding-inline: 2px;
   }
@@ -3078,10 +3080,11 @@ body.acct-open .mkt-header {
 .mkt h1.brand-headline,
 .brand-headline {
   margin: 0;
+  max-width: 18em;
   font-weight: 800;
-  font-size: clamp(32px, 5vw, 52px);
-  letter-spacing: -0.035em;
-  line-height: 1.08;
+  font-size: clamp(26px, 3.6vw, 40px);
+  letter-spacing: -0.03em;
+  line-height: 1.25;
 }
 
 .headline-en {
@@ -3110,7 +3113,7 @@ body.acct-open .mkt-header {
 }
 
 html[lang="ar"] .brand-headline {
-  line-height: 1.35;
+  line-height: 1.45;
   margin-bottom: 10px;
 }
 
@@ -3656,7 +3659,7 @@ label,
 .chart-viewer-close,
 .chart-viewer-backdrop,
 .mkt-menu-btn,
-.lang-toggle button {
+.lang-toggle button, .lang-toggle a {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -3768,6 +3771,7 @@ label,
 
   .mkt-menu-btn:hover,
   .lang-toggle button:hover,
+  .lang-toggle a:hover,
   .acct-chip:hover,
   .chart-action:hover,
   .msg-action-btn:hover,

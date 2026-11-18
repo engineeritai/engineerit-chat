@@ -122,9 +122,11 @@ test("redirects, sitemap, apple pay file, invoice route", async ({ request }, in
   const sitemap = await request.get("/sitemap.xml");
   expect(sitemap.status()).toBe(200);
   const xml = await sitemap.text();
-  for (const path of ["/", "/pricing", "/advisors", "/faq", "/how-it-works", "/guide", "/register", "/login", "/legal/terms", "/legal/privacy", "/legal/refund"]) {
+  for (const path of ["/", "/pricing", "/advisors", "/chat", "/faq", "/how-it-works", "/guide", "/register", "/legal/terms", "/legal/privacy", "/legal/refund"]) {
     expect.soft(xml, path).toContain(path === "/" ? "engineerit.ai" : path);
   }
+  expect(xml).toContain("lang=ar");
+  expect(xml).not.toContain("/login");
 
   const robots = await request.get("/robots.txt");
   expect(robots.status()).toBe(200);

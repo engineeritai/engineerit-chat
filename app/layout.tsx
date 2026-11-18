@@ -43,6 +43,7 @@ export const viewport: Viewport = {
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await requestLocale();
   const meta = metaFor(locale, "/");
+  const alternates = languageAlternates("/", locale);
   return {
     metadataBase: new URL(SITE_URL),
     title: {
@@ -51,15 +52,16 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: meta.description,
     applicationName: "engineer it",
-    alternates: languageAlternates("/"),
+    alternates,
     openGraph: {
       title: meta.title,
       description: meta.description,
-      url: SITE_URL,
+      url: alternates.canonical,
       siteName: SITE_NAME,
       images: [{ url: "/og.png", alt: SITE_NAME }],
       type: "website",
       locale: locale === "ar" ? "ar_SA" : "en_US",
+      alternateLocale: locale === "ar" ? ["en_US"] : ["ar_SA"],
     },
     twitter: {
       card: "summary_large_image",
