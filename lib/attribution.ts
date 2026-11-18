@@ -7,6 +7,7 @@ import {
   memoryFromLegacy,
   nextAttribution,
   planConfirmedSignup,
+  planOAuthSignup,
   rememberSignup,
   unknownAcquisition,
   type Acquisition,
@@ -187,6 +188,34 @@ export function trackConfirmedSignup(
   const seen = deps?.seen ?? readSignupSeen();
   const local = deps?.local || currentAcquisition();
   const plan = planConfirmedSignup({ user, nowMs, seen, local, intent: deps?.intent || "none" });
+  if (!plan.track) return plan;
+  const nextSeen = rememberSignup(seen, plan.createdAt);
+  if (!deps?.seen) writeSignupSeen(nextSeen);
+  trackProduct("register_completed", undefined, {
+    allow: deps?.allow ?? browserAllow(),
+    sink: deps?.sink,
+    acquisition: plan.acquisition,
+  });
+  return { ...plan, seen: nextSeen };
+}
+
+/** One register_completed for a new Google account. A later Google sign-in does not fire it. */
+export function trackOAuthSignup(
+  user: {
+    created_at?: string | null;
+    last_sign_in_at?: string | null;
+    email_confirmed_at?: string | null;
+    confirmed_at?: string | null;
+    user_metadata?: unknown;
+    app_metadata?: unknown;
+    identities?: { provider?: string | null }[] | null;
+  },
+  deps?: { nowMs?: number; seen?: string[]; allow?: boolean; sink?: TrackSink; local?: Acquisition }
+) {
+  const nowMs = deps?.nowMs ?? Date.now();
+  const seen = deps?.seen ?? readSignupSeen();
+  const local = deps?.local || currentAcquisition();
+  const plan = planOAuthSignup({ user, nowMs, seen, local });
   if (!plan.track) return plan;
   const nextSeen = rememberSignup(seen, plan.createdAt);
   if (!deps?.seen) writeSignupSeen(nextSeen);
