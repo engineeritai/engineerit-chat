@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { describe, it } from "node:test";
 import {
   buildReminderMessage,
+  isConfirmedAccount,
   planReminderEnqueue,
   planReminderQueue,
   reminderBatchLimit,
@@ -249,8 +250,8 @@ describe("reminder queue", () => {
     const planned = planReminderEnqueue({
       now: NOW,
       profiles: [
-        { id: USER, email: "engineer@example.com", tier: "assistant" },
-        { id: OTHER, email: "paid@example.com", tier: "engineer" },
+        { id: USER, email: "engineer@example.com", tier: "assistant", confirmed: true },
+        { id: OTHER, email: "paid@example.com", tier: "engineer", confirmed: true },
       ],
       subscriptions: [
         {
@@ -259,6 +260,7 @@ describe("reminder queue", () => {
           status: "expired",
           periodEnd: "2026-03-15T00:00:00.000Z",
           locale: "ar",
+          confirmed: true,
         },
         {
           userId: "33333333-3333-4333-8333-333333333333",
@@ -266,6 +268,7 @@ describe("reminder queue", () => {
           status: "active",
           periodEnd: "2026-11-20T00:00:00.000Z",
           locale: "en",
+          confirmed: true,
         },
       ],
       existingKeys: new Set(),
@@ -284,6 +287,111 @@ describe("reminder queue", () => {
     });
     assert.deepEqual(stale.expire, ["blank"]);
     assert.equal(stale.send.length, 0);
+  });
+
+  it("queues one current reminder per confirmed user and does not repeat it", async () => {
+    const ending = "33333333-3333-4333-8333-333333333333";
+    const ended = "44444444-4444-4444-8444-444444444444";
+    const unconfirmed = "55555555-5555-4555-8555-555555555555";
+    const opted = "66666666-6666-4666-8666-666666666666";
+    const planned = planReminderEnqueue({
+      now: NOW,
+      profiles: [
+        { id: USER, email: "free@example.com", tier: "assistant", confirmed: true },
+        { id: unconfirmed, email: "new@example.com", tier: "assistant", confirmed: false },
+        { id: opted, email: "opted@example.com", tier: "assistant", confirmed: true },
+        { id: ended, email: "ended@example.com", tier: "assistant", confirmed: true },
+        { id: "77777777-7777-4777-8777-777777777777", email: "maxxspace@example.com", tier: "assistant", confirmed: true },
+      ],
+      subscriptions: [
+        {
+          userId: ending,
+          email: "ending@example.com",
+          status: "active",
+          periodEnd: "2026-11-20T00:00:00.000Z",
+          locale: "en",
+          confirmed: true,
+        },
+        {
+          userId: ended,
+          email: "ended@example.com",
+          status: "expired",
+          periodEnd: "2026-11-16T00:00:00.000Z",
+          locale: "ar",
+          confirmed: true,
+        },
+        {
+          userId: OTHER,
+          email: "old@example.com",
+          status: "expired",
+          periodEnd: "2026-03-15T00:00:00.000Z",
+          locale: "en",
+          confirmed: true,
+        },
+        {
+          userId: unconfirmed,
+          email: "new@example.com",
+          status: "active",
+          periodEnd: "2026-11-19T00:00:00.000Z",
+          locale: "en",
+          confirmed: false,
+        },
+      ],
+      existingKeys: new Set(),
+      optedOut: new Set([opted]),
+    });
+    assert.deepEqual(
+      planned.map((row) => `${row.kind}:${row.userId}`).sort(),
+      [
+        `assistant_weekly_upsell:${USER}`,
+        `sub_expired_weekly:${ended}`,
+        `sub_expiring_3d:${ending}`,
+      ].sort()
+    );
+    const keys = new Set(planned.map((row) => row.dedupeKey));
+    const again = planReminderEnqueue({
+      now: NOW,
+      profiles: [{ id: USER, email: "free@example.com", tier: "assistant", confirmed: true }],
+      subscriptions: [
+        {
+          userId: ending,
+          email: "ending@example.com",
+          status: "active",
+          periodEnd: "2026-11-20T00:00:00.000Z",
+          locale: "en",
+          confirmed: true,
+        },
+      ],
+      existingKeys: keys,
+      optedOut: new Set(),
+    });
+    assert.deepEqual(again, []);
+    assert.equal(isConfirmedAccount(null), false);
+    assert.equal(isConfirmedAccount("2026-01-07T00:00:00.000Z"), true);
+
+    const memory = memoryStore();
+    const dry = await runReminderEmails({
+      now: NOW,
+      enabled: false,
+      dryRun: true,
+      enqueue: true,
+      limit: 40,
+      secret: "cron-secret",
+      appUrl: "https://engineerit.ai",
+      rows: [],
+      recentlySent: new Set(),
+      optedOut: new Set([opted]),
+      profiles: [{ id: USER, email: "free@example.com", tier: "assistant", confirmed: true }],
+      subscriptions: [],
+      existingKeys: new Set(),
+      store: memory.store,
+      deliver: async () => {
+        throw new Error("dry-run must not send");
+      },
+    });
+    assert.equal(dry.wouldEnqueue.assistant_weekly_upsell, 1);
+    assert.equal(dry.sent, 0);
+    assert.equal(memory.inserted.length, 0);
   });
 
   it("signs an unsubscribe token and keeps the switches off by default", () => {
@@ -320,6 +428,9 @@ describe("reminder queue", () => {
     assert.match(sql, /revoke all on table public\.email_notifications from public, anon, authenticated/);
     assert.match(sql, /grant all on table public\.email_notifications to service_role/);
     assert.match(sql, /revoke all on table public\.email_notification_opt_outs from public, anon, authenticated/);
+    const audience = fs.readFileSync("lib/reminderQueue.ts", "utf8");
+    assert.match(audience, /email_confirmed_at/);
+    assert.match(audience, /isConfirmedAccount/);
     const unsubscribe = fs.readFileSync("app/api/reminders/unsubscribe/route.ts", "utf8");
     assert.match(unsubscribe, /recordReminderOptOut/);
   });

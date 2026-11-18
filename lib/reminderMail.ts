@@ -182,6 +182,8 @@ export type EnqueueInput = {
   id: string;
   email: string | null;
   tier?: string | null;
+  /** False when the address has not been confirmed. Missing means unconfirmed. */
+  confirmed?: boolean;
 };
 
 export type EnqueueSubscription = {
@@ -190,7 +192,12 @@ export type EnqueueSubscription = {
   status: string;
   periodEnd: string;
   locale: "en" | "ar" | null;
+  confirmed?: boolean;
 };
+
+export function isConfirmedAccount(emailConfirmedAt: string | null | undefined) {
+  return Boolean(emailConfirmedAt && emailConfirmedAt.trim());
+}
 
 export type NewReminder = {
   userId: string;
@@ -217,15 +224,20 @@ export function planReminderEnqueue(args: {
   const seen = new Set<string>();
   const open = new Set<string>();
 
+  const claimedUsers = new Set<string>();
+
   function push(row: NewReminder) {
+    if (claimedUsers.has(row.userId)) return;
     if (seen.has(row.dedupeKey) || args.existingKeys.has(row.dedupeKey)) return;
     if (args.optedOut.has(row.userId)) return;
     if (!row.email || !row.email.includes("@") || isTestRecipient(row.email)) return;
     seen.add(row.dedupeKey);
+    claimedUsers.add(row.userId);
     planned.push(row);
   }
 
   for (const sub of args.subscriptions) {
+    if (!sub.confirmed) continue;
     const end = Date.parse(sub.periodEnd);
     if (!Number.isFinite(end)) continue;
     const status = sub.status.trim().toLowerCase();
@@ -239,7 +251,7 @@ export function planReminderEnqueue(args: {
           email,
           kind: "sub_expiring_3d",
           locale: sub.locale,
-          dedupeKey: `expiring:${sub.userId}:${sub.periodEnd.slice(0, 10)}`,
+          dedupeKey: `expiring:${sub.userId}:${week}`,
         });
       }
     }
@@ -257,6 +269,7 @@ export function planReminderEnqueue(args: {
   }
 
   for (const profile of args.profiles) {
+    if (!profile.confirmed) continue;
     const tier = (profile.tier || "assistant").trim().toLowerCase();
     if (tier && tier !== "assistant") continue;
     if (open.has(profile.id)) continue;
