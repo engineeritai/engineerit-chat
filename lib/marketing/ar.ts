@@ -1,3 +1,4 @@
+import { tryChatAnswer } from "@/lib/dailyLimits";
 import type { MarketingContent } from "@/lib/marketing/types";
 
 export const ar: MarketingContent = {
@@ -164,8 +165,7 @@ export const ar: MarketingContent = {
     items: [
       {
         question: "هل أجرب المحادثة قبل التسجيل؟",
-        answer:
-          "نعم. المحادثة متاحة دون حساب. الزائر يحصل على رد واحد في اليوم. باقة المهندس المساعد المجانية تشمل ثلاثة ردود في اليوم. باقات المهندس والمهندس المحترف والمهندس الاستشاري غير مقيدة بهذا الحد اليومي.",
+        answer: tryChatAnswer("ar"),
       },
       {
         question: "هل باقة الفريق تستبدل مهندسينا؟",

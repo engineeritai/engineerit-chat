@@ -1,3 +1,4 @@
+import { tryChatAnswer } from "@/lib/dailyLimits";
 import type { MarketingContent } from "@/lib/marketing/types";
 
 export const en: MarketingContent = {
@@ -180,8 +181,7 @@ export const en: MarketingContent = {
     items: [
       {
         question: "Can I try the chat before I register?",
-        answer:
-          "Yes. Open chat is available without an account. Guests receive one reply a day. The free Assistant Engineer plan includes three replies a day. Engineer, Professional Engineer, and Consultant Engineer are not capped by that daily limit.",
+        answer: tryChatAnswer("en"),
       },
       {
         question: "Does Team replace our engineers?",

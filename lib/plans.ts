@@ -1,5 +1,6 @@
 // lib/plans.ts
 
+import { freeAccountAllowance } from "@/lib/dailyLimits";
 import { RIYAL, riyalAmount } from "@/lib/riyal";
 
 export type PlanId =
@@ -247,6 +248,7 @@ export const PLANS: Plan[] = [
     priceMonthly: "Free",
     priceYearly: "Free",
     features: [
+      freeAccountAllowance("en"),
       "AI chat in all disciplines",
       "Understand simple PFD / P&ID / block diagrams",
       "Basic data digitization (tables & simple tags)",

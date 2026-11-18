@@ -1,5 +1,6 @@
 "use client";
 
+import AuthPathLink from "@/app/components/AuthPathLink";
 import BuyPlanButton from "@/app/components/BuyPlanButton";
 import type { Messages } from "@/lib/i18n";
 import type { PlanId } from "@/lib/plans";
@@ -36,9 +37,17 @@ export default function UpgradeDialog({ open, isGuest, m, notice, planId, onClos
               />
             ) : null}
             {isGuest ? (
-              <a className="gate-btn" href="/login">
+              <AuthPathLink
+                className={planId ? "gate-btn" : "gate-btn gate-btn-primary"}
+                returnHere
+              >
+                {m.gating.registerCta}
+              </AuthPathLink>
+            ) : null}
+            {isGuest ? (
+              <AuthPathLink className="gate-btn" path="/login" returnHere>
                 {m.gating.loginCta}
-              </a>
+              </AuthPathLink>
             ) : null}
             <a className="gate-btn" href="/pricing">
               {m.gating.compareCta}
