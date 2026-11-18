@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import MarketingShell from "../components/marketing/MarketingShell";
+import GoogleAuthButton from "@/app/components/GoogleAuthButton";
 import TurnstileField from "@/app/components/TurnstileField";
 import Link from "next/link";
 import { requestAuthEmail } from "@/lib/authEmailClient";
@@ -22,12 +23,15 @@ export default function LoginPage() {
   const [resending, setResending] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
   const [registerHref, setRegisterHref] = useState("/register");
+  const [nextPath, setNextPath] = useState<string | null>(null);
 
   const router = useRouter();
 
   useEffect(() => {
     const next = new URLSearchParams(window.location.search).get("next");
-    if (next) setRegisterHref(`/register?next=${encodeURIComponent(next)}`);
+    const safe = next ? safeNextPath(next, "/profile") : null;
+    setNextPath(safe);
+    if (safe) setRegisterHref(`/register?next=${encodeURIComponent(safe)}`);
   }, []);
 
   const resendConfirmation = async () => {
@@ -115,6 +119,8 @@ export default function LoginPage() {
 
           <form className="register-form" onSubmit={handleSubmit}>
             <h2 className="section-heading">{s.auth.welcome}</h2>
+
+            <GoogleAuthButton nextPath={nextPath} accepted showAgreement />
 
             <div className="form-row">
               <label>

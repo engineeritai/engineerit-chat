@@ -333,6 +333,70 @@ export type SignupTrackPlan =
   | { track: false }
   | { track: true; createdAt: string; acquisition: Acquisition };
 
+export const OAUTH_SIGNUP_WINDOW_MS = 15 * 60 * 1000;
+/** A later Google sign-in is not a new account, even inside the fresh window. */
+export const OAUTH_SIGNIN_GAP_MS = 2 * 60 * 1000;
+
+export function isGoogleIdentity(user: {
+  app_metadata?: unknown;
+  identities?: { provider?: string | null }[] | null;
+}) {
+  const meta = user.app_metadata && typeof user.app_metadata === "object" ? (user.app_metadata as Record<string, unknown>) : {};
+  if (meta.provider === "google") return true;
+  if (Array.isArray(meta.providers) && meta.providers.includes("google")) return true;
+  return Boolean(user.identities?.some((item) => item?.provider === "google"));
+}
+
+/**
+ * Google creates the account at the redirect, with the email already confirmed.
+ * A sign-in minutes later has a newer last_sign_in_at and must not count again.
+ */
+export function isFreshGoogleSignup(
+  user: {
+    created_at?: string | null;
+    last_sign_in_at?: string | null;
+    email_confirmed_at?: string | null;
+    confirmed_at?: string | null;
+    app_metadata?: unknown;
+    identities?: { provider?: string | null }[] | null;
+  },
+  nowMs: number
+) {
+  if (!isGoogleIdentity(user)) return false;
+  const created = Date.parse(user.created_at || "");
+  if (!Number.isFinite(created)) return false;
+  if (created > nowMs + 60_000) return false;
+  if (nowMs - created > OAUTH_SIGNUP_WINDOW_MS) return false;
+  const confirmed = Date.parse(user.email_confirmed_at || user.confirmed_at || "");
+  if (!Number.isFinite(confirmed)) return false;
+  if (user.last_sign_in_at) {
+    const signedIn = Date.parse(user.last_sign_in_at);
+    if (Number.isFinite(signedIn) && signedIn - created > OAUTH_SIGNIN_GAP_MS) return false;
+  }
+  return true;
+}
+
+export function planOAuthSignup(args: {
+  user: {
+    created_at?: string | null;
+    last_sign_in_at?: string | null;
+    email_confirmed_at?: string | null;
+    confirmed_at?: string | null;
+    user_metadata?: unknown;
+    app_metadata?: unknown;
+    identities?: { provider?: string | null }[] | null;
+  };
+  nowMs: number;
+  seen: string[];
+  local: Acquisition;
+}): SignupTrackPlan {
+  if (!isFreshGoogleSignup(args.user, args.nowMs)) return { track: false };
+  const createdAt = args.user.created_at || "";
+  if (!isCreatedStamp(createdAt) || args.seen.includes(createdAt)) return { track: false };
+  const stored = acquisitionFromMetadata(args.user.user_metadata, args.nowMs);
+  return { track: true, createdAt, acquisition: preferAcquisition(stored, args.local) };
+}
+
 export function planConfirmedSignup(args: {
   user: { created_at?: string | null; email_confirmed_at?: string | null; confirmed_at?: string | null; user_metadata?: unknown };
   nowMs: number;

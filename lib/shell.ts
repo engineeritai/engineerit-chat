@@ -236,6 +236,13 @@ export type ShellCopy = {
     createdConfirm: string;
     createdRedirect: string;
     upgradeAnytime: string;
+    orDivider: string;
+    continueGoogle: string;
+    googleWorking: string;
+    googleFailed: string;
+    googleAgreeBefore: string;
+    googleAgreeAfter: string;
+    passwordHint: string;
   };
   password: {
     changeTitle: string;
@@ -745,7 +752,7 @@ const en: ShellCopy = {
     plansOverview: "Plans and engineer tools",
     toolsInPlan: "Engineer tools in this plan",
     createHere: "Create one here",
-    emailRequired: "Please enter and confirm your email.",
+    emailRequired: "Enter your email address.",
     emailInvalid: "Enter a valid email address.",
     emailMismatch: "Email and confirmation email do not match.",
     passwordMismatch: "Password and confirmation password do not match.",
@@ -759,6 +766,13 @@ const en: ShellCopy = {
       "Account created. We sent a confirmation email. Check your inbox and junk folder, confirm the address, then sign in from the top bar.",
     createdRedirect: "Account created. Redirecting to your profile...",
     upgradeAnytime: "You can change your plan at any time from your profile or the pricing page.",
+    orDivider: "or",
+    continueGoogle: "Continue with Google",
+    googleWorking: "Continuing with Google…",
+    googleFailed: "Google sign-in did not finish. Try again, or use email and password.",
+    googleAgreeBefore: "By continuing with Google you agree to the ",
+    googleAgreeAfter: ".",
+    passwordHint: "At least 8 characters.",
   },
   password: {
     changeTitle: "Change password",
@@ -1272,7 +1286,7 @@ const ar: ShellCopy = {
     plansOverview: "الباقات وأدوات المهندس",
     toolsInPlan: "أدوات المهندس في هذه الباقة",
     createHere: "أنشئ حسابا من هنا",
-    emailRequired: "أدخل البريد وأكده.",
+    emailRequired: "أدخل البريد الإلكتروني.",
     emailInvalid: "أدخل بريدا إلكترونيا صالحا.",
     emailMismatch: "البريد وتأكيده غير متطابقين.",
     passwordMismatch: "كلمة المرور وتأكيدها غير متطابقين.",
@@ -1286,6 +1300,13 @@ const ar: ShellCopy = {
       "تم إنشاء الحساب. أرسلنا رسالة تأكيد. راجع الوارد والبريد غير الهام، ثم أكد العنوان وادخل من الشريط العلوي.",
     createdRedirect: "تم إنشاء الحساب. جاري التحويل إلى ملفك...",
     upgradeAnytime: "يمكنك تغيير الباقة في أي وقت من ملفك أو صفحة الأسعار.",
+    orDivider: "أو",
+    continueGoogle: "المتابعة باستخدام Google",
+    googleWorking: "جاري المتابعة باستخدام Google…",
+    googleFailed: "لم يكتمل الدخول عبر Google. أعد المحاولة، أو استخدم البريد وكلمة المرور.",
+    googleAgreeBefore: "بالمتابعة باستخدام Google فإنك توافق على ",
+    googleAgreeAfter: ".",
+    passwordHint: "8 أحرف على الأقل.",
   },
   password: {
     changeTitle: "تغيير كلمة المرور",

@@ -183,8 +183,9 @@ describe("profile row on first login", () => {
     assert.match(termsSql, /not like '%terms_accepted_at%'/);
     const register = readFileSync("app/register/page.tsx", "utf8");
     assert.match(register, /type="checkbox"/);
-    assert.match(register, /required/);
-    assert.match(register, /disabled=\{loading \|\| !accepted\}/);
+    assert.match(register, /registrationFieldErrors/);
+    assert.match(register, /disabled=\{loading\}/);
+    assert.doesNotMatch(register, /disabled=\{loading \|\| !accepted\}/);
     assert.match(register, /accepted: true/);
     assert.match(register, /\/legal\/terms\?lang=\$\{locale\}/);
     assert.match(register, /\/legal\/privacy\?lang=\$\{locale\}/);
@@ -203,8 +204,10 @@ describe("profile row on first login", () => {
     assert.match(shellCopy.en.auth.policyRequired, /Terms and Conditions/);
     assert.match(shellCopy.ar.auth.policyRequired, /سياسة/);
     assert.doesNotMatch(readFileSync("lib/authEmail.ts", "utf8"), /signInWithOAuth/);
-    assert.doesNotMatch(register, /signInWithOAuth/);
-    assert.doesNotMatch(readFileSync("app/login/page.tsx", "utf8"), /signInWithOAuth/);
+    assert.match(register, /GoogleAuthButton/);
+    assert.match(readFileSync("app/login/page.tsx", "utf8"), /GoogleAuthButton/);
+    assert.match(readFileSync("app/components/GoogleAuthButton.tsx", "utf8"), /signInWithOAuth/);
+    assert.match(readFileSync("app/components/GoogleAuthButton.tsx", "utf8"), /if \(!googleAuthEnabled\(\)\) return null/);
     const profile = readFileSync("app/profile/page.tsx", "utf8");
     const upsert = profile.slice(profile.indexOf(".upsert("), profile.indexOf("onConflict"));
     assert.doesNotMatch(upsert, /subscription_tier/);

@@ -105,6 +105,10 @@ const META: Record<Locale, Record<string, PageMeta>> = {
       title: "Email confirmed | engineer it",
       description: "Your engineerit.ai email address has been confirmed.",
     },
+    "/auth/callback": {
+      title: "Sign in | engineer it",
+      description: "Finishing Google sign-in for engineerit.ai.",
+    },
   },
   ar: {
     "/": {
@@ -206,6 +210,10 @@ const META: Record<Locale, Record<string, PageMeta>> = {
     "/auth/confirmed": {
       title: "تم تأكيد البريد | engineer it",
       description: "تم تأكيد بريد engineerit.ai.",
+    },
+    "/auth/callback": {
+      title: "دخول | engineer it",
+      description: "جاري إكمال الدخول عبر Google إلى engineerit.ai.",
     },
   },
 };
