@@ -102,19 +102,17 @@ test("Arabic hero title clears the first subtitle line", async ({ browser }) => 
   const english = await openPhone(browser, 375, "/?lang=en", "en");
   const englishMetrics = await english.page.evaluate(() => {
     const headline = document.querySelector("h1.brand-headline");
-    const wordmark = document.querySelector("img.headline-wordmark") as HTMLImageElement | null;
-    if (!headline || !wordmark) return null;
+    if (!headline) return null;
     const style = getComputedStyle(headline);
-    const box = wordmark.getBoundingClientRect();
     return {
+      text: headline.textContent || "",
       lineHeight: parseFloat(style.lineHeight),
       fontSize: parseFloat(style.fontSize),
-      ratio: box.width / box.height,
     };
   });
   expect(englishMetrics, "english hero metrics").not.toBeNull();
-  expect(englishMetrics!.lineHeight).toBeLessThan(englishMetrics!.fontSize * 1.2);
-  expect(englishMetrics!.ratio).toBeGreaterThan(4);
+  expect(englishMetrics!.text).toContain("AI engineering assistant");
+  expect(englishMetrics!.lineHeight).toBeGreaterThanOrEqual(englishMetrics!.fontSize * 1.2);
   expect(english.problems).toEqual([]);
   await english.context.close();
 });
