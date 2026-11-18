@@ -40,6 +40,9 @@ The first payment uses the Moyasar payment form with **Save card** after the cus
 | `CRON_SECRET` | yes | Authorizes `/api/cron/renewals` and `/api/cron/lifecycle`. Also signs lifecycle unsubscribe links. Missing secret rejects the job. |
 | `LIFECYCLE_EMAILS` | no | Set to `on` to send lifecycle feedback. Any other value, including unset, sends nothing. |
 | `LIFECYCLE_EMAIL_BATCH` | no | Notes per daily lifecycle run. Default 40, maximum 200. |
+| `REMINDER_EMAILS` | no | Set to `on` only after `supabase/migrations/20261118140000_email_notifications.sql` is applied and `?dry=1` has been reviewed. Any other value sends nothing. The first enabled run expires pending reminder rows older than 7 days and does not mail them. |
+| `REMINDER_ENQUEUE` | no | Set to `on` only after the backlog has been expired. Creates at most one current-window reminder per user (plan ending within 3 days, plan that ended within 7 days, or a free Assistant upsell for this week). It does not backfill missed weeks. |
+| `REMINDER_EMAIL_BATCH` | no | Reminder emails per daily run. Default 40, maximum 200. |
 | `NEXT_PUBLIC_APP_URL` | yes | Public HTTPS origin, no trailing slash. Used for Moyasar return URLs, the renewal callback, and the update-card link in failure emails. |
 | `ZSMTP_HOST` | yes for email | SMTP host for receipts and billing notes |
 | `ZSMTP_PORT` | no | Default `465` |
@@ -68,6 +71,20 @@ Run once, in order. Each file is idempotent (`if not exists` / `add column if no
 Off until `LIFECYCLE_EMAILS=on`. Vercel Cron calls `GET /api/cron/lifecycle` daily at 04:30 UTC. The first email is due 21 days after sign-up, then every 30 days, for accounts that have not used the unsubscribe link. Each run sends at most `LIFECYCLE_EMAIL_BATCH` messages (default 40, maximum 200). Paid accounts get a feedback note. Free accounts also get an invitation to the Engineer plan at SAR 19/month.
 
 `?dry=1` with the cron secret lists how many notes are due and does not send. Leave the flag unset, or set it to anything other than `on`, to stop sending. Mail is From `support@engineerit.ai`, so the SMTP account must be allowed to send as that address. `enqueue_subscription_emails` stays service-role only and is not called from the browser.
+
+## Reminder queue
+
+`public.email_notifications` holds `assistant_weekly_upsell`, `sub_expired_weekly`, and `sub_expiring_3d`. Those rows were left `pending` because no cron selected them: `vercel.json` only scheduled renewals, history cleanup, and lifecycle feedback, and the lifecycle job does not call `enqueue_subscription_emails`. Nothing has called `deliverMail` for these kinds. The database function that enqueues them is not in this repo, which is also why new rows stopped after March 2026.
+
+Vercel Cron calls `GET /api/cron/reminders` daily at 04:45 UTC. It stays off until `REMINDER_EMAILS=on`. `?dry=1` with the cron secret reports `stale`, `wouldSend`, and `wouldEnqueue` and does not write or send.
+
+On the first enabled run, with `REMINDER_ENQUEUE` left unset:
+
+- Every pending row older than 7 days is set to `expired` with reason `stale`. The rows queued from February and March 2026 are in this set. None of them are sent.
+- A pending row from the last 7 days can be sent, at most one email per user per 7 days, and only if that user has not unsubscribed. The exported queue has no such row, so the first run sends nothing.
+- Each message includes an unsubscribe link. One-click unsubscribe writes `email_notification_opt_outs` and is also honored for accounts already in `lifecycle_email_opt_outs`.
+
+`REMINDER_ENQUEUE=on` is a separate switch. It adds at most one row per user for a condition that is true now. It does not create a row for each missed week since March. Leave it unset until the dry-run `wouldEnqueue` count is acceptable. The batch cap still applies (default 40, maximum 200).
 
 `saved_cards`, `billing_subscriptions`, and `renewal_attempts` have RLS enabled and no client policies. Only the service role reads or writes them. Card tokens are never returned to the browser.
 
