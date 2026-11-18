@@ -49,6 +49,8 @@ export function authCallbackKind(search: string, hash: string): AuthCallbackKind
  */
 export function shouldForwardSignupConfirm(pathname: string, search: string, hash: string) {
   if (pathname.startsWith("/auth/confirmed")) return false;
+  // Google returns to /auth/callback with a code or hash. Confirmation must not consume it.
+  if (pathname === "/auth/callback" || pathname.startsWith("/auth/callback/")) return false;
   const kind = authCallbackKind(search, hash);
   if (kind === "recovery") return false;
   if (kind === "signup") return true;
