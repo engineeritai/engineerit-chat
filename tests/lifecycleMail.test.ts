@@ -123,7 +123,7 @@ describe("lifecycle copy", () => {
     const message = buildLifecycleMessage({ locale: "en", paid: false, feedbackUrl, unsubscribeUrl });
     assert.match(message.text, /SAR 19\/month/);
     assert.match(message.text, /engineer it community/);
-    assert.match(message.text, /three replies a day/);
+    assert.match(message.text, /15 replies a day/);
     assert.match(message.text, /drawing and design tools/);
     assert.match(message.text, new RegExp(LIFECYCLE_PRICING_URL.replace(/[.]/g, "\\.")));
     assert.match(message.text, new RegExp(LIFECYCLE_SUPPORT_LINE.replace(/[.]/g, "\\.")));
@@ -136,6 +136,7 @@ describe("lifecycle copy", () => {
     assert.match(arabic.subject, /ما رأيك/);
     assert.match(arabic.text, /ما الذي يعجبك/);
     assert.match(arabic.text, /SAR 19/);
+    assert.match(arabic.text, /15 ردا في اليوم/);
     assert.match(arabic.text, new RegExp(LIFECYCLE_SUPPORT_LINE.replace(/[.]/g, "\\.")));
     assert.equal(arabic.text.includes("What do you like"), false);
 

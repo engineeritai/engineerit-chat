@@ -18,6 +18,7 @@ import {
 } from "@/lib/diagramReply";
 import { appendSources, sourcesFromResponse, type SearchResponse } from "@/lib/citations";
 import { replyLanguageRule, uiLocale } from "@/lib/replyLanguage";
+import { dailyLimitError, dailyReplyCap } from "@/lib/dailyLimits";
 import { subjectFromSession } from "@/lib/sessionSubject";
 
 export const runtime = "nodejs";
@@ -60,8 +61,7 @@ async function enforceDailyLimit(args: {
 
   const plan = planId || (userId ? "assistant" : "guest");
 
-  const max =
-    plan === "guest" ? 1 : plan === "assistant" ? 3 : Number.POSITIVE_INFINITY;
+  const max = dailyReplyCap(plan);
 
   if (!Number.isFinite(max)) return { ok: true as const };
 
@@ -155,14 +155,7 @@ export async function POST(req: NextRequest) {
   if (!limit.ok) {
     return NextResponse.json(
       {
-        error:
-          locale === "ar"
-            ? limit.plan === "guest"
-              ? "بلغت الحد اليومي (رد واحد في اليوم). سجل أو ادخل."
-              : "بلغت الحد اليومي لباقة المساعد (3 ردود). باقة المهندس 19 ريال شهريا بلا حد يومي، مع تحليل ملفات وورد وإكسل وباوربوينت."
-            : limit.plan === "guest"
-              ? "Daily limit reached (1 reply/day). Please register or log in."
-              : "Daily limit reached on the free Assistant plan (3 replies). Engineer is SAR 19 a month, with no daily cap and Word, Excel, and PowerPoint analysis.",
+        error: dailyLimitError(locale, limit.plan),
         plan: limit.plan,
       },
       { status: 429 }

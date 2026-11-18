@@ -24,6 +24,7 @@ import BuyPlanButton from "@/app/components/BuyPlanButton";
 import type { PlanId } from "@/lib/plans";
 import { advisorsAreLive, advisorsNowLive } from "@/lib/advisorLaunch";
 import { getAccessToken } from "@/lib/accessToken";
+import { dailyReplyCap } from "@/lib/dailyLimits";
 import { getPlaybook, groupedPlaybooks, playbooksFor, playbookTemplate } from "@/lib/playbooks";
 import {
   exportPdf,
@@ -125,7 +126,7 @@ export default function AdvisorChat({ advisorId }: { advisorId: AdvisorId }) {
     const planKey = isGuest ? "guest" : tier;
     const key = `engineerit_daily_${planKey}_${day}`;
     const cur = getLocalCount(key);
-    const max = isGuest ? 1 : tier === "assistant" ? 3 : Number.POSITIVE_INFINITY;
+    const max = dailyReplyCap(isGuest ? "guest" : tier);
     if (Number.isFinite(max) && cur >= max) {
       openGate(
         isGuest ? s.chat.dailyGuest : `${s.chat.dailyPaid} ${s.chat.upgradeBody}`,

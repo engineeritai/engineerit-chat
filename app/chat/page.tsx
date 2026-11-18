@@ -22,6 +22,7 @@ import { downloadName } from "@/lib/exportName";
 import { answerTitle, exportMeta, nearestUserPrompt, plainTopic } from "@/lib/messageDocument";
 import { buildShareHtml } from "@/lib/shareDocument";
 import { actionItemsAr, actionItemsEn, chartCaseAr, chartCaseEn, sampleAr, sampleEn } from "@/lib/richSamples";
+import AuthPathLink from "../components/AuthPathLink";
 import MarketingShell from "../components/marketing/MarketingShell";
 import ComposerPlus from "../components/ComposerPlus";
 import EitMark from "../components/marketing/EitMark";
@@ -46,6 +47,7 @@ import type { HistoryCode } from "@/lib/chatHistoryClient";
 import { ENGINEER_TOOLS, type EngineerToolId } from "@/lib/engineerTools";
 import { ADVISOR_IDS, exportCapabilities, hasAdvisorAccess, unlockPlanForAdvisor, type AdvisorId } from "@/lib/advisors";
 import { trackProduct } from "@/lib/attribution";
+import { dailyReplyCap } from "@/lib/dailyLimits";
 import { featureTier, HEADER_PLAN_ABBREV, isPlanId, PLAN_THEME, type PlanId, type SelfServePlanId } from "@/lib/plans";
 import { hasToolAccess, toolRequiredPlan } from "@/lib/toolAccess";
 import { resolveEffectivePlan } from "@/lib/effectivePlan";
@@ -831,7 +833,7 @@ export default function Page() {
     const key = `engineerit_daily_${planKey}_${day}`;
     const cur = getLocalCount(key);
 
-    const max = isGuest ? 1 : planId === "assistant" ? 3 : Number.POSITIVE_INFINITY;
+    const max = dailyReplyCap(isGuest ? "guest" : planId);
     if (Number.isFinite(max) && cur >= max) {
       const msg =
         isGuest
@@ -1224,13 +1226,18 @@ export default function Page() {
                       </div>
                     )}
 
-                    {m.role === "assistant" && (
+                    {m.role === "assistant" && planId === "assistant" && isGuest ? (
+                      <p className="msg-register">
+                        {s.chat.registerActions}{" "}
+                        <AuthPathLink className="msg-register-link" returnHere>
+                          {s.chat.registerCta}
+                        </AuthPathLink>
+                      </p>
+                    ) : null}
+
+                    {m.role === "assistant" && !(planId === "assistant" && isGuest) && (
                       <div className="msg-actions">
-                        {planId === "assistant" && isGuest ? (
-                          <span style={{ fontSize: 12, color: "#6b7280" }}>
-                            {s.chat.registerActions}
-                          </span>
-                        ) : planId === "assistant" && !isGuest ? (
+                        {planId === "assistant" && !isGuest ? (
                           <span style={{ fontSize: 12, color: "#6b7280" }}>
                             {s.chat.upgradeActions}
                           </span>
@@ -1593,7 +1600,7 @@ export default function Page() {
                       onClick={() => {
                         setToolsOpen(false);
                         if (!attachmentsAllowed) {
-                          if (isGuest) openRegisterGate(s.chat.attachLocked);
+                          if (isGuest) openRegisterGate(s.chat.attachGuest);
                           else openUpgradeGate(s.chat.attachLocked);
                           return;
                         }
@@ -1607,7 +1614,7 @@ export default function Page() {
                       onClick={() => {
                         setToolsOpen(false);
                         if (!attachmentsAllowed) {
-                          if (isGuest) openRegisterGate(s.chat.attachLocked);
+                          if (isGuest) openRegisterGate(s.chat.attachGuest);
                           else openUpgradeGate(s.chat.attachLocked);
                           return;
                         }
@@ -1743,28 +1750,12 @@ export default function Page() {
                 <div className="gate-body">
                   <div className="gate-text">{s.chat.registerBody}</div>
                   <div className="gate-actions">
-                    <a
-                      className="gate-btn"
-                      href="/login"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        const next = window.location.pathname + window.location.search;
-                        window.location.assign(`/login?next=${encodeURIComponent(next)}`);
-                      }}
-                    >
+                    <AuthPathLink className="gate-btn" path="/login" returnHere>
                       {s.header.login}
-                    </a>
-                    <a
-                      className="gate-btn gate-btn-primary"
-                      href="/register"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        const next = window.location.pathname + window.location.search;
-                        window.location.assign(`/register?next=${encodeURIComponent(next)}`);
-                      }}
-                    >
-                      {s.header.register}
-                    </a>
+                    </AuthPathLink>
+                    <AuthPathLink className="gate-btn gate-btn-primary" returnHere>
+                      {s.chat.registerCta}
+                    </AuthPathLink>
                     <button
                       className="gate-btn"
                       type="button"

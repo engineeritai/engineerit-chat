@@ -1,3 +1,4 @@
+import { guideSignupBody } from "@/lib/dailyLimits";
 import type { Locale } from "@/lib/i18n";
 
 export type GuideStep = {
@@ -33,7 +34,7 @@ const en: GuideCopy = {
       id: "signup",
       title: "Sign up",
       short: "Create an account, or try the chat as a guest.",
-      body: "Open registration and create an account. A guest can send one message a day. The free Assistant plan includes three messages a day. Paid plans remove that daily cap.",
+      body: guideSignupBody("en"),
       href: "/register",
       hrefLabel: "Create an account",
     },
@@ -101,7 +102,7 @@ const ar: GuideCopy = {
       id: "signup",
       title: "سجل",
       short: "أنشئ حسابا، أو جرب المحادثة كزائر.",
-      body: "افتح التسجيل وأنشئ حسابا. الزائر يرسل رسالة واحدة في اليوم. باقة المهندس المساعد المجانية تشمل ثلاث رسائل في اليوم. الباقات المدفوعة ترفع هذا الحد اليومي.",
+      body: guideSignupBody("ar"),
       href: "/register",
       hrefLabel: "إنشاء حساب",
     },

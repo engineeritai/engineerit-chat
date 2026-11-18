@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import AuthPathLink from "@/app/components/AuthPathLink";
 import { useLocale } from "@/app/components/LocaleProvider";
 import { isSelfServePlan, type BillingInterval, type PlanId } from "@/lib/plans";
 import { startMoyasarCheckout } from "@/lib/checkoutClient";
@@ -41,9 +41,9 @@ export default function BuyPlanButton({
 
   if (planId === "assistant") {
     return (
-      <Link href="/register" className={className} style={style}>
+      <AuthPathLink className={className} style={style}>
         {label}
-      </Link>
+      </AuthPathLink>
     );
   }
 
