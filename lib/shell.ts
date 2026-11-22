@@ -1,5 +1,14 @@
 import type { Locale } from "@/lib/i18n";
 import type { EngineerToolId } from "@/lib/engineerTools";
+import {
+  assistantLimitNotice,
+  assistantLimitReply,
+  attachGuestNotice,
+  freeAccountAllowance,
+  guestLimitNotice,
+  guestLimitReply,
+  registerLeadBefore,
+} from "@/lib/dailyLimits";
 
 export type ShellCopy = {
   nav: {
@@ -101,8 +110,10 @@ export type ShellCopy = {
     imageFailed: string;
     documentFailed: string;
     registerTitle: string;
+    registerCta: string;
     upgradeTitle: string;
     registerBody: string;
+    attachGuest: string;
     upgradeBody: string;
     close: string;
     upgrade: string;
@@ -600,11 +611,10 @@ const en: ShellCopy = {
     toolLocked: "This tool requires a higher subscription plan.",
     unlockWith: "Unlock with",
     perMonth: "/month",
-    dailyGuest: "Daily limit reached. Please register or log in.",
-    dailyPaid: "You have used today's 3 replies on the free Assistant plan.",
-    dailyGuestReply: "Daily limit reached. Please register or log in to continue using engineerit.ai.",
-    dailyPaidReply:
-      "Daily limit reached. Engineer is SAR 19 a month: no daily reply cap, plus Word, Excel, and PowerPoint file analysis.",
+    dailyGuest: guestLimitNotice("en"),
+    dailyPaid: assistantLimitNotice("en"),
+    dailyGuestReply: guestLimitReply("en"),
+    dailyPaidReply: assistantLimitReply("en"),
     sorry: "Sorry, something failed. Please try again.",
     copyFailed: "Copy failed on this browser.",
     shareFailed: "Could not create the share link. Please try again.",
@@ -618,9 +628,11 @@ const en: ShellCopy = {
     imageFailed: "Image analysis failed. Please try again or use a smaller image.",
     documentFailed:
       "Document processing failed. Please try again, or convert the file to PDF or text and upload it again.",
-    registerTitle: "Register or log in",
+    registerTitle: "Create a free account",
+    registerCta: "Create a free account",
     upgradeTitle: "Engineer",
-    registerBody: "Please register or log in to continue.",
+    registerBody: freeAccountAllowance("en"),
+    attachGuest: attachGuestNotice("en"),
     upgradeBody:
       "SAR 19 a month. No daily reply cap, plus analysis of Word, Excel, and PowerPoint files.",
     close: "Close",
@@ -640,7 +652,7 @@ const en: ShellCopy = {
     empty: "Ask an engineering question to start the conversation.",
     you: "You",
     ai: "AI",
-    registerActions: "Register to copy, share, and attach files",
+    registerActions: freeAccountAllowance("en"),
     upgradeActions: "Upgrade to copy, share, and attach files",
     saveHtml: "Save HTML",
     print: "Print",
@@ -727,8 +739,7 @@ const en: ShellCopy = {
     genericError: "Something went wrong. Please try again.",
     loggedIn: "Logged in. Redirecting to your profile...",
     registerTitle: "Register on engineerit.ai",
-    registerLeadBefore:
-      "Create your account and start with the free Assistant Engineer plan, then subscribe to one of the paid plans for unlimited chats and chat export, according to each plan's features (",
+    registerLeadBefore: registerLeadBefore("en"),
     registerLeadLink: "plans",
     registerLeadAfter: ").",
     createAccount: "Create your account",
@@ -1136,11 +1147,10 @@ const ar: ShellCopy = {
     toolLocked: "هذه الأداة تتطلب باقة أعلى.",
     unlockWith: "افتحها مع",
     perMonth: "/شهر",
-    dailyGuest: "بلغت الحد اليومي. سجل أو ادخل.",
-    dailyPaid: "استخدمت ردود اليوم الثلاثة في باقة المساعد المجانية.",
-    dailyGuestReply: "بلغت الحد اليومي. سجل أو ادخل لمتابعة استخدام engineerit.ai.",
-    dailyPaidReply:
-      "بلغت الحد اليومي. باقة المهندس 19 ريال شهريا: بلا حد يومي للردود، مع تحليل ملفات وورد وإكسل وباوربوينت.",
+    dailyGuest: guestLimitNotice("ar"),
+    dailyPaid: assistantLimitNotice("ar"),
+    dailyGuestReply: guestLimitReply("ar"),
+    dailyPaidReply: assistantLimitReply("ar"),
     sorry: "عذرا، حدث خطأ. حاول مرة أخرى.",
     copyFailed: "تعذر النسخ في هذا المتصفح.",
     shareFailed: "تعذر إنشاء رابط المشاركة. حاول مرة أخرى.",
@@ -1153,9 +1163,11 @@ const ar: ShellCopy = {
     analyzeDocument: "استخرج هذا المستند ولخصه.",
     imageFailed: "تعذر تحليل الصورة. حاول مرة أخرى أو استخدم صورة أصغر.",
     documentFailed: "تعذرت معالجة المستند. حاول مرة أخرى، أو احفظه كملف بي دي إف أو نص ثم أعد رفعه.",
-    registerTitle: "التسجيل أو الدخول",
+    registerTitle: "أنشئ حسابا مجانيا",
+    registerCta: "أنشئ حسابا مجانيا",
     upgradeTitle: "المهندس",
-    registerBody: "سجل أو ادخل للمتابعة.",
+    registerBody: freeAccountAllowance("ar"),
+    attachGuest: attachGuestNotice("ar"),
     upgradeBody: "19 ريال شهريا. بلا حد يومي للردود، مع تحليل ملفات وورد وإكسل وباوربوينت.",
     close: "إغلاق",
     upgrade: "ترقية",
@@ -1174,7 +1186,7 @@ const ar: ShellCopy = {
     empty: "اسأل سؤالا هندسيا لبدء المحادثة.",
     you: "أنت",
     ai: "الذكاء",
-    registerActions: "سجل للنسخ والمشاركة وإرفاق الملفات",
+    registerActions: freeAccountAllowance("ar"),
     upgradeActions: "ارفع باقتك للنسخ والمشاركة وإرفاق الملفات",
     saveHtml: "حفظ الصفحة",
     print: "طباعة",
@@ -1261,8 +1273,7 @@ const ar: ShellCopy = {
     genericError: "حدث خطأ. حاول مرة أخرى.",
     loggedIn: "تم الدخول. جاري التحويل إلى ملفك...",
     registerTitle: "التسجيل في engineerit.ai",
-    registerLeadBefore:
-      "أنشئ حسابك، وابدأ بباقة المهندس المساعد المجانية، ثم اشترك في إحدى الباقات المدفوعة لتحصل على محادثات لا محدودة وتصدير للمحادثات حسب مزايا الباقات المتوفرة (",
+    registerLeadBefore: registerLeadBefore("ar"),
     registerLeadLink: "الباقات",
     registerLeadAfter: ").",
     createAccount: "إنشاء الحساب",

@@ -1,15 +1,16 @@
 import { expect, test, type Browser, type Page } from "./fixtures";
 import { isScriptConsoleError } from "./fixtures";
+import { shellCopy } from "../../lib/shell";
 
 const IPHONE =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 
 const TASHKEEL = /[\u064B-\u0652]/;
 
-const REGISTER = {
-  ar: "أنشئ حسابك، وابدأ بباقة المهندس المساعد المجانية، ثم اشترك في إحدى الباقات المدفوعة لتحصل على محادثات لا محدودة وتصدير للمحادثات حسب مزايا الباقات المتوفرة (الباقات).",
-  en: "Create your account and start with the free Assistant Engineer plan, then subscribe to one of the paid plans for unlimited chats and chat export, according to each plan's features (plans).",
-} as const;
+function registerSubtitle(lang: "en" | "ar") {
+  const auth = shellCopy[lang].auth;
+  return `${auth.registerLeadBefore}${auth.registerLeadLink}${auth.registerLeadAfter}`.replace(/\s+/g, " ").trim();
+}
 
 async function openPhone(browser: Browser, width: number, path: string, lang: "en" | "ar") {
   const context = await browser.newContext({
@@ -124,7 +125,7 @@ test("register subtitle wraps cleanly and the plans link is tappable", async ({ 
       const subtitle = page.locator(".page-subtitle");
       await expect(subtitle).toBeVisible();
       const text = ((await subtitle.textContent()) || "").replace(/\s+/g, " ").trim();
-      expect(text, `${width} ${lang} copy`).toBe(REGISTER[lang]);
+      expect(text, `${width} ${lang} copy`).toBe(registerSubtitle(lang));
       expect(text, `${width} ${lang} marks`).not.toMatch(TASHKEEL);
       const link = subtitle.locator("a.page-subtitle-link");
       await expect(link).toHaveText(lang === "ar" ? "الباقات" : "plans");

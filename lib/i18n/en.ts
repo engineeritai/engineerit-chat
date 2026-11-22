@@ -269,7 +269,7 @@ const en: Messages = {
       "A short preview is on this page. Checkout for the plan named on the advisor opens in Moyasar.",
     upgradeCta: "Subscribe",
     compareCta: "Compare plans",
-    registerCta: "Register",
+    registerCta: "Create a free account",
     loginCta: "Login",
     close: "Close",
     upgradeRequired: "Upgrade required",

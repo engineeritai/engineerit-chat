@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { ASSISTANT_DAILY_REPLIES } from "@/lib/dailyLimits";
 import { CONTACT_EMAIL } from "@/lib/trust";
 
 /** First note about 21 days after sign-up, then every 30 days. */
@@ -147,7 +148,7 @@ const enPaid = {
 
 const enFreeInvite = [
   "If you want to keep going with the engineer it community, the Engineer plan is SAR 19/month.",
-  "It is not capped by the free Assistant Engineer plan's three replies a day, and it includes the drawing and design tools.",
+  `It is not capped by the free Assistant Engineer plan's ${ASSISTANT_DAILY_REPLIES} replies a day, and it includes the drawing and design tools.`,
   "Paid plans can also attach a drawing or a document.",
 ].join(" ");
 
@@ -162,7 +163,7 @@ const arPaid = {
 
 const arFreeInvite = [
   "إذا أردت المتابعة مع مجتمع engineer it، فباقة المهندس بـ SAR 19 في الشهر.",
-  "باقة المهندس ليست مقيدة بثلاثة ردود في اليوم مثل باقة المهندس المساعد المجانية، وتشمل مراجعة الرسومات ومراجعة التصميم.",
+  `باقة المهندس ليست مقيدة بـ ${ASSISTANT_DAILY_REPLIES} ردا في اليوم مثل باقة المهندس المساعد المجانية، وتشمل مراجعة الرسومات ومراجعة التصميم.`,
   "الباقات المدفوعة يمكنها أيضا إرفاق رسم أو مستند.",
 ].join(" ");
 

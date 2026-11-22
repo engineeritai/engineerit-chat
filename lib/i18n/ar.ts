@@ -231,7 +231,7 @@ const ar: Messages = {
     lockedBody: "معاينة قصيرة في هذه الصفحة. الدفع للباقة المذكورة يفتح عبر Moyasar.",
     upgradeCta: "اشترك الآن",
     compareCta: "قارن الباقات",
-    registerCta: "تسجيل",
+    registerCta: "أنشئ حسابا مجانيا",
     loginCta: "دخول",
     close: "إغلاق",
     upgradeRequired: "الترقية مطلوبة",
