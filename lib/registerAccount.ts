@@ -15,20 +15,46 @@ export type RegistrationCode =
 
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export type RegistrationFields = {
+  email?: RegistrationCode;
+  password?: RegistrationCode;
+  terms?: RegistrationCode;
+};
+
+/** Every problem on the short form, so each field can show its own message. */
+export function registrationFieldErrors(input: {
+  email: string;
+  password: string;
+  accepted: boolean;
+}): RegistrationFields {
+  const errors: RegistrationFields = {};
+  const email = input.email.trim().toLowerCase();
+  if (!email) errors.email = "email_required";
+  else if (!EMAIL_SHAPE.test(email)) errors.email = "email_invalid";
+  if (input.password.length < 8) errors.password = "password_short";
+  if (!input.accepted) errors.terms = "policy";
+  return errors;
+}
+
 export function validateRegistration(input: {
   email: string;
-  confirmEmail: string;
+  confirmEmail?: string;
   password: string;
-  confirmPassword: string;
+  confirmPassword?: string;
   accepted: boolean;
 }): { ok: true } | { ok: false; code: RegistrationCode } {
   const email = input.email.trim().toLowerCase();
-  const confirmEmail = input.confirmEmail.trim().toLowerCase();
-  if (!email || !confirmEmail) return { ok: false, code: "email_required" };
-  if (!EMAIL_SHAPE.test(email) || !EMAIL_SHAPE.test(confirmEmail)) return { ok: false, code: "email_invalid" };
-  if (email !== confirmEmail) return { ok: false, code: "email_mismatch" };
+  if (input.confirmEmail !== undefined) {
+    const confirmEmail = input.confirmEmail.trim().toLowerCase();
+    if (!email || !confirmEmail) return { ok: false, code: "email_required" };
+    if (!EMAIL_SHAPE.test(email) || !EMAIL_SHAPE.test(confirmEmail)) return { ok: false, code: "email_invalid" };
+    if (email !== confirmEmail) return { ok: false, code: "email_mismatch" };
+  } else if (!email) return { ok: false, code: "email_required" };
+  else if (!EMAIL_SHAPE.test(email)) return { ok: false, code: "email_invalid" };
   if (input.password.length < 8) return { ok: false, code: "password_short" };
-  if (input.password !== input.confirmPassword) return { ok: false, code: "password_mismatch" };
+  if (input.confirmPassword !== undefined && input.password !== input.confirmPassword) {
+    return { ok: false, code: "password_mismatch" };
+  }
   if (!input.accepted) return { ok: false, code: "policy" };
   return { ok: true };
 }
