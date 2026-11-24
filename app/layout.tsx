@@ -6,6 +6,7 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
 import ProductAnalytics from "@/app/components/ProductAnalytics";
+import VisitBeacon from "@/app/components/VisitBeacon";
 import { LocaleProvider } from "@/app/components/LocaleProvider";
 import Attribution from "@/app/components/Attribution";
 import SignupConfirmForward from "@/app/components/SignupConfirmForward";
@@ -133,6 +134,7 @@ export default async function RootLayout({
         <SignupConfirmForward />
         <Attribution />
         <ProductAnalytics />
+        {isTest ? null : <VisitBeacon />}
       </body>
     </html>
   );

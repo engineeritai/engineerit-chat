@@ -3,7 +3,8 @@ import { isTestRecipient } from "@/lib/mailPolicy";
 
 /** Owner stats use Arabia Standard Time (UTC+3, no daylight saving). */
 
-export function riyadhWindows(now: Date) {
+/** Midnight at the start of an Arabia calendar day, as a UTC instant. `daysBack` 0 is today. */
+export function riyadhStart(now: Date, daysBack: number) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Riyadh",
     year: "numeric",
@@ -13,9 +14,11 @@ export function riyadhWindows(now: Date) {
   const year = Number(parts.find((part) => part.type === "year")?.value);
   const month = Number(parts.find((part) => part.type === "month")?.value);
   const day = Number(parts.find((part) => part.type === "day")?.value);
-  const todayStart = new Date(Date.UTC(year, month - 1, day, -3, 0, 0));
-  const weekStart = new Date(Date.UTC(year, month - 1, day - 6, -3, 0, 0));
-  return { todayStart, weekStart };
+  return new Date(Date.UTC(year, month - 1, day - daysBack, -3, 0, 0));
+}
+
+export function riyadhWindows(now: Date) {
+  return { todayStart: riyadhStart(now, 0), weekStart: riyadhStart(now, 6) };
 }
 
 export function foldSignups(stamps: string[], todayMs: number, weekMs: number) {
@@ -107,6 +110,17 @@ export function foldConfirmedSignups(rows: SignupObservation[], todayMs: number,
     }
   }
   return { confirmedToday, confirmed7, unconfirmed7, excludedTest, today, days7, methods, visits: null, conversion: null };
+}
+
+/** Confirmed, non-test accounts whose confirmation time is inside the window. */
+export function countConfirmedSince(rows: SignupObservation[], sinceMs: number) {
+  let count = 0;
+  for (const row of rows) {
+    if (row.test) continue;
+    const confirmed = row.confirmedAt ? Date.parse(row.confirmedAt) : NaN;
+    if (Number.isFinite(confirmed) && confirmed >= sinceMs) count += 1;
+  }
+  return count;
 }
 
 export function sumSar(amounts: Array<number | string | null>) {

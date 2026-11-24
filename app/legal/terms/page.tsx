@@ -97,6 +97,7 @@ export default function TermsPage() {
               confidential information should only be uploaded with proper
               authorization from the data owner.
             </p>
+            <p>Anonymous aggregate visit statistics are collected without cookies.</p>
             <p>
               We do not sell personal data to third parties. Limited data may be
               shared with trusted service providers (such as hosting, analytics,
@@ -218,6 +219,7 @@ function ArabicTerms() {
       <p>
         قد تعالج engineerit.ai الملفات المرفوعة والرسائل وبيانات الاستخدام لتوليد الإجابات وتحسين الخدمة والحفاظ على الأمان والامتثال للالتزامات النظامية. لا ترفع المعلومات الحساسة أو السرية إلا بتفويض من مالك البيانات.
       </p>
+      <p>تُجمع إحصاءات زيارات مجمّعة ومجهولة دون ملفات تعريف ارتباط.</p>
       <p>
         لا نبيع البيانات الشخصية لأطراف ثالثة. قد تشارك بيانات محدودة مع مزودي خدمة موثوقين، مثل الاستضافة والتحليلات ومعالجة الدفع، لتشغيل المنصة فقط وبضمانات حماية مناسبة.
       </p>

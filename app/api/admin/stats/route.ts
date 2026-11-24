@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { isAdminEmail } from "@/lib/admin";
-import { countByPlan, foldConfirmedSignups, foldSignups, riyadhWindows, signupObservation, sumSar } from "@/lib/adminStats";
+import { countByPlan, countConfirmedSince, foldConfirmedSignups, foldSignups, riyadhStart, riyadhWindows, signupObservation, sumSar } from "@/lib/adminStats";
 import { feedbackTableMissing, summarizePlatformFeedback } from "@/lib/platformFeedback";
+import { aggregatePageViews, normalizePageViewRow, pageViewsTableMissing, type PageViewRow, type VisitReport } from "@/lib/visitAggregate";
 import { getSupabaseAdmin, getUserFromRequest } from "@/lib/serverSupabase";
 
 export const runtime = "nodejs";
@@ -10,6 +11,7 @@ const USER_PAGE = 1000;
 const USER_PAGE_CAP = 20;
 const ROW_PAGE = 1000;
 const ROW_CAP = 20000;
+const VISIT_CAP = 20000;
 
 async function signupRows(admin: ReturnType<typeof getSupabaseAdmin>) {
   const rows: NonNullable<ReturnType<typeof signupObservation>>[] = [];
@@ -73,6 +75,45 @@ async function paidInvoices(admin: ReturnType<typeof getSupabaseAdmin>, sinceIso
   throw new Error("Paid invoice list was truncated.");
 }
 
+async function loadPageViews(admin: ReturnType<typeof getSupabaseAdmin>, sinceIso: string) {
+  const rows: PageViewRow[] = [];
+  try {
+    for (let from = 0; from < VISIT_CAP; from += ROW_PAGE) {
+      const { data, error } = await admin
+        .from("page_views")
+        .select("created_at, path, referrer_host, utm_source, utm_medium, utm_campaign, device_class, language, visitor_id")
+        .gte("created_at", sinceIso)
+        .order("created_at", { ascending: true })
+        .range(from, from + ROW_PAGE - 1);
+      if (error) {
+        if (pageViewsTableMissing(error)) return { rows, truncated: false, status: "missing" as const };
+        return { rows, truncated: false, status: "unavailable" as const };
+      }
+      const batch = data || [];
+      for (const row of batch) {
+        const normalized = normalizePageViewRow(row);
+        if (normalized) rows.push(normalized);
+      }
+      if (batch.length < ROW_PAGE) return { rows, truncated: false, status: "ready" as const };
+    }
+    return { rows, truncated: true, status: "ready" as const };
+  } catch (err) {
+    if (pageViewsTableMissing(err)) return { rows, truncated: false, status: "missing" as const };
+    return { rows, truncated: false, status: "unavailable" as const };
+  }
+}
+
+function visitReport(
+  loaded: { rows: PageViewRow[]; truncated: boolean; status: "ready" | "missing" | "unavailable" },
+  now: Date,
+  confirmed7: number,
+  confirmed30: number
+): VisitReport {
+  if (loaded.status === "missing") return { ready: false, reason: "missing" };
+  if (loaded.status === "unavailable") return { ready: false, reason: "unavailable" };
+  return aggregatePageViews(loaded.rows, now, { days7: confirmed7, days30: confirmed30 }, loaded.truncated);
+}
+
 async function platformFeedback(admin: ReturnType<typeof getSupabaseAdmin>) {
   const ratings: number[] = [];
   const latest: Array<{ rating: number | string | null; liked: string | null; improve: string | null; created_at: string }> = [];
@@ -107,13 +148,16 @@ export async function GET(req: Request) {
 
   try {
     const admin = getSupabaseAdmin();
-    const { todayStart, weekStart } = riyadhWindows(new Date());
-    const [rows, chatsToday, chats7, plans, payments] = await Promise.all([
+    const now = new Date();
+    const { todayStart, weekStart } = riyadhWindows(now);
+    const monthStart = riyadhStart(now, 29);
+    const [rows, chatsToday, chats7, plans, payments, pageViews] = await Promise.all([
       signupRows(admin),
       countRows(admin, "conversations", todayStart.toISOString()),
       countRows(admin, "conversations", weekStart.toISOString()),
       activePlans(admin),
       paidInvoices(admin, weekStart.toISOString()),
+      loadPageViews(admin, monthStart.toISOString()),
     ]);
     let feedback: Awaited<ReturnType<typeof platformFeedback>> = null;
     try {
@@ -122,10 +166,13 @@ export async function GET(req: Request) {
       if (!feedbackTableMissing(err)) throw err;
     }
     const signups = foldSignups(rows.map((row) => row.createdAt), todayStart.getTime(), weekStart.getTime());
+    const attribution = foldConfirmedSignups(rows, todayStart.getTime(), weekStart.getTime());
+    const confirmed30 = countConfirmedSince(rows, monthStart.getTime());
     return NextResponse.json({
       timezone: "Asia/Riyadh",
       signups,
-      attribution: foldConfirmedSignups(rows, todayStart.getTime(), weekStart.getTime()),
+      attribution,
+      visits: visitReport(pageViews, now, attribution.confirmed7, confirmed30),
       chats: { today: chatsToday, days7: chats7 },
       subscriptions: countByPlan(plans),
       payments7d: {
