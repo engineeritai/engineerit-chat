@@ -499,6 +499,7 @@ export type ShellCopy = {
     privacyBody: string;
     privacyLink: string;
     privacyNote: string;
+    privacyVisits: string;
     refundTitle: string;
     refundLead: string;
     refundBody: string;
@@ -1035,6 +1036,7 @@ const en: ShellCopy = {
     privacyBody: "The full privacy policy is in the legal document:",
     privacyLink: "Open the privacy section on the legal page",
     privacyNote: "This address exists for payment-provider compliance. The governing text is the legal page.",
+    privacyVisits: "Anonymous aggregate visit statistics are collected without cookies.",
     refundTitle: "Refund and cancellation policy – engineerit.ai",
     refundLead: "This page describes the refund and cancellation policy for engineerit.ai.",
     refundBody: "The full refund policy is in the legal document:",
@@ -1566,6 +1568,7 @@ const ar: ShellCopy = {
     privacyBody: "النص الكامل لسياسة الخصوصية في المستند القانوني:",
     privacyLink: "افتح قسم الخصوصية في الصفحة القانونية",
     privacyNote: "هذا العنوان مخصص لمتطلبات مزود الدفع. النص الحاكم هو الصفحة القانونية.",
+    privacyVisits: "تُجمع إحصاءات زيارات مجمّعة ومجهولة دون ملفات تعريف ارتباط.",
     refundTitle: "سياسة الاسترداد والإلغاء – engineerit.ai",
     refundLead: "تصف هذه الصفحة سياسة الاسترداد والإلغاء في engineerit.ai.",
     refundBody: "النص الكامل لسياسة الاسترداد في المستند القانوني:",

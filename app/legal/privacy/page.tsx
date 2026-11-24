@@ -11,6 +11,7 @@ export default function PrivacyPage() {
     <div className="page-wrap" style={{ padding: "40px 20px" }}>
       <h1 className="page-title">{s.legal.privacyTitle}</h1>
       <p style={{ marginTop: 16, marginBottom: 16 }}>{s.legal.privacyLead}</p>
+      <p style={{ marginBottom: 12 }}>{s.legal.privacyVisits}</p>
       <p style={{ marginBottom: 12 }}>{s.legal.privacyBody}</p>
       <ul style={{ marginInlineStart: 20, marginBottom: 16 }}>
         <li>

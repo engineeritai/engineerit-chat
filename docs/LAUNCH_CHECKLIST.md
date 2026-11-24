@@ -59,6 +59,7 @@ Set these on the Vercel project (Production, and Preview if you test there). `NE
 | `SALES_TO_EMAIL` | Optional inbox for non-purchase mail |
 | `FEEDBACK_TO_EMAIL` | Optional feedback inbox |
 | `ADMIN_EMAILS` | Comma-separated emails allowed to open `/admin/subscriptions` |
+| `VISIT_HASH_SALT` | Server only. Long random string, at least 16 characters. Salts the daily anonymous visitor id (hash of IP, user agent, and the Arabia date). If unset, visits still record with a built-in fallback salt and the raw IP is still not stored. Set it in production so the hash is not reversible from the source code. |
 | `VAT_NUMBER` | Leave unset |
 | `ZATCA_INVOICES_ENABLED` | Leave unset |
 
